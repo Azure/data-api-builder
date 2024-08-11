@@ -314,7 +314,11 @@ namespace Cli.Tests
             Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
         }
 
-        // Add failure test for set session context for mysql
+        /// <summary>
+        /// Tests the failure scenario when attempting to add the 'set-session-context' option to a MySQL database configuration.
+        /// This method verifies that the configuration process correctly fails when the 'set-session-context' option,
+        /// which is specific to MSSQL/DWSQL, is provided for a MySQL database type.
+        /// </summary>
         [TestMethod]
         public void TestFailureWhenAddingSetSessionContextToMySQLDatabase()
         {

@@ -527,6 +527,11 @@ namespace Cli
                 return false;
             }
 
+            if (!TryConfigureDataSourceOptions(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
             if (options.DepthLimit is not null && !TryUpdateDepthLimit(options, ref runtimeConfig))
             {
                 return false;
@@ -567,7 +572,7 @@ namespace Cli
                 dataSourceConnectionString = options.DataSourceConnectionString;
             }
 
-            Dictionary<string, object?> dbOptions = new();
+            Dictionary<string, object?>? dbOptions = null;
             HyphenatedNamingPolicy namingPolicy = new();
 
             if (DatabaseType.CosmosDB_NoSQL.Equals(dbType))
@@ -590,6 +595,7 @@ namespace Cli
                     return false;
                 }
 
+                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
@@ -608,20 +614,23 @@ namespace Cli
         /// <param name="dbOptions">The dictionary to which the CosmosDB-specific options will be added.</param>
         /// <param name="options">The configuration options provided by the user.</param>
         /// <param name="namingPolicy">The naming policy used to convert option names to the desired format.</param>
-        private static void AddCosmosDbOptions(Dictionary<string, object?> dbOptions, ConfigureOptions options, HyphenatedNamingPolicy namingPolicy)
+        private static void AddCosmosDbOptions(Dictionary<string, object?>? dbOptions, ConfigureOptions options, HyphenatedNamingPolicy namingPolicy)
         {
             if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase))
             {
+                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), options.DataSourceOptionsDatabase);
             }
 
             if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer))
             {
+                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), options.DataSourceOptionsContainer);
             }
 
             if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
             {
+                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), options.DataSourceOptionsSchema);
             }
         }
@@ -652,11 +661,6 @@ namespace Cli
                     _logger.LogError("Invalid depth limit. Specify a depth limit > 0 or remove the existing depth limit by specifying -1.");
                     return false;
                 }
-            }
-
-            if (!TryConfigureDataSourceOptions(options, ref runtimeConfig))
-            {
-                return false;
             }
 
             // Try to update the depth limit in the runtime configuration

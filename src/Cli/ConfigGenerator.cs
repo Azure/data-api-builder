@@ -536,6 +536,97 @@ namespace Cli
         }
 
         /// <summary>
+        /// Configures the data source options for the runtimeconfig based on the provided options.
+        /// This method updates the database type, connection string, and other database-specific options in the config file.
+        /// It validates the provided database type and ensures that options specific to certain database types are correctly applied.
+        /// If any validation fails, it logs an error and returns false.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="runtimeConfig">The runtime configuration to be updated. This parameter is passed by reference and must not be null if the method returns true.</param>
+        /// <returns>
+        /// True if the data source options were successfully configured and the runtime configuration was updated; otherwise, false.
+        /// </returns>
+        private static bool TryConfigureDataSourceOptions(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
+            string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
+
+            if (options.DataSourceDatabaseType is not null)
+            {
+                if (!Enum.TryParse(options.DataSourceDatabaseType, ignoreCase: true, out dbType))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<DatabaseType>(options.DataSourceDatabaseType));
+                    return false;
+                }
+            }
+
+            if (options.DataSourceConnectionString is not null)
+            {
+                dataSourceConnectionString = options.DataSourceConnectionString;
+            }
+
+            Dictionary<string, object?> dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            if (DatabaseType.CosmosDB_NoSQL.Equals(dbType))
+            {
+                AddCosmosDbOptions(dbOptions, options, namingPolicy);
+            }
+            else if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase)
+                    || !string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer)
+                    || !string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
+            {
+                _logger.LogError("Database, Container, and Schema options are only applicable for CosmosDB_NoSQL database type.");
+                return false;
+            }
+
+            if (options.DataSourceOptionsSetSessionContext is not null)
+            {
+                if (!(DatabaseType.MSSQL.Equals(dbType) || DatabaseType.DWSQL.Equals(dbType)))
+                {
+                    _logger.LogError("SetSessionContext option is only applicable for MSSQL/DWSQL database type.");
+                    return false;
+                }
+
+                dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
+            }
+
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions);
+            runtimeConfig = runtimeConfig with { DataSource = dataSource };
+
+            return true;
+        }
+
+        /// <summary>
+        /// Adds CosmosDB-specific options to the provided database options dictionary.
+        /// This method checks if the CosmosDB-specific options (database, container, and schema) are provided in the 
+        /// configuration options. If they are, it converts their names using the provided naming policy and adds them 
+        /// to the database options dictionary.
+        /// </summary>
+        /// <param name="dbOptions">The dictionary to which the CosmosDB-specific options will be added.</param>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="namingPolicy">The naming policy used to convert option names to the desired format.</param>
+        private static void AddCosmosDbOptions(Dictionary<string, object?> dbOptions, ConfigureOptions options, HyphenatedNamingPolicy namingPolicy)
+        {
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), options.DataSourceOptionsDatabase);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), options.DataSourceOptionsContainer);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), options.DataSourceOptionsSchema);
+            }
+        }
+
+        /// <summary>
         /// Attempts to update the depth limit in the GraphQL runtime settings based on the provided value.
         /// Validates that any user-provided depth limit is an integer within the valid range of [1 to Int32.MaxValue] or -1.
         /// A depth limit of -1 is considered a special case that disables the GraphQL depth limit.
@@ -561,6 +652,11 @@ namespace Cli
                     _logger.LogError("Invalid depth limit. Specify a depth limit > 0 or remove the existing depth limit by specifying -1.");
                     return false;
                 }
+            }
+
+            if (!TryConfigureDataSourceOptions(options, ref runtimeConfig))
+            {
+                return false;
             }
 
             // Try to update the depth limit in the runtime configuration

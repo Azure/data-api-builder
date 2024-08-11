@@ -589,6 +589,12 @@ namespace Cli
             
             if (options.DataSourceOptionsSetSessionContext is not null)
             {
+                if(!(DatabaseType.MSSQL.Equals(dbType) || DatabaseType.DWSQL.Equals(dbType)))
+                {
+                    _logger.LogError("SetSessionContext option is only applicable for MSSQL/DWSQL database type.");
+                    return false;
+                }
+
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 

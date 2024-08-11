@@ -313,5 +313,28 @@ namespace Cli.Tests
             // Assert
             Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
         }
+
+        // Add failure test for set session context for mysql
+        [TestMethod]
+        public void TestFailureWhenAddingSetSessionContextToMySQLDatabase()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+
+            // Act
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: "mysql",
+                dataSourceOptionsSetSessionContext: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Assert
+            Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+        }
     }
 }

@@ -11,7 +11,6 @@ using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
-using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
@@ -25,7 +24,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
-        private const string TOTALDBXEXECUTIONTIME = "TotalDbExecutionTime";
+        private const string TOTALDBEXECUTIONTIME = "TotalDbExecutionTime";
 
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
@@ -110,7 +109,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
 
-            return _retryPolicy.Execute(() =>
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
+
+            TResult? result = _retryPolicy.Execute(() =>
             {
                 retryAttempt++;
                 try
@@ -153,6 +155,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 }
             });
+
+            queryExecutionTimer.Stop();
+            AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+
+            return result;
         }
 
         /// <inheritdoc/>
@@ -162,8 +169,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             string dataSourceName,
             HttpContext? httpContext = null,
-            List<string>? args = null,
-            IMiddlewareContext? middlewareContext = null)
+            List<string>? args = null)
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
@@ -231,11 +237,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             });
 
             queryExecutionTimer.Stop();
-
-            if (middlewareContext is not null)
-            {
-                AddDbExecutionTimeToMiddlewareContext(middlewareContext, queryExecutionTimer.ElapsedMilliseconds);
-            }
+            AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
 
             return result;
         }
@@ -260,6 +262,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName,
             List<string>? args = null)
         {
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
             await conn.OpenAsync();
             DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
@@ -267,6 +271,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
                     await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return await dataReaderHandler(dbDataReader, args);
@@ -337,6 +343,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName,
             List<string>? args = null)
         {
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
             conn.Open();
             DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
@@ -344,6 +352,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
                     cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return dataReaderHandler(dbDataReader, args);
@@ -823,15 +833,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        private static void AddDbExecutionTimeToMiddlewareContext(IMiddlewareContext middlewareContext, long time)
+        private void AddDbExecutionTimeToMiddlewareContext(long time)
         {
-            if (!middlewareContext.ContextData.ContainsKey(TOTALDBXEXECUTIONTIME))
+            HttpContext? httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext != null)
             {
-                middlewareContext.ContextData[TOTALDBXEXECUTIONTIME] = (long)0;
-            }
 
-            long currentTime = (long)middlewareContext.ContextData[TOTALDBXEXECUTIONTIME]!;
-            middlewareContext.ContextData[TOTALDBXEXECUTIONTIME] = currentTime + time;
+                if (!httpContext.Items.ContainsKey(TOTALDBEXECUTIONTIME))
+                {
+                    httpContext.Items[TOTALDBEXECUTIONTIME] = (long)0;
+                }
+
+                long currentTime = (long)httpContext.Items[TOTALDBEXECUTIONTIME]!;
+                httpContext.Items[TOTALDBEXECUTIONTIME] = currentTime + time;
+            }
         }
     }
 }

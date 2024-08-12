@@ -69,8 +69,7 @@ public class DabCacheService
                        dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
                        httpContext: _httpContextAccessor.HttpContext!,
                        args: null,
-                       dataSourceName: queryMetadata.DataSource,
-                       middlewareContext: middlewareContext);
+                       dataSourceName: queryMetadata.DataSource);
 
                    ctx.Options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: result?.ToString()));
                    ctx.Options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));

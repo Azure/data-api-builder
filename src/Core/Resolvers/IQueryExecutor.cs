@@ -4,7 +4,6 @@
 using System.Data.Common;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Core.Models;
-using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -26,7 +25,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="httpContext">Current request httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <param name="dataSourceName">dataSourceName against which to run query. Can specify null or empty to run against default db.</param>
-        /// <param name="middlewareContext">middleware context for gql operations.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
         public Task<TResult?> ExecuteQueryAsync<TResult>(
             string sqltext,
@@ -34,8 +32,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             string dataSourceName,
             HttpContext? httpContext = null,
-            List<string>? args = null,
-            IMiddlewareContext? middlewareContext = null);
+            List<string>? args = null);
 
         /// <summary>
         /// Executes sql text with the given parameters and

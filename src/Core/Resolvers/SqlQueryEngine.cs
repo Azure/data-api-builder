@@ -80,13 +80,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName, context: context), structure.PaginationMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata),
                     structure.PaginationMetadata);
             }
             else
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    await ExecuteAsync(structure, dataSourceName, context: context),
+                    await ExecuteAsync(structure, dataSourceName),
                     structure.PaginationMetadata);
             }
         }
@@ -118,13 +118,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true, context: context), structure.PaginationMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true), structure.PaginationMetadata),
                     structure.PaginationMetadata);
             }
             else
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true, context: context),
+                    await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true),
                     structure.PaginationMetadata);
             }
         }
@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName, bool isMultipleCreateOperation = false, IMiddlewareContext? context = null)
+        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName, bool isMultipleCreateOperation = false)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
@@ -324,7 +324,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!dbPolicyConfigured && entityCacheEnabled)
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName), context);
+                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
                     byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
                     JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
                     return cacheServiceResponse;

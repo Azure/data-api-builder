@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
-using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -52,10 +51,9 @@ public class DabCacheService
     /// <param name="queryExecutor">Factory method. Only executed after a cache miss.</param>
     /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
     /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
-    /// <param name="middlewareContext">middleware context passed in for gql scenarios.</param>
     /// <returns>JSON Response</returns>
     /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
-    public async ValueTask<JsonElement?> GetOrSetAsync<JsonElement>(IQueryExecutor queryExecutor, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl, IMiddlewareContext? middlewareContext = null)
+    public async ValueTask<JsonElement?> GetOrSetAsync<JsonElement>(IQueryExecutor queryExecutor, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
         JsonElement? result = await _cache.GetOrSetAsync(

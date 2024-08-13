@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using static Cli.Utils;
 
 namespace Cli
@@ -572,7 +573,7 @@ namespace Cli
                 dataSourceConnectionString = options.DataSourceConnectionString;
             }
 
-            Dictionary<string, object?>? dbOptions = null;
+            Dictionary<string, object?>? dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
             if (DatabaseType.CosmosDB_NoSQL.Equals(dbType))
@@ -595,10 +596,10 @@ namespace Cli
                     return false;
                 }
 
-                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
+            dbOptions = dbOptions.IsNullOrEmpty() ? null : dbOptions;
             DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 
@@ -614,23 +615,20 @@ namespace Cli
         /// <param name="dbOptions">The dictionary to which the CosmosDB-specific options will be added.</param>
         /// <param name="options">The configuration options provided by the user.</param>
         /// <param name="namingPolicy">The naming policy used to convert option names to the desired format.</param>
-        private static void AddCosmosDbOptions(Dictionary<string, object?>? dbOptions, ConfigureOptions options, HyphenatedNamingPolicy namingPolicy)
+        private static void AddCosmosDbOptions(Dictionary<string, object?> dbOptions, ConfigureOptions options, HyphenatedNamingPolicy namingPolicy)
         {
             if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase))
             {
-                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), options.DataSourceOptionsDatabase);
             }
 
             if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer))
             {
-                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), options.DataSourceOptionsContainer);
             }
 
             if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
             {
-                dbOptions = dbOptions ?? new();
                 dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), options.DataSourceOptionsSchema);
             }
         }

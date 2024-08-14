@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             {
                 if (token is JsonDocument jsonToken)
                 {
-                    TraverseJsonObject(jsonToken, _containerName);
+                    this.TraverseJsonObject(jsonToken, _containerName);
                 }
                 else
                 {
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
 
             // Generate the GraphQL schema string from the collected entity information.
-            return GenerateGQLSchema();
+            return this.GenerateGQLSchema();
         }
 
         /// <summary>
@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
 
                 // Process each property token to determine its GraphQL type.
-                ProcessJsonToken(property.Value, property.Name, parentType, false);
+                this.ProcessJsonToken(property.Value, property.Name, parentType, false);
             }
         }
 
@@ -183,13 +183,11 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="parentArrayLength">The length of the parent array if applicable.</param>
         /// <returns>The GraphQL type of the field.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the JSON token type is unsupported or if an array contains mixed types.</exception>
-
-        private string ProcessJsonToken(JsonElement token, string fieldName, string parentType, bool isArray, int parentArrayLength = 1)
+        private string? ProcessJsonToken(JsonElement token, string fieldName, string parentType, bool isArray, int parentArrayLength = 1)
         {
-            bool isObjectType = false;
             parentType = parentType.Pascalize();
 
-            string gqlFieldType = "String";
+            string? gqlFieldType = "String";
             // If field name is "id" then it will be represented as ID in GQL
             if (fieldName == "id")
             {
@@ -209,15 +207,22 @@ namespace Azure.DataApiBuilder.Core.Generator
                             objectTypeName = objectTypeName.Singularize();
                         }
 
-                        // Recursively traverse nested objects.
-                        TraverseJsonObject(JsonDocument.Parse(token.GetRawText()), objectTypeName);
+                        if (_entityAndSingularNameMapping.Count == 0 ||
+                            (_entityAndSingularNameMapping.Count != 0 && _entityAndSingularNameMapping.ContainsKey(objectTypeName)))
+                        {
+                            // Recursively traverse nested objects.
+                            this.TraverseJsonObject(JsonDocument.Parse(token.GetRawText()), objectTypeName);
+                            gqlFieldType = objectTypeName;
+                        }
+                        else
+                        {
+                            gqlFieldType = null;
+                        }
 
-                        isObjectType = true;
-                        gqlFieldType = objectTypeName;
                         break;
                     }
                     case JsonValueKind.Array:
-                        gqlFieldType = ProcessJsonArray(token, fieldName, parentType.Singularize());
+                        gqlFieldType = this.ProcessJsonArray(token, fieldName, parentType.Singularize());
                         break;
 
                     case JsonValueKind.Number:
@@ -253,9 +258,9 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
 
             // Add or update attribute information in the entity mapping.
-            if (!(isObjectType && _entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(gqlFieldType.Pascalize())))
+            if (gqlFieldType != null)
             {
-                AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType, parentArrayLength);
+                this.AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType, parentArrayLength);
             }
 
             return gqlFieldType;
@@ -269,15 +274,15 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="parentType">The name of the parent type.</param>
         /// <returns>The GraphQL type of the array elements.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the array contains elements of multiple types.</exception>
-        private string ProcessJsonArray(JsonElement jsonArray, string fieldName, string parentType)
+        private string? ProcessJsonArray(JsonElement jsonArray, string fieldName, string parentType)
         {
-            HashSet<string> gqlFieldType = new();
+            HashSet<string?> gqlFieldType = new();
             ArrayEnumerator arrayEnumerator = jsonArray.EnumerateArray();
 
             // Process each element of the array to determine its GraphQL type.
             foreach (JsonElement obj in arrayEnumerator)
             {
-                gqlFieldType.Add(ProcessJsonToken(obj, fieldName, parentType, true, arrayEnumerator.Count()));
+                gqlFieldType.Add(this.ProcessJsonToken(obj, fieldName, parentType, true, arrayEnumerator.Count()));
             }
 
             // Check if all elements in the array are of the same type.
@@ -286,7 +291,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new InvalidOperationException($"Same attributes {parentType} contains multiple types of elements.");
             }
 
-            return gqlFieldType.First<string>();
+            return gqlFieldType.First<string?>();
         }
 
         /// <summary>

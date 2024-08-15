@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Core.Services
     public class OpenApiDocumentor : IOpenApiDocumentor
     {
         private readonly IMetadataProviderFactory _metadataProviderFactory;
-        private readonly RuntimeConfig _runtimeConfig;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private OpenApiResponses _defaultOpenApiResponses;
         private OpenApiDocument? _openApiDocument;
 
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider)
         {
             _metadataProviderFactory = metadataProviderFactory;
-            _runtimeConfig = runtimeConfigProvider.GetConfig();
+            _runtimeConfigProvider = runtimeConfigProvider;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
         }
 
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists);
             }
 
-            if (!_runtimeConfig.IsRestEnabled)
+            if (!_runtimeConfigProvider.GetConfig().IsRestEnabled)
             {
                 throw new DataApiBuilderException(
                     message: DOCUMENT_CREATION_UNSUPPORTED_ERROR,
@@ -120,8 +120,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
-                string restEndpointPath = _runtimeConfig.RestPath;
-                string? runtimeBaseRoute = _runtimeConfig.Runtime?.BaseRoute;
+                string restEndpointPath = _runtimeConfigProvider.GetConfig().RestPath;
+                string? runtimeBaseRoute = _runtimeConfigProvider.GetConfig().Runtime?.BaseRoute;
                 string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
                 OpenApiComponents components = new()
                 {
@@ -173,12 +173,12 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             OpenApiPaths pathsCollection = new();
 
-            string defaultDataSourceName = _runtimeConfig.DefaultDataSourceName;
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 string entityName = entityDbMetadataMap.Key;
-                if (!_runtimeConfig.Entities.ContainsKey(entityName))
+                if (!_runtimeConfigProvider.GetConfig().Entities.ContainsKey(entityName))
                 {
                     // This can happen for linking entities which are not present in runtime config.
                     continue;
@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
-                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                if (_runtimeConfigProvider.GetConfig().Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
                 {
                     if (!entity.Rest.Enabled)
                     {
@@ -611,7 +611,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (dbObject.SourceType == EntitySourceType.StoredProcedure)
             {
-                Entity entity = _runtimeConfig.Entities[entityName];
+                Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
 
                 List<SupportedHttpVerb>? spRestMethods;
                 if (entity.Rest.Methods is not null)
@@ -842,7 +842,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private string GetEntityRestPath(string entityName)
         {
             string entityRestPath = entityName;
-            EntityRestOptions entityRestSettings = _runtimeConfig.Entities[entityName].Rest;
+            EntityRestOptions entityRestSettings = _runtimeConfigProvider.GetConfig().Entities[entityName].Rest;
 
             if (!string.IsNullOrEmpty(entityRestSettings.Path))
             {
@@ -959,7 +959,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, OpenApiSchema> schemas = new();
 
             // for rest scenario we need the default datasource name.
-            string defaultDataSourceName = _runtimeConfig.DefaultDataSourceName;
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
 
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
@@ -969,7 +969,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (!_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
+                if (!_runtimeConfigProvider.GetConfig().Entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
                 {
                     // Don't create component schemas for:
                     // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.

@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
-        private readonly RuntimeConfig _runtimeConfig;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private Dictionary<string, string> _partitionKeyPaths = new();
 
         /// <summary>
@@ -55,12 +55,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+
             _fileSystem = fileSystem;
-            _runtimeConfig = runtimeConfigProvider.GetConfig();
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _databaseType = runtimeConfig.DataSource.DatabaseType;
 
-            _databaseType = _runtimeConfig.DataSource.DatabaseType;
-
-            CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
+            CosmosDbNoSQLDataSourceOptions? cosmosDb = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
 
             if (cosmosDb is null)
             {
@@ -291,7 +292,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private void AssertIfEntityIsAvailableInConfig(string entityName)
         {
             // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
-            if (!_runtimeConfig.Entities.ContainsKey(entityName))
+            if (!_runtimeConfigProvider.GetConfig().Entities.ContainsKey(entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"The entity '{entityName}' was not found in the runtime config.",
@@ -303,7 +304,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
-            Entity entity = _runtimeConfig.Entities[entityName];
+            Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
 
             string entitySource = entity.Source.Object;
 
@@ -328,7 +329,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public string GetSchemaName(string entityName)
         {
-            Entity entity = _runtimeConfig.Entities[entityName];
+            Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
 
             string entitySource = entity.Source.Object;
 
@@ -548,7 +549,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public string GetEntityName(string graphQLType)
         {
-            if (_runtimeConfig.Entities.ContainsKey(graphQLType))
+            if (_runtimeConfigProvider.GetConfig().Entities.ContainsKey(graphQLType))
             {
                 return graphQLType;
             }
@@ -570,7 +571,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             // Fallback to looking at the singular name of the entity.
-            foreach ((string _, Entity entity) in _runtimeConfig.Entities)
+            foreach ((string _, Entity entity) in _runtimeConfigProvider.GetConfig().Entities)
             {
                 if (entity.GraphQL.Singular == graphQLType)
                 {
@@ -592,7 +593,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public bool IsDevelopmentMode()
         {
-            return _runtimeConfig.IsDevelopmentMode();
+            return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
         }
 
         public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)

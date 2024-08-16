@@ -20,7 +20,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
     <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.38.1" />
     <!--When updating Microsoft.Data.SqlClient, update license URL in scripts/notice-generation.ps1-->
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.1.4" />
     <PackageVersion Include="Microsoft.Extensions.Logging.ApplicationInsights" Version="2.22.0" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.5.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />

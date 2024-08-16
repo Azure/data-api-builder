@@ -36,6 +36,10 @@
         <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Docker|net8.0|AnyCPU'">
+      <Optimize>True</Optimize>
+    </PropertyGroup>
+
     <ItemGroup>
         <Content Update="appsettings*.json">
             <CopyToOutputDirectory>$(CopyToOutputDirectoryAction)</CopyToOutputDirectory>
@@ -45,7 +49,6 @@
 
     <ItemGroup>
         <Watch Remove="dab-config.CosmosDb_NoSql.json" />
-        <Watch Remove="dab-config.json" />
         <Watch Remove="dab-config.MsSql.json" />
         <Watch Remove="dab-config.MySql.json" />
         <Watch Remove="dab-config.PostgreSql.json" />

@@ -238,6 +238,11 @@ namespace Azure.DataApiBuilder.Service
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
 
+            // Allows DAB to override the HTTP error code set by HotChocolate.
+            // This is used to ensure HTTP code 4XX is set when the datatbase
+            // returns a "bad request" error such as stored procedure params missing.
+            services.AddHttpResultSerializer<DabGraphQLResultSerializer>();
+
             server.AddErrorFilter(error =>
                 {
                     if (error.Exception is not null)

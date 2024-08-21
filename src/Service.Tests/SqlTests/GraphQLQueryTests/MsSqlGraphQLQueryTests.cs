@@ -409,7 +409,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Did not provide all procedure params");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Missing required procedure parameters.");
         }
         #endregion
     }

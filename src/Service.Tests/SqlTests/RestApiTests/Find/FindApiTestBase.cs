@@ -1476,8 +1476,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Validates that parameters of a SP sent through the request body are ignored and
-        /// results in a 400 Bad Request due to missing required parameters. 
+        /// For a HTTP GET request, validates that request body contents are ignore.
+        /// e.g. Any stored procedure parameters sent through the request body
+        /// are not considered.
+        /// Validates that a request whicResults in a 400 Bad Request due to missing required parameters. 
         /// </summary>
         [TestMethod]
         public virtual async Task FindApiTestForSPWithRequiredParamsInRequestBody()
@@ -1496,8 +1498,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 operationType: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
-                expectedStatusCode: HttpStatusCode.BadRequest
+                expectedErrorMessage: "Invalid request. Missing required procedure parameters.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseInputError.ToString()
                 );
         }
 
@@ -1516,8 +1519,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 operationType: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
-                expectedStatusCode: HttpStatusCode.BadRequest
+                expectedErrorMessage: "Invalid request. Missing required procedure parameters.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseInputError.ToString()
                 );
         }
 

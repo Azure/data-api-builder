@@ -117,7 +117,11 @@ public class DataApiBuilderException : Exception
         /// <summary>
         /// Relationship Field's value not found
         /// </summary>
-        RelationshipFieldNotFound
+        RelationshipFieldNotFound,
+        /// <summary>
+        /// Error due to client input validation failure.
+        /// </summary>
+        DatabaseInputError
     }
 
     public HttpStatusCode StatusCode { get; }

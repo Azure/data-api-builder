@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using static Azure.DataApiBuilder.Service.Exceptions.DataApiBuilderException;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -24,6 +25,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
          * connecting to your database in SQL Database.*/
         protected HashSet<string> TransientExceptionCodes;
         protected HashSet<string> ConflictExceptionCodes;
+        internal Dictionary<int, string> _errorMessages;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
@@ -31,6 +33,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             BadRequestExceptionCodes = new();
             TransientExceptionCodes = new();
             ConflictExceptionCodes = new();
+            _errorMessages = new();
         }
 
         /// <summary>
@@ -41,11 +44,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>Custom exception to be returned to the user.</returns>
         public Exception Parse(DbException e)
         {
-            string message = _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
             return new DataApiBuilderException(
-                message: message,
+                message: _developerMode ? e.Message : GetMessage(e),
                 statusCode: GetHttpStatusCodeForException(e),
-                subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed,
+                subStatusCode: GetResultSubStatusCodeForException(e),
                 innerException: e
             );
         }
@@ -65,5 +67,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
         /// <returns>status code to be returned in the response.</returns>
         public abstract HttpStatusCode GetHttpStatusCodeForException(DbException e);
+
+        /// <summary>
+        /// Gets a specific substatus code which describes the cause of the error in more detail.
+        /// </summary>
+        /// <param name="e">The exception thrown as a result of execution of the request.</param>
+        /// <returns>status code to be returned in the response.</returns>
+        public virtual SubStatusCodes GetResultSubStatusCodeForException(DbException e)
+        {
+            return SubStatusCodes.DatabaseOperationFailed;
+        }
+
+        /// <summary>
+        /// Gets the user-friendly message to be returned to the user in case of an exception.
+        /// </summary>
+        /// <param name="e">The exception thrown as a result of execution of the request.</param>
+        /// <returns>Response message.</returns>
+        public virtual string GetMessage(DbException e)
+        {
+            return GENERIC_DB_EXCEPTION_MESSAGE;
+        }
     }
 }

@@ -172,7 +172,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 Assert.AreEqual(expected: HttpStatusCode.InternalServerError, actual: ex.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.GraphQLMapping, actual: ex.SubStatusCode);
             }
-
         }
 
         /// <summary>

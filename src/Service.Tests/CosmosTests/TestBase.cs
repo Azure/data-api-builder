@@ -46,7 +46,7 @@ type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     character: Character,
-    age : Int,
+    age : Float,
     dimension : String,
     earth: Earth,
     tags: [String!],

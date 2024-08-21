@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public abstract class DbExceptionParser
     {
         public const string GENERIC_DB_EXCEPTION_MESSAGE = "While processing your request the database ran into an error.";
-        private readonly bool _developerMode;
+        internal readonly bool _developerMode;
         protected HashSet<string> BadRequestExceptionCodes;
 
         /*A transient error, also known as a transient fault, has an underlying cause that soon resolves itself.
@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Exception Parse(DbException e)
         {
             return new DataApiBuilderException(
-                message: _developerMode ? e.Message : GetMessage(e),
+                message: GetMessage(e),
                 statusCode: GetHttpStatusCodeForException(e),
                 subStatusCode: GetResultSubStatusCodeForException(e),
                 innerException: e
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>Response message.</returns>
         public virtual string GetMessage(DbException e)
         {
-            return GENERIC_DB_EXCEPTION_MESSAGE;
+            return _developerMode ? e.Message : GENERIC_DB_EXCEPTION_MESSAGE;
         }
     }
 }

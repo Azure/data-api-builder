@@ -101,10 +101,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed;
         }
 
+        /// <summary>
+        /// Returns a sanitized error message to be returned to the user.
+        /// Development mode: returns specific database message which may contain database object names
+        /// and not just DAB overridden entity names or field mappings.
+        /// For MSSQL, also looks up any DAB overridden error messages in "_errorMessages" dictionary.
+        /// e.g. message may contain: "dbo.CxStoredProcName" instead of "MySpEntityName"
+        /// Production mode: returns generic database error message.
+        /// </summary>
+        /// <param name="e">Exception occurred in the database.</param>
+        /// <returns>Error message returned to client.</returns>
         public override string GetMessage(DbException e)
         {
-            int errorCode = ((SqlException)e).Number;
-            return _errorMessages.ContainsKey(errorCode) ? _errorMessages[errorCode] : e.Message;
+            if (_developerMode)
+            {
+                int errorCode = ((SqlException)e).Number;
+                return _errorMessages.ContainsKey(errorCode) ? _errorMessages[errorCode] : e.Message;
+            }
+
+            return GENERIC_DB_EXCEPTION_MESSAGE;
         }
     }
 }

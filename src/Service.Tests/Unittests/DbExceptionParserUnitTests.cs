@@ -12,7 +12,6 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Polly;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {

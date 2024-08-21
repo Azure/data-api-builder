@@ -128,10 +128,8 @@ public class StoredProcedureDefinition : SourceDefinition
     }
 }
 
-[DebuggerDisplay("Parameter: {Name}")]
 public class ParameterDefinition
 {
-    public string Name { get; set; } = string.Empty;
     public Type SystemType { get; set; } = null!;
     public DbType? DbType { get; set; }
     public SqlDbType? SqlDbType { get; set; }

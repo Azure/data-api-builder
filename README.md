@@ -11,6 +11,8 @@
 
 Join the Data API builder community! This sign up will help us maintain a list of interested developers to be part of our roadmap and to help us better understand the different ways DAB is being used. Sign up [here](https://forms.office.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR1S1JdzGAxhDrefV-tBYtwZUNE1RWVo0SUVMTkRESUZLMVVOS0wwUFNVRy4u).
 
+[![Introduction to DAB](./docs/media/dab_logo.png)](https://youtu.be/xAlaoDQolLw)
+
 ## About
 
 **Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.**

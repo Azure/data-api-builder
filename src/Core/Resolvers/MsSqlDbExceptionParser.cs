@@ -113,13 +113,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>Error message returned to client.</returns>
         public override string GetMessage(DbException e)
         {
+            int errorCode = ((SqlException)e).Number;
+
             if (_developerMode)
             {
-                int errorCode = ((SqlException)e).Number;
                 return _errorMessages.ContainsKey(errorCode) ? _errorMessages[errorCode] : e.Message;
             }
 
-            return GENERIC_DB_EXCEPTION_MESSAGE;
+            return _errorMessages.ContainsKey(errorCode) ? _errorMessages[errorCode] : GENERIC_DB_EXCEPTION_MESSAGE;
         }
     }
 }

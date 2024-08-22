@@ -25,6 +25,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
          * connecting to your database in SQL Database.*/
         protected HashSet<string> TransientExceptionCodes;
         protected HashSet<string> ConflictExceptionCodes;
+
+        /// <summary>
+        /// DAB specific message overrides for database error codes. Instead of returning
+        /// the database error message, DAB returns a more user-friendly message defined here.
+        /// Key: error code
+        /// Value: overridden message
+        /// NOTE: Overridden messages returned in both development and production modes. Avoid
+        /// including database schema metadata in overridden messages.
+        /// </summary>
         internal Dictionary<int, string> _errorMessages;
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)

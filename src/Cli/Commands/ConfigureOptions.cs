@@ -53,7 +53,7 @@ namespace Cli.Commands
         [Option("data-source.options.schema", Required = false, HelpText = "Schema path for Cosmos DB for NoSql.")]
         public string? DataSourceOptionsSchema { get; }
 
-        [Option("data-source.options.set-session-context", Required = false, HelpText = "Set session context. Allowed values: true, false (default: false).")]
+        [Option("data-source.options.set-session-context", Required = false, HelpText = "Enable session context. Allowed values: true (default), false.")]
         public bool? DataSourceOptionsSetSessionContext { get; }
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]

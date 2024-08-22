@@ -545,7 +545,7 @@ namespace Cli
         /// Configures the data source options for the runtimeconfig based on the provided options.
         /// This method updates the database type, connection string, and other database-specific options in the config file.
         /// It validates the provided database type and ensures that options specific to certain database types are correctly applied.
-        /// If any validation fails, it logs an error and returns false.
+        /// When validation fails, this function logs the validation errors and returns false.
         /// </summary>
         /// <param name="options">The configuration options provided by the user.</param>
         /// <param name="runtimeConfig">The runtime configuration to be updated. This parameter is passed by reference and must not be null if the method returns true.</param>
@@ -603,7 +603,7 @@ namespace Cli
             DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 
-            return true;
+            return runtimeConfig != null;
         }
 
         /// <summary>

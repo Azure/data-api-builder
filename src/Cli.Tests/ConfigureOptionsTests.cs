@@ -153,6 +153,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Tests the update of the database type in the runtime config.
+        /// dab configure `--data-source.database-type {dbType}`
         /// This method verifies that the database type can be updated to various valid values, including different cases,
         /// and ensures that the config file is correctly modified and parsed after the update.
         /// </summary>
@@ -173,14 +174,16 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
 
-            // Act
             ConfigureOptions options = new(
                 dataSourceDatabaseType: dbType,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
             Assert.IsNotNull(config.Runtime);
@@ -191,7 +194,8 @@ namespace Cli.Tests
         /// Tests the update of the database type from CosmosDB_NoSQL to MSSQL in the runtime config.
         /// This method verifies that the database type can be changed from CosmosDB_NoSQL to MSSQL and that the 
         /// specific MSSQL option 'set-session-context' is correctly added to the configuration and the specific
-        /// cosmosDB options are removed. 
+        /// cosmosDB options are removed.
+        /// Command: dab configure --data-source.database-type mssql --data-source.options.set-session-context true 
         /// </summary>
         [TestMethod]
         public void TestDatabaseTypeUpdateCosmosDB_NoSQLToMSSQL()
@@ -204,15 +208,17 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_COSMOSDB_NOSQL_CONFIG, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
 
-            // Act
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "mssql",
                 dataSourceOptionsSetSessionContext: true,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
             Assert.IsNotNull(config.Runtime);
@@ -227,6 +233,8 @@ namespace Cli.Tests
         /// Tests the update of the database type from MSSQL to CosmosDB_NoSQL in the runtime config.
         /// This method verifies that the database type can be changed from MSSQL to CosmosDB_NoSQL and that the 
         /// specific CosmosDB_NoSQL options such as database, container, and schema are correctly added to the config.
+        /// Command: dab configure --data-source.database-type cosmosdb_nosql
+        /// --data-source.options.database testdb --data-source.options.container testcontainer --data-source.options.schema testschema.gql
         /// </summary>
         [TestMethod]
         public void TestDatabaseTypeUpdateMSSQLToCosmosDB_NoSQL()
@@ -239,7 +247,6 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
 
-            // Act
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "cosmosdb_nosql",
                 dataSourceOptionsDatabase: "testdb",
@@ -247,9 +254,12 @@ namespace Cli.Tests
                 dataSourceOptionsSchema: "testschema.gql",
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
             Assert.IsNotNull(config.Runtime);
@@ -276,14 +286,16 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
 
-            // Act
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "invalid",
                 config: TEST_RUNTIME_CONFIG_FILE
             );
 
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
             // Assert
-            Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(isSuccess);
         }
 
         /// <summary>
@@ -302,7 +314,6 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
 
-            // Act
             ConfigureOptions options = new(
                 dataSourceOptionsDatabase: "testdb",
                 dataSourceOptionsContainer: "testcontainer",
@@ -310,8 +321,11 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE
             );
 
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
             // Assert
-            Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(isSuccess);
         }
 
         /// <summary>
@@ -330,15 +344,17 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
 
-            // Act
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "mysql",
                 dataSourceOptionsSetSessionContext: true,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
 
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
             // Assert
-            Assert.IsFalse(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(isSuccess);
         }
     }
 }

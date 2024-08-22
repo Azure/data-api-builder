@@ -1110,6 +1110,7 @@ public class EndToEndTests
 
     /// <summary>
     /// Tests that the CLI can update the database type in the configuration file and is case insensitive.
+    /// Command: dab configure --data-source.database-type {dbType}
     /// </summary>
     /// <param name="dbType">The database type to be set in the configuration.</param>
     /// <param name="isSuccess">Expected success or failure of the operation.</param>

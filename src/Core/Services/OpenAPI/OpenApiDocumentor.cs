@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         new() { Url = url }
                     },
-                    Paths = BuildPaths(),
+                    Paths = BuildPaths(runtimeConfig),
                     Components = components
                 };
                 _openApiDocument = doc;
@@ -170,9 +170,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// "/EntityName"
         /// </example>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths()
+        private OpenApiPaths BuildPaths(RuntimeConfig runtimeConfig)
         {
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             OpenApiPaths pathsCollection = new();
 
             string defaultDataSourceName = runtimeConfig.DefaultDataSourceName;

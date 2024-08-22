@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
-            ParseSchemaGraphQLFieldsForJoins();
+            ParseSchemaGraphQLFieldsForJoins(runtimeConfig);
 
             InitODataParser();
         }
@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// EntityWithJoins dictionary indicates the paths for each entity. There "Planet" has one path i.e. "c" on the other hand Star has 3 paths.with one join statement.
         /// This information is getting used to resolve DB Policy and generate cosmos DB sql query conditions for them.
         /// </summary>
-        private void ParseSchemaGraphQLFieldsForJoins()
+        private void ParseSchemaGraphQLFieldsForJoins(RuntimeConfig runtimeConfig)
         {
             IncrementingInteger tableCounter = new();
 
@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 
-                    AssertIfEntityIsAvailableInConfig(modelName);
+                    AssertIfEntityIsAvailableInConfig(runtimeConfig, modelName);
 
                     if (EntityWithJoins.TryGetValue(modelName, out List<EntityDbPolicyCosmosModel>? entityWithJoins))
                     {
@@ -178,7 +178,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                            });
                     }
 
-                    ProcessSchema(node.Fields, schemaDefinitions, CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
+                    ProcessSchema(
+                        fields: node.Fields,
+                        schemaDocument: schemaDefinitions,
+                        currentPath: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS,
+                        tableCounter: tableCounter,
+                        runtimeConfig: runtimeConfig);
                 }
             }
         }
@@ -205,6 +210,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
             IncrementingInteger tableCounter,
+            RuntimeConfig runtimeConfig,
             EntityDbPolicyCosmosModel? parentEntity = null,
             HashSet<string>? visitedEntities = null)
         {
@@ -226,7 +232,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                 string entityType = field.Type.NamedType().Name.Value;
 
-                AssertIfEntityIsAvailableInConfig(entityType);
+                AssertIfEntityIsAvailableInConfig(runtimeConfig, entityType);
 
                 // If the entity is already visited, then it is a circular reference
                 if (!trackerForFields.Add(entityType))
@@ -284,15 +290,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     schemaDocument: schemaDocument,
                     currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
                     tableCounter: tableCounter,
+                    runtimeConfig: runtimeConfig,
                     parentEntity: isArrayType ? currentEntity : null,
                     visitedEntities: trackerForFields);
             }
         }
 
-        private void AssertIfEntityIsAvailableInConfig(string entityName)
+        private static void AssertIfEntityIsAvailableInConfig(RuntimeConfig runtimeConfig, string entityName)
         {
             // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
-            if (!_runtimeConfigProvider.GetConfig().Entities.ContainsKey(entityName))
+            if (!runtimeConfig.Entities.ContainsKey(entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"The entity '{entityName}' was not found in the runtime config.",

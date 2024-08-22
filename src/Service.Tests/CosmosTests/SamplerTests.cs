@@ -27,6 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class SamplerTests : TestBase
     {
+        private CosmosClient _cosmosClient;
         private Database _database;
         private Container _containerWithNamePk;
         private Container _containerWithIdPk;
@@ -48,8 +49,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task Initialize()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
-            _database = await cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME);
+            _cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
+            _database = await _cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME);
 
             _containerWithIdPk = await _database.CreateContainerIfNotExistsAsync(CONTAINER_NAME_ID_PK, "/id");
             _containerWithNamePk = await _database.CreateContainerIfNotExistsAsync(CONTAINER_NAME_NAME_PK, "/name");
@@ -92,12 +93,15 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestTopNSampler(int count, int? maxDays, int expectedCount)
         {
             Mock<TopNSampler> topNSampler = new(_containerWithIdPk, count, maxDays, _mockLogger.Object);
-            if (maxDays is not null)
+
+            if (maxDays is null || maxDays == 0)
             {
-                topNSampler
-                    .Setup<long>(x => x.GetTimeStampThreshold())
-                    .Returns((long)(_sortedTimespansIdPk[0] - maxDays));
+                maxDays = 10;
             }
+
+            topNSampler
+                .Setup<long>(x => x.GetTimeStampThreshold())
+                .Returns((long)(_sortedTimespansIdPk[0] - maxDays));
 
             List<JsonDocument> result = await topNSampler.Object.GetSampleAsync();
             Assert.AreEqual(expectedCount, result.Count);
@@ -125,12 +129,15 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             Mock<PartitionBasedSampler> partitionBasedSampler
                 = new(_containerWithNamePk, partitionKeyPath, numberOfRecordsPerPartition, maxDaysPerPartition, _mockLogger.Object);
-            if (maxDaysPerPartition is not null)
+
+            if (maxDaysPerPartition is null || maxDaysPerPartition == 0)
             {
-                partitionBasedSampler
-                    .Setup<long>(x => x.GetTimeStampThreshold())
-                    .Returns((long)(_sortedTimespansNamePk[0] - maxDaysPerPartition));
+                maxDaysPerPartition = 30;
             }
+
+            partitionBasedSampler
+                .Setup<long>(x => x.GetTimeStampThreshold())
+                .Returns((long)(_sortedTimespansNamePk[0] - maxDaysPerPartition));
 
             List<JsonDocument> result = await partitionBasedSampler.Object.GetSampleAsync();
 
@@ -190,17 +197,19 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             Mock<TimeBasedSampler> timeBasedSampler
                 = new(_containerWithNamePk, groupCount, numberOfRecordsPerGroup, maxDays, _mockLogger.Object);
-            if (maxDays is not null)
+
+            if (maxDays is null || maxDays == 0)
             {
-                timeBasedSampler
-                    .Setup<long>(x => x.GetTimeStampThreshold())
-                    .Returns((long)(_sortedTimespansNamePk[0] - maxDays));
+                maxDays = 10;
             }
+
+            timeBasedSampler
+                .Setup<long>(x => x.GetTimeStampThreshold())
+                .Returns((long)(_sortedTimespansNamePk[0] - maxDays));
 
             List<JsonDocument> result = await timeBasedSampler.Object.GetSampleAsync();
 
-            // Due to the nature of the test, sometime results might vary with 1 record.
-            Assert.IsTrue(result.Count == expectedResultCount || result.Count == (expectedResultCount - 1));
+            Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
         }
 
         /// <summary>
@@ -210,8 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestCleanup]
         public async Task CleanUp()
         {
-            await _containerWithIdPk.DeleteContainerAsync();
-            await _containerWithNamePk.DeleteContainerAsync();
+            await _database.DeleteAsync();
         }
     }
 }

@@ -19,7 +19,7 @@ public class CustomLoggerProvider : ILoggerProvider
     public class CustomConsoleLogger : ILogger
     {
         // Minimum LogLevel. LogLevel below this would be disabled.
-        private readonly LogLevel _minimumLogLevel = LogLevel.Debug;
+        private readonly LogLevel _minimumLogLevel = LogLevel.Information;
 
         //  Color values based on LogLevel
         //  LogLevel    Foreground      Background

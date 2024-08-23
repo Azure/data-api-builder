@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using HotChocolate.AspNetCore.Authorization;
+using HotChocolate.Authorization;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -15,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Authorization;
 /// The changes in this custom handler enable fetching the ClientRoleHeader value defined within requests (value of X-MS-API-ROLE) HTTP Header.
 /// Then, using that value to check the header value against the authenticated ClientPrincipal roles.
 /// </summary>
-public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization.IAuthorizationHandler
+public class GraphQLAuthorizationHandler : IAuthorizationHandler
 {
     /// <summary>
     /// Authorize access to field based on contents of @authorize directive.
@@ -31,7 +32,10 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
     /// Returns a value indicating if the current session is authorized to
     /// access the resolver data.
     /// </returns>
-    public ValueTask<AuthorizeResult> AuthorizeAsync(IMiddlewareContext context, AuthorizeDirective directive)
+    public ValueTask<AuthorizeResult> AuthorizeAsync(
+        IMiddlewareContext context,
+        AuthorizeDirective directive,
+        CancellationToken cancellationToken = default)
     {
         if (!IsUserAuthenticated(context))
         {
@@ -51,6 +55,15 @@ public class GraphQLAuthorizationHandler : HotChocolate.AspNetCore.Authorization
         }
 
         return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
+    }
+
+    // TODO : check our implementation on this.
+    public ValueTask<AuthorizeResult> AuthorizeAsync(
+        AuthorizationContext context,
+        IReadOnlyList<AuthorizeDirective> directives,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     /// <summary>

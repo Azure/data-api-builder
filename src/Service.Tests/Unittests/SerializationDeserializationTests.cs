@@ -389,8 +389,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                     Assert.IsTrue(namespaceString.Contains("Azure.DataApiBuilder.Config.DatabasePrimitives"));
                     Assert.AreEqual(namespaceString, "Azure.DataApiBuilder.Config.DatabasePrimitives." + objectName);
 
-                    string projectNameString = typeNameSplitParts[1].Trim();
-                    Assert.AreEqual(projectNameString, "Azure.DataApiBuilder.Config");
+                    string projectstring = typeNameSplitParts[1].Trim();
+                    Assert.AreEqual(projectstring, "Azure.DataApiBuilder.Config");
 
                     Assert.AreEqual(typeNameSplitParts.Length, 2);
                 }

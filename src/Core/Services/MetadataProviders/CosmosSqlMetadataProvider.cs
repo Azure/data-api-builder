@@ -25,6 +25,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly RuntimeEntities _runtimeConfigEntities;
         private Dictionary<string, string> _partitionKeyPaths = new();
 
         /// <summary>
@@ -56,9 +57,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-
-            _fileSystem = fileSystem;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _fileSystem = fileSystem;
+            // Make a copy of the runtime entities to guarantee consistency
+            _runtimeConfigEntities = new RuntimeEntities(runtimeConfig.Entities.Entities);
             _databaseType = runtimeConfig.DataSource.DatabaseType;
 
             CosmosDbNoSQLDataSourceOptions? cosmosDb = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
@@ -83,7 +85,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
-            ParseSchemaGraphQLFieldsForJoins(runtimeConfig);
+            ParseSchemaGraphQLFieldsForJoins();
 
             InitODataParser();
         }
@@ -141,7 +143,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// EntityWithJoins dictionary indicates the paths for each entity. There "Planet" has one path i.e. "c" on the other hand Star has 3 paths.with one join statement.
         /// This information is getting used to resolve DB Policy and generate cosmos DB sql query conditions for them.
         /// </summary>
-        private void ParseSchemaGraphQLFieldsForJoins(RuntimeConfig runtimeConfig)
+        private void ParseSchemaGraphQLFieldsForJoins()
         {
             IncrementingInteger tableCounter = new();
 
@@ -162,7 +164,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 
-                    AssertIfEntityIsAvailableInConfig(runtimeConfig, modelName);
+                    AssertIfEntityIsAvailableInConfig(modelName);
 
                     if (EntityWithJoins.TryGetValue(modelName, out List<EntityDbPolicyCosmosModel>? entityWithJoins))
                     {
@@ -182,8 +184,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                         fields: node.Fields,
                         schemaDocument: schemaDefinitions,
                         currentPath: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS,
-                        tableCounter: tableCounter,
-                        runtimeConfig: runtimeConfig);
+                        tableCounter: tableCounter);
                 }
             }
         }
@@ -210,7 +211,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
             IncrementingInteger tableCounter,
-            RuntimeConfig runtimeConfig,
             EntityDbPolicyCosmosModel? parentEntity = null,
             HashSet<string>? visitedEntities = null)
         {
@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                 string entityType = field.Type.NamedType().Name.Value;
 
-                AssertIfEntityIsAvailableInConfig(runtimeConfig, entityType);
+                AssertIfEntityIsAvailableInConfig(entityType);
 
                 // If the entity is already visited, then it is a circular reference
                 if (!trackerForFields.Add(entityType))
@@ -290,16 +290,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     schemaDocument: schemaDocument,
                     currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
                     tableCounter: tableCounter,
-                    runtimeConfig: runtimeConfig,
                     parentEntity: isArrayType ? currentEntity : null,
                     visitedEntities: trackerForFields);
             }
         }
 
-        private static void AssertIfEntityIsAvailableInConfig(RuntimeConfig runtimeConfig, string entityName)
+        private void AssertIfEntityIsAvailableInConfig(string entityName)
         {
             // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
-            if (!runtimeConfig.Entities.ContainsKey(entityName))
+            if (!_runtimeConfigEntities.ContainsKey(entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"The entity '{entityName}' was not found in the runtime config.",
@@ -311,7 +310,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {
-            Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
+            Entity entity = _runtimeConfigEntities[entityName];
 
             string entitySource = entity.Source.Object;
 
@@ -336,7 +335,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public string GetSchemaName(string entityName)
         {
-            Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
+            Entity entity = _runtimeConfigEntities[entityName];
 
             string entitySource = entity.Source.Object;
 
@@ -556,7 +555,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public string GetEntityName(string graphQLType)
         {
-            if (_runtimeConfigProvider.GetConfig().Entities.ContainsKey(graphQLType))
+            if (_runtimeConfigEntities.ContainsKey(graphQLType))
             {
                 return graphQLType;
             }
@@ -578,7 +577,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             // Fallback to looking at the singular name of the entity.
-            foreach ((string _, Entity entity) in _runtimeConfigProvider.GetConfig().Entities)
+            foreach ((string _, Entity entity) in _runtimeConfigEntities)
             {
                 if (entity.GraphQL.Singular == graphQLType)
                 {
@@ -598,6 +597,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return string.Empty;
         }
 
+        // Use the runtimeConfigProvider to ensure we have current up to date
+        // state on development mode in case a hot
         public bool IsDevelopmentMode()
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();

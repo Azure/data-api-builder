@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
+using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -1109,6 +1111,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 Assert.Fail("Unexpected failure. Atleast one of the delete mutations should've succeeded");
             }
 
+        }
+
+        /// <summary>
+        /// Performs create item on different Windows Regional format settings and validate that the data type Float is correct
+        /// </summary>
+        [TestMethod]
+        public async Task CanCreateItemWithCultureInvariant(string cultureInfo, string dbQuery)
+        {
+            CultureInfo ci = new(cultureInfo);
+            CultureInfo.DefaultThreadCurrentCulture = ci;
+
+            string graphQLMutationName = "createSales";
+            string graphQLMutation = @"
+                mutation {
+                    createSales (item: { item_name: ""test_name"", subtotal: 3.14, tax: 1.15 }) {
+                        id
+                        item_name
+                        subtotal
+                        tax
+                        total
+                    }
+                }
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string dbResponse = await GetDatabaseResultAsync(dbQuery);
+            using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
+            
+            // Validate results
+            Assert.AreEqual(Convert.ToDouble(dbResponseJson.RootElement.GetProperty("total").GetDouble(), CultureInfo.InvariantCulture), response.GetProperty("total").GetDouble());
         }
 
         #endregion

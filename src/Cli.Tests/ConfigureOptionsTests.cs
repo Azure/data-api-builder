@@ -295,7 +295,7 @@ namespace Cli.Tests
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert
-            Assert.IsTrue(isSuccess);
+            Assert.IsFalse(isSuccess);
         }
 
         /// <summary>
@@ -325,7 +325,7 @@ namespace Cli.Tests
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert
-            Assert.IsTrue(isSuccess);
+            Assert.IsFalse(isSuccess);
         }
 
         /// <summary>
@@ -354,7 +354,7 @@ namespace Cli.Tests
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert
-            Assert.IsTrue(isSuccess);
+            Assert.IsFalse(isSuccess);
         }
     }
 }

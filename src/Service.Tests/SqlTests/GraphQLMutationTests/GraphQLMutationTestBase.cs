@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Globalization;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -1116,7 +1116,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <summary>
         /// Performs create item on different Windows Regional format settings and validate that the data type Float is correct
         /// </summary>
-        [TestMethod]
         public async Task CanCreateItemWithCultureInvariant(string cultureInfo, string dbQuery)
         {
             CultureInfo ci = new(cultureInfo);
@@ -1138,7 +1137,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             JsonElement response = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            
+
             // Validate results
             Assert.AreEqual(Convert.ToDouble(dbResponseJson.RootElement.GetProperty("total").GetDouble(), CultureInfo.InvariantCulture), response.GetProperty("total").GetDouble());
         }

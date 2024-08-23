@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
@@ -94,7 +95,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode createField =
                 query.Fields.Where(f => f.Name.Value == $"createFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: createField.Directives.Count);
+                actual: createField.Directives.Where(x => x.Name.Value is GraphQLUtils.AUTHORIZE_DIRECTIVE).Count());
         }
 
         [TestMethod]
@@ -123,8 +124,8 @@ type Foo @model(name:""Foo"") {
                     ),
                 "The type Date is not a known GraphQL type, and cannot be used in this schema."
             );
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.GraphQLMapping, ex.SubStatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
         }
 
         [TestMethod]
@@ -719,7 +720,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode deleteField =
                 query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
+                actual: deleteField.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -838,7 +839,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode collectionField =
                 query.Fields.Where(f => f.Name.Value == $"updateFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: collectionField.Directives.Count);
+                actual: field.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -905,46 +906,6 @@ type Bar @model(name:""Bar""){
             Assert.IsFalse(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
             Assert.IsTrue(inputObj.Fields[1].Type.IsListType(), "bar field should be a list");
             Assert.IsFalse(inputObj.Fields[1].Type.InnerType().IsNonNullType(), "list fields should be nullable");
-        }
-
-        [TestMethod]
-        [TestCategory("Mutation Builder - Create")]
-        public void CreateMutationWontCreateNestedModelsOnInput()
-        {
-            string gql =
-                @"
-type Foo @model(name:""Foo"") {
-    id: ID!
-    baz: Baz!
-}
-
-type Baz @model(name:""Baz"") {
-    id: ID!
-    x: String!
-}
-                ";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
-            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
-            {
-                { "Foo", DatabaseType.MSSQL },
-                { "Baz", DatabaseType.MSSQL }
-            };
-            DocumentNode mutationRoot = MutationBuilder.Build(
-                root,
-                entityNameToDatabaseType,
-                new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } }),
-                entityPermissionsMap: _entityPermissions
-                );
-
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
-            Assert.AreEqual(1, field.Arguments.Count);
-
-            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
-            Assert.AreEqual(1, argType.Fields.Count);
-            Assert.AreEqual("id", argType.Fields[0].Name.Value);
         }
 
         [TestMethod]
@@ -1051,7 +1012,10 @@ type Foo @model(name:""Foo"") {{
         /// When singular and plural names are specified by the user, these names will be used for generating the
         /// queries and mutations in the schema.
         /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
-        /// This test validates that this naming convention is followed for the mutations when the schema is generated.
+        /// 
+        /// This test validates a) Number of mutation fields generated b) Mutation field names c) Mutation field descriptions
+        /// when multiple create operations are disabled.
+        /// 
         /// </summary>
         /// <param name="gql">Type definition for the entity</param>
         /// <param name="entityName">Name of the entity</param>
@@ -1060,20 +1024,20 @@ type Foo @model(name:""Foo"") {{
         /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
         [DataTestMethod]
         [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, null, null, new string[] { "People" },
-            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined")]
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation disabled")]
         [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for plural entity name with singular plural defined")]
+            DisplayName = "Mutation name and description validation for plural entity name with singular plural defined - Multiple Create Operation disabled")]
         [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "" }, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for plural entity name with singular defined")]
+            DisplayName = "Mutation name and description validation for plural entity name with singular defined - Multiple Create Operation disabled")]
         [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, null, null, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined")]
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation disabled")]
         [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for singular entity name with singular plural defined")]
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural defined - Multiple Create Operation disabled")]
         [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, new string[] { "Person", "Book" }, new string[] { "People", "Books" }, new string[] { "Person", "Book" },
-            DisplayName = "Mutation name and description validation for multiple entities with singular, plural")]
+            DisplayName = "Mutation name and description validation for multiple entities with singular, plural - Multiple Create Operation disabled")]
         [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, null, null, new string[] { "Person", "Book" },
-            DisplayName = "Mutation name and description validation for multiple entities with singular plural not defined")]
-        public void ValidateMutationsAreCreatedWithRightName(
+            DisplayName = "Mutation name and description validation for multiple entities with singular plural not defined - Multiple Create Operation disabled")]
+        public void ValidateMutationsAreCreatedWithRightNameWithMultipleCreateOperationDisabled(
             string gql,
             string[] entityNames,
             string[] singularNames,
@@ -1089,6 +1053,7 @@ type Foo @model(name:""Foo"") {{
                 new string[] { "anonymous", "authenticated" });
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            int totalExpectedMutations = 0;
             for (int i = 0; i < entityNames.Length; i++)
             {
                 Entity entity = (singularNames is not null)
@@ -1097,22 +1062,28 @@ type Foo @model(name:""Foo"") {{
                 entityNameToEntity.TryAdd(entityNames[i], entity);
                 entityNameToDatabaseType.TryAdd(entityNames[i], i % 2 == 0 ? DatabaseType.CosmosDB_NoSQL : DatabaseType.MSSQL);
 
+                // The permissions are setup for create, update, delete and patch(only for cosmos) operations.
+                // So create, update, delete and patch(only for cosmos) mutations should get generated.
+                // A Check to validate that the count of mutations generated is -
+                // 1. 1 Create mutation (MSSQL and CosmosDB)
+                // 2. 1 Update mutation (MSSQL and CosmosDB)
+                // 3. 1 Delete mutation (MSSQL and CosmosDB)
+                // 4. 1 Patch mutation (CosmosDB only)
+                totalExpectedMutations += (i % 2 == 0 ? 4 : 3);
             }
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
                 entityNameToDatabaseType,
                 new(entityNameToEntity),
-                entityPermissionsMap: entityPermissionsMap
+                entityPermissionsMap: entityPermissionsMap,
+                IsMultipleCreateOperationEnabled: false
                 );
 
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
             Assert.IsNotNull(mutation);
 
-            // The permissions are setup for create, update and delete operations.
-            // So create, update and delete mutations should get generated.
-            // A Check to validate that the count of mutations generated is 3.
-            Assert.AreEqual(3 * entityNames.Length, mutation.Fields.Count);
+            Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)
             {
@@ -1122,6 +1093,122 @@ type Foo @model(name:""Foo"") {{
                 Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMutationName));
                 FieldDefinitionNode createMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMutationName);
                 Assert.AreEqual(expectedCreateMutationDescription, createMutation.Description.Value);
+
+                // Name and Description validations for Update mutation
+                string expectedUpdateMutationName = $"update{expectedNames[i]}";
+                string expectedUpdateMutationDescription = $"Updates a {expectedNames[i]}";
+                Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedUpdateMutationName));
+                FieldDefinitionNode updateMutation = mutation.Fields.First(f => f.Name.Value == expectedUpdateMutationName);
+                Assert.AreEqual(expectedUpdateMutationDescription, updateMutation.Description.Value);
+
+                // Name and Description validations for Delete mutation
+                string expectedDeleteMutationName = $"delete{expectedNames[i]}";
+                string expectedDeleteMutationDescription = $"Delete a {expectedNames[i]}";
+                Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedDeleteMutationName));
+                FieldDefinitionNode deleteMutation = mutation.Fields.First(f => f.Name.Value == expectedDeleteMutationName);
+                Assert.AreEqual(expectedDeleteMutationDescription, deleteMutation.Description.Value);
+
+                if (entityNameToDatabaseType[entityNames[i]] == DatabaseType.CosmosDB_NoSQL)
+                {
+                    // Name and Description validations for Patch mutation
+                    string expectedPatchMutationName = $"patch{expectedNames[i]}";
+                    string expectedPatchMutationDescription = $"Updates a {expectedNames[i]}";
+                    Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedPatchMutationName));
+                    FieldDefinitionNode patchMutation = mutation.Fields.First(f => f.Name.Value == expectedPatchMutationName);
+                    Assert.AreEqual(expectedPatchMutationDescription, patchMutation.Description.Value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// We assume that the user will provide a singular name for the entity. Users have the option of providing singular and
+        /// plural names for an entity in the config to have more control over the graphql schema generation.
+        /// When singular and plural names are specified by the user, these names will be used for generating the
+        /// queries and mutations in the schema.
+        /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
+        /// 
+        /// This test validates a) Number of mutation fields generated b) Mutation field names c) Mutation field descriptions
+        /// when multiple create operations are enabled.
+        /// 
+        /// </summary>
+        /// <param name="gql">Type definition for the entity</param>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="singularName">Singular name provided by the user</param>
+        /// <param name="pluralName">Plural name provided by the user</param>
+        /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
+        [DataTestMethod]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, null, null, new string[] { "People" }, new string[] { "Peoples" },
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" },
+            DisplayName = "Mutation name and description validation for plural entity name with singular plural defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "" }, new string[] { "Person" }, new string[] { "People" },
+            DisplayName = "Mutation name and description validation for plural entity name with singular defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" },
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, new string[] { "Person", "Book" }, new string[] { "People", "Books" }, new string[] { "Person", "Book" }, new string[] { "People", "Books" },
+            DisplayName = "Mutation name and description validation for multiple entities with singular, plural - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, null, null, new string[] { "Person", "Book" }, new string[] { "People", "Books" },
+            DisplayName = "Mutation name and description validation for multiple entities with singular plural not defined - Multiple Create Operation enabled")]
+        public void ValidateMutationsAreCreatedWithRightNameWithMultipleCreateOperationsEnabled(
+            string gql,
+            string[] entityNames,
+            string[] singularNames,
+            string[] pluralNames,
+            string[] expectedNames,
+            string[] expectedCreateMultipleMutationNames)
+        {
+            Dictionary<string, Entity> entityNameToEntity = new();
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new();
+            Dictionary<string, EntityMetadata> entityPermissionsMap = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
+                entityNames,
+                new EntityActionOperation[] { EntityActionOperation.Create, EntityActionOperation.Update, EntityActionOperation.Delete },
+                new string[] { "anonymous", "authenticated" });
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+
+            for (int i = 0; i < entityNames.Length; i++)
+            {
+                Entity entity = (singularNames is not null)
+                                    ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularNames[i], pluralNames[i])
+                                    : GraphQLTestHelpers.GenerateEntityWithSingularPlural(entityNames[i], entityNames[i].Pluralize());
+                entityNameToEntity.TryAdd(entityNames[i], entity);
+                entityNameToDatabaseType.TryAdd(entityNames[i], DatabaseType.MSSQL);
+
+            }
+
+            DocumentNode mutationRoot = MutationBuilder.Build(
+                root,
+                entityNameToDatabaseType,
+                new(entityNameToEntity),
+                entityPermissionsMap: entityPermissionsMap,
+                IsMultipleCreateOperationEnabled: true);
+
+            ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
+            Assert.IsNotNull(mutation);
+
+            // The permissions are setup for create, update and delete operations.
+            // So create, update and delete mutations should get generated.
+            // A Check to validate that the count of mutations generated is 4 -
+            // 1. 2 Create mutations (point/many) when db supports nested created, else 1.
+            // 2. 1 Update mutation
+            // 3. 1 Delete mutation
+            int totalExpectedMutations = 4 * entityNames.Length;
+            Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
+
+            for (int i = 0; i < entityNames.Length; i++)
+            {
+                // Name and Description validations for Create mutation
+                string expectedCreateMutationName = $"create{expectedNames[i]}";
+                string expectedCreateMutationDescription = $"Creates a new {expectedNames[i]}";
+                Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMutationName));
+                FieldDefinitionNode createMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMutationName);
+                Assert.AreEqual(expectedCreateMutationDescription, createMutation.Description.Value);
+
+                // Name and Description validations for CreateMultiple mutation
+                string expectedCreateMultipleMutationName = $"create{expectedCreateMultipleMutationNames[i]}";
+                string expectedCreateMultipleMutationDescription = $"Creates multiple new {expectedCreateMultipleMutationNames[i]}";
+                Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMultipleMutationName));
+                FieldDefinitionNode createMultipleMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMultipleMutationName);
+                Assert.AreEqual(expectedCreateMultipleMutationDescription, createMultipleMutation.Description.Value);
 
                 // Name and Description validations for Update mutation
                 string expectedUpdateMutationName = $"update{expectedNames[i]}";

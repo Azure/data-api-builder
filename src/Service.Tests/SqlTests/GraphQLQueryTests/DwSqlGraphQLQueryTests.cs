@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -68,46 +69,57 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-            string msSqlQuery = @"
-                SELECT
-                  TOP 1 [table0].[id] AS [id],
-                  JSON_QUERY ([table1_subq].[data]) AS [websiteplacement]
-                FROM
-                  [books] AS [table0]
-                  OUTER APPLY (
-                    SELECT
-                      TOP 1 [table1].[id] AS [id],
-                      [table1].[price] AS [price],
-                      JSON_QUERY ([table2_subq].[data]) AS [books]
-                    FROM
-                      [book_website_placements] AS [table1]
-                      OUTER APPLY (
-                        SELECT
-                          TOP 1 [table2].[id] AS [id]
-                        FROM
-                          [books] AS [table2]
-                        WHERE
-                          [table1].[book_id] = [table2].[id]
-                        ORDER BY
-                          [table2].[id] Asc FOR JSON PATH,
-                          INCLUDE_NULL_VALUES,
-                          WITHOUT_ARRAY_WRAPPER
-                      ) AS [table2_subq]([data])
-                    WHERE
-                      [table1].[book_id] = [table0].[id]
-                    ORDER BY
-                      [table1].[id] Asc FOR JSON PATH,
-                      INCLUDE_NULL_VALUES,
-                      WITHOUT_ARRAY_WRAPPER
-                  ) AS [table1_subq]([data])
-                WHERE
-                  [table0].[id] = 1
-                ORDER BY
-                  [table0].[id] Asc FOR JSON PATH,
-                  INCLUDE_NULL_VALUES,
-                  WITHOUT_ARRAY_WRAPPER";
+            string dwSqlQuery = @"
+                SELECT COALESCE('[' + STRING_AGG('{' + N'""id"":' + ISNULL(STRING_ESCAPE(CAST([id] AS NVARCHAR(MAX)), 'json'), 
+                                'null') + ',' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' + 
+                            N'""websiteplacement"":' + ISNULL([websiteplacement], 'null') + 
+                            '}', ', ') + ']', '[]')
+                FROM (
+                    SELECT TOP 100 [table0].[id] AS [id],
+                        [table0].[title] AS [title],
+                        ([table1_subq].[data]) AS [websiteplacement]
+                    FROM [dbo].[books] AS [table0]
+                    OUTER APPLY (
+                        SELECT STRING_AGG('{' + N'""price"":' + ISNULL(STRING_ESCAPE(CAST([price] AS NVARCHAR(MAX)), 'json'), 
+                                    'null') + '}', ', ')
+                        FROM (
+                            SELECT TOP 1 [table1].[price] AS [price]
+                            FROM [dbo].[book_website_placements] AS [table1]
+                            WHERE [table0].[id] = [table1].[book_id]
+                                AND [table1].[book_id] = [table0].[id]
+                            ORDER BY [table1].[id] ASC
+                            ) AS [table1]
+                        ) AS [table1_subq]([data])
+                    WHERE 1 = 1
+                    ORDER BY [table0].[id] ASC
+                    ) AS [table0]";
 
-            await OneToOneJoinQuery(msSqlQuery);
+            await OneToOneJoinQuery(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            string dwSqlQuery = @"
+                SELECT COALESCE('['+STRING_AGG('{'+N'""fancyName"":' + ISNULL('""' + STRING_ESCAPE([fancyName],'json') + '""','null')+','+N'""fungus"":' + ISNULL([fungus],'null')+'}',', ')+']','[]')
+                FROM (
+                    SELECT TOP 100 [table0].[species] AS [fancyName], 
+                        (SELECT TOP 1 '{""habitat"":""' + STRING_ESCAPE([table1].[habitat], 'json') + '""}'
+                         FROM [dbo].[fungi] AS [table1]
+                         WHERE [table0].[species] = [table1].[habitat] AND [table1].[habitat] = [table0].[species]
+                         ORDER BY [table1].[speciesid] ASC) AS [fungus]
+                    FROM [dbo].[trees] AS [table0]
+                    WHERE 1 = 1
+                    ORDER BY [table0].[treeId] ASC
+                ) AS [table0]";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(dwSqlQuery);
         }
 
         /// <summary>
@@ -193,6 +205,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM [foo].[magazines] ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestQueryingTypeWithNullableIntFields(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields()
+        {
+            string msSqlQuery = $"SELECT datetime_types FROM type_table ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await TestQueryingTypeWithNullableDateTimeFields(msSqlQuery);
         }
 
         /// <summary>
@@ -334,6 +356,64 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a single row
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingSingleRow()
+        {
+            string dwSqlQuery = $"EXEC dbo.get_publisher_by_id @id=1234";
+            await TestStoredProcedureQueryForGettingSingleRow(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a list(multiple rows)
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingMultipleRows()
+        {
+            string dwSqlQuery = $"EXEC dbo.get_books";
+            await TestStoredProcedureQueryForGettingMultipleRows(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that counts the total number of rows
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows()
+        {
+            string dwSqlQuery = $"EXEC dbo.count_books";
+            await TestStoredProcedureQueryForGettingTotalNumberOfRows(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that contains null in the result set.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryWithResultsContainingNull()
+        {
+            string dwSqlQuery = $"EXEC dbo.get_authors_history_by_first_name @firstName='Aaron'";
+            await TestStoredProcedureQueryWithResultsContainingNull(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Checks failure on providing arguments with no default in runtimeconfig.
+        /// In this test, there is no default value for the argument 'id' in runtimeconfig, nor is it specified in the query.
+        /// Stored procedure expects id argument to be provided.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryWithNoDefaultInConfig()
+        {
+            string graphQLQueryName = "executeGetPublisher";
+            string graphQLQuery = @"{
+                executeGetPublisher {
+                    name
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Did not provide all procedure params");
+        }
         #endregion
     }
 }

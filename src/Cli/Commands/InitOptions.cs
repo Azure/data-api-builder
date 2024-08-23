@@ -5,6 +5,7 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -36,7 +37,8 @@ namespace Cli.Commands
             bool graphqlDisabled = false,
             CliBool restEnabled = CliBool.None,
             CliBool graphqlEnabled = CliBool.None,
-            CliBoolean restRequestBodyStrict = CliBoolean.None,
+            CliBool restRequestBodyStrict = CliBool.None,
+            CliBool multipleCreateOperationEnabled = CliBool.None,
             string? config = null)
             : base(config)
         {
@@ -59,6 +61,7 @@ namespace Cli.Commands
             RestEnabled = restEnabled;
             GraphQLEnabled = graphqlEnabled;
             RestRequestBodyStrict = restRequestBodyStrict;
+            MultipleCreateOperationEnabled = multipleCreateOperationEnabled;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
@@ -118,9 +121,12 @@ namespace Cli.Commands
         // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
         // included in the init command.
         [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
-        public CliBoolean RestRequestBodyStrict { get; }
+        public CliBool RestRequestBodyStrict { get; }
 
-        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
+        public CliBool MultipleCreateOperationEnabled { get; }
+
+        public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader, fileSystem);
@@ -128,10 +134,12 @@ namespace Cli.Commands
             {
                 logger.LogInformation("Config file generated.");
                 logger.LogInformation("SUGGESTION: Use 'dab add [entity-name] [options]' to add new entities in your config.");
+                return CliReturnCode.SUCCESS;
             }
             else
             {
                 logger.LogError("Could not generate config file.");
+                return CliReturnCode.GENERAL_ERROR;
             }
         }
     }

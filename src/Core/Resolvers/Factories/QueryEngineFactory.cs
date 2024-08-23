@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
@@ -29,7 +30,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor contextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            ILogger<IQueryEngine> logger)
+            ILogger<IQueryEngine> logger,
+            DabCacheService cache)
         {
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
 
@@ -38,7 +40,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             if (config.SqlDataSourceUsed)
             {
                 IQueryEngine queryEngine = new SqlQueryEngine(
-                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider);
+                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider, cache);
                 _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
                 _queryEngines.Add(DatabaseType.MySQL, queryEngine);
                 _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);
@@ -47,7 +49,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
             if (config.CosmosDataSourceUsed)
             {
-                IQueryEngine queryEngine = new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser);
+                IQueryEngine queryEngine = new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser, runtimeConfigProvider, cache);
                 _queryEngines.Add(DatabaseType.CosmosDB_NoSQL, queryEngine);
             }
 

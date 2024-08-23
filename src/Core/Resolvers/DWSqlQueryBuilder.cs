@@ -15,6 +15,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class DwSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
+        public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
 
         /// <inheritdoc />
         public override string QuoteIdentifier(string ident)
@@ -107,9 +108,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // If the column is not a subquery column and is not a string, cast it to string
                 if (!subQueryColumn && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
                 {
-                    col_value = $"CAST([{col_value}] AS NVARCHAR(MAX))";
-                    // Create json. Example: "book.id": 1 would be a sample output.
-                    stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null')");
+                    col_value = $"CONVERT(NVARCHAR(MAX), [{col_value}])";
+
+                    Type col_type = structure.GetColumnSystemType(column.ColumnName);
+
+                    if (col_type == typeof(DateTime))
+                    {
+                        // Need to wrap datetime in quotes to ensure correct deserialization.
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\"\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null') + \'\"\'+");
+                    }
+                    else if (col_type == typeof(Boolean))
+                    {
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(IIF({col_value} = 1, 'true', 'false'),'null')");
+                    }
+                    else
+                    {
+                        // Create json. Example: "book.id": 1 would be a sample output.
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null')");
+                    }
                 }
                 else
                 {
@@ -146,31 +162,119 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse Sql currently does not support inserts");
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+
+            // Predicates by virtue of database policy for Create action.
+            string dbPolicypredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+
+            // Columns whose values are provided in the request body - to be inserted into the record.
+            string insertColumns = Build(structure.InsertColumns);
+
+            // Values to be inserted into the entity.
+            string values = dbPolicypredicates.Equals(BASE_PREDICATE) ?
+                $"VALUES ({string.Join(", ", structure.Values)});" : $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {dbPolicypredicates};";
+
+            // Final insert query to be executed against the database.
+            StringBuilder insertQuery = new();
+            insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) ");
+            insertQuery.Append(values);
+
+            return insertQuery.ToString();
         }
 
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support updates");
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+            string predicates = JoinPredicateStrings(
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Update),
+                       Build(structure.Predicates));
+
+            StringBuilder updateQuery = new($"UPDATE {tableName} SET {Build(structure.UpdateOperations, ", ")} ");
+            updateQuery.Append($"WHERE {predicates};");
+            return updateQuery.ToString();
         }
 
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support deletes");
+            string predicates = JoinPredicateStrings(
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Delete),
+                       Build(structure.Predicates));
+
+            return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                    $"WHERE {predicates} ";
         }
 
         /// <inheritdoc />
         public string Build(SqlExecuteStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support executes");
+            return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                $"{BuildProcedureParameterList(structure.ProcedureParameters)}";
         }
 
         /// <inheritdoc />
         public string Build(SqlUpsertQueryStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support updates");
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+
+            // Predicates by virtue of PK.
+            string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
+
+            string updateOperations = Build(structure.UpdateOperations, ", ");
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+
+            // Query to get the number of records with a given PK.
+            string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +
+                $"SET @ROWS_TO_UPDATE = ({queryToGetCountOfRecordWithPK}); " +
+                $"{queryToGetCountOfRecordWithPK};";
+
+            // Final query to be executed for the given PUT/PATCH operation.
+            StringBuilder upsertQuery = new(prefixQuery);
+
+            // Query to update record (if there exists one for given PK).
+            StringBuilder updateQuery = new(
+                $"IF @ROWS_TO_UPDATE = 1 " +
+                $"BEGIN " +
+                $"UPDATE {tableName} " +
+                $"SET {updateOperations} ");
+
+            // End the IF block.
+            updateQuery.Append("END ");
+
+            // Append the update query to upsert query.
+            upsertQuery.Append(updateQuery);
+            if (!structure.IsFallbackToUpdate)
+            {
+                // Append the conditional to check if the insert query is to be executed or not.
+                // Insert is only attempted when no record exists corresponding to given PK.
+                upsertQuery.Append("ELSE BEGIN ");
+
+                // Columns which are assigned some value in the PUT/PATCH request.
+                string insertColumns = Build(structure.InsertColumns);
+
+                // Predicates added by virtue of database policy for create operation.
+                string createPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+
+                // Query to insert record (if there exists none for given PK).
+                StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) ");
+
+                // Query to fetch the column values to be inserted into the entity.
+                string fetchColumnValuesQuery = BASE_PREDICATE.Equals(createPredicates) ?
+                    $"VALUES({string.Join(", ", structure.Values)});" :
+                    $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {createPredicates};";
+
+                // Append the values to be inserted to the insertQuery.
+                insertQuery.Append(fetchColumnValuesQuery);
+
+                // Append the insert query to the upsert query.
+                upsertQuery.Append(insertQuery.ToString());
+
+                // End the ELSE block.
+                upsertQuery.Append("END");
+            }
+
+            return upsertQuery.ToString();
         }
 
         /// <summary>
@@ -203,7 +307,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support stored procedures");
+            string query = $"EXEC sp_describe_first_result_set @tsql = N'{databaseObjectName}';";
+            return query;
         }
 
         /// <summary>
@@ -219,10 +324,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
         {
             // For 'timestamp' columns sc.is_computed = 0.
-            string query = "SELECT ifsc.column_name from sys.columns as sc INNER JOIN INFORMATION_SCHEMA.COLUMNS as ifsc " +
-                "ON (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +
-                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) and ifsc.table_name = {tableParamName} " +
-                $"AND ifsc.table_schema = {schemaParamName} and ifsc.column_name = sc.name;";
+            string query = "SELECT ifsc.COLUMN_NAME from sys.columns as sc INNER JOIN INFORMATION_SCHEMA.COLUMNS as ifsc " +
+                "ON (sc.is_computed = 1 or ifsc.DATA_TYPE = 'timestamp') " +
+                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) AND ifsc.TABLE_SCHEMA = {schemaParamName} " +
+                $"AND ifsc.TABLE_NAME = {tableParamName} AND ifsc.COLUMN_NAME = sc.name;";
 
             return query;
         }
@@ -234,6 +339,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "On ST.object_id = STE.object_id AND ST.parent_id = object_id(@param0 + '.' + @param1) WHERE ST.is_disabled = 0;";
 
             return query;
+        }
+
+        /// <summary>
+        /// Builds the parameter list for the stored procedure execute call
+        /// paramKeys are the user-generated procedure parameter names
+        /// paramValues are the auto-generated, parameterized values (@param0, @param1..)
+        /// </summary>
+        private static string BuildProcedureParameterList(Dictionary<string, object> procedureParameters)
+        {
+            StringBuilder sb = new();
+            foreach ((string paramKey, object paramValue) in procedureParameters)
+            {
+                sb.Append($"@{paramKey} = {paramValue}, ");
+            }
+
+            string parameterList = sb.ToString();
+            // If at least one parameter added, remove trailing comma and space, else return empty string
+            return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
     }
 }

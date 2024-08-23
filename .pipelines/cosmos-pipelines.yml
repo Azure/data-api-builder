@@ -15,9 +15,6 @@ trigger:
 
 strategy:
   matrix:
-    linux:
-      imageName: "ubuntu-latest"
-      ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
     windows:
       imageName: "windows-latest"
       ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
@@ -38,9 +35,20 @@ steps:
       Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
       Start-CosmosDbEmulator
 
-- task: NuGetAuthenticate@0
+- task: NuGetAuthenticate@1
   displayName: 'NuGet Authenticate'
 
+# The .NET CLI commands in proceeding tasks use the .NET SDK version specified ("selected") here.
+# Per Microsoft Learn Docs, "Selecting the .NET SDK version is independent from 
+# specifying the runtime version a project targets."
+- task: UseDotNet@2
+  displayName: Setup .NET SDK v8.0.x
+  inputs:
+    packageType: sdk
+    version: 8.0.x
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+# Preserving .NET 6 for multi-targeting support
 - task: UseDotNet@2
   displayName: Setup .NET SDK v6.0.x
   inputs:
@@ -60,8 +68,17 @@ steps:
   displayName: Build
   inputs:
     command: build
-    projects: '**/*.csproj'
+    projects: |
+        **/*.csproj
+        !**/*Tests*.csproj
     arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
+
+- task: DotNetCoreCLI@2
+  displayName: Build Test Projects
+  inputs:
+    command: build
+    projects: '**/*Tests/*.csproj'
+    arguments: '--configuration $(buildConfiguration)'
 
 - bash: |
     echo "Waiting for CosmosDB Emulator to Start"
@@ -79,7 +96,7 @@ steps:
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
+    targetFiles: 'src/out/tests/*/dab-config.CosmosDb_NoSql.json'
 
 - task: DotNetCoreCLI@2
   displayName: 'Run CosmosDb_NoSql Integration Tests'

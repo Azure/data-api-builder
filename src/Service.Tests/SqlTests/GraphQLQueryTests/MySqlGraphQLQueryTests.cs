@@ -107,33 +107,53 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQuery()
         {
             string mySqlQuery = @"
-                SELECT JSON_OBJECT('id', `subq11`.`id`, 'websiteplacement', `subq11`.`websiteplacement`)
-                       AS `data`
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq7`.`id`, 'title', `subq7`.`title`, 'websiteplacement',
+                                `subq7`.`websiteplacement`)), JSON_ARRAY()) AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
                         `table1_subq`.`data` AS `websiteplacement`
                     FROM `books` AS `table0`
-                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq10`.`id`, 'price', `subq10`.`price`, 'books',
-                                `subq10`.`books`) AS `data` FROM (
-                            SELECT `table1`.`id` AS `id`,
-                                `table1`.`price` AS `price`,
-                                `table2_subq`.`data` AS `books`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('price', `subq6`.`price`) AS `data` FROM (
+                            SELECT `table1`.`price` AS `price`
                             FROM `book_website_placements` AS `table1`
-                            LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq9`.`id`) AS `data` FROM (
-                                    SELECT `table2`.`id` AS `id`
-                                    FROM `books` AS `table2`
-                                    WHERE `table1`.`book_id` = `table2`.`id`
-                                    ORDER BY `table2`.`id` asc LIMIT 1
-                                    ) AS `subq9`) AS `table2_subq` ON TRUE
-                            WHERE `table0`.`id` = `table1`.`book_id`
-                            ORDER BY `table1`.`id` asc LIMIT 1
-                            ) AS `subq10`) AS `table1_subq` ON TRUE
-                    WHERE `table0`.`id` = 1
-                    ORDER BY `table0`.`id` asc LIMIT 100
-                    ) AS `subq11`
+                            WHERE `table1`.`book_id` = `table0`.`id`
+                            ORDER BY `table1`.`id` ASC LIMIT 1
+                            ) AS `subq6`) AS `table1_subq` ON TRUE
+                    WHERE 1 = 1
+                    ORDER BY `table0`.`id` ASC LIMIT 100
+                    ) AS `subq7`
             ";
 
             await OneToOneJoinQuery(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('fancyName', `subq7`.`fancyName`, 'fungus', `subq7`.`fungus`)), JSON_ARRAY()) AS `data`
+                FROM (
+                    SELECT `table0`.`species` AS `fancyName`,
+                        `table1_subq`.`data` AS `fungus`
+                    FROM `trees` AS `table0`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('habitat', `subq6`.`habitat`) AS `data` FROM (
+                            SELECT `table1`.`habitat` AS `habitat`
+                            FROM `fungi` AS `table1`
+                            WHERE `table1`.`habitat` = `table0`.`species`
+                            ORDER BY `table1`.`habitat` ASC LIMIT 1
+                            ) AS `subq6`) AS `table1_subq` ON TRUE
+                    WHERE 1 = 1
+                    LIMIT 100
+                    ) AS `subq7`
+            ";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(mySqlQuery);
         }
 
         [TestMethod]
@@ -271,6 +291,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await TestQueryingTypeWithNullableStringFields(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('datetime_types', `subq1`.`datetime_types`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`datetime_types` AS `datetime_types`
+                   FROM `type_table` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id` asc
+                   LIMIT 100) AS `subq1`";
+
+            await TestQueryingTypeWithNullableDateTimeFields(mySqlQuery);
         }
 
         /// <summary>

@@ -51,6 +51,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindOnTableWithNamingCollision",
+                $"SELECT [upc], [comic_name], [issue] " +
+                $"FROM { _collisionTable } AS { _collisionEntity } " +
+                $"WHERE 1 = 1 ORDER BY [upc] ASC FOR JSON PATH"
+            },
+            {
                 "FindViewAll",
                 $"SELECT * FROM { _simple_all_books } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
@@ -236,6 +242,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTest_NoQueryParams_PaginationNextLink",
                 $"SELECT TOP 100 * FROM { _integrationPaginationTableName } " +
+                $"ORDER BY id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTest_Negative1QueryParams_Pagination",
+                $"SELECT TOP 100000 * FROM { _integrationPaginationTableName } " +
                 $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
@@ -432,7 +444,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
                 $"SELECT TOP 101 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
-                $"WHERE [trees].[treeId] < 2 " +
+                $"WHERE [trees].[species] > 'Pseudotsuga menziesii' " +
                 $"ORDER BY [trees].[species] asc, [trees].[treeId] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
@@ -546,6 +558,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"SELECT [id], [title]" +
                 $"FROM {_integrationTableName} " +
                 $"ORDER BY [publisher_id] ASC, [id] ASC " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                $"SELECT * FROM { _tableWithVarcharMax } " +
+                $"WHERE color IS NULL AND ownername = 'Abhishek' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'sand' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'forestland' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             }
         };

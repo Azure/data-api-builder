@@ -4,7 +4,6 @@
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -116,7 +115,7 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
                 _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
             }
 
-            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
+            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
         }
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
@@ -191,8 +190,8 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
-            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
-            _runtimeConfig.UpdateDataSourceNameToDataSource(_runtimeConfig.GetDefaultDataSourceName(), _runtimeConfig.DataSource);
+            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
+            _runtimeConfig.UpdateDataSourceNameToDataSource(_runtimeConfig.DefaultDataSourceName, _runtimeConfig.DataSource);
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -221,7 +220,7 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
     {
         if (string.IsNullOrEmpty(dataSourceName))
         {
-            dataSourceName = runtimeConfig.GetDefaultDataSourceName();
+            dataSourceName = runtimeConfig.DefaultDataSourceName;
         }
 
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
@@ -238,13 +237,13 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
 
         DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
 
-        Dictionary<string, JsonElement> options;
+        Dictionary<string, object?> options;
         if (dataSource.Options is not null)
         {
             options = new(dataSource.Options)
             {
                 // push the "raw" GraphQL schema into the options to pull out later when requested
-                { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
+                { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), schema }
             };
         }
         else
@@ -258,13 +257,13 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
         if (database is not null)
         {
             // Add or update the options to contain the parsed database
-            options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
+            options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = database;
         }
 
         // Update the connection string in the datasource with the one that was provided to the controller
         dataSource = dataSource with { Options = options, ConnectionString = connectionString };
 
-        if (dataSourceName == runtimeConfig.GetDefaultDataSourceName())
+        if (dataSourceName == runtimeConfig.DefaultDataSourceName)
         {
             // update default db.
             runtimeConfig = runtimeConfig with { DataSource = dataSource };

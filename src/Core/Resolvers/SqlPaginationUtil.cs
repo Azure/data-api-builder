@@ -4,6 +4,7 @@
 using System.Collections.Specialized;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -29,38 +30,65 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <list>*Connection.hasNextPage which is decided on whether structure.Limit() elements have been returned</list>
         /// </list>
         /// </summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonElement(JsonElement root, PaginationMetadata paginationMetadata)
+        public static JsonElement CreatePaginationConnectionFromJsonElement(JsonElement root, PaginationMetadata paginationMetadata)
+            => CreatePaginationConnection(root, paginationMetadata).ToJsonElement();
+
+        /// <summary>
+        /// Wrapper for CreatePaginationConnectionFromJsonElement
+        /// </summary>
+        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
+        {
+            // necessary for MsSql because it doesn't coalesce list query results like Postgres
+            if (jsonDocument is null)
+            {
+                jsonDocument = JsonDocument.Parse("[]");
+            }
+
+            JsonElement root = jsonDocument.RootElement.Clone();
+
+            // create the connection object.
+            return CreatePaginationConnection(root, paginationMetadata).ToJsonDocument();
+        }
+
+        private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)
         {
             // Maintains the connection JSON object *Connection
-            Dictionary<string, object> connectionJson = new();
+            JsonObject connection = new();
 
             // in dw we wrap array with "" and hence jsonValueKind is string instead of array.
             if (root.ValueKind is JsonValueKind.String)
             {
-                JsonDocument document = JsonDocument.Parse(root.GetString()!);
-                root = document.RootElement;
+                using JsonDocument document = JsonDocument.Parse(root.GetString()!);
+                root = document.RootElement.Clone();
             }
 
+            // If the request includes either hasNextPage or endCursor then to correctly return those
+            // values we need to determine the correct pagination logic
+            bool isPaginationRequested = paginationMetadata.RequestedHasNextPage || paginationMetadata.RequestedEndCursor;
+
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
-
+            int returnedElementCount = rootEnumerated.Count();
             bool hasExtraElement = false;
-            if (paginationMetadata.RequestedHasNextPage)
+
+            if (isPaginationRequested)
             {
-                // check if the number of elements requested is successfully returned
-                // structure.Limit() is first + 1 for paginated queries where hasNextPage is requested
-                hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
-
-                // add hasNextPage to connection elements
-                connectionJson.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement ? true : false);
-
+                // structure.Limit() is first + 1 for paginated queries where hasNextPage or endCursor is requested
+                hasExtraElement = returnedElementCount == paginationMetadata.Structure!.Limit();
                 if (hasExtraElement)
                 {
-                    // remove the last element
+                    // In a pagination scenario where we have an extra element, this element
+                    // must be removed since it was only used to determine if there are additional
+                    // records after those requested.
                     rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+                    --returnedElementCount;
                 }
             }
 
-            int returnedElemNo = rootEnumerated.Count();
+            if (paginationMetadata.RequestedHasNextPage)
+            {
+                // add hasNextPage to connection elements
+                connection.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement);
+            }
 
             if (paginationMetadata.RequestedItems)
             {
@@ -68,23 +96,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // use rootEnumerated to make the *Connection.items since the last element of rootEnumerated
                     // is removed if the result has an extra element
-                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, JsonSerializer.Serialize(rootEnumerated.ToArray()));
+                    connection.Add(QueryBuilder.PAGINATION_FIELD_NAME, JsonSerializer.Serialize(rootEnumerated.ToArray()));
                 }
                 else
                 {
                     // if the result doesn't have an extra element, just return the dbResult for *Connection.items
-                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
+                    connection.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
                 }
             }
 
             if (paginationMetadata.RequestedEndCursor)
             {
-                // parse *Connection.endCursor if there are no elements
-                // if no after is added, but it has been requested HotChocolate will report it as null
-                if (returnedElemNo > 0)
+                // Note: if we do not add endCursor to the connection but it was in the request, its value will
+                // automatically be populated as null.
+                // Need to validate we have an extra element, because otherwise there is no next page
+                // and endCursor should be left as null.
+                if (returnedElementCount > 0 && hasExtraElement)
                 {
-                    JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
+                    JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElementCount - 1);
+                    connection.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
                         MakeCursorFromJsonElement(
                             lastElemInRoot,
                             paginationMetadata.Structure!.PrimaryKey(),
@@ -96,30 +126,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            return JsonDocument.Parse(JsonSerializer.Serialize(connectionJson));
-        }
-
-        /// <summary>
-        /// Wrapper for CreatePaginationConnectionFromJsonElement
-        /// Disposes the JsonDocument passed to it
-        /// <summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
-        {
-            // necessary for MsSql because it doesn't coalesce list query results like Postgres
-            if (jsonDocument is null)
-            {
-                jsonDocument = JsonDocument.Parse("[]");
-            }
-
-            JsonElement root = jsonDocument.RootElement;
-
-            // this is intentionally not disposed since it will be used for processing later
-            JsonDocument result = CreatePaginationConnectionFromJsonElement(root, paginationMetadata);
-
-            // no longer needed, so it is disposed
-            jsonDocument.Dispose();
-
-            return result;
+            return connection;
         }
 
         /// <summary>
@@ -520,22 +527,40 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Create the URL that will provide for the next page of results
         /// using the same query options.
+        /// Return value formatted as a JSON array: [{"nextLink":"[base]/api/[entity]?[queryParams_URIescaped]$after=[base64encodedPaginationToken]"}]
         /// </summary>
-        /// <param name="path">The request path.</param>
-        /// <param name="queryStringParameters">Collection of query string parameters.</param>
-        /// <param name="after">The values needed for next page.</param>
-        /// <returns>The string representing nextLink.</returns>
-        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string after)
+        /// <param name="path">The request path excluding query parameters (e.g. https://localhost/api/myEntity)</param>
+        /// <param name="queryStringParameters">Collection of query string parameters that are URI escaped.</param>
+        /// <param name="newAfterPayload">The contents to add to the $after query parameter. Should be base64 encoded pagination token.</param>
+        /// <returns>JSON element - array with nextLink.</returns>
+        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string newAfterPayload)
         {
+            if (queryStringParameters is null)
+            {
+                queryStringParameters = new();
+            }
+            else
+            {
+                // Purge old $after value so this function can replace it.
+                queryStringParameters.Remove("$after");
+            }
+
+            // To prevent regression of current behavior, retain the call to FormatQueryString
+            // which URI escapes other query parameters. Since $after has been removed,
+            // this will not affect the base64 encoded paging token.
             string queryString = FormatQueryString(queryStringParameters: queryStringParameters);
-            if (!string.IsNullOrWhiteSpace(after))
+
+            // When a new $after payload is provided, append it to the query string with the
+            // appropriate prefix: ? if $after is the only query parameter. & if $after is one of many query parameters.
+            if (!string.IsNullOrWhiteSpace(newAfterPayload))
             {
                 string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "?" : "&";
-                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={after}";
+                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
             // ValueKind will be array so we can differentiate from other objects in the response
             // to be returned.
+            // [{"nextLink":"[base]/api/[entity]?[queryParams_URIescaped]$after=[base64encodedPaginationToken]"}]
             string jsonString = JsonSerializer.Serialize(new[]
             {
                 new
@@ -552,12 +577,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="jsonResult">Results plus one extra record if more exist.</param>
         /// <param name="first">Client provided limit if one exists, otherwise 0.</param>
+        /// <param name="defaultPageSize">Default limit for page size.</param>
+        /// <param name="maxPageSize">Maximum limit for page size.</param>
         /// <returns>Bool representing if more records are available.</returns>
-        public static bool HasNext(JsonElement jsonResult, uint? first)
+        public static bool HasNext(JsonElement jsonResult, int? first, uint defaultPageSize, uint maxPageSize)
         {
-            // When first is 0 we use default limit of 100, otherwise we use first
+            // When first is null we use default limit from runtime config, otherwise we use first
             uint numRecords = (uint)jsonResult.GetArrayLength();
-            uint? limit = first is not null ? first : 100;
+
+            uint limit;
+            if (first.HasValue)
+            {
+                // first is not null.
+                if (first == -1)
+                {
+                    // user has requested max value.
+                    limit = maxPageSize;
+                }
+                else
+                {
+                    limit = (uint)first;
+                }
+            }
+            else
+            {
+                limit = defaultPageSize;
+            }
+
             return numRecords > limit;
         }
 
@@ -580,6 +626,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (string key in queryStringParameters)
             {
+                // Whitespace or empty string query paramters are not supported.
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     continue;

@@ -805,8 +805,12 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "Author",
-          "source.fields": [],
-          "target.fields": [],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.object": "book_author_link",
           "linking.source.fields": [
             "book_id"
@@ -816,6 +820,32 @@
           ]
         }
       }
+    },
+    "BookNF": {
+      "source": {
+        "object": "books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "bookNF",
+          "plural": "booksNF"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
     },
     "BookWebsitePlacement": {
       "source": {
@@ -1351,6 +1381,16 @@
       ],
       "mappings": {
         "species": "fancyName"
+      },
+      "relationships": {
+        "fungus": {
+          "cardinality": "one",
+          "target.entity": "Fungus",
+          "source.fields": [ "species" ],
+          "target.fields": [ "habitat" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "Fungus": {
@@ -1423,6 +1463,16 @@
       ],
       "mappings": {
         "spores": "hazards"
+      },
+      "relationships": {
+        "shrub": {
+          "cardinality": "one",
+          "target.entity": "Shrub",
+          "source.fields": [ "habitat" ],
+          "target.fields": [ "species" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "books_view_all": {
@@ -1922,6 +1972,154 @@
         }
       ]
     },
+    "User_NonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_NonAutogenRelationshipColumn",
+          "plural": "User_NonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_NonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "username"
+          ],
+          "target.fields": [
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile",
+          "plural": "UserProfiles"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "User_AutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenRelationshipColumn",
+          "plural": "User_AutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "profileid"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "User_AutogenToNonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenToNonAutogenRelationshipColumn",
+          "plural": "User_AutogenToNonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenToNonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid",
+            "username"
+          ],
+          "target.fields": [
+            "userid",
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
     "GQLmappings": {
       "source": {
         "object": "GQLmappings",
@@ -2057,6 +2255,76 @@
           ]
         }
       ]
+    },
+    "DefaultBuiltInFunction": {
+      "source": {
+        "object": "default_with_function_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "include": [
+                  "*"
+                ],
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
+              }
+            },
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ]
+    },
+    "dbo_DimAccount": {
+      "source": "dimaccount",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read",
+            "create",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "relationships": {
+        "parent_account": {
+          "cardinality": "one",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "ParentAccountKey"
+          ],
+          "target.fields": [
+            "AccountKey"
+          ]
+        },
+        "child_accounts": {
+          "cardinality": "many",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "AccountKey"
+          ],
+          "target.fields": [
+            "ParentAccountKey"
+          ]
+        }
+      }
     }
   }
 }

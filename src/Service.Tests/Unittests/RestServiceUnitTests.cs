@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -143,21 +145,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
 
+            RuntimeConfig loadedConfig = provider.GetConfig();
+            loadedConfig.TryAddEntityPathNameToEntityName(entityName, entityName);
+
             Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
-            string outParam;
-            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
-            Dictionary<string, string> _pathToEntityMock = new() { { entityName, entityName } };
-            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
-                               .Callback(new metaDataCallback((string entityPath, out string entity) => _ = _pathToEntityMock.TryGetValue(entityPath, out entity)))
-                               .Returns((string entityPath, out string entity) => _pathToEntityMock.TryGetValue(entityPath, out entity));
-
-            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(sqlMetadataProvider.Object);
-
             Mock<IAuthorizationService> authorizationService = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
             AuthorizationResolver authorizationResolver = new(provider, metadataProviderFactory.Object);
             GQLFilterParser gQLFilterParser = new(provider, metadataProviderFactory.Object);
+
+            Mock<IFusionCache> cache = new();
+            DabCacheService cacheService = new(cache.Object, logger: null, httpContextAccessor.Object);
+
             SqlQueryEngine queryEngine = new(
                 queryManagerFactory.Object,
                 metadataProviderFactory.Object,
@@ -165,7 +165,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 authorizationResolver,
                 gQLFilterParser,
                 queryEngineLogger.Object,
-                provider);
+                provider,
+                cacheService);
 
             queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
 

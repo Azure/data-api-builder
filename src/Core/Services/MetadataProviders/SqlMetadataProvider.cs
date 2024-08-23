@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -36,7 +37,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
-        private readonly IReadOnlyDictionary<string, Entity> _entities;
+        // Represents the entities exposed in the runtime config.
+        private IReadOnlyDictionary<string, Entity> _entities;
+
+        // Represents the linking entities created by DAB to support multiple mutations for entities having an M:N relationship between them.
+        protected Dictionary<string, Entity> _linkingEntities = new();
 
         protected readonly string _dataSourceName;
 
@@ -47,6 +52,13 @@ namespace Azure.DataApiBuilder.Core.Services
         // Contains all the referencing and referenced columns for each pair
         // of referencing and referenced tables.
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; set; }
+
+        /// <summary>
+        /// Maps {entityName, relationshipName} to the ForeignKeyDefinition defined for the relationship.
+        /// The ForeignKeyDefinition denotes referencing/referenced fields and whether the referencing/referenced fields
+        /// apply to the target or source entity as defined in the relationship in the config file.
+        /// </summary>
+        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinition { get; set; } = new();
 
         protected IQueryExecutor QueryExecutor { get; }
 
@@ -63,8 +75,6 @@ namespace Azure.DataApiBuilder.Core.Services
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
-
-        private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
@@ -206,23 +216,29 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name)
         {
-            return EntityBackingColumnsToExposedNames[entityName].TryGetValue(backingFieldName, out name);
+            Dictionary<string, string>? backingColumnsToExposedNamesMap;
+            if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out backingColumnsToExposedNamesMap))
+            {
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
+            }
+
+            return backingColumnsToExposedNamesMap.TryGetValue(backingFieldName, out name);
         }
 
         /// <inheritdoc />
         public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
-            return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
+            Dictionary<string, string>? exposedNamesToBackingColumnsMap;
+            if (!EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out exposedNamesToBackingColumnsMap))
+            {
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
+            }
+
+            return exposedNamesToBackingColumnsMap.TryGetValue(field, out name);
         }
 
         /// <inheritdoc />
-        public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
-        {
-            return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
-        }
-
-        /// <inheritdoc />
-        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject;
         }
@@ -284,6 +300,44 @@ namespace Azure.DataApiBuilder.Core.Services
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
+        /// <inheritdoc />
+        public void InitializeAsync(
+            Dictionary<string, DatabaseObject> entityToDatabaseObject,
+            Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap)
+        {
+            EntityToDatabaseObject = entityToDatabaseObject ?? EntityToDatabaseObject;
+            GraphQLStoredProcedureExposedNameToEntityNameMap = graphQLStoredProcedureExposedNameToEntityNameMap ?? GraphQLStoredProcedureExposedNameToEntityNameMap;
+            GenerateExposedToBackingColumnMapsForEntities();
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            Dictionary<string, string>? entityToColumnMappings;
+            mappings = null;
+            if (EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out entityToColumnMappings))
+            {
+                mappings = entityToColumnMappings;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            Dictionary<string, string>? columntoEntityMappings;
+            mappings = null;
+            if (EntityBackingColumnsToExposedNames.TryGetValue(entityName, out columntoEntityMappings))
+            {
+                mappings = columntoEntityMappings;
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Log Primary key information. Function only called when not
         /// in a hosted scenario. Log relevant information about Primary keys
@@ -294,25 +348,36 @@ namespace Azure.DataApiBuilder.Core.Services
             ColumnDefinition column;
             foreach ((string entityName, Entity _) in _entities)
             {
-                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                _logger.LogDebug("Logging primary key information for entity: {entityName}.", entityName);
-                foreach (string pK in sourceDefinition.PrimaryKey)
+                try
                 {
-                    column = sourceDefinition.Columns[pK];
-                    if (TryGetExposedColumnName(entityName, pK, out string? exposedPKeyName))
+                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                    _logger.LogDebug("Logging primary key information for entity: {entityName}.", entityName);
+                    foreach (string pK in sourceDefinition.PrimaryKey)
                     {
-                        _logger.LogDebug(
-                            message: "Primary key column name: {pK}\n" +
-                            "      Primary key mapped name: {exposedPKeyName}\n" +
-                            "      Type: {column.SystemType.Name}\n" +
-                            "      IsNullable: {column.IsNullable}\n" +
-                            "      IsAutoGenerated: {column.IsAutoGenerated}",
-                            pK,
-                            exposedPKeyName,
-                            column.SystemType.Name,
-                            column.IsNullable,
-                            column.IsAutoGenerated);
+                        column = sourceDefinition.Columns[pK];
+                        if (TryGetExposedColumnName(entityName, pK, out string? exposedPKeyName))
+                        {
+                            _logger.LogDebug(
+                                message: "Primary key column name: {pK}\n" +
+                                "      Primary key mapped name: {exposedPKeyName}\n" +
+                                "      Type: {column.SystemType.Name}\n" +
+                                "      IsNullable: {column.IsNullable}\n" +
+                                "      IsAutoGenerated: {column.IsAutoGenerated}",
+                                pK,
+                                exposedPKeyName,
+                                column.SystemType.Name,
+                                column.IsNullable,
+                                column.IsAutoGenerated);
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Failed to log primary key information for entity: {entityName} due to: {ex.Message}",
+                        innerException: ex,
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization));
                 }
             }
         }
@@ -449,7 +514,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (!string.IsNullOrEmpty(path))
                     {
-                        EntityPathToEntityName[path] = entityName;
+                        // add the entity path name to the entity name mapping to the runtime config for multi-db resolution.
+                        runtimeConfig.TryAddEntityPathNameToEntityName(path, entityName);
                     }
                 }
                 catch (Exception e)
@@ -570,70 +636,84 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
-            string schemaName, dbObjectName;
             Dictionary<string, DatabaseObject> sourceObjects = new();
             foreach ((string entityName, Entity entity) in _entities)
             {
-                try
+                PopulateDatabaseObjectForEntity(entity, entityName, sourceObjects);
+            }
+        }
+
+        protected void PopulateDatabaseObjectForEntity(
+            Entity entity,
+            string entityName,
+            Dictionary<string, DatabaseObject> sourceObjects)
+        {
+            try
+            {
+                EntitySourceType sourceType = GetEntitySourceType(entityName, entity);
+                if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
-                    EntitySourceType sourceType = GetEntitySourceType(entityName, entity);
-
-                    if (!EntityToDatabaseObject.ContainsKey(entityName))
+                    if (entity.Source.Object is null)
                     {
-                        // Reuse the same Database object for multiple entities if they share the same source.
-                        if (!sourceObjects.TryGetValue(entity.Source.Object, out DatabaseObject? sourceObject))
+                        throw new DataApiBuilderException(
+                            message: $"The entity {entityName} does not have a valid source object.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
+                    // Reuse the same Database object for multiple entities if they share the same source.
+                    if (!sourceObjects.TryGetValue(entity.Source.Object, out DatabaseObject? sourceObject))
+                    {
+                        // parse source name into a tuple of (schemaName, databaseObjectName)
+                        (string schemaName, string dbObjectName) = ParseSchemaAndDbTableName(entity.Source.Object)!;
+
+                        // if specified as stored procedure in config,
+                        // initialize DatabaseObject as DatabaseStoredProcedure,
+                        // else with DatabaseTable (for tables) / DatabaseView (for views).
+
+                        if (sourceType is EntitySourceType.StoredProcedure)
                         {
-                            // parse source name into a tuple of (schemaName, databaseObjectName)
-                            (schemaName, dbObjectName) = ParseSchemaAndDbTableName(entity.Source.Object)!;
-
-                            // if specified as stored procedure in config,
-                            // initialize DatabaseObject as DatabaseStoredProcedure,
-                            // else with DatabaseTable (for tables) / DatabaseView (for views).
-
-                            if (sourceType is EntitySourceType.StoredProcedure)
+                            sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
                             {
-                                sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
-                                {
-                                    SourceType = sourceType,
-                                    StoredProcedureDefinition = new()
-                                };
-                            }
-                            else if (sourceType is EntitySourceType.Table)
+                                SourceType = sourceType,
+                                StoredProcedureDefinition = new()
+                            };
+                        }
+                        else if (sourceType is EntitySourceType.Table)
+                        {
+                            sourceObject = new DatabaseTable()
                             {
-                                sourceObject = new DatabaseTable()
-                                {
-                                    SchemaName = schemaName,
-                                    Name = dbObjectName,
-                                    SourceType = sourceType,
-                                    TableDefinition = new()
-                                };
-                            }
-                            else
+                                SchemaName = schemaName,
+                                Name = dbObjectName,
+                                SourceType = sourceType,
+                                TableDefinition = new()
+                            };
+                        }
+                        else
+                        {
+                            sourceObject = new DatabaseView(schemaName, dbObjectName)
                             {
-                                sourceObject = new DatabaseView(schemaName, dbObjectName)
-                                {
-                                    SchemaName = schemaName,
-                                    Name = dbObjectName,
-                                    SourceType = sourceType,
-                                    ViewDefinition = new()
-                                };
-                            }
-
-                            sourceObjects.Add(entity.Source.Object, sourceObject);
+                                SchemaName = schemaName,
+                                Name = dbObjectName,
+                                SourceType = sourceType,
+                                ViewDefinition = new()
+                            };
                         }
 
-                        EntityToDatabaseObject.Add(entityName, sourceObject);
+                        sourceObjects.Add(entity.Source.Object, sourceObject);
+                    }
 
-                        if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table)
-                        {
-                            AddForeignKeysForRelationships(entityName, entity, (DatabaseTable)sourceObject);
-                        }
+                    EntityToDatabaseObject.Add(entityName, sourceObject);
+
+                    if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table)
+                    {
+                        ProcessRelationships(entityName, entity, (DatabaseTable)sourceObject, sourceObjects);
                     }
                 }
-                catch (Exception e)
-                {
-                    HandleOrRecordException(e);
-                }
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
             }
         }
 
@@ -658,21 +738,22 @@ namespace Azure.DataApiBuilder.Core.Services
         /// specified in the relationships section of this entity
         /// to gather the referencing and referenced columns from the database at a later stage.
         /// Sets the referencing and referenced tables based on the kind of relationship.
-        /// If encounter a linking object, use that as the referencing table
+        /// A linking object encountered is used as the referencing table
         /// for the foreign key definition.
-        /// There may not be a foreign key defined on the backend in which case
-        /// the relationship.source.fields and relationship.target fields are mandatory.
-        /// Initializing a definition here is an indication to find the foreign key
+        /// When no foreign key is defined in the database for the relationship,
+        /// the relationship.source.fields and relationship.target.fields are mandatory.
+        /// Initializing a FKDefinition indicates to find the foreign key
         /// between the referencing and referenced tables.
         /// </summary>
         /// <param name="entityName"></param>
         /// <param name="entity"></param>
         /// <param name="databaseTable"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        private void AddForeignKeysForRelationships(
+        private void ProcessRelationships(
             string entityName,
             Entity entity,
-            DatabaseTable databaseTable)
+            DatabaseTable databaseTable,
+            Dictionary<string, DatabaseObject> sourceObjects)
         {
             SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
             if (!sourceDefinition.SourceEntityRelationshipMap
@@ -683,12 +764,20 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             string targetSchemaName, targetDbTableName, linkingTableSchema, linkingTableName;
-            foreach (EntityRelationship relationship in entity.Relationships!.Values)
+            foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
                 string targetEntityName = relationship.TargetEntity;
                 if (!_entities.TryGetValue(targetEntityName, out Entity? targetEntity))
                 {
                     throw new InvalidOperationException($"Target Entity {targetEntityName} should be one of the exposed entities.");
+                }
+
+                if (targetEntity.Source.Object is null)
+                {
+                    throw new DataApiBuilderException(
+                                message: $"Target entity {entityName} does not have a valid source object.",
+                                statusCode: HttpStatusCode.InternalServerError,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
 
                 (targetSchemaName, targetDbTableName) = ParseSchemaAndDbTableName(targetEntity.Source.Object)!;
@@ -700,93 +789,172 @@ namespace Azure.DataApiBuilder.Core.Services
                     (linkingTableSchema, linkingTableName) = ParseSchemaAndDbTableName(relationship.LinkingObject)!;
                     DatabaseTable linkingDbTable = new(linkingTableSchema, linkingTableName);
                     AddForeignKeyForTargetEntity(
-                        targetEntityName,
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
+                        targetEntityName: targetEntityName,
                         referencingDbTable: linkingDbTable,
                         referencedDbTable: databaseTable,
                         referencingColumns: relationship.LinkingSourceFields,
                         referencedColumns: relationship.SourceFields,
-                        relationshipData);
+                        referencingEntityRole: RelationshipRole.Linking,
+                        referencedEntityRole: RelationshipRole.Source,
+                        relationshipData: relationshipData);
 
                     AddForeignKeyForTargetEntity(
-                        targetEntityName,
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
+                        targetEntityName: targetEntityName,
                         referencingDbTable: linkingDbTable,
                         referencedDbTable: targetDbTable,
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
-                        relationshipData);
+                        referencingEntityRole: RelationshipRole.Linking,
+                        referencedEntityRole: RelationshipRole.Target,
+                        relationshipData: relationshipData);
+
+                    RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+
+                    // Populating metadata for linking object is only required when multiple create operation is enabled and those database types that support multiple create operation.
+                    if (runtimeConfig.IsMultipleCreateOperationEnabled())
+                    {
+                        // When a linking object is encountered for a database table, we will create a linking entity for the object.
+                        // Subsequently, we will also populate the Database object for the linking entity. This is used to infer
+                        // metadata about linking object needed to create GQL schema for multiple insertions.
+                        if (entity.Source.Type is EntitySourceType.Table)
+                        {
+                            PopulateMetadataForLinkingObject(
+                                entityName: entityName,
+                                targetEntityName: targetEntityName,
+                                linkingObject: relationship.LinkingObject,
+                                sourceObjects: sourceObjects);
+                        }
+                    }
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
-                    // For Many-One OR One-One Relationships, optimistically
-                    // add foreign keys from either sides in the hopes of finding their metadata
-                    // at a later stage when we query the database about foreign keys.
-                    // Both or either of these may be present if its a One-One relationship,
-                    // The second fk would not be present if its a Many-One relationship.
-                    // When the configuration file doesn't specify how to relate these entities,
-                    // at least 1 of the following foreign keys should be present.
-
-                    // Adding this foreign key in the hopes of finding a foreign key
-                    // in the underlying database object of the source entity referencing
-                    // the target entity.
-                    // This foreign key may NOT exist for either of the following reasons:
-                    // a. this source entity is related to the target entity in an One-to-One relationship
-                    // but the foreign key was added to the target entity's underlying source
-                    // This is covered by the foreign key below.
-                    // OR
-                    // b. no foreign keys were defined at all.
+                    // Example: books(Many) - publisher(One)
+                    // where books.publisher_id is referencing publisher.id
+                    // For Many-One OR One-One Relationships, DAB optimistically
+                    // creates two ForeignKeyDefinitions to represent the relationship:
+                    //
+                    // #1
+                    // Referencing Entity | Referenced Entity
+                    // -------------------|-------------------
+                    // Source Entity      | Target Entity
+                    //
+                    // #2
+                    // Referencing Entity | Referenced Entity
+                    // -------------------|-------------------
+                    // Target Entity      | Source Entity
+                    //
+                    // One of the created ForeignKeyDefinitions correctly matches foreign key
+                    // metadata in the database and DAB will later identify the correct
+                    // ForeignKeyDefinition object when processing database schema metadata.
+                    //
+                    // When the runtime config doesn't specify how to relate these entities
+                    // (via source/target fields), DAB expects to identity that one of
+                    // the ForeignKeyDefinition objects will match foreign key metadata in the database.
+                    // Create ForeignKeyDefinition #1
                     AddForeignKeyForTargetEntity(
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
                         targetEntityName,
                         referencingDbTable: databaseTable,
                         referencedDbTable: targetDbTable,
                         referencingColumns: relationship.SourceFields,
                         referencedColumns: relationship.TargetFields,
+                        referencingEntityRole: RelationshipRole.Source,
+                        referencedEntityRole: RelationshipRole.Target,
                         relationshipData);
 
-                    // Adds another foreign key definition with targetEntity.GetSourceName()
-                    // as the referencingTableName - in the situation of a One-to-One relationship
-                    // and the foreign key is defined in the source of targetEntity.
-                    // This foreign key WILL NOT exist if its a Many-One relationship.
-                    AddForeignKeyForTargetEntity(
-                        targetEntityName,
-                        referencingDbTable: targetDbTable,
-                        referencedDbTable: databaseTable,
-                        referencingColumns: relationship.TargetFields,
-                        referencedColumns: relationship.SourceFields,
-                        relationshipData);
+                    // Create ForeignKeyDefinition #2
+                    // when target and source entities differ (NOT self-referencing)
+                    // because one ForeignKeyDefintion is sufficient to represent a self-joining relationship.
+                    if (targetEntityName != entityName)
+                    {
+                        AddForeignKeyForTargetEntity(
+                            sourceEntityName: entityName,
+                            relationshipName: relationshipName,
+                            targetEntityName,
+                            referencingDbTable: targetDbTable,
+                            referencedDbTable: databaseTable,
+                            referencingColumns: relationship.TargetFields,
+                            referencedColumns: relationship.SourceFields,
+                            referencingEntityRole: RelationshipRole.Target,
+                            referencedEntityRole: RelationshipRole.Source,
+                            relationshipData);
+                    }
                 }
                 else if (relationship.Cardinality is Cardinality.Many)
                 {
-                    // Case of publisher(One)-books(Many)
-                    // we would need to obtain the foreign key information from the books table
-                    // about the publisher id so we can do the join.
-                    // so, the referencingTable is the source of the target entity.
+                    // Example: publisher(One)-books(Many)
+                    // where publisher.id is referenced by books.publisher_id
+                    // For Many-Many relationships, DAB creates one
+                    // ForeignKeyDefinition to represent the relationship:
+                    //
+                    // #1
+                    // Referencing Entity | Referenced Entity
+                    // -------------------|-------------------
+                    // Target Entity      | Source Entity
                     AddForeignKeyForTargetEntity(
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
                         targetEntityName,
                         referencingDbTable: targetDbTable,
                         referencedDbTable: databaseTable,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
+                        referencingEntityRole: RelationshipRole.Target,
+                        referencedEntityRole: RelationshipRole.Source,
                         relationshipData);
                 }
             }
         }
 
         /// <summary>
-        /// Adds a new foreign key definition for the target entity
-        /// in the relationship metadata.
+        /// Helper method to create a linking entity and a database object for the given linking object (which relates the source and target with an M:N relationship).
+        /// The created linking entity and its corresponding database object definition is later used during GraphQL schema generation
+        /// to enable multiple mutations.
+        /// </summary>
+        /// <param name="entityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="linkingObject">Linking object</param>
+        /// <param name="sourceObjects">Dictionary storing a collection of database objects which have been created.</param>
+        protected virtual void PopulateMetadataForLinkingObject(
+            string entityName,
+            string targetEntityName,
+            string linkingObject,
+            Dictionary<string, DatabaseObject> sourceObjects)
+        {
+            return;
+        }
+
+        /// <summary>
+        /// Adds a new foreign key definition for the target entity in the relationship metadata.
+        /// The last argument "relationshipData" is modified (hydrated with the new foreign key definition)
+        /// as a side effect of executing this function.
         /// </summary>
         private static void AddForeignKeyForTargetEntity(
+            string sourceEntityName,
+            string relationshipName,
             string targetEntityName,
             DatabaseTable referencingDbTable,
             DatabaseTable referencedDbTable,
             string[]? referencingColumns,
             string[]? referencedColumns,
+            RelationshipRole referencingEntityRole,
+            RelationshipRole referencedEntityRole,
             RelationshipMetadata relationshipData)
         {
             ForeignKeyDefinition foreignKeyDefinition = new()
             {
+                SourceEntityName = sourceEntityName,
+                RelationshipName = relationshipName,
+                ReferencingEntityRole = referencingEntityRole,
+                ReferencedEntityRole = referencedEntityRole,
                 Pair = new()
                 {
+                    RelationshipName = relationshipName,
                     ReferencingDbTable = referencingDbTable,
                     ReferencedDbTable = referencedDbTable
                 }
@@ -864,6 +1032,15 @@ namespace Azure.DataApiBuilder.Core.Services
         public string? GetSchemaGraphQLFieldTypeFromFieldName(string graphQLType, string fieldName)
             => throw new NotImplementedException();
 
+        /// <inheritdoc />
+        public FieldDefinitionNode? GetSchemaGraphQLFieldFromFieldName(string graphQLType, string fieldName)
+            => throw new NotImplementedException();
+
+        public IReadOnlyDictionary<string, Entity> GetLinkingEntities()
+        {
+            return _linkingEntities;
+        }
+
         /// <summary>
         /// Enrich the entities in the runtime config with the
         /// object definition information needed by the runtime to serve requests.
@@ -874,53 +1051,70 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             foreach ((string entityName, Entity entity) in _entities)
             {
-                try
+                await PopulateObjectDefinitionForEntity(entityName, entity);
+            }
+
+            foreach ((string entityName, Entity entity) in _linkingEntities)
+            {
+                await PopulateObjectDefinitionForEntity(entityName, entity);
+            }
+
+            try
+            {
+                await PopulateForeignKeyDefinitionAsync();
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
+            }
+        }
+
+        private async Task PopulateObjectDefinitionForEntity(string entityName, Entity entity)
+        {
+            try
+            {
+                EntitySourceType entitySourceType = GetEntitySourceType(entityName, entity);
+                if (entitySourceType is EntitySourceType.StoredProcedure)
                 {
-                    EntitySourceType entitySourceType = GetEntitySourceType(entityName, entity);
-                    if (entitySourceType is EntitySourceType.StoredProcedure)
+                    await FillSchemaForStoredProcedureAsync(
+                        entity,
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetStoredProcedureDefinition(entityName));
+
+                    if (GetDatabaseType() == DatabaseType.MSSQL || GetDatabaseType() == DatabaseType.DWSQL)
                     {
-                        await FillSchemaForStoredProcedureAsync(
-                            entity,
-                            entityName,
+                        await PopulateResultSetDefinitionsForStoredProcedureAsync(
                             GetSchemaName(entityName),
                             GetDatabaseObjectName(entityName),
                             GetStoredProcedureDefinition(entityName));
-
-                        if (GetDatabaseType() == DatabaseType.MSSQL)
-                        {
-                            await PopulateResultSetDefinitionsForStoredProcedureAsync(
-                                GetSchemaName(entityName),
-                                GetDatabaseObjectName(entityName),
-                                GetStoredProcedureDefinition(entityName));
-                        }
-                    }
-                    else if (entitySourceType is EntitySourceType.Table)
-                    {
-                        await PopulateSourceDefinitionAsync(
-                            entityName,
-                            GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName),
-                            GetSourceDefinition(entityName),
-                            entity.Source.KeyFields);
-                    }
-                    else
-                    {
-                        ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
-                        await PopulateSourceDefinitionAsync(
-                            entityName,
-                            GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName),
-                            viewDefinition,
-                            entity.Source.KeyFields);
                     }
                 }
-                catch (Exception e)
+                else if (entitySourceType is EntitySourceType.Table)
                 {
-                    HandleOrRecordException(e);
+                    await PopulateSourceDefinitionAsync(
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetSourceDefinition(entityName),
+                        entity.Source.KeyFields);
+                }
+                else
+                {
+                    ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
+                    await PopulateSourceDefinitionAsync(
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        viewDefinition,
+                        entity.Source.KeyFields);
                 }
             }
-
-            await PopulateForeignKeyDefinitionAsync();
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
+            }
         }
 
         /// <summary>
@@ -952,9 +1146,9 @@ namespace Azure.DataApiBuilder.Core.Services
             // one row in the result set.
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
-                string resultFieldName = element.GetProperty("result_field_name").ToString();
-                Type resultFieldType = SqlToCLRType(element.GetProperty("result_type").ToString());
-                bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
+                string resultFieldName = element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_NAME).ToString();
+                Type resultFieldType = SqlToCLRType(element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_SYSTEMTYPENAME).ToString());
+                bool isResultFieldNullable = element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_ISNULLABLE).GetBoolean();
 
                 // Store the dictionary containing result set field with its type as Columns
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
@@ -991,31 +1185,53 @@ namespace Azure.DataApiBuilder.Core.Services
         /// In the future, mappings for SPs could be used for parameter renaming.
         /// We also handle logging the primary key information here since this is when we first have
         /// the exposed names suitable for logging.
+        /// As part of building the database query, when generating the output columns,
+        /// EntityBackingColumnsToExposedNames is looked at.
+        /// But, when linking entity details are not populated, the flow will fail
+        /// when generating the output columns.
+        /// Hence, mappings of exposed names to backing columns
+        /// and of backing columns to exposed names
+        /// are generated for linking entities as well.
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
         {
             foreach ((string entityName, Entity _) in _entities)
             {
-                try
+                GenerateExposedToBackingColumnMapUtil(entityName);
+            }
+
+            foreach ((string entityName, Entity _) in _linkingEntities)
+            {
+                GenerateExposedToBackingColumnMapUtil(entityName);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to generate the mappings of exposed names to
+        /// backing columns, and of backing columns to exposed names.
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        private void GenerateExposedToBackingColumnMapUtil(string entityName)
+        {
+            try
+            {
+                // For StoredProcedures, result set definitions become the column definition.
+                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                foreach (string columnName in sourceDefinition.Columns.Keys)
                 {
-                    // For StoredProcedures, result set definitions become the column definition.
-                    Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                    EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                    EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                    foreach (string columnName in sourceDefinition.Columns.Keys)
+                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
                     {
-                        if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
-                        {
-                            EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
-                            EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
-                        }
+                        EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
                     }
                 }
-                catch (Exception e)
-                {
-                    HandleOrRecordException(e);
-                }
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
             }
         }
 
@@ -1150,7 +1366,8 @@ namespace Azure.DataApiBuilder.Core.Services
             List<string>? readOnlyFields = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: queryToGetReadOnlyColumns,
                 parameters: parameters,
-                dataReaderHandler: SummarizeReadOnlyFieldsMetadata);
+                dataReaderHandler: SummarizeReadOnlyFieldsMetadata,
+                dataSourceName: _dataSourceName);
 
             if (readOnlyFields is not null && readOnlyFields.Count > 0)
             {
@@ -1208,7 +1425,14 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
+            // Because we have an instance of SqlMetadataProvider for each individual database
+            // (note: this means each actual database not each database type), we do not
+            // need to worry about collisions beyond that schema, hence no database name is needed.
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(
+                schemaName: schemaName,
+                tableName: tableName);
+
+            DataTable? dataTable = EntitiesDataSet.Tables[tableNameWithSchemaPrefix];
             if (dataTable is null)
             {
                 try
@@ -1328,35 +1552,31 @@ namespace Azure.DataApiBuilder.Core.Services
                 Connection = conn
             };
 
-            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
-            string queryPrefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
             selectCommand.CommandText
-                = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
+                = $"SELECT * FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
             return dataTable[0];
         }
 
-        internal string GetTablePrefix(string databaseName, string schemaName)
+        /// <summary>
+        /// Gets the correctly formatted table name with schema as prefix, if one exists.
+        /// A schema prefix is simply the correctly formatted and prefixed schema name that
+        /// is provided, separated from the table name by a ".". The formatting for both the
+        /// schema and table name is based on database type and may or may not include
+        /// [] quotes depending how the particular database type handles said format.
+        /// </summary>
+        /// <param name="schemaName">Name of schema the table belongs within.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <returns>Properly formatted table name with schema prefix if it exists.</returns>
+        internal string GetTableNameWithSchemaPrefix(string schemaName, string tableName)
         {
             IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 
-            if (!string.IsNullOrEmpty(databaseName))
-            {
-                // Determine databaseName for prefix.
-                databaseName = queryBuilder.QuoteIdentifier(databaseName);
-                tablePrefix.Append(databaseName);
-
-                if (!string.IsNullOrEmpty(schemaName))
-                {
-                    // Determine schemaName for prefix.
-                    schemaName = queryBuilder.QuoteIdentifier(schemaName);
-                    tablePrefix.Append($".{schemaName}");
-                }
-            }
-            else if (!string.IsNullOrEmpty(schemaName))
+            if (!string.IsNullOrEmpty(schemaName))
             {
                 // Determine schemaName for prefix.
                 schemaName = queryBuilder.QuoteIdentifier(schemaName);
@@ -1364,7 +1584,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 tablePrefix.Append(schemaName);
             }
 
-            return tablePrefix.ToString();
+            string queryPrefix = string.IsNullOrEmpty(tablePrefix.ToString()) ? string.Empty : $"{tablePrefix}.";
+            return $"{queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
         }
 
         /// <summary>
@@ -1446,20 +1667,26 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // Build the query required to get the foreign key information.
-            string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)GetQueryBuilder()).BuildForeignKeyInfoQuery(tableNames.Count);
+            BaseSqlQueryBuilder queryBuilder = (BaseSqlQueryBuilder)GetQueryBuilder();
+            string foreignKeyMetadataQuery = queryBuilder.BuildForeignKeyInfoQuery(numberOfParameters: tableNames.Count);
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
-            Dictionary<string, DbConnectionParam> parameters =
+            Dictionary<string, DbConnectionParam> foreignKeyMetadataQueryParameters =
                 GetForeignKeyQueryParams(
                     schemaNames.ToArray(),
                     tableNames.ToArray());
 
-            // Gather all the referencing and referenced columns for each pair
-            // of referencing and referenced tables.
+            // Saves the <RelationShipPair, ForeignKeyDefinition> objects returned from query execution.
+            // RelationShipPair: referencing, referenced tables
+            // ForeignKeyDefinition: referecing, referenced columns
             PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(
-                queryForForeignKeyInfo, parameters, SummarizeFkMetadata, httpContext: null, args: null, _dataSourceName);
+                sqltext: foreignKeyMetadataQuery,
+                parameters: foreignKeyMetadataQueryParameters,
+                dataReaderHandler: SummarizeFkMetadata,
+                dataSourceName: _dataSourceName,
+                httpContext: null,
+                args: null);
 
             if (PairToFkDefinition is not null)
             {
@@ -1470,11 +1697,12 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Identifies SourceDefinitions of table-backed entities that define relationships in the runtime config.
         /// Helper method to find all the entities whose foreign key information is to be retrieved.
         /// </summary>
         /// <param name="schemaNames">List of names of the schemas to which entities belong.</param>
         /// <param name="tableNames">List of names of the entities(tables)</param>
-        /// <returns>A collection of entity names</returns>
+        /// <returns>A collection of distinct entity names</returns>
         private IEnumerable<SourceDefinition> FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
             List<string> schemaNames,
             List<string> tableNames)
@@ -1487,6 +1715,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // by database itself.
                 if (dbObject.SourceType is EntitySourceType.Table)
                 {
+                    // We only keep track of unique tables identified.
                     if (!sourceNameToSourceDefinition.ContainsKey(dbObject.Name))
                     {
                         SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
@@ -1514,7 +1743,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Method to validate that the foreign key information is populdated
+        /// Method to validate that the foreign key information is populated
         /// for all the expected entities
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
@@ -1530,10 +1759,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // If none of the inferred foreign keys have the referencing columns,
-                    // it means metadata is still missing fail the bootstrap.
-                    if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() != 0)))
+                    // it means metadata is still missing. DAB startup must fail and terminate.
+                    bool isAtLeastOneEntityMissingReferencingColumns = foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count == 0));
+                    if (isAtLeastOneEntityMissingReferencingColumns)
                     {
-                        HandleOrRecordException(new NotSupportedException($"Some of the relationship information missing and could not be inferred for {sourceEntityName}."));
+                        HandleOrRecordException(new NotSupportedException($"Some of relationship information is missing and could not be inferred for {sourceEntityName}."));
                     }
                 }
             }
@@ -1555,7 +1785,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Extract all the rows in the current Result Set of DbDataReader.
             DbResultSet foreignKeysInfoWithProperties =
-                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+                await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
 
@@ -1604,14 +1834,14 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Extract all the rows in the current Result Set of DbDataReader.
             DbResultSet readOnlyFieldRowsWithProperties =
-                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+                await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
 
             List<string> readOnlyFields = new();
 
             foreach (DbResultSetRow readOnlyFieldRowWithProperties in readOnlyFieldRowsWithProperties.Rows)
             {
                 Dictionary<string, object?> readOnlyFieldInfo = readOnlyFieldRowWithProperties.Columns;
-                string fieldName = (string)readOnlyFieldInfo["column_name"]!;
+                string fieldName = (string)readOnlyFieldInfo["COLUMN_NAME"]!;
                 readOnlyFields.Add(fieldName);
             }
 
@@ -1619,71 +1849,177 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Fills the table definition with the inferred foreign key metadata
-        /// about the referencing and referenced columns.
+        /// Hydrates the table definition (SourceDefinition) with database foreign key
+        /// metadata that define a relationship's referencing and referenced columns.
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
         /// whose definition has to be populated with foreign key information.</param>
         private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
-            // For each table definition that has to be populated with the inferred
-            // foreign key information.
             foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)
             {
-                // For each source entities, which maps to this table definition
-                // and has a relationship metadata to be filled.
-                foreach ((_, RelationshipMetadata relationshipData)
+                foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
-                    // Enumerate all the foreign keys required for all the target entities
-                    // that this source is related to.
-                    IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities =
-                        relationshipData.TargetEntityToFkDefinitionMap.Values;
-                    // For each target, loop through each foreign key
-                    foreach (List<ForeignKeyDefinition> foreignKeysForTarget in foreignKeysForAllTargetEntities)
+                    // Create ForeignKeyDefinition objects representing the relationships
+                    // between the source entity and each of its defined target entities.
+                    foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        // For each foreign key between this pair of source and target entities
-                        // which needs the referencing columns,
-                        // find the fk inferred for this pair the backend and
-                        // equate the referencing columns and referenced columns.
-                        foreach (ForeignKeyDefinition fk in foreignKeysForTarget)
-                        {
-                            // if the referencing and referenced columns count > 0,
-                            // we have already gathered this information from the runtime config.
-                            if (fk.ReferencingColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
-                            {
-                                continue;
-                            }
-
-                            // Add the referencing and referenced columns for this foreign key definition
-                            // for the target.
-                            if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
-                                    fk.Pair, out ForeignKeyDefinition? inferredDefinition))
-                            {
-                                // Only add the referencing columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencingColumns.Count == 0)
-                                {
-                                    fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
-                                }
-
-                                // Only add the referenced columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencedColumns.Count == 0)
-                                {
-                                    fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
-                                }
-                            }
-                        }
+                        // fkDefinitionsToTarget is a List that is hydrated differently depending
+                        // on the source of the relationship metadata:
+                        // 1. Database FK constraints:
+                        //      - One ForeignKeyDefinition with the db schema specified Referencing and Referenced tables.
+                        // 2. Config Defined:
+                        //      - Two ForeignKeyDefinition objects:
+                        //        1.  Referencing table: Source entity, Referenced table: Target entity
+                        //        2.  Referencing table: Target entity, Referenced table: Source entity 
+                        List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
+                        relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }
                 }
             }
         }
 
         /// <summary>
-        /// For the given two database objects, returns true if a foreignKey exists between them.
-        /// Else returns false.
+        /// Loops over all the foreign key definitions defined for the target entity in the source entity's definition
+        /// and adds to the set of validated FK definitions:
+        /// 1. All the FK definitions which actually map to a foreign key constraint defined in the database.
+        ///    - When the source/target fields are also provided in the config, they override the database resolved FK constraint.
+        /// 2. FK definitions for custom relationships defined by the user in the configuration file where no FK constraint exists between
+        /// the pair of (source, target) entities.
+        /// </summary>
+        /// <param name="fKDefinitionsToTarget">List of FK definitions defined in the runtime config from source to target.</param>
+        /// <returns>List of validated FK definitions from source to target.</returns>
+        private List<ForeignKeyDefinition> GetValidatedFKs(List<ForeignKeyDefinition> fKDefinitionsToTarget)
+        {
+            List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = new();
+            foreach (ForeignKeyDefinition configResolvedFkDefinition in fKDefinitionsToTarget)
+            {
+                // Check whether DAB found a match between 'configResolvedFkDefinition' and 'databaseResolvedFKDefinition's {referencing -> referenced} entity pair.
+                if (PairToFkDefinition is not null &&
+                    PairToFkDefinition.TryGetValue(configResolvedFkDefinition.Pair, out ForeignKeyDefinition? databaseResolvedFkDefinition))
+                {
+                    if (DoesConfiguredRelationshipOverrideDatabaseFkConstraint(configResolvedFkDefinition))
+                    {
+                        validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
+
+                        // Save additional metadata for use when processing requests on self-joined/referencing entities.
+                        if (IsSelfJoiningRelationship(configResolvedFkDefinition))
+                        {
+                            EntityRelationshipKey entityToFkDefKey = new(
+                                entityName: configResolvedFkDefinition.SourceEntityName,
+                                relationshipName: configResolvedFkDefinition.RelationshipName);
+                            RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        }
+                    }
+                    else
+                    {
+                        // When the configured relationship doesn't override the database FK constraint,
+                        // DAB can consolidate the referenced and referencing columns from the database FK definition
+                        // into the configResolvedFkDefinition object.
+                        configResolvedFkDefinition.ReferencedColumns = databaseResolvedFkDefinition.ReferencedColumns;
+                        configResolvedFkDefinition.ReferencingColumns = databaseResolvedFkDefinition.ReferencingColumns;
+                        validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
+
+                        // Save additional metadata for use when processing requests on self-joined/referencing entities.
+                        // Since the configResolvedFkDefinition has additional metadata populated, DAB supplements that
+                        // object by using the inferred FK definition's referenced/referencing columns.
+                        if (IsSelfJoiningRelationship(databaseResolvedFkDefinition))
+                        {
+                            EntityRelationshipKey entityToFkDefKey = new(
+                                entityName: configResolvedFkDefinition.SourceEntityName,
+                                relationshipName: configResolvedFkDefinition.RelationshipName);
+                            RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        }
+                    }
+                }
+                else
+                {
+                    // A database foreign key doesn't exist that matches configResolvedFkDefinition's referencing and referenced
+                    // tables. This section now checks whether DAB resolved a database foreign key definition
+                    // matching the inverse order of the referencing/referenced tables.
+                    // A match indicates that a FK constraint exists between the source and target entities and
+                    // DAB can skip adding the optimstically created configResolvedFkDefinition
+                    // to the list of validated foreign key definitions.
+                    //
+                    // A database FK constraint may exist between the inverse order of referencing/referenced tables
+                    // in configResolvedFkDefinition when the relationship has a right cardinality of 1.
+                    // DAB optimistically created ForeignKeyDefinition objects denoting relationships between:
+                    // both source->target and target->source to the entity's SourceDefinition
+                    // because during relationship preprocessing, DAB doesn't know if the relationship is an N:1 a 1:1 relationship.
+                    // So here, we need to remove the "wrong" FK definition for:
+                    // 1. N:1 relationships,
+                    // 2. 1:1 relationships where an FK constraint exists only from source->target or target->source but not both.
+                    //
+                    // E.g. For a relationship between Book->Publisher entities with cardinality configured to 1 (many to one),
+                    // DAB added two Foreign key definitions to Book's source definition:
+                    // 1. Book->Publisher [Referencing: Book, Referenced: Publisher] ** this is the correct foreign key definition
+                    // 2. Publisher->Book [Referencing: Publisher, Referenced: Book]
+                    // This is because DAB pre-processes runtime config relationships prior to processing database FK definitions.
+                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically generated ForeignKeyDefinition
+                    // objects for both source->target and target->source entities because DAB doesn't yet have db metadata
+                    // to confirm which combination of optimistically generated ForeignKeyDefinition objects matched
+                    // the database FK relationship metadata.
+                    //
+                    // At this point in the code, DAB now has the database resolved FK metadata and can determine whether
+                    // 1. configResolvedFkDefinition matches a database fk definition -> isn't added to the list of
+                    //    validated FK definitions because it's already added.
+                    // 2. configResolvedFkDefinition doesn't match a database fk definition -> added to the list of
+                    //    validated FK definitions because it's not already added.
+                    bool doesFkExistInDatabase = VerifyForeignKeyExistsInDB(
+                        databaseTableA: configResolvedFkDefinition.Pair.ReferencingDbTable,
+                        databaseTableB: configResolvedFkDefinition.Pair.ReferencedDbTable);
+
+                    if (!doesFkExistInDatabase)
+                    {
+                        validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
+
+                        // The following operation generates FK metadata for use when processing requests on self-joined/referencing entities.
+                        if (IsSelfJoiningRelationship(configResolvedFkDefinition))
+                        {
+                            EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
+                            RelationshipToFkDefinition.TryAdd(key, configResolvedFkDefinition);
+                        }
+                    }
+                }
+            }
+
+            return validatedFKDefinitionsToTarget;
+        }
+
+        /// <summary>
+        /// Returns whether the supplied foreign key definition denotes a self-joining relationship
+        /// by checking whether the backing tables are the same.
+        /// </summary>
+        /// <param name="fkDefinition">ForeignKeyDefinition representing a relationship.</param>
+        /// <returns>true when the ForeignKeyDefinition represents a self-joining relationship</returns>
+        private static bool IsSelfJoiningRelationship(ForeignKeyDefinition fkDefinition)
+        {
+            return fkDefinition.Pair.ReferencedDbTable.FullName.Equals(fkDefinition.Pair.ReferencingDbTable.FullName);
+        }
+
+        /// <summary>
+        /// When a relationship is defined in the runtime config, the user may define
+        /// source and target fields. By doing so, the user overrides the
+        /// foreign key constraint defined in the database.
+        /// </summary>
+        /// <param name="configResolvedFkDefinition">FkDefinition resolved from the runtime config.</param>
+        /// <returns>True when the passed in foreign key definition defines referencing/referenced columns.</returns>
+        private static bool DoesConfiguredRelationshipOverrideDatabaseFkConstraint(ForeignKeyDefinition configResolvedFkDefinition)
+        {
+            return configResolvedFkDefinition.ReferencingColumns.Count > 0 && configResolvedFkDefinition.ReferencedColumns.Count > 0;
+        }
+
+        /// <summary>
+        /// Returns whether DAB has resolved a foreign key from the database
+        /// linking databaseTableA and databaseTableB.
+        /// A database foreign key definition explicitly denotes the referencing table and the referenced table.
+        /// This function creates two RelationShipPair objects, interchanging which datatable is referencing
+        /// and which table is referenced, so that DAB can definitevly identify whether a database foreign key exists.
+        /// - When DAB pre-processes relationships in the config, DAB creates two foreign key definition objects
+        /// because the config doesn't tell DAB which table is referencing vs referenced. This function is called when
+        /// DAB is determining which of the two FK definitions to keep.
         /// </summary>
         public bool VerifyForeignKeyExistsInDB(
             DatabaseTable databaseTableA,
@@ -1694,8 +2030,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 return false;
             }
 
-            RelationShipPair pairAB = new(databaseTableA, databaseTableB);
-            RelationShipPair pairBA = new(databaseTableB, databaseTableA);
+            RelationShipPair pairAB = new(
+                referencingDbObject: databaseTableA,
+                referencedDbObject: databaseTableB);
+
+            RelationShipPair pairBA = new(
+                referencingDbObject: databaseTableB,
+                referencedDbObject: databaseTableA);
 
             return (PairToFkDefinition.ContainsKey(pairAB) || PairToFkDefinition.ContainsKey(pairBA));
         }
@@ -1715,6 +2056,52 @@ namespace Azure.DataApiBuilder.Core.Services
         public bool IsDevelopmentMode()
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetFKDefinition(
+            string sourceEntityName,
+            string targetEntityName,
+            string referencingEntityName,
+            string referencedEntityName,
+            [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition,
+            bool isMToNRelationship = false)
+        {
+            if (GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObject))
+            {
+                DatabaseTable referencingDbTable = (DatabaseTable)referencingDbObject;
+                DatabaseTable referencedDbTable = (DatabaseTable)referencedDbObject;
+                SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+                RelationShipPair referencingReferencedPair;
+                List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+
+                // At this point, we are sure that a valid foreign key definition would exist from the referencing entity
+                // to the referenced entity because we validate it during the startup that the Foreign key information
+                // has been inferred for all the relationships.
+                if (isMToNRelationship)
+                {
+
+                    foreignKeyDefinition = fKDefinitions.FirstOrDefault(
+                                                            fk => string.Equals(referencedDbTable.FullName, fk.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase)
+                                                            && fk.ReferencingColumns.Count > 0
+                                                            && fk.ReferencedColumns.Count > 0)!;
+                }
+                else
+                {
+                    referencingReferencedPair = new(referencingDbTable, referencedDbTable);
+                    foreignKeyDefinition = fKDefinitions.FirstOrDefault(
+                                                            fk => fk.Pair.Equals(referencingReferencedPair) &&
+                                                            fk.ReferencingColumns.Count > 0
+                                                            && fk.ReferencedColumns.Count > 0)!;
+                }
+
+                return true;
+            }
+
+            foreignKeyDefinition = null;
+            return false;
         }
     }
 }

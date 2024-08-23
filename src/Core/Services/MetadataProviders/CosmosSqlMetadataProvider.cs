@@ -6,21 +6,36 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
+using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
     public class CosmosSqlMetadataProvider : ISqlMetadataProvider
     {
+        private ODataParser _oDataParser = new();
+
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
+
+        /// <summary>
+        /// This contains each entity into EDM model convention which will be used to traverse DB Policy filter using ODataParser
+        /// </summary>
+        public EdmModel EdmModel { get; set; } = new();
+
+        /// <summary>
+        /// This dictionary contains entity name as key (or its alias) and its path(s) in the graphQL schema as value which will be used in the generated conditions for the entity
+        /// </summary>
+        public Dictionary<string, List<EntityDbPolicyCosmosModel>> EntityWithJoins { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -29,6 +44,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition => throw new NotImplementedException();
+
+        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinition { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
 
@@ -65,6 +82,222 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
+            ParseSchemaGraphQLFieldsForJoins();
+
+            InitODataParser();
+        }
+
+        /// <summary>
+        /// Initialize OData parser by building OData model.
+        /// The parser will be used for parsing filter clause and order by clause.
+        /// </summary>
+        private void InitODataParser()
+        {
+            _oDataParser.BuildModel(GraphQLSchemaRoot);
+        }
+
+        /// <summary>
+        /// Parse the schema to get the entity paths for prefixes.
+        /// It will collect all the paths for each entity and its field, starting from the container model.
+        ///
+        /// e.g. If we have the following schema:
+        ///     type Planet @model(name:""PlanetAlias"") {
+        ///         id : ID!,
+        ///         name : String,
+        ///         character: Character,
+        ///         stars: [Star],
+        ///         sun: Star
+        ///     }
+        ///     
+        ///     type Star {
+        ///         id : ID,
+        ///         name : String
+        ///     }
+        ///
+        ///     type Character {
+        ///         id : ID,
+        ///         name : String,
+        ///         type: String,
+        ///         homePlanet: Int,
+        ///         primaryFunction: String,
+        ///         star: Star
+        ///     }
+        /// It would generate the following EntityWithJoins dictionary:
+        /// KEY: PlanetAlias
+        /// VALUE:
+        /// a) Path = c, EntityName = PlanetAlias
+        ///
+        /// KEY: Star
+        /// VALUE:
+        /// a) Path = c, ColumnName = stars , EntityName = Star, Alias = table0, JoinStatement = table0 IN c.stars
+        /// b) Path = c , ColumnName = sun, EntityName = Star
+        /// c) Path = c.character, ColumnName = star , EntityName = Star
+        ///
+        /// KEY: Character
+        /// VALUE:
+        /// a) Path = c, ColumnName = character , EntityName = Character
+        ///
+        /// EntityWithJoins dictionary indicates the paths for each entity. There "Planet" has one path i.e. "c" on the other hand Star has 3 paths.with one join statement.
+        /// This information is getting used to resolve DB Policy and generate cosmos DB sql query conditions for them.
+        /// </summary>
+        private void ParseSchemaGraphQLFieldsForJoins()
+        {
+            IncrementingInteger tableCounter = new();
+
+            Dictionary<string, ObjectTypeDefinitionNode> schemaDefinitions = new();
+
+            // Step1: Collect all the schema definitions in a dictionary for easy lookup of the corresponding fields
+            foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
+            {
+                schemaDefinitions.Add(typeDefinition.Name.Value, typeDefinition);
+            }
+
+            // Step2:
+            // a) Traverse the schema to find the container model
+            // b) Once it is found, start collecting all the paths for each entity and its field.
+            foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
+            {
+                if (typeDefinition is ObjectTypeDefinitionNode node && node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
+                {
+                    string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
+
+                    AssertIfEntityIsAvailableInConfig(modelName);
+
+                    if (EntityWithJoins.TryGetValue(modelName, out List<EntityDbPolicyCosmosModel>? entityWithJoins))
+                    {
+                        entityWithJoins.Add(new(Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName));
+                    }
+                    else
+                    {
+                        EntityWithJoins.Add(
+                           modelName,
+                           new List<EntityDbPolicyCosmosModel>
+                           {
+                                new (Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
+                           });
+                    }
+
+                    ProcessSchema(node.Fields, schemaDefinitions, CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Once container is found, it will traverse the fields and inner fields to get the paths for each entity.
+        /// Following steps are implemented here:
+        /// 1. If the entity is not in the runtime config, skip it.
+        /// 2. If the field is an array type, we need to create a table alias which will be used when creating JOINs to that table.
+        /// 3. Create a new EntityDbPolicyCosmosModel object with all the entity related information and add it to the EntityWithJoins dictionary.
+        /// 4. Check if we get previous entity with join information, if yes append it to the current entity also
+        /// 5. Recursively call this function, to process the schema
+        /// </summary>
+        /// <param name="fields">All the fields of an entity</param>
+        /// <param name="schemaDocument">Schema Documents, useful to get fields information of an entity</param>
+        /// <param name="currentPath">Generated path of an entity</param>
+        /// <param name="tableCounter">Counter used to generate table alias</param>
+        /// <param name="parentEntity">indicates the parent entity for which we are processing the schema.
+        /// It is useful to get the JOIN statement information and create further new statements</param>
+        /// <param name="visitedEntities"> Keeps a track of the path in an entity, to detect circular reference</param>
+        /// <remarks>It detects the circular reference in the schema while processing the schema and throws <seealso cref="DataApiBuilderException"/> </remarks>
+        private void ProcessSchema(
+            IReadOnlyList<FieldDefinitionNode> fields,
+            Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
+            string currentPath,
+            IncrementingInteger tableCounter,
+            EntityDbPolicyCosmosModel? parentEntity = null,
+            HashSet<string>? visitedEntities = null)
+        {
+            // Traverse the fields and add them to the path
+            foreach (FieldDefinitionNode field in fields)
+            {
+                // Create a tracker to keep track of visited entities to detect circular references
+                HashSet<string> trackerForFields = new();
+                if (visitedEntities is not null)
+                {
+                    trackerForFields = visitedEntities;
+                }
+
+                // If the entity is build-in type, do not go further to check circular reference
+                if (GraphQLUtils.IsBuiltInType(field.Type))
+                {
+                    continue;
+                }
+
+                string entityType = field.Type.NamedType().Name.Value;
+
+                AssertIfEntityIsAvailableInConfig(entityType);
+
+                // If the entity is already visited, then it is a circular reference
+                if (!trackerForFields.Add(entityType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Circular reference detected in the provided GraphQL schema for entity '{entityType}'.",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                string? alias = null;
+                bool isArrayType = field.Type is ListTypeNode;
+                if (isArrayType)
+                {
+                    // Since we don't have query structure here,
+                    // we are going to generate alias and use this counter to generate unique alias for each table at later stage.
+                    alias = $"table{tableCounter.Next()}";
+                }
+
+                EntityDbPolicyCosmosModel currentEntity = new(
+                                Path: currentPath,
+                                EntityName: entityType,
+                                ColumnName: field.Name.Value,
+                                Alias: alias);
+
+                // If entity is defined in the runtime config, only then generate Join for this entity
+                if (EntityWithJoins.ContainsKey(entityType))
+                {
+                    EntityWithJoins[entityType].Add(currentEntity);
+                }
+                else
+                {
+                    EntityWithJoins.Add(
+                        entityType,
+                        new List<EntityDbPolicyCosmosModel>() {
+                        currentEntity
+                        });
+                }
+
+                if (parentEntity is not null)
+                {
+                    if (string.IsNullOrEmpty(currentEntity.JoinStatement))
+                    {
+                        currentEntity.JoinStatement = parentEntity.JoinStatement;
+                    }
+                    else
+                    {
+                        currentEntity.JoinStatement = parentEntity.JoinStatement + " JOIN " + currentEntity.JoinStatement;
+                    }
+                }
+
+                // If the field is an array type, we need to create a table alias which will be used when creating JOINs to that table.
+                ProcessSchema(
+                    fields: schemaDocument[entityType].Fields,
+                    schemaDocument: schemaDocument,
+                    currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
+                    tableCounter: tableCounter,
+                    parentEntity: isArrayType ? currentEntity : null,
+                    visitedEntities: trackerForFields);
+            }
+        }
+
+        private void AssertIfEntityIsAvailableInConfig(string entityName)
+        {
+            // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
+            if (!_runtimeConfig.Entities.ContainsKey(entityName))
+            {
+                throw new DataApiBuilderException(
+                    message: $"The entity '{entityName}' was not found in the runtime config.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
         }
 
         /// <inheritdoc />
@@ -234,9 +467,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return null;
         }
 
+        public FieldDefinitionNode? GetSchemaGraphQLFieldFromFieldName(string entityName, string fieldName)
+        {
+            if (_graphQLTypeToFieldsMap.TryGetValue(entityName, out List<FieldDefinitionNode>? fields))
+            {
+                return fields?.Where(x => x.Name.Value == fieldName).FirstOrDefault();
+            }
+
+            return null;
+        }
+
         public ODataParser GetODataParser()
         {
-            throw new NotImplementedException();
+            return _oDataParser;
         }
 
         public IQueryBuilder GetQueryBuilder()
@@ -276,7 +519,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return true;
         }
 
-        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();
         }
@@ -336,7 +579,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             throw new DataApiBuilderException(
-                "GraphQL type doesn't match any entity name or singular type in the runtime config.",
+               "GraphQL type doesn't match any entity name or singular type in the runtime config.",
                 System.Net.HttpStatusCode.BadRequest,
                 DataApiBuilderException.SubStatusCodes.BadRequest);
         }
@@ -350,6 +593,23 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public bool IsDevelopmentMode()
         {
             return _runtimeConfig.IsDevelopmentMode();
+        }
+
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void InitializeAsync(
+            Dictionary<string, DatabaseObject> entityToDatabaseObject,
+            Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap)
+        {
+            throw new NotImplementedException();
         }
     }
 }

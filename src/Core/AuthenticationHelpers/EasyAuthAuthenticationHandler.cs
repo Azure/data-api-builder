@@ -21,6 +21,7 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers;
 /// </summary>
 public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
 {
+#if NET8_0_OR_GREATER
     /// <summary>
     /// Constructor for the EasyAuthAuthenticationHandler.
     /// Note the parameters are required by the base class.
@@ -28,15 +29,32 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
     /// <param name="options">EasyAuth authentication options.</param>
     /// <param name="logger">Logger factory.</param>
     /// <param name="encoder">URL encoder.</param>
-    /// <param name="clock">System clock.</param>
+    public EasyAuthAuthenticationHandler(
+        IOptionsMonitor<EasyAuthAuthenticationOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder)
+        // ISystemClock is obsolete in .NET 8.0 and later
+        // https://learn.microsoft.com/dotnet/core/compatibility/aspnet-core/8.0/isystemclock-obsolete
+        : base(options, logger, encoder)
+    {
+    }
+#else
+    /// <summary>
+    /// Constructor for the EasyAuthAuthenticationHandler.
+    /// Note the parameters are required by the base class.
+    /// </summary>
+    /// <param name="options">EasyAuth authentication options.</param>
+    /// <param name="logger">Logger factory.</param>
+    /// <param name="encoder">URL encoder.</param>
     public EasyAuthAuthenticationHandler(
         IOptionsMonitor<EasyAuthAuthenticationOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        ISystemClock clock
-        ) : base(options, logger, encoder, clock)
+        ISystemClock clock)
+        : base(options, logger, encoder, clock)
     {
     }
+#endif
 
     /// <summary>
     /// Attempts processing of a request's authentication metadata.

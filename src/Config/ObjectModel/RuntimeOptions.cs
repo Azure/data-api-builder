@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -13,6 +14,7 @@ public record RuntimeOptions
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
     public EntityCacheOptions? Cache { get; init; }
+    public PaginationOptions? Pagination { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -21,7 +23,8 @@ public record RuntimeOptions
         HostOptions? Host,
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
-        EntityCacheOptions? Cache = null)
+        EntityCacheOptions? Cache = null,
+        PaginationOptions? Pagination = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -29,6 +32,7 @@ public record RuntimeOptions
         this.BaseRoute = BaseRoute;
         this.Telemetry = Telemetry;
         this.Cache = Cache;
+        this.Pagination = Pagination;
     }
 
     /// <summary>
@@ -37,6 +41,7 @@ public record RuntimeOptions
     /// </summary>
     /// <returns>Whether caching is enabled globally.</returns>
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Cache))]
     public bool IsCachingEnabled =>
             Cache is not null &&
             Cache.Enabled is not null &&

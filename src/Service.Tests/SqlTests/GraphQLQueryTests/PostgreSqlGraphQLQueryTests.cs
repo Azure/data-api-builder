@@ -69,61 +69,55 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQuery()
         {
             string postgresQuery = @"
-SELECT
-  to_jsonb(""subq12"") AS ""data""
+SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""
 FROM
-  (
-    SELECT
-      ""table0"".""id"" AS ""id"",
-      ""table1_subq"".""data"" AS ""websiteplacement""
-    FROM
-      ""public"".""books"" AS ""table0""
-      LEFT OUTER JOIN LATERAL(
-        SELECT
-          to_jsonb(""subq11"") AS ""data""
-        FROM
-          (
-            SELECT
-              ""table1"".""id"" AS ""id"",
-              ""table1"".""price"" AS ""price"",
-              ""table2_subq"".""data"" AS ""books""
-            FROM
-              ""public"".""book_website_placements"" AS ""table1""
-              LEFT OUTER JOIN LATERAL(
-                SELECT
-                  to_jsonb(""subq10"") AS ""data""
-                FROM
-                  (
-                    SELECT
-                      ""table2"".""id"" AS ""id""
-                    FROM
-                      ""public"".""books"" AS ""table2""
-                    WHERE
-                      ""table1"".""book_id"" = ""table2"".""id""
-                    ORDER BY
-                      ""table2"".""id"" Asc
-                    LIMIT
-                      1
-                  ) AS ""subq10""
-              ) AS ""table2_subq"" ON TRUE
-            WHERE
-              ""table1"".""book_id"" = ""table0"".""id""
-            ORDER BY
-              ""table1"".""id"" Asc
-            LIMIT
-              1
-          ) AS ""subq11""
-      ) AS ""table1_subq"" ON TRUE
-    WHERE
-      ""table0"".""id"" = 1
-    ORDER BY
-      ""table0"".""id"" Asc
-    LIMIT
-      1
-  ) AS ""subq12""
+    (SELECT ""table0"".""id"" AS ""id"",
+            ""table0"".""title"" AS ""title"",
+            ""table1_subq"".""data"" AS ""websiteplacement""
+     FROM ""public"".""books"" AS ""table0""
+     LEFT OUTER JOIN LATERAL
+         (SELECT to_jsonb(""subq6"") AS ""data""
+          FROM
+              (SELECT ""table1"".""price"" AS ""price""
+               FROM ""public"".""book_website_placements"" AS ""table1""
+               WHERE ""table1"".""book_id"" = ""table0"".""id""
+               ORDER BY ""table1"".""id"" ASC
+               LIMIT 1) AS ""subq6"") AS ""table1_subq"" ON TRUE
+     WHERE 1 = 1
+     ORDER BY ""table0"".""id"" ASC
+     LIMIT 100) AS ""subq7""
             ";
 
             await OneToOneJoinQuery(postgresQuery);
+        }
+
+        /// <summary>
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            string postgresQuery = @"
+SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""
+FROM
+    (SELECT ""table0"".""species"" AS ""fancyName"",
+            ""table1_subq"".""data"" AS ""fungus""
+     FROM ""public"".""trees"" AS ""table0""
+     LEFT OUTER JOIN LATERAL
+         (SELECT to_jsonb(""subq6"") AS ""data""
+          FROM
+              (SELECT ""table1"".""habitat"" AS ""habitat""
+               FROM ""public"".""fungi"" AS ""table1""
+               WHERE ""table1"".""habitat"" = ""table0"".""species""
+               ORDER BY ""table1"".""habitat"" ASC
+               LIMIT 1) AS ""subq6"") AS ""table1_subq"" ON TRUE
+     WHERE 1 = 1
+     LIMIT 100) AS ""subq7""
+            ";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(postgresQuery);
         }
 
         [TestMethod]
@@ -220,6 +214,16 @@ FROM
         {
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, username FROM website_users ORDER BY id asc LIMIT 100) as table0";
             await TestQueryingTypeWithNullableStringFields(postgresQuery);
+        }
+
+        /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT datetime_types FROM type_table ORDER BY id asc LIMIT 100) as table0";
+            await TestQueryingTypeWithNullableDateTimeFields(postgresQuery);
         }
 
         /// <summary>

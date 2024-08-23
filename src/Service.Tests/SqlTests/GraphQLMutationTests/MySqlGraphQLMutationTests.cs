@@ -97,6 +97,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
+        /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
+        /// as GraphQL response.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public Task InsertMutationWithDefaultBuiltInFunctions()
+        {
+            // FIXME: This test is failing because of incorrect SQL query. Issue: https://github.com/Azure/data-api-builder/issues/1696
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information

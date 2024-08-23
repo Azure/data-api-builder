@@ -399,6 +399,75 @@
         }
       ]
     },
+    "stocks_price": {
+      "source": {
+        "object": "stocks_price",
+        "type": "table",
+        "key-fields": [
+          "categoryid",
+          "pieceid",
+          "instant"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "stocks_price",
+          "plural": "stocks_prices"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "price"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
+          "actions": [
+            {
+              "action": "create"
+            }
+          ]
+        }
+      ]
+    },
     "Book": {
       "source": {
         "object": "books",
@@ -1396,6 +1465,16 @@
       ],
       "mappings": {
         "species": "fancyName"
+      },
+      "relationships": {
+        "fungus": {
+          "cardinality": "one",
+          "target.entity": "Fungus",
+          "source.fields": [ "species" ],
+          "target.fields": [ "habitat" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "Fungus": {
@@ -1471,6 +1550,16 @@
       ],
       "mappings": {
         "spores": "hazards"
+      },
+      "relationships": {
+        "shrub": {
+          "cardinality": "one",
+          "target.entity": "Shrub",
+          "source.fields": [ "habitat" ],
+          "target.fields": [ "species" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "books_view_all": {
@@ -2119,6 +2208,400 @@
           ]
         }
       ]
+    },
+    "GetBooks": {
+      "source": {
+        "object": "get_books",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "GetBooks",
+          "plural": "GetBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "GetBook": {
+      "source": {
+        "object": "get_book_by_id",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": false,
+        "operation": "mutation",
+        "type": {
+          "singular": "GetBook",
+          "plural": "GetBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "GetPublisher": {
+      "source": {
+        "object": "get_publisher_by_id",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "GetPublisher",
+          "plural": "GetPublishers"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "GetAuthorsHistoryByFirstName": {
+      "source": {
+        "object": "get_authors_history_by_first_name",
+        "type": "stored-procedure",
+        "parameters": {
+          "firstName": "Aaron"
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "SearchAuthorByFirstName",
+          "plural": "SearchAuthorByFirstNames"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "CountBooks": {
+      "source": {
+        "object": "count_books",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "CountBooks",
+          "plural": "CountBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "InsertBook": {
+      "source": {
+        "object": "insert_book",
+        "type": "stored-procedure",
+        "parameters": {
+          "title": "randomX",
+          "publisher_id": 1234
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "InsertBook",
+          "plural": "InsertBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "InsertAndDisplayAllBooksUnderGivenPublisher": {
+      "source": {
+        "object": "insert_and_display_all_books_for_given_publisher",
+        "type": "stored-procedure",
+        "parameters": {
+          "title": "MyTitle",
+          "publisher_name": "MyPublisher"
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "InsertAndDisplayAllBooksUnderGivenPublisher",
+          "plural": "InsertAndDisplayAllBooksUnderGivenPublishers"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "UpdateBookTitle": {
+      "source": {
+        "object": "update_book_title",
+        "type": "stored-procedure",
+        "parameters": {
+          "id": 1,
+          "title": "Testing Tonight"
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "UpdateBookTitle",
+          "plural": "UpdateBookTitles"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "DeleteLastInsertedBook": {
+      "source": {
+        "object": "delete_last_inserted_book",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "DeleteLastInsertedBook",
+          "plural": "DeleteLastInsertedBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "dbo_DimAccount": {
+      "source": "dbo.DimAccount",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read",
+            "create",
+            "update",
+            "delete"
+          ]
+    }
+      ],
+      "relationships": {
+
+        "parent_account": {
+          "cardinality": "one",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "ParentAccountKey"
+          ],
+          "target.fields": [
+            "AccountKey"
+          ]
+        },
+        "child_accounts": {
+          "cardinality": "many",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "AccountKey"
+          ],
+          "target.fields": [
+            "ParentAccountKey"
+          ]
+        }
+      }
     }
   }
 }

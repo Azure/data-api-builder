@@ -42,11 +42,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     structure.JoinQueries.Select(
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
-            string predicates = JoinPredicateStrings(
+            string predicates;
+
+            if (structure.IsMultipleCreateOperation)
+            {
+                predicates = JoinPredicateStrings(
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                    structure.FilterPredicates,
+                                    Build(structure.Predicates, " OR ", isMultipleCreateOperation: true),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+            else
+            {
+                predicates = JoinPredicateStrings(
                                     structure.GetDbPolicyForOperation(EntityActionOperation.Read),
                                     structure.FilterPredicates,
                                     Build(structure.Predicates),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
+            }
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
@@ -472,8 +485,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
+            // The system type name column is aliased while the other columns are not to ensure
+            // names are consistent across different sql implementations as all go through same deserialization logic
             string query = "SELECT " +
-                            "name as result_field_name, TYPE_NAME(system_type_id) as result_type, is_nullable " +
+                            $"{STOREDPROC_COLUMN_NAME}, TYPE_NAME(system_type_id) as {STOREDPROC_COLUMN_SYSTEMTYPENAME}, {STOREDPROC_COLUMN_ISNULLABLE} " +
                             "FROM " +
                             "sys.dm_exec_describe_first_result_set_for_object (" +
                             $"OBJECT_ID('{databaseObjectName}'), 0) " +
@@ -494,10 +509,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
         {
             // For 'timestamp' columns sc.is_computed = 0.
-            string query = "SELECT ifsc.column_name from sys.columns as sc INNER JOIN information_schema.columns as ifsc " +
-                "ON (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +
-                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) and ifsc.table_name = {tableParamName} " +
-                $"AND ifsc.table_schema = {schemaParamName} and ifsc.column_name = sc.name;";
+            string query = "SELECT ifsc.COLUMN_NAME from sys.columns as sc INNER JOIN INFORMATION_SCHEMA.COLUMNS as ifsc " +
+                "ON (sc.is_computed = 1 or ifsc.DATA_TYPE = 'timestamp') " +
+                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) AND ifsc.TABLE_SCHEMA = {schemaParamName} " +
+                $"AND ifsc.TABLE_NAME = {tableParamName} AND ifsc.COLUMN_NAME = sc.name;";
 
             return query;
         }

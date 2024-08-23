@@ -16,6 +16,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// query.
         /// </summary>
         public string Build(SqlQueryStructure structure);
+
         /// <summary>
         /// Builds the query specific to the target database for the given
         /// SqlInsertStructure object which holds the major components of the

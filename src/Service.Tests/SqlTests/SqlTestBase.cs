@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Controllers;
 using Microsoft.AspNetCore.Authorization;
@@ -34,6 +35,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
@@ -55,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static IAuthorizationResolver _authorizationResolver;
-        private static WebApplicationFactory<Program> _application;
+        protected static WebApplicationFactory<Program> _application;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
         protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
         protected static ILogger<IQueryEngine> _queryEngineLogger;
@@ -94,9 +96,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Add magazines entity to the config
             runtimeConfig = DatabaseEngine switch
             {
-                TestCategory.MYSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "magazines"),
-                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines", new string[] { "id" }),
-                _ => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines"),
+                TestCategory.MYSQL => TestHelper.AddMissingEntitiesToConfig(
+                    config: runtimeConfig,
+                    entityKey: "magazine",
+                    entityName: "magazines"),
+                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(
+                    config: runtimeConfig,
+                    entityKey: "magazine",
+                    entityName: "foo.magazines",
+                    keyfields: new string[] { "id" }),
+                _ => TestHelper.AddMissingEntitiesToConfig(
+                    config: runtimeConfig,
+                    entityKey: "magazine",
+                    entityName: "foo.magazines"),
+            };
+
+            // Add table name collision testing entity to the config
+            runtimeConfig = DatabaseEngine switch
+            {
+                // MySql does not handle schema the same as other DB, so this testing entity is not needed
+                TestCategory.MYSQL => runtimeConfig,
+                _ => TestHelper.AddMissingEntitiesToConfig(
+                    config: runtimeConfig,
+                    entityKey: "bar_magazine",
+                    entityName: "bar.magazines",
+                    keyfields: new string[] { "upc" })
             };
 
             // Add custom entities for the test, if any.
@@ -141,6 +165,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 runtimeConfigProvider,
                 _metadataProviderFactory.Object);
 
+            Mock<IFusionCache> cache = new();
+            DabCacheService cacheService = new(cache.Object, logger: null, _httpContextAccessor.Object);
+
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
@@ -158,7 +185,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _authorizationResolver,
                                 _gQLFilterParser,
                                 _queryEngineLogger,
-                                runtimeConfigProvider
+                                runtimeConfigProvider,
+                                cacheService
                                 );
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
@@ -210,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 foreach (string query in customQueries)
                 {
-                    await _queryExecutor.ExecuteQueryAsync<object>(query, parameters: null, dataReaderHandler: null);
+                    await _queryExecutor.ExecuteQueryAsync<object>(query, dataSourceName: string.Empty, parameters: null, dataReaderHandler: null);
                 }
             }
         }
@@ -248,7 +276,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
@@ -339,6 +367,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         {
             await _queryExecutor.ExecuteQueryAsync<object>(
                 File.ReadAllText($"DatabaseSchema-{DatabaseEngine}.sql"),
+                dataSourceName: string.Empty,
                 parameters: null,
                 dataReaderHandler: null);
         }
@@ -360,7 +389,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     await _queryExecutor.ExecuteQueryAsync(
                         queryText,
                         parameters: null,
-                        _queryExecutor.GetJsonResultAsync<JsonDocument>);
+                        _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                        string.Empty);
 
                 result = sqlResult is not null ?
                     sqlResult.RootElement.ToString() :
@@ -372,7 +402,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     await _queryExecutor.ExecuteQueryAsync(
                         queryText,
                         parameters: null,
-                        _queryExecutor.GetJsonArrayAsync);
+                        _queryExecutor.GetJsonArrayAsync,
+                        string.Empty);
                 using JsonDocument sqlResult = resultArray is not null ? JsonDocument.Parse(resultArray.ToJsonString()) : null;
                 result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
             }

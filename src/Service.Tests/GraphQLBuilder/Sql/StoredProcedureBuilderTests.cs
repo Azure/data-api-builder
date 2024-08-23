@@ -56,6 +56,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(DateTimeOffset), DATETIME_TYPE, "11/19/2012 10:57:11 AM -08:00", false, DisplayName = "DateTimeOffset")]
         [DataRow(typeof(TimeOnly), LOCALTIME_TYPE, "10:57:11.0000", false, DisplayName = "LocalTime")]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE, "AgQGCAoMDhASFA==", false, DisplayName = "Byte[]")]
+        [DataRow(typeof(Guid), UUID_TYPE, "f58b7b58-62c9-4b97-ab60-75de70793f66", false, DisplayName = "GraphQL UUID/ SystemType GUID")]
+        [DataRow(typeof(string), STRING_TYPE, "f58b7b58-62c9-4b97-ab60-75de70793f66", false, DisplayName = "DB/SystemType String -> GUID value -> Resolve as GraphQL string")]
         public void StoredProcedure_ParameterValueTypeResolution(
             Type systemType,
             string expectedGraphQLType,
@@ -195,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             // Output column metadata hydration, parameter entities is used for relationship metadata handling, which is not
             // relevant for stored procedure tests.
-            ObjectTypeDefinitionNode objectTypeDefinitionNode = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode objectTypeDefinitionNode = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 entityName: entityName,
                 spDbObj,
                 configEntity: spEntity,

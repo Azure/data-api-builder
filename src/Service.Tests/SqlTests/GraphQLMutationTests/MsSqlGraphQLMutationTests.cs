@@ -59,13 +59,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
+        /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
+        /// as GraphQL response.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithDefaultBuiltInFunctions()
+        {
+            string msSqlQuery = @"
+                SELECT *
+                FROM [default_with_function_table] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[user_value] = 1234
+                ORDER BY [id] asc
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+            await base.InsertMutationWithDefaultBuiltInFunctions(msSqlQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new Publisher with name = 'New publisher'
         /// <code>Check: </code> Mutation fails because the database policy (@item.name ne 'New publisher') prohibits insertion of records with name = 'New publisher'.
         /// </summary>
         [TestMethod]
         public async Task InsertMutationFailingDatabasePolicy()
         {
-            string errorMessage = "Could not insert row with given values.";
+            string errorMessage = "Could not insert row with given values for entity: Publisher";
             string msSqlQuery = @"
                 SELECT count(*) as count
                    FROM [publishers]

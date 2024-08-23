@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -23,6 +22,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindByDateTimePKTest",
+                $"SELECT categoryid, pieceid, FORMAT(instant, 'MMM dd yyyy  h:mmtt') as instant, price, is_wholesale_price FROM { _tableWithDateTimePK } " +
+                $"WHERE categoryid = 2 AND pieceid = 1 AND instant = '2023-08-21 15:11:04' FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "FindEmptyTable",
                 $"SELECT * FROM { _emptyTableTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
@@ -31,6 +35,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "FindEmptyResultSetWithQueryFilter",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindOnTableWithNamingCollision",
+                $"SELECT upc, comic_name, issue FROM { _collisionTable } " +
+                $"WHERE 1 = 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindOnTableWithUniqueCharacters",
@@ -230,6 +239,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTest_Negative1QueryParams_Pagination",
+                $"SELECT TOP 100000 * FROM { _integrationPaginationTableName } " +
+                $"ORDER BY id asc " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
                 $"SELECT TOP 100 id FROM { _integrationPaginationTableName } " +
                 $"ORDER BY id asc " +
@@ -334,7 +349,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
-
             {
                 "FindTestWithFirstTwoOrderByAndPagination",
                 $"SELECT TOP 2 * FROM { _integrationTableName } " +
@@ -422,7 +436,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
                 $"SELECT TOP 101 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
-                $"WHERE [trees].[treeId] < 2 " +
+                $"WHERE [trees].[species] > 'Pseudotsuga menziesii' " +
                 $"ORDER BY [trees].[species] asc, [trees].[treeId] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
@@ -541,7 +555,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FROM {_integrationTableName} " +
                 $"ORDER BY [publisher_id] ASC, [id] ASC " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
-            }
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                $"SELECT * FROM { _tableWithVarcharMax } " +
+                $"WHERE color IS NULL AND ownername = 'Abhishek' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'sand' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'forestland' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindManyStoredProcedureTest",
+                $"EXECUTE {_integrationProcedureFindMany_ProcName}"
+            },
+            {
+                "FindOneStoredProcedureTestUsingParameter",
+                $"EXECUTE {_integrationProcedureFindOne_ProcName} @id = 1"
+            },
         };
         #region Test Fixture Setup
 
@@ -593,55 +633,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
-        [TestMethod]
-        [Ignore]
-        public override Task FindByDateTimePKTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        // Pending Stored Procedure Support
-        [TestMethod]
-        [Ignore]
-        public override Task FindManyStoredProcedureTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindOneStoredProcedureTestUsingParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithMissingParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonexistentParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindApiTestForSPWithRequiredParamsInRequestBody()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
     }
 }

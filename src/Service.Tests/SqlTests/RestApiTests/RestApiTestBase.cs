@@ -24,6 +24,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
         protected static readonly string _integration_NonAutoGenPK_EntityName = "magazine";
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
+        protected static readonly string _collisionEntity = "bar_magazine";
+        protected static readonly string _collisionTable = "bar.magazines";
         protected static readonly string _integration_AutoGenNonPK_EntityName = "Comic";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
         protected static readonly string _Composite_NonAutoGenPK_TableName = "stocks";
@@ -35,6 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationMappingTable = "trees";
         protected static readonly string _integrationMappingDifferentEntity = "plants";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
+        protected static readonly string _integrationBrokenMappingTable = "fungi";
         protected static readonly string _integrationUniqueCharactersEntity = "ArtOfWar";
         protected static readonly string _integrationUniqueCharactersTable = "aow";
         protected static readonly string _nonExistentEntityName = "!@$%^&*()_+definitely_nonexistent_entity!@$%^&*()_+";
@@ -64,6 +67,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _nonAutogenPKEntityWithTrigger = "InternData";
         protected static readonly string _nonAutogenPKTableWithTrigger = "intern_data";
         protected static readonly string _tableWithDateTimePK = "stocks_price";
+        protected static readonly string _defaultValueAsBuiltInMethodsEntity = "DefaultBuiltInFunction";
+        protected static readonly string _defaultValueAsBuiltInMethodsTable = "default_with_function_table";
+        protected static readonly string _tableWithVarcharMax = "journals";
+        protected static readonly string _entityWithVarcharMax = "Journal";
 
         public abstract string GetQuery(string key);
     }

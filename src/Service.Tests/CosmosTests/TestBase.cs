@@ -30,10 +30,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
 public class TestBase
 {
     internal const string DATABASE_NAME = "graphqldb";
-    // Intentionally removed name attibute from Planet model to test scenario where the 'name' attribute
+    // Intentionally removed name attribute from Planet model to test scenario where the 'name' attribute
     // is not explicitly added in the schema
     internal const string GRAPHQL_SCHEMA = @"
-type Character @model(name:""Character"") {
+type Character {
     id : ID,
     name : String,
     type: String,
@@ -42,45 +42,78 @@ type Character @model(name:""Character"") {
     star: Star
 }
 
-type Planet @model {
+type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     character: Character,
-    age : Int,
+    age : Float,
     dimension : String,
     earth: Earth,
+    tags: [String!],
     stars: [Star],
+    additionalAttributes: [AdditionalAttribute],
     moons: [Moon],
-    tags: [String!]
+    suns: [Sun]
 }
 
-type Star @model(name:""StarAlias"") {
+type Star {
     id : ID,
     name : String,
     tag: Tag
 }
 
-type Tag @model(name:""TagAlias"") {
+type Tag {
     id : ID,
     name : String
 }
 
-type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
+type Moon {
     id : ID,
     name : String,
-    details : String
+    details : String,
+    moonAdditionalAttributes: [MoonAdditionalAttribute]
 }
 
-type Earth @model(name:""Earth"") {
+type Earth {
     id : ID,
     name : String,
     type: String @authorize(roles: [""authenticated""])
 }
 
-type Sun @model(name:""Sun"") {
+type Sun {
     id : ID,
     name : String
-}";
+}
+
+type AdditionalAttribute {
+    id : ID,
+    name : String,
+    type: String
+}
+
+type MoonAdditionalAttribute {
+    id : ID,
+    name : String,
+    moreAttributes: [MoreAttribute!]
+}
+
+type MoreAttribute {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
+}
+
+type InvalidAuthModel @model @authorize(policy: ""Crater"") {
+    id : ID!,
+    name : String
+}
+
+type PlanetAgain @model {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
+}
+";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 
@@ -106,7 +139,7 @@ type Sun @model(name:""Sun"") {
             throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
         }
 
-        Dictionary<string, JsonElement> updatedOptions = baseConfig.DataSource.Options;
+        Dictionary<string, object> updatedOptions = baseConfig.DataSource.Options;
         updatedOptions["container"] = JsonDocument.Parse($"\"{_containerName}\"").RootElement;
 
         RuntimeConfig updatedConfig = baseConfig
@@ -160,7 +193,7 @@ type Sun @model(name:""Sun"") {
     {
         List<string> idList = new();
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
         for (int i = 0; i < numItems; i++)
         {
             string uid = Guid.NewGuid().ToString();
@@ -193,7 +226,7 @@ type Sun @model(name:""Sun"") {
             MaxItemCount = pageSize,
         };
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
         Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
         QueryDefinition queryDef = new(query);
         FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);

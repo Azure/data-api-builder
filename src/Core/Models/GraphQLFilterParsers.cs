@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -28,6 +29,8 @@ public class GQLFilterParser
     private readonly IRuntimeConfigProvider _configProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
 
+    private IncrementingInteger? _tableCounter;
+
     /// <summary>
     /// Constructor for GQLFilterParser
     /// </summary>
@@ -37,6 +40,7 @@ public class GQLFilterParser
     {
         _configProvider = runtimeConfigProvider;
         _metadataProviderFactory = metadataProviderFactory;
+        _tableCounter = new IncrementingInteger();
     }
 
     /// <summary>
@@ -64,12 +68,12 @@ public class GQLFilterParser
         string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-        InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
+        InputObjectType filterArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentSchema);
 
         List<PredicateOperand> predicates = new();
         foreach (ObjectFieldNode field in fields)
         {
-            object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field.Value,
                 argumentSchema: filterArgumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);
@@ -84,7 +88,7 @@ public class GQLFilterParser
             bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
             bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
-            InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
+            InputObjectType filterInputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
             if (fieldIsAnd || fieldIsOr)
             {
                 PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
@@ -157,7 +161,7 @@ public class GQLFilterParser
 
                     bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
                         entityName: originalEntityName,
-                        roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+                        roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER].ToString(),
                         operation: EntityActionOperation.Read,
                         columns: new[] { name });
 
@@ -187,15 +191,13 @@ public class GQLFilterParser
                             queryStructure,
                             metadataProvider);
                     }
-                    else
+                    else if (queryStructure is CosmosQueryStructure cosmosQueryStructure)
                     {
                         // This path will never get called for sql since the primary key will always required
                         // This path will only be exercised for CosmosDb_NoSql
-                        queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
-                        queryStructure.SourceAlias = sourceName + "." + backingColumnName;
-                        string? nestedFieldType = metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
+                        FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(cosmosQueryStructure.EntityName, name);
 
-                        if (nestedFieldType is null)
+                        if (fieldDefinitionNode is null)
                         {
                             throw new DataApiBuilderException(
                                 message: "Invalid filter object used as a nested field input value type.",
@@ -203,33 +205,149 @@ public class GQLFilterParser
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
 
-                        queryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
-                        predicates.Push(new PredicateOperand(Parse(ctx,
-                            filterArgumentObject.Fields[name],
-                            subfields,
-                            queryStructure)));
-                        queryStructure.DatabaseObject.Name = sourceName;
-                        queryStructure.SourceAlias = sourceAlias;
+                        string nestedFieldTypeName = fieldDefinitionNode.Type.NamedType().Name.Value;
+                        if (fieldDefinitionNode.Type.IsListType())
+                        {
+                            HandleNestedFilterForCosmos(
+                                ctx,
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                backingColumnName,
+                                nestedFieldTypeName,
+                                predicates,
+                                cosmosQueryStructure,
+                                metadataProvider);
+                        }
+                        else
+                        {
+                            cosmosQueryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
+                            cosmosQueryStructure.SourceAlias = sourceName + "." + backingColumnName;
+                            cosmosQueryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldTypeName);
+
+                            predicates.Push(new PredicateOperand(Parse(ctx,
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                cosmosQueryStructure)));
+
+                            cosmosQueryStructure.DatabaseObject.Name = sourceName;
+                            cosmosQueryStructure.SourceAlias = sourceAlias;
+                        }
                     }
                 }
                 else
                 {
+                    bool isListType = false;
+                    if (queryStructure is CosmosQueryStructure)
+                    {
+                        FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
+                        if (fieldDefinitionNode is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: "Invalid filter object used as a nested field input value type.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+
+                        isListType = fieldDefinitionNode.Type.IsListType();
+                    }
+
                     predicates.Push(
-                        new PredicateOperand(
-                            ParseScalarType(
-                                ctx,
-                                argumentSchema: filterArgumentObject.Fields[name],
-                                backingColumnName,
-                                subfields,
-                                schemaName,
-                                sourceName,
-                                sourceAlias,
-                                queryStructure.MakeDbConnectionParam)));
+                   new PredicateOperand(
+                       ParseScalarType(
+                           ctx: ctx,
+                           argumentSchema: filterArgumentObject.Fields[name],
+                           fieldName: backingColumnName,
+                           fields: subfields,
+                           schemaName: schemaName,
+                           tableName: sourceName,
+                           tableAlias: sourceAlias,
+                           processLiterals: queryStructure.MakeDbConnectionParam,
+                           isListType: isListType)));
                 }
             }
         }
 
         return MakeChainPredicate(predicates, PredicateOperation.AND);
+    }
+
+    /// <summary>
+    /// For CosmosDB, a nested filter represents an EXISTS clause with a subquery.
+    /// This function:
+    /// 1. Defines the Exists Query structure
+    /// 2. Recursively parses any more(possibly nested) filters on the Exists sub query.
+    /// 3. Adds join predicates between the related entities to the Exists sub query.
+    /// 4. Adds the Exists subquery to the existing list of predicates.
+    /// </summary>
+    /// <param name="ctx">The middleware context.</param>
+    /// <param name="filterField">The nested filter field.</param>
+    /// <param name="subfields">The subfields of the nested filter.</param>
+    /// <param name="columnName">Current Column Name</param>
+    /// <param name="entityType">Current Entity Type</param>
+    /// <param name="predicates">The predicates parsed so far.</param>
+    /// <param name="queryStructure">The query structure of the entity being filtered, it would be modified to contain EXIST predicates</param>
+    /// <param name="metadataProvider"> Cosmos Metadata Provider, to get metadata information for a given entity </param>
+    /// <exception cref="DataApiBuilderException">
+    private void HandleNestedFilterForCosmos(
+        IMiddlewareContext ctx,
+        IInputField filterField,
+        List<ObjectFieldNode> subfields,
+        string columnName,
+        string entityType,
+        List<PredicateOperand> predicates,
+        CosmosQueryStructure queryStructure,
+        ISqlMetadataProvider metadataProvider)
+    {
+        // Validate that the field referenced in the nested input filter can be accessed.
+        bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
+            entityIdentifier: entityType,
+            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER].ToString(),
+            operation: EntityActionOperation.Read);
+
+        if (!entityAccessPermitted)
+        {
+            throw new DataApiBuilderException(
+                message: DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE,
+                statusCode: HttpStatusCode.Forbidden,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+        }
+
+        List<Predicate> predicatesForExistsQuery = new();
+        CosmosExistsQueryStructure existsQuery = new(
+            ctx,
+            new Dictionary<string, object?>(),
+            _configProvider,
+            metadataProvider,
+            queryStructure.AuthorizationResolver,
+            this,
+            queryStructure.Counter,
+            predicatesForExistsQuery);
+
+        existsQuery.DatabaseObject.SchemaName = $"{queryStructure.SourceAlias}.{columnName}";
+        existsQuery.DatabaseObject.Name = existsQuery.SourceAlias;
+        existsQuery.EntityName = metadataProvider.GetEntityName(entityType);
+
+        // Recursively parse and obtain the predicates for the Exists clause subquery
+        Predicate existsQueryFilterPredicate = Parse(ctx,
+                filterField,
+                subfields,
+                existsQuery);
+
+        predicatesForExistsQuery.Push(existsQueryFilterPredicate);
+
+        // The right operand is the SqlExistsQueryStructure.
+        PredicateOperand right = new(existsQuery);
+
+        // Create a new unary Exists Predicate
+        Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
+
+        // Add it to the rest of the existing predicates.
+        predicates.Push(new PredicateOperand(existsPredicate));
+
+        // Add all parameters from the exists subquery to the main queryStructure.
+        foreach ((string key, DbConnectionParam value) in existsQuery.Parameters)
+        {
+            queryStructure.Parameters.Add(key, value);
+        }
     }
 
     /// <summary>
@@ -271,7 +389,7 @@ public class GQLFilterParser
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
             entityIdentifier: nestedFilterEntityName,
-            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER].ToString(),
             operation: EntityActionOperation.Read);
 
         if (!entityAccessPermitted)
@@ -307,9 +425,9 @@ public class GQLFilterParser
         // Add JoinPredicates to the subquery query structure so a predicate connecting
         // the outer table is added to the where clause of subquery
         existsQuery.AddJoinPredicatesForRelatedEntity(
-            queryStructure.EntityName,
-            queryStructure.SourceAlias,
-            existsQuery);
+            targetEntityName: queryStructure.EntityName,
+            relatedSourceAlias: queryStructure.SourceAlias,
+            subQuery: existsQuery);
 
         // The right operand is the SqlExistsQueryStructure.
         PredicateOperand right = new(existsQuery);
@@ -349,29 +467,31 @@ public class GQLFilterParser
 
     /// <summary>
     /// Calls the appropriate scalar type filter parser based on the type of
-    /// the fields
+    /// the fields.
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
     /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
-    /// <param name="name">The name of the field</param>
+    /// <param name="fieldName">The name of the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="schemaName">The db schema name to which the table belongs</param>
     /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
     /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
+    /// <param name="isListType">Flag to give a hint about the node type. It is only applicable for CosmosDB</param>
     private static Predicate ParseScalarType(
         IMiddlewareContext ctx,
         IInputField argumentSchema,
-        string name,
+        string fieldName,
         List<ObjectFieldNode> fields,
         string schemaName,
         string tableName,
         string tableAlias,
-        Func<object, string?, string> processLiterals)
+        Func<object, string?, string> processLiterals,
+        bool isListType = false)
     {
-        Column column = new(schemaName, tableName, columnName: name, tableAlias);
+        Column column = new(schemaName, tableName, columnName: fieldName, tableAlias);
 
-        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals);
+        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals, isListType);
     }
 
     /// <summary>
@@ -408,7 +528,7 @@ public class GQLFilterParser
         List<PredicateOperand> operands = new();
         foreach (IValueNode field in fields)
         {
-            object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field,
                 argumentSchema: argumentSchema,
                 ctx.Variables);
@@ -488,20 +608,22 @@ public static class FieldFilterParser
     /// <param name="column">The table column targeted by the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
+    /// <param name="isListType">Flag which gives a hint about the node type in the given schema. only for CosmosDB it can be of list type. Refer <a href=https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/query/array-contains>here</a>.</param>
     public static Predicate Parse(
         IMiddlewareContext ctx,
         IInputField argumentSchema,
         Column column,
         List<ObjectFieldNode> fields,
-        Func<object, string?, string> processLiterals)
+        Func<object, string?, string> processLiterals,
+        bool isListType = false)
     {
         List<PredicateOperand> predicates = new();
 
-        InputObjectType argumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(argumentSchema);
+        InputObjectType argumentObject = ExecutionHelper.InputObjectTypeFromIInputField(argumentSchema);
         foreach (ObjectFieldNode field in fields)
         {
             string name = field.Name.ToString();
-            object? value = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? value = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field.Value,
                 argumentSchema: argumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);
@@ -535,12 +657,28 @@ public static class FieldFilterParser
                     op = PredicateOperation.GreaterThanOrEqual;
                     break;
                 case "contains":
-                    op = PredicateOperation.LIKE;
-                    value = $"%{EscapeLikeString((string)value)}%";
+                    if (isListType)
+                    {
+                        op = PredicateOperation.ARRAY_CONTAINS;
+                    }
+                    else
+                    {
+                        op = PredicateOperation.LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                    }
+
                     break;
                 case "notContains":
-                    op = PredicateOperation.NOT_LIKE;
-                    value = $"%{EscapeLikeString((string)value)}%";
+                    if (isListType)
+                    {
+                        op = PredicateOperation.NOT_ARRAY_CONTAINS;
+                    }
+                    else
+                    {
+                        op = PredicateOperation.NOT_LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                    }
+
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;

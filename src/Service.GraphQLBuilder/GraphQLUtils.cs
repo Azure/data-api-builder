@@ -2,20 +2,15 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Net;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
+using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using HotChocolate.Types.NodaTime;
-using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
@@ -29,6 +24,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_MUTATION = "mutation";
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
+        public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
+        public const string DB_OPERATION_RESULT_FIELD_NAME = "result";
+
+        // String used as a prefix for the name of a linking entity.
+        private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+        // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
+        private const string ENTITY_NAME_DELIMITER = "$";
+
+        public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
+            DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -44,9 +49,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         public static bool IsBuiltInType(ITypeNode typeNode)
         {
-            HashSet<string> inBuiltTypes = new()
+            HashSet<string> builtInTypes = new()
             {
-                "ID",
+                "ID", // Required for CosmosDB
                 UUID_TYPE,
                 BYTE_TYPE,
                 SHORT_TYPE,
@@ -62,7 +67,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 LOCALTIME_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
-            return inBuiltTypes.Contains(name);
+            return builtInTypes.Contains(name);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether database type represents a NoSQL database.
+        /// </summary>
+        public static bool IsRelationalDb(DatabaseType databaseType)
+        {
+            return RELATIONAL_DBS.Contains(databaseType);
         }
 
         /// <summary>
@@ -224,61 +237,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Translates a JSON string or number value defined in the runtime configuration to a GraphQL {Type}ValueNode which represents
-        /// the associated GraphQL type. The target value type is referenced from the passed in parameterDefinition which
-        /// holds database schema metadata.
-        /// </summary>
-        /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
-        /// <param name="parameterDefinition">Database schema metadata for stored procedure parameter which include value and value type.</param>
-        /// <returns>Tuple where first item is the string representation of a GraphQLType (e.g. "Byte", "Int", "Decimal")
-        /// and the second item is the GraphQL {type}ValueNode </returns>
-        /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
-        public static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
-        {
-            string paramValueType = SchemaConverter.GetGraphQLTypeFromSystemType(type: parameterDefinition.SystemType);
-
-            try
-            {
-                Tuple<string, IValueNode> valueNode = paramValueType switch
-                {
-                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
-                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
-                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
-                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
-                    STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
-                    BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
-                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
-                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
-                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
-                        DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
-                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
-                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
-                    _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
-                };
-
-                return valueNode;
-            }
-            catch (Exception error) when (
-                error is FormatException ||
-                error is OverflowException ||
-                error is ArgumentException ||
-                error is NotSupportedException)
-            {
-                throw new DataApiBuilderException(
-                        message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
-                        innerException: error);
-            }
-        }
-
-        /// <summary>
-        /// Generates the entity name from the GraphQL context.
+        /// Generates the datasource name from the GraphQL context.
         /// </summary>
         /// <param name="context">Middleware context.</param>
-        /// <returns></returns>
-        public static string GetDataSourceNameFromGraphQLContext(IMiddlewareContext context, RuntimeConfig runtimeConfig)
+        /// <returns>Datasource name used to execute request.</returns>
+        public static string GetDataSourceNameFromGraphQLContext(IPureResolverContext context, RuntimeConfig runtimeConfig)
         {
             string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
             string dataSourceName;
@@ -287,27 +250,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 // we are at the root query node - need to determine return type and store on context.
                 // Output type below would be the graphql object return type - Books,BooksConnectionObject.
-                IOutputType outputType = context.Selection.Field.Type;
-                string entityName = outputType.TypeName();
-
-                // Below is only needed if say we have an Array return type or items object for plural case.
-                ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-
-                // Example: CustomersConnectionObject - for get all scenarios.
-                if (QueryBuilder.IsPaginationType(underlyingFieldType))
-                {
-                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
-                    outputType = subField.Type;
-                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-                    entityName = underlyingFieldType.Name;
-                }
-
-                // if name on schema is different from name in config.
-                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
-                {
-                    entityName = modelName;
-                }
+                string entityName = GetEntityNameFromContext(context);
 
                 dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
 
@@ -319,15 +262,198 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 // Derive node from path - e.g. /books/{id} - node would be books.
                 // for this queryNode path we have stored the datasourceName needed to retrieve query and mutation engine of inner objects
                 object? obj = context.ContextData[GenerateDataSourceNameKeyFromPath(context)];
-                dataSourceName = obj?.ToString()!;
+
+                if (obj is null)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Unable to determine datasource name for operation.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                }
+
+                dataSourceName = obj.ToString()!;
             }
 
             return dataSourceName;
         }
 
-        private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
+        /// <summary>
+        /// Get entity name from context object.
+        /// </summary>
+        public static string GetEntityNameFromContext(IPureResolverContext context)
+        {
+            IOutputType type = context.Selection.Field.Type;
+            string graphQLTypeName = type.TypeName();
+            string entityName = graphQLTypeName;
+
+            if (graphQLTypeName is DB_OPERATION_RESULT_TYPE)
+            {
+                // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
+                if (TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
+                {
+                    entityName = modelName;
+                }
+            }
+            else
+            {
+                // for rest of scenarios get entity name from output object type.
+                ObjectType underlyingFieldType;
+                underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                // Example: CustomersConnectionObject - for get all scenarios.
+                if (QueryBuilder.IsPaginationType(underlyingFieldType))
+                {
+                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+                    type = subField.Type;
+                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                    entityName = underlyingFieldType.Name;
+                }
+
+                // if name on schema is different from name in config.
+                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
+                if (TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+                {
+                    entityName = modelName;
+                }
+            }
+
+            return entityName;
+        }
+
+        private static string GenerateDataSourceNameKeyFromPath(IPureResolverContext context)
         {
             return $"{context.Path.ToList()[0]}";
+        }
+
+        /// <summary>
+        /// Helper method to determine whether a field is a column (or scalar) or complex (relationship) field based on its syntax kind.
+        /// If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column/scalar field which
+        /// has an IntValue, FloatValue, StringValue, BooleanValue or an EnumValue.
+        /// </summary>
+        /// <param name="fieldSyntaxKind">SyntaxKind of the field.</param>
+        /// <returns>true if the field is a scalar field, else false.</returns>
+        public static bool IsScalarField(SyntaxKind fieldSyntaxKind)
+        {
+            return fieldSyntaxKind is SyntaxKind.IntValue || fieldSyntaxKind is SyntaxKind.FloatValue ||
+                fieldSyntaxKind is SyntaxKind.StringValue || fieldSyntaxKind is SyntaxKind.BooleanValue ||
+                fieldSyntaxKind is SyntaxKind.EnumValue;
+        }
+
+        /// <summary>
+        /// Helper method to get the field details i.e. (field value, field kind) from the GraphQL request body.
+        /// If the field value is being provided as a variable in the mutation, a recursive call is made to the method
+        /// to get the actual value of the variable.
+        /// </summary>
+        /// <param name="value">Value of the field.</param>
+        /// <param name="variables">Collection of variables declared in the GraphQL mutation request.</param>
+        /// <returns>A tuple containing a constant field value and the field kind.</returns>
+        public static Tuple<IValueNode?, SyntaxKind> GetFieldDetails(IValueNode? value, IVariableValueCollection variables)
+        {
+            if (value is null)
+            {
+                return new(null, SyntaxKind.NullValue);
+            }
+
+            if (value.Kind == SyntaxKind.Variable)
+            {
+                string variableName = ((VariableNode)value).Name.Value;
+                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
+                return GetFieldDetails(variableValue, variables);
+            }
+
+            return new(value, value.Kind);
+        }
+
+        /// <summary>
+        /// Helper method to generate the linking entity name using the source and target entity names.
+        /// </summary>
+        /// <param name="source">Source entity name.</param>
+        /// <param name="target">Target entity name.</param>
+        /// <returns>Name of the linking entity 'LinkingEntity$SourceEntityName$TargetEntityName'.</returns>
+        public static string GenerateLinkingEntityName(string source, string target)
+        {
+            return LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER + source + ENTITY_NAME_DELIMITER + target;
+        }
+
+        /// <summary>
+        ///  Helper method to decode the names of source and target entities from the name of a linking entity.
+        /// </summary>
+        /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
+        /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
+        /// <exception cref="ArgumentException">Thrown when the linking entity name is not of the expected format.</exception>
+        public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
+        {
+            if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            string[] sourceTargetEntityNames = linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+
+            if (sourceTargetEntityNames.Length != 3)
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
+        }
+
+        /// <summary>
+        /// Helper method to extract a hotchocolate field node object with the specified name from all the field node objects belonging to an input type object.  
+        /// </summary>
+        /// <param name="objectFieldNodes">List of field node objects belonging to an input type object</param>
+        /// <param name="fieldName"> Name of the field node object to extract from the list of all field node objects</param>
+        /// <exception cref="ArgumentException"></exception>
+        public static IValueNode GetFieldNodeForGivenFieldName(List<ObjectFieldNode> objectFieldNodes, string fieldName)
+        {
+            ObjectFieldNode? requiredFieldNode = objectFieldNodes.Where(fieldNode => fieldNode.Name.Value.Equals(fieldName)).FirstOrDefault();
+            if (requiredFieldNode != null)
+            {
+                return requiredFieldNode.Value;
+            }
+
+            throw new ArgumentException($"The provided field {fieldName} does not exist.");
+        }
+
+        /// <summary>
+        /// Helper method to determine if the relationship defined between the source entity and a particular target entity is an M:N relationship.
+        /// </summary>
+        /// <param name="sourceEntity">Source entity.</param>
+        /// <param name="relationshipName">Relationship name.</param>
+        /// <returns>true if the relationship between source and target entities has a cardinality of M:N.</returns>
+        public static bool IsMToNRelationship(Entity sourceEntity, string relationshipName)
+        {
+            return sourceEntity.Relationships is not null &&
+                sourceEntity.Relationships.TryGetValue(relationshipName, out EntityRelationship? relationshipInfo) &&
+                !string.IsNullOrWhiteSpace(relationshipInfo.LinkingObject);
+        }
+
+        /// <summary>
+        /// Helper method to get the name of the related entity for a given relationship name.
+        /// </summary>
+        /// <param name="entity">Entity object</param>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="relationshipName">Name of the relationship</param>
+        /// <returns>Name of the related entity</returns>
+        public static string GetRelationshipTargetEntityName(Entity entity, string entityName, string relationshipName)
+        {
+            if (entity.Relationships is null)
+            {
+                throw new DataApiBuilderException(message: $"Entity {entityName} has no relationships defined",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            if (entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
+               && entityRelationship is not null)
+            {
+                return entityRelationship.TargetEntity;
+            }
+            else
+            {
+                throw new DataApiBuilderException(message: $"Entity {entityName} does not have a relationship named {relationshipName}",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
+            }
         }
     }
 }

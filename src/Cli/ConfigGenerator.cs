@@ -4,7 +4,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -89,7 +88,7 @@ namespace Cli
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
             string? runtimeBaseRoute = options.RuntimeBaseRoute;
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object?> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
 
@@ -112,6 +111,27 @@ namespace Cli
                 !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled))
             {
                 return false;
+            }
+
+            bool isMultipleCreateEnabledForGraphQL;
+
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // a warning is logged.
+            // When multiple mutation operations are extended for other database types, this option should be honored.
+            // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
+            if (dbType is not DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
+            {
+                _logger.LogWarning($"The option --graphql.multiple-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
+            }
+
+            MultipleMutationOptions? multipleMutationOptions = null;
+
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // it is not honored.
+            if (dbType is DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
+            {
+                isMultipleCreateEnabledForGraphQL = IsMultipleCreateOperationEnabled(options.MultipleCreateOperationEnabled);
+                multipleMutationOptions = new(multipleCreateOptions: new MultipleCreateOptions(enabled: isMultipleCreateEnabledForGraphQL));
             }
 
             switch (dbType)
@@ -142,20 +162,20 @@ namespace Cli
                         _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
-                    if (options.RestRequestBodyStrict is not CliBoolean.None)
+                    if (options.RestRequestBodyStrict is not CliBool.None)
                     {
                         _logger.LogWarning("Configuration option --rest.request-body-strict is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
                     restPath = null;
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement(cosmosDatabase));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(cosmosContainer));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), cosmosDatabase);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), cosmosContainer);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), graphQLSchemaPath);
                     break;
 
                 case DatabaseType.DWSQL:
                 case DatabaseType.MSSQL:
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.SetSessionContext);
 
                     break;
                 case DatabaseType.MySQL:
@@ -232,8 +252,8 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBoolean.False ? false : true),
-                    GraphQL: new(graphQLEnabled, graphQLPath),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
+                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -284,6 +304,16 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the multiple create operation is enabled or not based on the inputs from dab init command.
+        /// </summary>
+        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-create.enabled option of the init command</param>
+        /// <returns>True/False</returns>
+        private static bool IsMultipleCreateOperationEnabled(CliBool multipleCreateEnabledOptionValue)
+        {
+            return multipleCreateEnabledOptionValue is CliBool.True;
         }
 
         /// <summary>
@@ -474,6 +504,73 @@ namespace Cli
                     out sourceObject))
             {
                 _logger.LogError("Unable to parse the given source.");
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Tries to update the runtime settings based on the provided runtime options.
+        /// </summary>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        public static bool TryConfigureSettings(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (options.DepthLimit is not null && !TryUpdateDepthLimit(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Attempts to update the depth limit in the GraphQL runtime settings based on the provided value.
+        /// Validates that any user-provided depth limit is an integer within the valid range of [1 to Int32.MaxValue] or -1.
+        /// A depth limit of -1 is considered a special case that disables the GraphQL depth limit.
+        /// [NOTE:] This method expects the provided depth limit to be not null.
+        /// </summary>
+        /// <param name="options">Options including the new depth limit.</param>
+        /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        private static bool TryUpdateDepthLimit(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            // check if depth limit is within the valid range of 1 to Int32.MaxValue
+            int? newDepthLimit = options.DepthLimit;
+            if (newDepthLimit < 1)
+            {
+                if (newDepthLimit == -1)
+                {
+                    _logger.LogWarning("Depth limit set to -1 removes the GraphQL query depth limit.");
+                }
+                else
+                {
+                    _logger.LogError("Invalid depth limit. Specify a depth limit > 0 or remove the existing depth limit by specifying -1.");
+                    return false;
+                }
+            }
+
+            // Try to update the depth limit in the runtime configuration
+            try
+            {
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime! with { GraphQL = runtimeConfig.Runtime.GraphQL! with { DepthLimit = newDepthLimit, UserProvidedDepthLimit = true } } };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Failed to update the depth limit: {e}", e);
                 return false;
             }
 
@@ -1092,24 +1189,14 @@ namespace Cli
                 return false;
             }
 
-            // Validates that config file has data and it is properly deserialized
-            // Replaces all the environment variables while deserializing when starting DAB.
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
-            {
-                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
-                return false;
-            }
-            else
-            {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
-            }
+            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
 
             LocalRuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, LoggerFactoryForCli).Result;
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
         }
 
         /// <summary>
@@ -1316,6 +1403,54 @@ namespace Cli
             }
 
             return graphQLType with { Operation = graphQLOperation };
+        }
+
+        /// <summary>
+        /// This method will add the telemetry options to the config file. If the config file already has telemetry options,
+        /// it will overwrite the existing options.
+        /// Data API builder consumes the config file with provided telemetry options to send telemetry to Application Insights.
+        /// </summary>
+        public static bool TryAddTelemetry(AddTelemetryOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.Runtime is null)
+            {
+                _logger.LogError("Invalid or missing 'runtime' section in config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(options.AppInsightsConnString))
+            {
+                _logger.LogError("Invalid Application Insights connection string provided.");
+                return false;
+            }
+
+            ApplicationInsightsOptions applicationInsightsOptions = new(
+                Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
+                ConnectionString: options.AppInsightsConnString
+            );
+
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = runtimeConfig.Runtime with
+                {
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                }
+            };
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
     }
 }

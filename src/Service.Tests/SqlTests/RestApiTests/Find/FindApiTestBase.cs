@@ -128,6 +128,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the Rest Api to validate that queries work
+        /// when there is the same table name in two different
+        /// schemas. In this test we have two tables both
+        /// named magazines but with one in the schema "foo" and
+        /// the other in the schema "bar".
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindOnTableWithNamingCollision()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _collisionEntity,
+                sqlQuery: GetQuery("FindOnTableWithNamingCollision"));
+        }
+
+        /// <summary>
         /// Validates that a Find request on a single item with $select with only non-PK fields
         /// returns only the selected fields and does not contain PK fields.
         /// </summary>
@@ -564,6 +581,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLeftNullNeFilter")
             );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=color eq null and ownername eq 'Abhishek'",
+                entityNameOrPath: _entityWithVarcharMax,
+                sqlQuery: GetQuery("FindTestFilterForVarcharColumnWithNullAndNonNullValues"),
+                clientRoleHeader: "authorizationHandlerTester"
+            );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=habitat eq 'sand'",
+                entityNameOrPath: _integrationBrokenMappingEntity,
+                sqlQuery: GetQuery("FindTestFilterForVarcharColumnWithNotMaximumSize")
+            );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=habitat eq 'forestland'",
+                entityNameOrPath: _integrationBrokenMappingEntity,
+                sqlQuery: GetQuery("FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation")
+            );
         }
 
         /// <summary>
@@ -723,6 +759,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink)),
                 expectedAfterQueryString: $"?$after={after}",
                 paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Validates that when first is set to -1, we return the maximum records
+        /// as specified by max page size. In this case, the expected result is that
+        /// all the records are returned from the db.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTest_Negative1QueryParams_Pagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=-1",
+                entityNameOrPath: _integrationPaginationEntityName,
+                sqlQuery: GetQuery(nameof(FindTest_Negative1QueryParams_Pagination))
             );
         }
 
@@ -1517,7 +1569,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: "Invalid number of items requested, $first must be an integer greater than 0. Actual value: 0",
+                expectedErrorMessage: "Invalid number of items requested, $first must be -1 or an integer greater than 0. Actual value: 0",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first=100001
+        /// to request > max records of 100000 records, which should throw a DataApiBuilder
+        /// Exception. This test depends on max page size configuration in runtimeconfig.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithMaxExceededSingleKeyPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=100001",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                exceptionExpected: true,
+                expectedErrorMessage: "Invalid number of items requested, first argument must be either -1 or a positive number within the max page size limit of 100000. Actual value: 100001",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

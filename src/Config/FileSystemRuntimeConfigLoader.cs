@@ -129,6 +129,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <param name="logger">ILogger for logging errors.</param>
+    /// <param name="dataSourceName">If provided and not empty, this is the data source name that will be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,
@@ -156,6 +157,20 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         if (logger is null)
         {
             Console.Error.WriteLine(errorMessage);
+
+            if (TryParseConfig(
+                json: json,
+                config: out config,
+                connectionString: _connectionString,
+                replaceEnvVar: replaceEnvVar))
+            {
+                if (!string.IsNullOrEmpty(dataSourceName))
+                {
+                    config.UpdateDefaultDataSourceName(dataSourceName);
+                }
+
+                return true;
+            }
         }
         else
         {
@@ -172,6 +187,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
+    /// <param name="dataSourceName">The data source name to be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string? defaultDataSourceName = null)
     {

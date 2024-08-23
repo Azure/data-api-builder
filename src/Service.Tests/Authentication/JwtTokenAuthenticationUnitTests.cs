@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Security.Claims;
@@ -24,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -215,22 +215,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// JWT with intentionally scrambled signature should result in failed authentication
-        /// characterized with an HTTP 401 Unauthorized response.
-        /// JWT signed with RSASecurityKey, not a cert, so no KID (keyID) claim in token.
+        /// JWT signed with key not registered in the server should result in failed authentication
+        /// characterized with an HTTP 401 Unauthorized response due to an "invalid signature" error.
+        /// If this test fails, check the console output for the error:
+        /// "Bearer was not authenticated. Failure message: IDX10503: Signature validation failed."
         /// </summary>
         [TestMethod("JWT signed with unrecognized/unconfigured key, results in signature key not found")]
         public async Task TestInvalidToken_InvalidSignature()
         {
-            RsaSecurityKey key = new(RSA.Create(2048));
-            string token = CreateJwt(audience: AUDIENCE, issuer: LOCAL_ISSUER, signingKey: key);
-            string tokenForgedSignature = ModifySignature(token, removeSig: false);
+            // Arrange
+            RsaSecurityKey tokenIssuerSigningKey = CreateRsaSigningKeyForTest();
 
-            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(key, tokenForgedSignature);
+            // Create a JWT token with a signing key differnt than the key
+            // used by the server to validate the IssuerSigningKey
+            // -> Exercises the ValidateIssuerSigningKey validator
+            // https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/wiki/ValidatingTokens
+            RsaSecurityKey badKey = CreateRsaSigningKeyForTest();
+            string badToken = CreateJwt(audience: AUDIENCE, issuer: LOCAL_ISSUER, signingKey: badKey);
+
+            // Act
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                key: tokenIssuerSigningKey,
+                token: badToken);
+
+            // Assert
             Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
-            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The signature is invalid"));
+
+            bool isResponseContentValid = headerValue[0].Contains("invalid_token") && headerValue[0].Contains("The signature key was not found");
+            Assert.IsTrue(condition: isResponseContentValid, message: "Expected JWT signature validation failure.");
         }
 
         /// <summary>
@@ -348,7 +362,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// test JwtAuthenticationMiddlware
         /// Sends a request with the passed in token to the TestServer created.
         /// </summary>
-        /// <param name="key">The JST signing key to setup the TestServer</param>
+        /// <param name="key">The signing key used for TestServer's IssuerSigningKey field.</param>
         /// <param name="token">The JWT value to test against the TestServer</param>
         /// <returns></returns>
         private static async Task<HttpContext> SendRequestAndGetHttpContextState(
@@ -395,23 +409,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             DateTime? expirationTime = null,
             SecurityKey signingKey = null)
         {
-            JwtSecurityTokenHandler tokenHandler = new();
+            JsonWebTokenHandler jsonWebTokenHandler = new();
             SecurityTokenDescriptor tokenDescriptor = new()
             {
                 Audience = audience,
                 Issuer = issuer,
-                Subject = new System.Security.Claims.ClaimsIdentity(new[] { new Claim("id", "1337-314159"), new Claim("userId", "777"), new Claim(ClaimTypes.Name, "ladybird") }),
+                Subject = new ClaimsIdentity(new[] { new Claim("id", "1337-314159"), new Claim("userId", "777"), new Claim(ClaimTypes.Name, "ladybird") }),
                 NotBefore = notBefore,
                 Expires = expirationTime,
-                SigningCredentials = new(key: signingKey, algorithm: SecurityAlgorithms.RsaSsaPssSha256)
+                SigningCredentials = new(key: signingKey, algorithm: SecurityAlgorithms.RsaSha256)
             };
 
-            // Usage of RsaSsaPssSha256 results in token signature being different even with same contents.
-            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
-            SecurityToken token2 = tokenHandler.CreateToken(tokenDescriptor);
-            Assert.AreNotEqual(token, token2);
-
-            return tokenHandler.WriteToken(token);
+            return jsonWebTokenHandler.CreateToken(tokenDescriptor);
         }
 
         /// <summary>
@@ -454,6 +463,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             return context.Response.Headers[CHALLENGE_HEADER];
         }
 
+        private static RsaSecurityKey CreateRsaSigningKeyForTest()
+        {
+            RsaSecurityKey key = new(RSA.Create(2048))
+            {
+                KeyId = Guid.NewGuid().ToString()
+            };
+
+            return key;
+        }
         #endregion
     }
 }

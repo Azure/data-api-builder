@@ -13,10 +13,10 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     /// <summary>
@@ -59,14 +59,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Dictionary<string, string> ColumnLabelToParam { get; }
 
         /// <summary>
-        /// Default limit when no first param is specified for list queries
-        /// </summary>
-        private const uint DEFAULT_LIST_LIMIT = 100;
-
-        /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        private uint? _limit = DEFAULT_LIST_LIMIT;
+        private uint? _limit = PaginationOptions.DEFAULT_PAGE_SIZE;
 
         /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
@@ -84,6 +79,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Used to cache the primary key as a list of OrderByColumn
         /// </summary>
         private List<OrderByColumn>? _primaryKeyAsOrderByColumns;
+
+        /// <summary>
+        /// Indicates whether the SqlQueryStructure is constructed for
+        /// a multiple create mutation operation.
+        /// </summary>
+        public bool IsMultipleCreateOperation;
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
@@ -119,6 +120,119 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 AddPrimaryKeyPredicates(queryParams);
             }
+        }
+
+        /// <summary>
+        /// Generate the structure for a SQL query based on GraphQL query
+        /// information. This is used to construct the follow-up query
+        /// for a many-type multiple create mutation.
+        /// This constructor accepts a list of query parameters as opposed to a single query parameter
+        /// like the other constructors for SqlQueryStructure.
+        /// For constructing the follow-up query of a many-type multiple create mutation, the primary keys
+        /// of the created items in the top level entity will be passed as the query parameters.
+        /// </summary>
+        public SqlQueryStructure(
+            IMiddlewareContext ctx,
+            List<IDictionary<string, object?>> queryParams,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            RuntimeConfigProvider runtimeConfigProvider,
+            GQLFilterParser gQLFilterParser,
+            IncrementingInteger counter,
+            string entityName = "",
+            bool isMultipleCreateOperation = false)
+            : this(sqlMetadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser,
+                  predicates: null,
+                  entityName: entityName,
+                  counter: counter)
+        {
+            _ctx = ctx;
+            IsMultipleCreateOperation = isMultipleCreateOperation;
+
+            IObjectField schemaField = _ctx.Selection.Field;
+            FieldNode? queryField = _ctx.Selection.SyntaxNode;
+
+            IOutputType outputType = schemaField.Type;
+            _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+
+            PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
+
+            if (PaginationMetadata.IsPaginated)
+            {
+                if (queryField != null && queryField.SelectionSet != null)
+                {
+                    // process pagination fields without overriding them
+                    ProcessPaginationFields(queryField.SelectionSet.Selections);
+
+                    // override schemaField and queryField with the schemaField and queryField of *Connection.items
+                    queryField = ExtractItemsQueryField(queryField);
+                }
+
+                schemaField = ExtractItemsSchemaField(schemaField);
+
+                outputType = schemaField.Type;
+                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+
+                // this is required to correctly keep track of which pagination metadata
+                // refers to what section of the json
+                // for a paginationless chain:
+                //      getbooks > publisher > books > publisher
+                //      each new entry in the chain corresponds to a subquery so there will be
+                //      a matching pagination metadata object chain
+                // for a chain with pagination:
+                //      books > items > publisher > books > publisher
+                //      items do not have a matching subquery so the line of code below is
+                //      required to build a pagination metadata chain matching the json result
+                PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
+            }
+
+            EntityName = _underlyingFieldType.Name;
+
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
+            {
+                EntityName = modelName;
+            }
+
+            DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
+            DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
+            SourceAlias = CreateTableAlias();
+
+            // support identification of entities by primary key when query is non list type nor paginated
+            // only perform this action for the outermost query as subqueries shouldn't provide primary key search
+            AddPrimaryKeyPredicates(queryParams);
+
+            // SelectionSet will not be null when a field is not a leaf.
+            // There may be another entity to resolve as a sub-query.
+            if (queryField != null && queryField.SelectionSet != null)
+            {
+                AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
+            }
+
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
+            // Process Authorization Policy of the entity being processed.
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
+
+            if (outputType.IsNonNullType())
+            {
+                IsListQuery = outputType.InnerType().IsListType();
+            }
+            else
+            {
+                IsListQuery = outputType.IsListType();
+            }
+
+            OrderByColumns = PrimaryKeyAsOrderByColumns();
+
+            // If there are no columns, add the primary key column
+            // to prevent failures when executing the database query.
+            if (!Columns.Any())
+            {
+                AddColumn(PrimaryKey()[0]);
+            }
+
+            ParametrizeColumns();
         }
 
         /// <summary>
@@ -197,7 +311,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             AddColumnsForEndCursor();
-            _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
+            runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+            _limit = runtimeConfig?.GetPaginationLimit((int?)context.First) + 1;
+
             ParametrizeColumns();
         }
 
@@ -302,7 +418,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            EntityName = _underlyingFieldType.Name;
+            EntityName = sqlMetadataProvider.GetDatabaseType() == DatabaseType.DWSQL ? GraphQLUtils.GetEntityNameFromContext(ctx) : _underlyingFieldType.Name;
 
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
             {
@@ -333,24 +449,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IsListQuery = outputType.IsListType();
             }
 
-            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
+            if (IsListQuery)
             {
-                // parse first parameter for all list queries
-                object? firstObject = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
-
-                if (firstObject != null)
+                runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+                if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
                 {
-                    int first = (int)firstObject;
-
-                    if (first <= 0)
-                    {
-                        throw new DataApiBuilderException(
-                        message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                    }
-
-                    _limit = (uint)first;
+                    // parse first parameter for all list queries
+                    object? firstObject = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                    _limit = runtimeConfig?.GetPaginationLimit((int?)firstObject);
+                }
+                else
+                {
+                    // if first is not passed, we should use the default page size.
+                    _limit = runtimeConfig?.DefaultPageSize();
                 }
             }
 
@@ -391,7 +502,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     AddColumnsForEndCursor();
                 }
 
-                if (PaginationMetadata.RequestedHasNextPage)
+                if (PaginationMetadata.RequestedHasNextPage || PaginationMetadata.RequestedEndCursor)
                 {
                     _limit++;
                 }
@@ -434,10 +545,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             OrderByColumns = new();
         }
 
+        /// <summary>
+        /// Adds predicates for the primary keys in the parameters of the GraphQL query
+        /// </summary>
+        private void AddPrimaryKeyPredicates(List<IDictionary<string, object?>> queryParams)
+        {
+            foreach (IDictionary<string, object?> queryParam in queryParams)
+            {
+                AddPrimaryKeyPredicates(queryParam, isMultipleCreateOperation: true);
+            }
+        }
+
         ///<summary>
         /// Adds predicates for the primary keys in the parameters of the GraphQL query
         ///</summary>
-        private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams)
+        private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams, bool isMultipleCreateOperation = false)
         {
             foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
@@ -455,7 +577,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeDbConnectionParam(parameter.Value, columnName)}")
+                    new PredicateOperand($"{MakeDbConnectionParam(parameter.Value, columnName)}"),
+                    addParenthesis: isMultipleCreateOperation
                 ));
             }
         }
@@ -635,7 +758,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
+                    IDictionary<string, object?> subqueryParams = ExecutionHelper.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
                     SqlQueryStructure subquery = new(
                         _ctx,
                         subqueryParams,
@@ -668,11 +791,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
                     string targetEntityName = MetadataProvider.GetEntityName(subunderlyingType.Name);
-                    string subtableAlias = subquery.SourceAlias;
+                    string subqueryTableAlias = subquery.SourceAlias;
+                    EntityRelationshipKey currentEntityRelationshipKey = new(EntityName, relationshipName: fieldName);
+                    AddJoinPredicatesForRelationship(
+                        fkLookupKey: currentEntityRelationshipKey,
+                        targetEntityName,
+                        subqueryTargetTableAlias: subqueryTableAlias,
+                        subquery);
 
-                    AddJoinPredicatesForRelatedEntity(targetEntityName, subtableAlias, subquery);
-
-                    string subqueryAlias = $"{subtableAlias}_subq";
+                    string subqueryAlias = $"{subqueryTableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
                     Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
                               tableName: subquery.DatabaseObject.Name,
@@ -720,10 +847,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             HashSet<string> remainingPkCols = new(PrimaryKey());
 
-            InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
+            InputObjectType orderByArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(orderByArgumentSchema);
             foreach (ObjectFieldNode field in orderByFields)
             {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                     value: field.Value,
                     argumentSchema: orderByArgumentObject.Fields[field.Name.Value],
                     variables: _ctx.Variables);

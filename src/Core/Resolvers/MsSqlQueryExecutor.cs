@@ -4,7 +4,6 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
-using System.Security.Claims;
 using System.Text;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -108,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
@@ -199,7 +198,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])
@@ -208,17 +207,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // Dictionary containing all the claims belonging to the user, to be used as session parameters.
-            Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(httpContext);
+            Dictionary<string, string> sessionParams = AuthorizationResolver.GetProcessedUserClaims(httpContext);
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
             const string SESSION_PARAM_NAME = $"{BaseQueryStructure.PARAM_NAME_PREFIX}session_param";
             StringBuilder sessionMapQuery = new();
 
-            foreach ((string claimType, Claim claim) in sessionParams)
+            foreach ((string claimType, string claimValue) in sessionParams)
             {
                 string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
-                parameters.Add(paramName, new(claim.Value));
+                parameters.Add(paramName, new(claimValue));
                 // Append statement to set read only param value - can be set only once for a connection.
                 string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 1;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
@@ -232,7 +231,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbDataReader dbDataReader, List<string>? args = null)
         {
             // From the first result set, we get the count(0/1) of records with given PK.
-            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
+            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
             int numOfRecordsWithGivenPK;
 
@@ -250,7 +249,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // The second result set holds the records returned as a result of the executed update/insert operation.
-            DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReader(dbDataReader) : null;
+            DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader) : null;
 
             if (dbResultSet is null)
             {
@@ -306,12 +305,51 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return dbResultSet;
         }
 
-        /// <inheritdoc/>
-        public override void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
+        /// <inheritdoc />
+        public override SqlCommand PrepareDbCommand(
+            SqlConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
         {
-            if (parameterEntry.Value is not null && parameterEntry.Value.DbType is not null)
+            SqlCommand cmd = conn.CreateCommand();
+            cmd.CommandType = CommandType.Text;
+
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
+
+            cmd.CommandText = sessionParamsQuery + sqltext;
+            if (parameters is not null)
             {
-                parameter.DbType = (DbType)parameterEntry.Value.DbType;
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
+                {
+                    SqlParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return cmd;
+        }
+
+        /// <inheritdoc/>
+        public static void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, SqlParameter parameter)
+        {
+            if (parameterEntry.Value is not null)
+            {
+                if (parameterEntry.Value.DbType is not null)
+                {
+                    parameter.DbType = (DbType)parameterEntry.Value.DbType;
+                }
+
+                if (parameterEntry.Value.SqlDbType is not null)
+                {
+                    parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ init --config "dab-config.MySql.json" --database-type mysql --connection-string 
 add Publisher --config "dab-config.MySql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.MySql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.MySql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
+add BookNF --config "dab-config.MySql.json" --source books --permissions "anonymous:*" --rest true --graphql "bookNF:booksNF"
 add BookWebsitePlacement --config "dab-config.MySql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.MySql.json" --source authors --permissions "anonymous:read"
 add Review --config "dab-config.MySql.json" --source reviews --permissions "anonymous:create,read,update" --rest false --graphql "review:reviews"
@@ -24,10 +25,15 @@ add Journal --config "dab-config.MySql.json" --source "journals" --rest true --g
 add ArtOfWar --config "dab-config.MySql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
 add series --config "dab-config.MySql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.MySql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
+add User_NonAutogenRelationshipColumn --config "dab-config.MySql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add UserProfile --config "dab-config.MySql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenRelationshipColumn --config "dab-config.MySql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MySql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add GQLmappings --config "dab-config.MySql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true
 add Bookmarks --config "dab-config.MySql.json" --source "bookmarks" --permissions "anonymous:*" --rest true --graphql true
 add MappedBookmarks --config "dab-config.MySql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
 add BooksSold --config "dab-config.MySql.json" --source "books_sold" --rest true --graphql "books_sold:books_sold" --permissions "anonymous:*"
+add DefaultBuiltInFunction --config "dab-config.MySql.json" --source "default_with_function_table" --rest true --graphql true --permissions "anonymous:*"
 update GQLmappings --config "dab-config.MySql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_01:create,delete"
@@ -58,7 +64,7 @@ update Book --config "dab-config.MySql.json" --permissions "authenticated:create
 update Book --config "dab-config.MySql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.MySql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update Book --config "dab-config.MySql.json" --relationship reviews --target.entity Review --cardinality many
-update Book --config "dab-config.MySql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update Book --config "dab-config.MySql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id" --relationship.fields "id:id"
 update Book --config "dab-config.MySql.json" --map "id:id,title:title"
 update Book --config "dab-config.MySql.json" --permissions "policy_tester_01:create,delete"
 update Book --config "dab-config.MySql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -103,9 +109,9 @@ update Comic --config "dab-config.MySql.json" --permissions "authenticated:creat
 update series --config "dab-config.MySql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.MySql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.MySql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
-update Shrub --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
+update Shrub --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName" --relationship fungus --cardinality one --target.entity Fungus --relationship.fields "species:habitat"
 update Fungus --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
-update Fungus --config "dab-config.MySql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update Fungus --config "dab-config.MySql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'" --relationship Shrub --cardinality one --target.entity Shrub --relationship.fields "habitat:species"
 update books_view_all --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update stocks_view_selected --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update books_publishers_view_composite --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
@@ -122,6 +128,13 @@ update Journal --config "dab-config.MySql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.MySql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MySql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.MySql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
+update User_NonAutogenRelationshipColumn --config "dab-config.MySql.json" --relationship UserProfile_NonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "username:username"
+update User_AutogenRelationshipColumn --config "dab-config.MySql.json" --relationship UserProfile_AutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid:profileid"
+update User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MySql.json" --relationship UserProfile_AutogenToNonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid,username:userid,username"
 update Sales --config "dab-config.MySql.json" --permissions "authenticated:*"
 update Bookmarks --config "dab-config.MySql.json" --permissions "authenticated:*"
 update MappedBookmarks --config "dab-config.MySql.json" --permissions "authenticated:*" --map "id:bkid,bkname:name"
+update DefaultBuiltInFunction --config "dab-config.MySql.json" --permissions "anonymous:create" --fields.exclude "current_date,next_date"
+add dbo_DimAccount --config "dab-config.MySql.json" --source "dimaccount" --permissions "anonymous:*" --rest true --graphql true
+update dbo_DimAccount --config "dab-config.MySql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "ParentAccountKey:AccountKey"
+update dbo_DimAccount --config "dab-config.MySql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "AccountKey:ParentAccountKey"

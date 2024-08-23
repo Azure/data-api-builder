@@ -457,6 +457,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTest_Negative1QueryParams_Pagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'bkname', bkname)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationPaginationTableName + @"
+                      ORDER BY id asc
+                      LIMIT 100000
+                  ) AS subq"
+            },
+            {
                 "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id)) AS data
@@ -801,7 +812,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationMappingTable + @"
-                      WHERE treeId < 2
+                      WHERE species > 'Pseudotsuga menziesii'
                       ORDER BY species asc, treeId asc
                       LIMIT 101
                   ) AS subq"
@@ -974,6 +985,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         FROM " + _integrationTableName + @" 
                     ) AS subq
                 "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', id, 'journalname', journalname, 'color', color, 'ownername', ownername)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _tableWithVarcharMax + @"
+                        WHERE color IS NULL AND ownername = 'Abhishek'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('speciesid', speciesid, 'region', region, 'habitat', habitat)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'sand'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('speciesid', speciesid, 'region', region, 'habitat', habitat)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'forestland'
+                    ) AS subq
+                "
             }
         };
 
@@ -1008,11 +1052,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// MySql does not a schema so it lacks
+        /// MySql does not have a schema so it lacks
         /// the '.' between schema and table, we
         /// return empty string here for this reason.
         /// </summary>
-        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
         public override string GetDefaultSchemaForEdmModel()
         {
             return string.Empty;
@@ -1021,6 +1065,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        /// <summary>
+        /// MySql does not have a schema and so this test
+        /// which validates we de-conflict the same table
+        /// name in different schemas is not valid.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        [TestMethod]
+        [Ignore]
+        public override Task FindOnTableWithNamingCollision()
+        {
+            throw new NotImplementedException();
         }
 
         // Pending Stored Procedure Support

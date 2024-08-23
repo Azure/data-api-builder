@@ -175,6 +175,30 @@
             "enabled": {
               "type": "boolean",
               "description": "Allow enabling/disabling GraphQL requests for all entities."
+            },
+            "depth-limit": {
+              "type": [ "integer", "null" ],
+              "description": "Maximum allowed depth of a GraphQL query.",
+              "default": null
+            },
+            "multiple-mutations": {
+              "type": "object",
+              "description": "Configuration properties for multiple mutation operations",
+              "additionalProperties": false,
+              "properties": {
+                "create":{
+                  "type": "object",
+                  "description": "Options for multiple create operations",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Allow enabling/disabling multiple create operations for all entities.",
+                      "default": false
+                    }
+                  }
+                }
+              }
             }
           }
         },
@@ -236,6 +260,50 @@
               }
             }
           }
+        },
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable caching of responses globally.",
+              "default": false
+            },
+            "ttl-seconds": {
+              "type": "integer",
+              "description": "Time to live in seconds",
+              "default": 5
+            }
+          }
+        },
+        "telemetry": {
+          "type": "object",
+          "description": "Telemetry configuration",
+          "additionalProperties": false,
+          "properties": {
+            "application-insights": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "connection-string": {
+                  "type": "string",
+                  "description": "Application Insights connection string"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling Application Insights telemetry.",
+                  "default": true
+                }
+              },
+              "required": [
+                "connection-string"
+              ]
+            }
+          },
+          "required": [
+            "application-insights"
+          ]
         }
       }
     },
@@ -463,6 +531,22 @@
                     "cardinality",
                     "target.entity"
                   ]
+                }
+              }
+            },
+            "cache": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable caching of responses for this entity.",
+                  "default": false
+                },
+                "ttl-seconds": {
+                  "type": "integer",
+                  "description": "Time to live in seconds",
+                  "default": 5
                 }
               }
             }

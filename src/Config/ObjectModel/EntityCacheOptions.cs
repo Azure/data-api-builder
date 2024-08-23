@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -56,5 +57,6 @@ public record EntityCacheOptions
     /// property/value specified would be interpreted by DAB as "user explicitly set ttl."
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(TtlSeconds))]
     public bool UserProvidedTtlOptions { get; init; } = false;
 }

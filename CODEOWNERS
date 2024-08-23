@@ -1,4 +1,11 @@
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence,
 # review when someone opens a pull request.
-*       @mbhaskar @Aniruddh25 @JelteF @seantleonard @mathos1432 @gledis69 @aaronburtle @milismsft @junsu0ms @tarazou9 @ayush3797 @abhishekkumams @aaronpowell @severussundar @ravishetye
+*       @Aniruddh25 @seantleonard @aaronburtle @abhishekkumams @RubenCerna2079 @ravishetye @rohkhann @neeraj-sharma2592 @sourabh1007
+
+code_of_conduct.md @jerrynixon
+contributing.md @jerrynixon
+license.txt @jerrynixon
+readme.md @jerrynixon
+security.md @jerrynixon
+support.md @jerrynixon

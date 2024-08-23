@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -67,6 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             if (graphQLResult.TryGetProperty("errors", out JsonElement errors))
             {
                 // to validate expected errors and error message
+                Console.WriteLine($"GraphQL error: {errors}");
                 return errors;
             }
 

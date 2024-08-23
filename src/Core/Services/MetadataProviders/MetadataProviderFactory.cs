@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using System.Net;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
@@ -87,6 +88,20 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public IEnumerable<ISqlMetadataProvider> ListMetadataProviders()
         {
             return _metadataProviders.Values;
+        }
+
+        /// <inheritdoc />
+        public void InitializeAsync(
+            Dictionary<string, Dictionary<string, DatabaseObject>> EntityToDatabaseObjectMap,
+            Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap)
+        {
+            foreach ((string dataSourceName, ISqlMetadataProvider provider) in _metadataProviders)
+            {
+                if (provider is not null)
+                {
+                    provider.InitializeAsync(EntityToDatabaseObjectMap[dataSourceName], graphQLStoredProcedureExposedNameToEntityNameMap[dataSourceName]);
+                }
+            }
         }
     }
 }

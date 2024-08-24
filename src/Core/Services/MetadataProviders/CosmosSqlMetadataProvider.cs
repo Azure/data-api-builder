@@ -59,7 +59,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _runtimeConfigProvider = runtimeConfigProvider;
             _fileSystem = fileSystem;
-            // Make a copy of the runtime entities to guarantee consistency
+            // Many classes have references to the RuntimeConfig, therefore to guarantee
+            // that the Runtime Entities are not mutated by another class we make a copy of them
+            // to store internally.
             _runtimeConfigEntities = new RuntimeEntities(runtimeConfig.Entities.Entities);
             _databaseType = runtimeConfig.DataSource.DatabaseType;
 

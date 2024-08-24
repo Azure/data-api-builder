@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
                 OpenApiComponents components = new()
                 {
-                    Schemas = CreateComponentSchemas()
+                    Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName)
                 };
 
                 OpenApiDocument doc = new()
@@ -192,7 +192,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
-                if (entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                Entity? entity;
+                if (entities.TryGetValue(entityName, out entity) && entity is not null)
                 {
                     if (!entity.Rest.Enabled)
                     {
@@ -213,7 +214,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     openApiTag
                 };
 
-                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entityName, dbObject, entities);
+                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject);
 
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
@@ -595,10 +596,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Acts as a helper for stored procedures where the runtime config can denote any combination of REST verbs
         /// to enable.
         /// </summary>
-        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="entity">The entity.</param>
         /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
         /// <returns>Collection of OpenAPI OperationTypes and whether they should be created.</returns>
-        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(string entityName, DatabaseObject dbObject, RuntimeEntities entities)
+        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity? entity, DatabaseObject dbObject)
         {
             Dictionary<OperationType, bool> configuredOperations = new()
             {
@@ -609,10 +610,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 [OperationType.Delete] = false
             };
 
-            if (dbObject.SourceType == EntitySourceType.StoredProcedure)
+            if (dbObject.SourceType == EntitySourceType.StoredProcedure && entity is not null)
             {
-                Entity entity = entities[entityName];
-
                 List<SupportedHttpVerb>? spRestMethods;
                 if (entity.Rest.Methods is not null)
                 {
@@ -952,12 +951,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Schema objects can be referenced elsewhere in the OpenAPI document with the intent to reduce document verbosity.
         /// </summary>
         /// <returns>Collection of schemas for entities defined in the runtime configuration.</returns>
-        private Dictionary<string, OpenApiSchema> CreateComponentSchemas()
+        private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeEntities entities, string defaultDataSourceName)
         {
             Dictionary<string, OpenApiSchema> schemas = new();
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             // for rest scenario we need the default datasource name.
-            string defaultDataSourceName = runtimeConfig.DefaultDataSourceName;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
 
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
@@ -967,7 +964,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (!runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
+                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
                 {
                     // Don't create component schemas for:
                     // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.

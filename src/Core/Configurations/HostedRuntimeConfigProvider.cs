@@ -199,22 +199,22 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
         return false;
     }
 
-    //public async Task<bool> InvokeConfigLoadedHandlersAsync()
-    //{
-    //    List<Task<bool>> configLoadedTasks = new();
-    //    if (_runtimeConfig is not null)
-    //    {
-    //        foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
-    //        {
-    //            configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
-    //        }
-    //    }
+    public async Task<bool> InvokeConfigLoadedHandlersAsync()
+    {
+        List<Task<bool>> configLoadedTasks = new();
+        if (_runtimeConfig is not null)
+        {
+            foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+            {
+                configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
+            }
+        }
 
-    //    bool[] results = await Task.WhenAll(configLoadedTasks);
+        bool[] results = await Task.WhenAll(configLoadedTasks);
 
-    //    // Verify that all tasks succeeded.
-    //    return results.All(x => x);
-    //}
+        // Verify that all tasks succeeded.
+        return results.All(x => x);
+    }
 
     private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string dataSourceName = "")
     {

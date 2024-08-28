@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
 
             // Create an instance of SchemaGenerator and generate the schema.
-            return new SchemaGenerator(jsonData, containerName, config)
+            return new SchemaGenerator(jsonData, containerName.Singularize(), config)
                         .ConvertJsonToGQLSchema();
         }
 

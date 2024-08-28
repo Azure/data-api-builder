@@ -151,6 +151,8 @@ namespace Cli
 
                     if (string.IsNullOrEmpty(graphQLSchemaPath))
                     {
+                        graphQLSchemaPath = "schema.gql"; // Default to schema.gql
+
                         _logger.LogWarning("The GraphQL schema path, i.e. --graphql-schema, is not specified. Please generate the schema using the `export` command before running `dab start`. For more detail, run 'dab export --help` ");
                     }
                     else if (!fileSystem.File.Exists(graphQLSchemaPath))

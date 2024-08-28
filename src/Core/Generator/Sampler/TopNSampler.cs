@@ -50,11 +50,12 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns>A list of JsonDocument objects representing the retrieved records.</returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
-            _logger.LogInformation("Sampling Configuration is Count: {0}, Days: {1}", _numberOfRecords, _maxDays);
+            _logger.LogInformation("Sampling Configuration is Count: {0}", _numberOfRecords);
             string daysFilterClause = string.Empty;
 
             if (_maxDays > 0)
             {
+                _logger.LogInformation("Max number of days are configured as: {0}", _maxDays);
                 daysFilterClause = $"WHERE c._ts >= {GetTimeStampThreshold()}";
             }
 

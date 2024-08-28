@@ -24,8 +24,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly RuntimeEntities _runtimeConfigEntities;
+        private readonly bool _isDevelopmentMode;
         private Dictionary<string, string> _partitionKeyPaths = new();
 
         /// <summary>
@@ -63,6 +63,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             // that the Runtime Entities are not mutated by another class we make a copy of them
             // to store internally.
             _runtimeConfigEntities = new RuntimeEntities(runtimeConfig.Entities.Entities);
+            _isDevelopmentMode = runtimeConfig.IsDevelopmentMode();
             _databaseType = runtimeConfig.DataSource.DatabaseType;
 
             CosmosDbNoSQLDataSourceOptions? cosmosDb = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
@@ -603,7 +604,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         // state on development mode in case a hot-reload
         public bool IsDevelopmentMode()
         {
-            return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
+            return _isDevelopmentMode;
         }
 
         public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)

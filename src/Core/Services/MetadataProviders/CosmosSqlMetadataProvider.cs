@@ -600,7 +600,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         }
 
         // Use the runtimeConfigProvider to ensure we have current up to date
-        // state on development mode in case a hot
+        // state on development mode in case a hot-reload
         public bool IsDevelopmentMode()
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();

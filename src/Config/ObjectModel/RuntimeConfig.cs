@@ -241,7 +241,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        DefaultDataSourceName = DefaultDataSourceName;
+        this.DefaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;

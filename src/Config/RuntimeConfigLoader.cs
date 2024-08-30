@@ -167,13 +167,17 @@ public abstract class RuntimeConfigLoader
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
-        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory());
+        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
         options.Converters.Add(new EntityCacheOptionsConverterFactory());
+        options.Converters.Add(new MultipleCreateOptionsConverter());
+        options.Converters.Add(new MultipleMutationOptionsConverter(options));
+        options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
+        options.Converters.Add(new HostOptionsConvertorFactory());
 
         if (replaceEnvVar)
         {

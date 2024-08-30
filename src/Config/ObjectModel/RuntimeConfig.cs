@@ -132,7 +132,7 @@ public record RuntimeConfig
     }
 
     [JsonIgnore]
-    public string DefaultDataSourceName { get; private set; }
+    public string DefaultDataSourceName { get; set; }
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 

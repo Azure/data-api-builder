@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -28,6 +29,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     // This stores either the default config name e.g. dab-config.json
     // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
     private string _baseConfigFilePath;
+
+    private ConfigFileWatcher? _configFileWatcher;
 
     private readonly IFileSystem _fileSystem;
 
@@ -88,44 +91,75 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Checks if we have already attempted to configure the file watcher, if not
+    /// instantiate the file watcher if we are in the development mode.
+    /// Returns true if we instantiate a new file watcher.
+    /// </summary>
+    private bool TrySetupConfigFileWatcher()
+    {
+        if (_configFileWatcher is not null)
+        {
+            return false;
+        }
+
+        if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+        {
+            try
+            {
+                _configFileWatcher = new(this, GetConfigDirectoryName(), GetConfigFileName());
+            }
+            catch (Exception ex)
+            {
+                // Need to remove the dependencies in startup on the RuntimeConfigProvider
+                // before we can have an ILogger here.
+                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+            }
+
+            return _configFileWatcher is not null;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Load the runtime config from the specified path.
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    /// <param name="dataSourceName">If provided and not empty, this is the data source name that will be used in the loaded config.</param>
+    /// <param name="logger">ILogger for logging errors.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,
         [NotNullWhen(true)] out RuntimeConfig? config,
         bool replaceEnvVar = false,
-        string dataSourceName = "")
+        ILogger? logger = null,
+        string? defaultDataSourceName = null)
     {
         if (_fileSystem.File.Exists(path))
         {
             Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
-
-            if (TryParseConfig(
-                json: json,
-                config: out config,
-                connectionString: _connectionString,
-                replaceEnvVar: replaceEnvVar))
+            bool configParsed = TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
+            TrySetupConfigFileWatcher();
+            config = RuntimeConfig;
+            if (RuntimeConfig is not null && defaultDataSourceName is not null)
             {
-                if (!string.IsNullOrEmpty(dataSourceName))
-                {
-                    config.UpdateDefaultDataSourceName(dataSourceName);
-                }
-
-                return true;
+                RuntimeConfig.DefaultDataSourceName = defaultDataSourceName;
             }
+
+            return configParsed;
+        }
+
+        string errorMessage = $"Unable to find config file: {path} does not exist.";
+        if (logger is null)
+        {
+            Console.Error.WriteLine(errorMessage);
         }
         else
         {
-            // Unable to use ILogger because this code is invoked before LoggerFactory
-            // is instantiated.
-            Console.WriteLine($"Unable to find config file: {path} does not exist.");
+            logger.LogError(message: errorMessage);
         }
 
         config = null;
@@ -138,11 +172,19 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    /// <param name="dataSourceName">The data source name to be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "")
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string? defaultDataSourceName = null)
     {
-        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar, dataSourceName);
+        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
+    }
+
+    /// <summary>
+    /// Hot Reloads the runtime config when the file watcher
+    /// is active and detects a change to the underlying config file.
+    /// </summary>
+    public void HotReloadConfig(string defaultDataSourceName)
+    {
+        TryLoadKnownConfig(out _, replaceEnvVar: true, defaultDataSourceName);
     }
 
     /// <summary>

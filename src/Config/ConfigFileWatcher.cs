@@ -51,9 +51,13 @@ public class ConfigFileWatcher
             if (_configLoader.RuntimeConfig.IsDevelopmentMode())
             {
                 _configLoader.HotReloadConfig(_configLoader.RuntimeConfig.DefaultDataSourceName);
-                // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Need to remove the dependencies in startup on the RuntimeConfigProvider
+            // before we can have an ILogger here.
+            Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
         }
     }
 }

@@ -84,34 +84,6 @@ public class RuntimeConfigProvider
         return _runtimeConfig;
     }
 
-    /// <summary>
-    /// Checks if we have already attempted to configure the file watcher, if not
-    /// instantiate the file watcher if we are in the correct scenario. If we
-    /// are not in the correct scenario, do not setup a file watcher but remember
-    /// that we have attempted to do so to avoid repeat checks in future calls.
-    /// Returns true if we instantiate a file watcher.
-    /// </summary>
-    private bool TrySetupConfigFileWatcher()
-    {
-        if (!IsLateConfigured && _runtimeConfig is not null && RuntimeConfig.IsHotReloadable())
-        {
-            try
-            {
-                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
-                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
-            }
-            catch (Exception ex)
-            {
-                // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
-            }
-
-            return _configFileWatcher is not null;
-        }
-
-        return false;
-    }
 
     /// <summary>
     /// Attempt to acquire runtime configuration metadata.

@@ -57,7 +57,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            _runtimeConfigProvider = runtimeConfigProvider;
             _fileSystem = fileSystem;
             // Many classes have references to the RuntimeConfig, therefore to guarantee
             // that the Runtime Entities are not mutated by another class we make a copy of them

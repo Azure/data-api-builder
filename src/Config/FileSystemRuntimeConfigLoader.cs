@@ -175,7 +175,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string? defaultDataSourceName = null)
     {
-        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
+        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar, defaultDataSourceName: defaultDataSourceName);
     }
 
     /// <summary>

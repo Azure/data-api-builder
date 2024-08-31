@@ -2,11 +2,11 @@
 
 ## Overview
 
-The `dab configure` command is designed to simplify updating config properties outside of **entities** section. This document outlines the design, functionality, and implementation details of the `dab configure` command.
+The `dab configure` command is designed to simplify updating config properties outside of the **entities** section. This document outlines the design, functionality, and implementation details of the `dab configure` command.
 
 ## Objectives
 
-- Add support to CLI to configure `data-source` and `runtime` sections of the runtime config.
+- Add support to CLI to configure the `data-source` and `runtime` sections of the runtime config.
 
 - Ensure configurations are validated before being applied.
 
@@ -36,12 +36,12 @@ The configuration file consists of three main sections:
 2. runtime: Configures the runtime settings for REST, GraphQL, and host settings.
 3. entities: Entity related information.
 
-`dab configure` is only for updating `data-source` and `runtime` sections of the config. For `entites` section we already have `dab update` command.
+`dab configure` is only for updating the `data-source` and `runtime` sections of the config. For the `entities` section, we already have the `dab update` command.
 
 #### Naming the option
 
 1. Identify the section to configure. `data-source` or `runtime`.
-2. Identity the property in that section to update.
+2. Identify the property in that section to update.
 3. '.' is used for nesting.
 
 Example:

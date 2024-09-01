@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     /// The TopNSampler class is responsible for retrieving a specified number of recent records 
     /// from an Azure Cosmos DB container, optionally filtering by a maximum number of days.
     /// </summary>
-    public class TopNSampler : ISchemaGeneratorSampler
+    public class TopNExtractor : ISchemaGeneratorSampler
     {
         // Default Configuration
         public const int NUMBER_OF_RECORDS = 10;
@@ -27,13 +27,13 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private CosmosExecutor _cosmosExecutor;
 
         /// <summary>
-        /// Initializes a new instance of the TopNSampler class.
+        /// Initializes a new instance of the TopNExtractor class.
         /// </summary>
         /// <param name="container">The Azure Cosmos DB container from which to retrieve data.</param>
         /// <param name="numberOfRecords">Optional. The number of records to retrieve. Defaults to 10.</param>
         /// <param name="maxDays">Optional. The maximum number of days in the past from which to retrieve data. Defaults to 0 (no limit).</param>
         /// <param name="logger">The logger to use for logging information.</param>
-        public TopNSampler(Container container, int? numberOfRecords, int? maxDays, ILogger logger)
+        public TopNExtractor(Container container, int? numberOfRecords, int? maxDays, ILogger logger)
         {
             this._numberOfRecords = numberOfRecords ?? NUMBER_OF_RECORDS;
             this._maxDays = maxDays ?? MAX_DAYS;

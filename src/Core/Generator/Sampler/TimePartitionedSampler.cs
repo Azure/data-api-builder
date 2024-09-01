@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     /// The TimeBasedSampler class is responsible for dividing a time range into subranges 
     /// and retrieving the top N records from each subrange based on a specified configuration.
     /// </summary>
-    public class TimeBasedSampler : ISchemaGeneratorSampler
+    public class TimePartitionedSampler : ISchemaGeneratorSampler
     {
         // Default Configuration
         private const int GROUP_COUNT = 10;
@@ -32,14 +32,14 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private CosmosExecutor _cosmosExecutor;
 
         /// <summary>
-        /// Initializes a new instance of the TimeBasedSampler class.
+        /// Initializes a new instance of the TimePartitionedSampler class.
         /// </summary>
         /// <param name="container">The Azure Cosmos DB container from which to retrieve data.</param>
         /// <param name="groupCount">Optional. The number of subranges (or groups) to divide the time range into. Defaults to 10.</param>
         /// <param name="numberOfRecordsPerGroup">Optional. The number of records to retrieve from each subrange. Defaults to 10.</param>
         /// <param name="maxDays">Optional. The maximum number of days in the past from which to consider records. Defaults to 10.</param>
         /// <param name="logger">The logger to use for logging information.</param>
-        public TimeBasedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, ILogger logger)
+        public TimePartitionedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, ILogger logger)
         {
             this._groupCount = groupCount ?? GROUP_COUNT;
             this._numberOfRecordsPerGroup = numberOfRecordsPerGroup ?? RECORDS_PER_GROUP;

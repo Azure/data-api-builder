@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             List<JsonDocument> jsonArray = new() { JsonSerializer.Deserialize<JsonDocument>(json) };
 
             string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
-            string expectedSchema = File.ReadAllText($"{gqlFilePath}/EmulatorData.gql").Trim();
+            string expectedSchema = File.ReadAllText($"{gqlFilePath}/EmulatorData.gql");
 
             Assert.AreEqual(expectedSchema, actualSchema);
         }
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }
 
             string actualSchema = SchemaGenerator.Generate(jArray, "planet", baseConfig);
-            string expectedSchema = File.ReadAllText($"{gqlFilePath}/{gqlFileName}").Trim();
+            string expectedSchema = File.ReadAllText($"{gqlFilePath}/{gqlFileName}");
 
             Assert.AreEqual(expectedSchema, actualSchema);
         }
@@ -127,7 +127,8 @@ type Dimensions {
   length: Float!,
   width: Float!,
   height: Float!
-}";
+}
+";
 
             Assert.AreEqual(expectedSchema, actualSchema);
         }
@@ -192,7 +193,8 @@ type Coordinates {
 type PhoneNumber {
   type: String!,
   number: String!
-}";
+}
+";
 
             Assert.AreEqual(expectedSchema, actualSchema);
         }
@@ -217,7 +219,8 @@ type PhoneNumber {
   birthDate: Date,
   email: String,
   phone: String
-}";
+}
+";
 
             Assert.AreEqual(expectedSchema, actualSchema);
         }
@@ -260,7 +263,8 @@ type PhoneNumber {
             string expectedSchema = @"type ContainerName @model(name: ""ContainerName"") {
   name: String!,
   age: String!
-}";
+}
+";
 
             Assert.AreEqual(expectedSchema, actualSchema);
         }

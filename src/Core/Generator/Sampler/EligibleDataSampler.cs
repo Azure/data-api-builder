@@ -8,11 +8,11 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// The PartitionBasedSampler class is designed to sample data from an Azure Cosmos DB container 
+    /// The EligibleDataSampler class is designed to sample data from an Azure Cosmos DB container 
     /// by fetching records from each partition based on a specified partition key. 
     /// The sampling is configurable by the number of records per partition and the time range considered.
     /// </summary>
-    public class PartitionBasedSampler : ISchemaGeneratorSampler
+    public class EligibleDataSampler : ISchemaGeneratorSampler
     {
         // Default Configuration
         private const int RECORDS_PER_PARTITION = 5;
@@ -31,14 +31,14 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private CosmosExecutor _cosmosExecutor;
 
         /// <summary>
-        /// Initializes a new instance of the PartitionBasedSampler class.
+        /// Initializes a new instance of the EligibleDataSampler class.
         /// </summary>
         /// <param name="container">The Azure Cosmos DB container from which to sample data.</param>
         /// <param name="partitionKeyPath">Optional. The path to the partition key. If null, it will be fetched from the Azure Cosmos DB metadata.</param>
         /// <param name="numberOfRecordsPerPartition">Optional. The number of records to retrieve per partition. Defaults to 5.</param>
         /// <param name="maxDaysPerPartition">Optional. The maximum number of days in the past to consider per partition. Defaults to 30.</param>
         /// <param="logger">The logger to use for logging information.</param>
-        public PartitionBasedSampler(Container container, string? partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, ILogger logger)
+        public EligibleDataSampler(Container container, string? partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, ILogger logger)
         {
             this._partitionKeyPath = partitionKeyPath;
             this._numberOfRecordsPerPartition = numberOfRecordsPerPartition ?? RECORDS_PER_PARTITION;

@@ -74,10 +74,10 @@ namespace Azure.DataApiBuilder.Core.Generator
             // Determine the appropriate sampler based on the sampling mode.
             ISchemaGeneratorSampler schemaGeneratorSampler = samplingMode switch
             {
-                SamplingModes.TopNSampler => new TopNSampler(container, sampleCount, days, logger),
-                SamplingModes.PartitionBasedSampler => new PartitionBasedSampler(container, partitionKeyPath, sampleCount, days, logger),
-                SamplingModes.TimeBasedSampler => new TimeBasedSampler(container, groupCount, sampleCount, days, logger),
-                _ => throw new ArgumentException($"Invalid sampling mode: {mode}, Valid Sampling Modes are: {SamplingModes.TopNSampler}, {SamplingModes.PartitionBasedSampler}, {SamplingModes.TimeBasedSampler}")
+                SamplingModes.TopNExtractor => new TopNExtractor(container, sampleCount, days, logger),
+                SamplingModes.EligibleDataSampler => new EligibleDataSampler(container, partitionKeyPath, sampleCount, days, logger),
+                SamplingModes.TimePartitionedSampler => new TimePartitionedSampler(container, groupCount, sampleCount, days, logger),
+                _ => throw new ArgumentException($"Invalid sampling mode: {mode}, Valid Sampling Modes are: {SamplingModes.TopNExtractor}, {SamplingModes.EligibleDataSampler}, {SamplingModes.TimePartitionedSampler}")
             };
 
             logger.LogInformation("Sampling Started using {0}", schemaGeneratorSampler.GetType().Name);

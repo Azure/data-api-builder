@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 sb.AppendLine("}");
             }
 
-            return sb.ToString().Trim();
+            return sb.ToString();
         }
 
         /// <summary>

@@ -76,58 +76,58 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Verifies the functionality of the <c>TopNSampler</c> class with various configurations to ensure it accurately samples the top N records.
+        /// Verifies the functionality of the <c>TopNExtractor</c> class with various configurations to ensure it accurately samples the top N records.
         /// </summary>
         /// <param name="count">The maximum number of top records to retrieve.</param>
         /// <param name="maxDays">The maximum number of days to filter records. If null, no day-based filtering is applied.</param>
         /// <param name="expectedCount">The expected number of records returned by the sampler.</param>
         /// <remarks>
-        /// This test case ensures that the <c>TopNSampler</c> behaves as expected under different sampling scenarios, including scenarios where
+        /// This test case ensures that the <c>TopNExtractor</c> behaves as expected under different sampling scenarios, including scenarios where
         /// maximum days are not specified. It checks that the sampling logic correctly handles the specified count and optionally applies
         /// date-based filtering based on the <c>maxDays</c> parameter.
         /// </remarks>
-        [TestMethod(displayName: "TopNSampler Scenarios")]
-        [DataRow(1, 0, 1, DisplayName = "TopNSampler: Retrieve 1 record when max days are not specified.")]
-        [DataRow(5, null, 5, DisplayName = "TopNSampler: Retrieve 5 records when max days are null")]
-        [DataRow(5, 2, 3, DisplayName = "TopNSampler: Retrieve 3 records with max days configured as 2.")]
-        public async Task TestTopNSampler(int count, int? maxDays, int expectedCount)
+        [TestMethod(displayName: "TopNExtractor Scenarios")]
+        [DataRow(1, 0, 1, DisplayName = "TopNExtractor: Retrieve 1 record when max days are not specified.")]
+        [DataRow(5, null, 5, DisplayName = "TopNExtractor: Retrieve 5 records when max days are null")]
+        [DataRow(5, 2, 3, DisplayName = "TopNExtractor: Retrieve 3 records with max days configured as 2.")]
+        public async Task TestTopNExtractor(int count, int? maxDays, int expectedCount)
         {
-            Mock<TopNSampler> topNSampler = new(_containerWithIdPk, count, maxDays, _mockLogger.Object);
+            Mock<TopNExtractor> topNExtractor = new(_containerWithIdPk, count, maxDays, _mockLogger.Object);
 
             if (maxDays is null || maxDays == 0)
             {
                 maxDays = 10;
             }
 
-            topNSampler
+            topNExtractor
                 .Setup<long>(x => x.GetTimeStampThreshold())
                 .Returns((long)(_sortedTimespansIdPk[0] - maxDays));
 
-            List<JsonDocument> result = await topNSampler.Object.GetSampleAsync();
+            List<JsonDocument> result = await topNExtractor.Object.GetSampleAsync();
             Assert.AreEqual(expectedCount, result.Count);
         }
 
         /// <summary>
-        /// Tests the <c>PartitionBasedSampler</c> class to ensure correct sampling across partitions with various configurations.
+        /// Tests the <c>EligibleDataSampler</c> class to ensure correct sampling across partitions with various configurations.
         /// </summary>
         /// <param name="partitionKeyPath">The path of the partition key to use for sampling. If null, partition key path is not considered.</param>
         /// <param name="numberOfRecordsPerPartition">The number of records to retrieve per partition. Defaults to 5 if not specified.</param>
         /// <param name="maxDaysPerPartition">The maximum number of days to filter records within each partition. If null, no date-based filtering is applied.</param>
         /// <param name="expectedResultCount">The expected number of records returned by the sampler.</param>
         /// <remarks>
-        /// This test case ensures that the <c>PartitionBasedSampler</c> handles partition-based sampling correctly with various configurations.
+        /// This test case ensures that the <c>EligibleDataSampler</c> handles partition-based sampling correctly with various configurations.
         /// It verifies that the sampler correctly applies partition key paths, record limits per partition, and date-based filters as specified.
         /// </remarks>
-        [TestMethod(displayName: "PartitionBasedSampler Scenarios")]
-        [DataRow("/name", 1, 0, 9, DisplayName = "PartitionBasedSampler: Retrieve 1 record per partition, ignoring day-based filtering.")]
-        [DataRow("/name", 2, 0, 15, DisplayName = "PartitionBasedSampler: Retrieve 2 records per partition, ignoring day-based filtering.")]
-        [DataRow("/name", 2, 1, 2, DisplayName = "PartitionBasedSampler: Retrieve 2 records per partition, filtering for 1 day old records.")]
-        [DataRow("/name", 0, 1, 2, DisplayName = "PartitionBasedSampler: Retrieve records from 1 day old records per partition with no count limit.")]
-        [DataRow("/name", null, null, 15, DisplayName = "PartitionBasedSampler: Retrieve default value of 5 records per partition if count limit is not set.")]
-        [DataRow(null, 1, 0, 9, DisplayName = "PartitionBasedSampler: Retrieve 1 record per partition, ignoring day-based filtering when partition key path is not specified.")]
-        public async Task TestPartitionBasedSampler(string partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, int expectedResultCount)
+        [TestMethod(displayName: "EligibleDataSampler Scenarios")]
+        [DataRow("/name", 1, 0, 9, DisplayName = "EligibleDataSampler: Retrieve 1 record per partition, ignoring day-based filtering.")]
+        [DataRow("/name", 2, 0, 15, DisplayName = "EligibleDataSampler: Retrieve 2 records per partition, ignoring day-based filtering.")]
+        [DataRow("/name", 2, 1, 2, DisplayName = "EligibleDataSampler: Retrieve 2 records per partition, filtering for 1 day old records.")]
+        [DataRow("/name", 0, 1, 2, DisplayName = "EligibleDataSampler: Retrieve records from 1 day old records per partition with no count limit.")]
+        [DataRow("/name", null, null, 15, DisplayName = "EligibleDataSampler: Retrieve default value of 5 records per partition if count limit is not set.")]
+        [DataRow(null, 1, 0, 9, DisplayName = "EligibleDataSampler: Retrieve 1 record per partition, ignoring day-based filtering when partition key path is not specified.")]
+        public async Task TestEligibleDataSampler(string partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, int expectedResultCount)
         {
-            Mock<PartitionBasedSampler> partitionBasedSampler
+            Mock<EligibleDataSampler> eligibleDataSampler
                 = new(_containerWithNamePk, partitionKeyPath, numberOfRecordsPerPartition, maxDaysPerPartition, _mockLogger.Object);
 
             if (maxDaysPerPartition is null || maxDaysPerPartition == 0)
@@ -135,11 +135,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 maxDaysPerPartition = 30;
             }
 
-            partitionBasedSampler
+            eligibleDataSampler
                 .Setup<long>(x => x.GetTimeStampThreshold())
                 .Returns((long)(_sortedTimespansNamePk[0] - maxDaysPerPartition));
 
-            List<JsonDocument> result = await partitionBasedSampler.Object.GetSampleAsync();
+            List<JsonDocument> result = await eligibleDataSampler.Object.GetSampleAsync();
 
             Assert.AreEqual(expectedResultCount, result.Count);
         }
@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             Container container = await _database.CreateContainerIfNotExistsAsync("myTestContainer", $"/{partitionKeyPath}");
 
-            Mock<PartitionBasedSampler> partitionBasedSampler = new(container, null, 1, 1, _mockLogger.Object);
+            Mock<EligibleDataSampler> partitionBasedSampler = new(container, null, 1, 1, _mockLogger.Object);
             List<string> result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
 
             if (partitionKeyPath == "anotherPojo/anotherProp")
@@ -176,26 +176,26 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests the functionality of the <c>TimeBasedSampler</c> class to ensure it samples records correctly based on time-based constraints and group counts.
+        /// Tests the functionality of the <c>TimePartitionedSampler</c> class to ensure it samples records correctly based on time-based constraints and group counts.
         /// </summary>
         /// <param name="groupCount">The number of time-based groups to consider for sampling. If null, the default number of groups is used.</param>
         /// <param name="numberOfRecordsPerGroup">The number of records to sample from each time-based group. If null, the default number of records per group is used.</param>
         /// <param name="maxDays">The maximum number of days to filter records. If null, no date-based filtering is applied.</param>
         /// <param name="expectedResultCount">The expected number of records returned by the sampler.</param>
         /// <remarks>
-        /// This test case ensures that the <c>TimeBasedSampler</c> accurately handles various configurations for time-based sampling. 
+        /// This test case ensures that the <c>TimePartitionedSampler</c> accurately handles various configurations for time-based sampling. 
         /// It verifies the sampler’s ability to manage different group counts and record limits, as well as its handling of optional day-based filtering. 
         /// The test cases also include scenarios where records are not evenly distributed across time-based groups.
         /// </remarks>
-        [TestMethod(displayName: "TimeBasedSampler Scenarios")]
-        [DataRow(5, 1, 0, 5, DisplayName = "TimeBasedSampler: Retrieve 1 record, if it is allowed to fetch 1 item from a group and there are 5 groups (or time range)")]
-        [DataRow(1, 10, 0, 10, DisplayName = "TimeBasedSampler: Retrieve 10 records, if it is allowed to fetch 10 item from a group and there is only 1 group.")]
-        [DataRow(null, 1, 0, 10, DisplayName = "TimeBasedSampler: Retrieve 10 records, if 1 item is allowed to fetch from each group and number of groups is 10 (i.e default)")]
-        [DataRow(null, null, null, 10, DisplayName = "TimeBasedSampler: Retrieve records based on default values when no specific limits are set.")]
-        [DataRow(5, 1, 4, 1, DisplayName = "TimeBasedSampler: Retrieve 1 record from a single group when records cannot be evenly divided into time-based groups.")]
-        public async Task TestTimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, int expectedResultCount)
+        [TestMethod(displayName: "TimePartitionedSampler Scenarios")]
+        [DataRow(5, 1, 0, 5, DisplayName = "TimePartitionedSampler: Retrieve 1 record, if it is allowed to fetch 1 item from a group and there are 5 groups (or time range)")]
+        [DataRow(1, 10, 0, 10, DisplayName = "TimePartitionedSampler: Retrieve 10 records, if it is allowed to fetch 10 item from a group and there is only 1 group.")]
+        [DataRow(null, 1, 0, 10, DisplayName = "TimePartitionedSampler: Retrieve 10 records, if 1 item is allowed to fetch from each group and number of groups is 10 (i.e default)")]
+        [DataRow(null, null, null, 10, DisplayName = "TimePartitionedSampler: Retrieve records based on default values when no specific limits are set.")]
+        [DataRow(5, 1, 4, 1, DisplayName = "TimePartitionedSampler: Retrieve 1 record from a single group when records cannot be evenly divided into time-based groups.")]
+        public async Task TestTimePartitionedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, int expectedResultCount)
         {
-            Mock<TimeBasedSampler> timeBasedSampler
+            Mock<TimePartitionedSampler> timePartitionedSampler
                 = new(_containerWithNamePk, groupCount, numberOfRecordsPerGroup, maxDays, _mockLogger.Object);
 
             if (maxDays is null || maxDays == 0)
@@ -203,11 +203,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 maxDays = 10;
             }
 
-            timeBasedSampler
+            timePartitionedSampler
                 .Setup<long>(x => x.GetTimeStampThreshold())
                 .Returns((long)(_sortedTimespansNamePk[0] - maxDays));
 
-            List<JsonDocument> result = await timeBasedSampler.Object.GetSampleAsync();
+            List<JsonDocument> result = await timePartitionedSampler.Object.GetSampleAsync();
 
             Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
         }

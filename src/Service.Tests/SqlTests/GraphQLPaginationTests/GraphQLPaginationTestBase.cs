@@ -934,6 +934,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <summary>
         /// Tests the GraphQL query for retrieving supported types with a specified number of rows.
+        /// Also verifies the hasNextPage and endCursor fields in the response.
         /// </summary>
         /// <param name="pageSize">The number of rows to retrieve in the query.</param>
         /// <param name="fields">The fields to retrieve in the query.</param>
@@ -966,6 +967,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             Assert.IsFalse(graphQLResponse.TryGetProperty("errors", out _), "Response contains errors");
 
             // Check the number of items
+            // Total number of rows in DB < 200, so when the pagesize exeeds 200, the number of rows returned in the result
+            // will be less than the pagesize.
             JsonElement items = graphQLResponse.GetProperty("items");
             Assert.AreEqual(items.GetArrayLength() == pageSize, pageSize <= 200);
             Assert.AreEqual(items.GetArrayLength() < pageSize, pageSize > 200);
@@ -980,6 +983,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             }
 
             // Verify hasNextPage field
+            // Since number of rows in DB<200, if pagesize provided exceeds 200, hasNextPage should be false.
             JsonElement hasNextPage = graphQLResponse.GetProperty("hasNextPage");
             Assert.AreNotEqual(JsonValueKind.Null, hasNextPage.ValueKind, "hasNextPage is null");
             bool expectedHasNextPageValue = pageSize < 200 ? true : false;
@@ -987,7 +991,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
             // Verify endCursor field
             JsonElement endCursor = graphQLResponse.GetProperty("endCursor");
-            JsonValueKind expectedEndCursorType = pageSize < 200 ? JsonValueKind.String : JsonValueKind.Null;
+            JsonValueKind expectedEndCursorType = hasNextPage.GetBoolean() ? JsonValueKind.String : JsonValueKind.Null;
             Assert.AreEqual(expectedEndCursorType, endCursor.ValueKind, "endCursor is null");
 
             // Clean up: Delete the inserted records

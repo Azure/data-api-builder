@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         // Default Configuration
         private const int GROUP_COUNT = 10;
         private const int RECORDS_PER_GROUP = 10;
-        private const int MAX_DAYS = 10;
+        internal const int MAX_DAYS = 10;
 
         // Query
         private const string MIN_TIMESTAMP_QUERY = "SELECT VALUE MIN(c._ts) FROM c";
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private async Task<(long minTimestamp, long maxTimestamp)> GetHighestAndLowestTimestampsAsync()
         {
             List<long> maxTimestamp = await this._cosmosExecutor.ExecuteQueryAsync<long>(MAX_TIMESTAMP_QUERY);
-            List<long> minTimestamp = new(capacity: 1); // Here I know that there will be only one value
+            List<long> minTimestamp = new(capacity: 1); // There is always one minimum timestamp for a container.
             if (_maxDays > 0)
             {
                 // Calculate the timestamp threshold for the timespan

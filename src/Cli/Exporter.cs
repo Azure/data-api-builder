@@ -168,16 +168,17 @@ namespace Cli
         /// <param name="content">The schema content to be written to the file.</param>
         private static void WriteSchemaFile(ExportOptions options, IFileSystem fileSystem, string content, ILogger logger)
         {
-            // Ensure the output directory exists
-            if (!fileSystem.Directory.Exists(options.OutputDirectory))
-            {
-                fileSystem.Directory.CreateDirectory(options.OutputDirectory);
-            }
 
             if (string.IsNullOrEmpty(content))
             {
                 logger.LogError("There is nothing to write");
                 return;
+            }
+
+            // Ensure the output directory exists
+            if (!fileSystem.Directory.Exists(options.OutputDirectory))
+            {
+                fileSystem.Directory.CreateDirectory(options.OutputDirectory);
             }
 
             // Construct the path for the schema file and write the content to it

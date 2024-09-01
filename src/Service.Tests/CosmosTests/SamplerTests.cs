@@ -94,11 +94,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             Mock<TopNExtractor> topNExtractor = new(_containerWithIdPk, count, maxDays, _mockLogger.Object);
 
-            if (maxDays is null || maxDays == 0)
-            {
-                maxDays = 10;
-            }
-
             topNExtractor
                 .Setup<long>(x => x.GetTimeStampThreshold())
                 .Returns((long)(_sortedTimespansIdPk[0] - maxDays));
@@ -132,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             if (maxDaysPerPartition is null || maxDaysPerPartition == 0)
             {
-                maxDaysPerPartition = 30;
+                maxDaysPerPartition = EligibleDataSampler.MAX_DAYS_PER_PARTITION;
             }
 
             eligibleDataSampler
@@ -164,11 +159,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             if (partitionKeyPath == "anotherPojo/anotherProp")
             {
+                Assert.AreEqual(2, result.Count);
                 Assert.AreEqual("anotherPojo", result[0]);
                 Assert.AreEqual("anotherProp", result[1]);
             }
             else
             {
+                Assert.AreEqual(1, result.Count);
                 Assert.AreEqual(partitionKeyPath, result[0]);
             }
 
@@ -200,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             if (maxDays is null || maxDays == 0)
             {
-                maxDays = 10;
+                maxDays = TimePartitionedSampler.MAX_DAYS;
             }
 
             timePartitionedSampler

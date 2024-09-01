@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     {
         // Default Configuration
         private const int RECORDS_PER_PARTITION = 5;
-        private const int MAX_DAYS_PER_PARTITION = 30;
+        internal const int MAX_DAYS_PER_PARTITION = 30;
 
         // Query
         private const string DISTINCT_QUERY = "SELECT DISTINCT {0} FROM c";

@@ -14,8 +14,8 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     public class TopNExtractor : ISchemaGeneratorSampler
     {
         // Default Configuration
-        public const int NUMBER_OF_RECORDS = 10;
-        public const int MAX_DAYS = 0;
+        private const int NUMBER_OF_RECORDS = 10;
+        private const int MAX_DAYS = 0;
 
         // Query
         public const string SELECT_QUERY = "SELECT TOP {0} * FROM c {1} ORDER BY c._ts desc";

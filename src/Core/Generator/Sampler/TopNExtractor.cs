@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     {
         // Default Configuration
         private const int NUMBER_OF_RECORDS = 10;
-        private const int MAX_DAYS = 0;
+        internal const int MAX_DAYS = 0;
 
         // Query
         public const string SELECT_QUERY = "SELECT TOP {0} * FROM c {1} ORDER BY c._ts desc";

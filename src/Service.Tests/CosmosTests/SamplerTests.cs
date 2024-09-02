@@ -94,6 +94,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             Mock<TopNExtractor> topNExtractor = new(_containerWithIdPk, count, maxDays, _mockLogger.Object);
 
+            if (maxDays is null || maxDays == 0)
+            {
+                maxDays = TopNExtractor.MAX_DAYS;
+            }
+
             topNExtractor
                 .Setup<long>(x => x.GetTimeStampThreshold())
                 .Returns((long)(_sortedTimespansIdPk[0] - maxDays));

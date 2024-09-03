@@ -51,6 +51,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   ? DetermineExtraFieldsInResponse(findOperationResponse, context.FieldsToBeReturned)
                                                   : DetermineExtraFieldsInResponse(findOperationResponse.EnumerateArray().First(), context.FieldsToBeReturned);
 
+            //Remove RecordCOunt from extraFieldsInResponse if present
+            /*
+            if (extraFieldsInResponse.Contains("RecordCount"))
+            {
+                extraFieldsInResponse.Remove("RecordCount");
+            }
+            */
             uint defaultPageSize = runtimeConfig.DefaultPageSize();
             uint maxPageSize = runtimeConfig.MaxPageSize();
 
@@ -113,6 +120,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                   queryStringParameters: context!.ParsedQueryString,
                                   after);
 
+            //Get the element RecordCount from the first element of the array
+            JsonElement recordCountElement = rootEnumerated[0].GetProperty("RecordCount");
+            string jsonRecordCount = JsonSerializer.Serialize(new[]
+            {
+                new
+                {
+                    recordCount = @$"{rootEnumerated[0].GetProperty("RecordCount")}"
+                }
+            });
+
             // When there are extra fields present, they are removed before returning the response.
             if (extraFieldsInResponse.Count > 0)
             {
@@ -120,6 +137,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             rootEnumerated.Add(nextLink);
+            rootEnumerated.Add(JsonSerializer.Deserialize<JsonElement>(jsonRecordCount));
             return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
         }
 
@@ -218,13 +236,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // we strip the "[" and "]" and then save the nextLink element
                 // into a dictionary with a key of "nextLink" and a value that
                 // represents the nextLink data we require.
-                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated[resultEnumerated.Count - 1]);
+                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated[resultEnumerated.Count - 2]);
+                string recordCountJsonString = JsonSerializer.Serialize(resultEnumerated[resultEnumerated.Count - 1]);
                 Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
-                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count - 1);
+                Dictionary<string, object> recordCount = JsonSerializer.Deserialize<Dictionary<string, object>>(recordCountJsonString[1..^1])!;
+                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count - 2);
                 return new OkObjectResult(new
                 {
                     value = value,
-                    @nextLink = nextLink["nextLink"]
+                    @nextLink = nextLink["nextLink"],
+                    @recordCount = recordCount["recordCount"]
                 });
             }
 

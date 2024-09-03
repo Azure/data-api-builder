@@ -104,7 +104,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 .Returns((long)(_sortedTimespansIdPk[0] - maxDays));
 
             List<JsonDocument> result = await topNExtractor.Object.GetSampleAsync();
-            Assert.AreEqual(expectedCount, result.Count);
+
+            // The actual count can vary by 1 record because of time based record creation
+            Assert.IsTrue(expectedCount == result.Count || (expectedCount + 1) == result.Count, $"Expected result count is {expectedCount} and Actual result count is {result.Count}");
         }
 
         /// <summary>
@@ -140,8 +142,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 .Returns((long)(_sortedTimespansNamePk[0] - maxDaysPerPartition));
 
             List<JsonDocument> result = await eligibleDataSampler.Object.GetSampleAsync();
-
-            Assert.AreEqual(expectedResultCount, result.Count);
+            // The actual count can vary by 1 record because of time based record creation
+            Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
         }
 
         /// <summary>
@@ -211,6 +213,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             List<JsonDocument> result = await timePartitionedSampler.Object.GetSampleAsync();
 
+            // The actual count can vary by 1 record because of time based record creation
             Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
         }
 

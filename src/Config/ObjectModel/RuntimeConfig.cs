@@ -536,4 +536,12 @@ public record RuntimeConfig
             return defaultPageSize;
         }
     }
+
+    /// <summary>
+    /// Retrieve the value of LogLevel from runtime
+    /// </summary>
+    public Level? LogLevelValue()
+    {
+        return Runtime?.LogLevel?.Value;
+    }
 }

@@ -430,6 +430,22 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
+        /// Takes in the RuntimeConfig object and checks the LogLevel level.
+        /// If LogLevel is not null, it will return the current value as a LogLevel,
+        /// else it will take the default option by going to GetLogLevelBasedOnMode
+        /// </summary>
+        public static LogLevel GetLogLevelBasedOnLevel(RuntimeConfig runtimeConfig)
+        {
+            Level? value = runtimeConfig.LogLevelValue();
+            if (value is not null)
+            {
+                return (LogLevel)value;
+            }
+
+            return GetLogLevelBasedOnMode(runtimeConfig);
+        }
+
+        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the 
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
@@ -445,7 +461,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
+                    MinimumLogLevel = GetLogLevelBasedOnLevel(runtimeConfig);
                 }
             }
 

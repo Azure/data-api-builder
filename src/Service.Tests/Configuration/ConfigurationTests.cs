@@ -3451,6 +3451,69 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Test different loglevel values that are avaliable by deserializing RuntimeConfig with LogLevel value
+        /// and checks if value exists properly inside the deserialized RuntimeConfig.
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(Level.Trace, DisplayName = "Validates that log level Trace deserialized correctly")]
+        [DataRow(Level.Debug, DisplayName = "Validates log level Debug deserialized correctly")]
+        [DataRow(Level.Information, DisplayName = "Validates log level Information deserialized correctly")]
+        [DataRow(Level.Warning, DisplayName = "Validates log level Warning deserialized correctly")]
+        [DataRow(Level.Error, DisplayName = "Validates log level Error deserialized correctly")]
+        [DataRow(Level.Critical, DisplayName = "Validates log level Critical deserialized correctly")]
+        [DataRow(Level.None, DisplayName = "Validates log level None deserialized correctly")]
+        [DataRow(null, DisplayName = "Validates log level Null deserialized correctly")]
+        public void TestExistingLogLevels(Level expectedLevel)
+        {
+            RuntimeConfig configWithCustomLogLevel = InitRuntimeWithLogLevel(expectedLevel);
+
+            string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
+
+            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.LogLevel.Value);
+        }
+
+        /// <summary>
+        /// Test different loglevel values that do not exist to ensure that the build fails when they are trying to be set up
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(-1, DisplayName = "Validates that a negative log level value, fails to build")]
+        [DataRow(7, DisplayName = "Validates that a positive log level value that does not exist, fails to build")]
+        [DataRow(12, DisplayName = "Validates that a bigger positive log level value that does not exist, fails to build")]
+        public void TestNonExistingLogLevels(Level expectedLevel)
+        {
+            RuntimeConfig configWithCustomLogLevel = InitRuntimeWithLogLevel(expectedLevel);
+
+            //Try should fail and go to catch exception
+            try
+            {
+                string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+                Assert.Fail();
+            }
+            //Catch verifies that the exception is due to LogLevel having a value that does not exist
+            catch (Exception ex)
+            {
+                Assert.AreEqual(ex.GetType(), typeof(KeyNotFoundException));
+            }
+        }
+
+        private static RuntimeConfig InitRuntimeWithLogLevel(Level expectedLevel)
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            RuntimeConfig config = SqlTestHelper.SetupRuntimeConfig();
+
+            return config with
+            {
+                Runtime = config.Runtime with
+                {
+                    LogLevel = config.Runtime.LogLevel with { Value = expectedLevel }
+                }
+            };
+        }
+
+        /// <summary>
         /// Validates the OpenAPI documentor behavior when enabling and disabling the global REST endpoint
         /// for the DAB engine.
         /// Global REST enabled:

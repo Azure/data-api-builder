@@ -935,6 +935,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         /// <summary>
         /// Tests the GraphQL query for retrieving supported types with a specified number of rows.
         /// Also verifies the hasNextPage and endCursor fields in the response.
+        /// This test is a 'best effort' attempt to reproduce an issue that occurs due to JsonDocument disposal
+        /// occurring before its values are fully utilized. As a result, this test attempts to catch circumstances
+        /// where JsonDocument.RootElement.Clone() is not called.
         /// </summary>
         /// <param name="pageSize">The number of rows to retrieve in the query.</param>
         /// <param name="fields">The fields to retrieve in the query.</param>

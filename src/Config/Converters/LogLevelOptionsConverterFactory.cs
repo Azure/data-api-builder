@@ -27,7 +27,9 @@ internal class LogLevelOptionsConverterFactory : JsonConverterFactory
     private class LogLevelOptionsConverter : JsonConverter<LogLevelOptions>
     {
         /// <summary>
-        ///
+        /// Defines how DAB reads loglevel options and defines which values are
+        /// used to instantiate LogLevelOptions.
+        /// Uses default deserialize.
         /// </summary>
         public override LogLevelOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -36,9 +38,6 @@ internal class LogLevelOptionsConverterFactory : JsonConverterFactory
             return JsonSerializer.Deserialize<LogLevelOptions>(ref reader, jsonSerializerOptions);
         }
 
-        /// <summary>
-        ///
-        /// </summary>
         public override void Write(Utf8JsonWriter writer, LogLevelOptions value, JsonSerializerOptions options)
         {
             writer.WriteStartObject();

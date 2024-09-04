@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
     /// <summary>
     /// The <c>SamplerTests</c> class contains unit tests for the different sampling strategies used in the schema generation process.
-    /// These tests validate the behavior of the <c>TopNSampler</c>, <c>PartitionBasedSampler</c>, and <c>TimeBasedSampler</c> classes
+    /// These tests validate the behavior of the <c>TopNExtractor</c>, <c>EligibleDataSampler</c>, and <c>TimePartitionedSampler</c> classes
     /// to ensure they produce correct and expected results based on various configurations and parameters.
     /// </summary>
     /// <remarks>
@@ -147,22 +147,22 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Verifies that the <c>PartitionBasedSampler</c> correctly retrieves partition key paths from containers with different partition key configurations.
+        /// Verifies that the <c>EligibleDataSampler</c> correctly retrieves partition key paths from containers with different partition key configurations.
         /// </summary>
         /// <remarks>
-        /// This test ensures that the <c>PartitionBasedSampler</c> accurately identifies and returns partition key paths from containers.
+        /// This test ensures that the <c>EligibleDataSampler</c> accurately identifies and returns partition key paths from containers.
         /// It includes cases where containers have single and multiple partition key paths to validate correct functionality.
         /// </remarks>
         [TestMethod]
         [DataRow("name", DisplayName = "When Container is partitioned by name")]
         [DataRow("id", DisplayName = "When Container is partitioned by id")]
         [DataRow("anotherPojo/anotherProp", DisplayName = "Hierarchy Partition Key: When Container is partitioned by multi-level partition key")]
-        public async Task TestGetPartitionInfoInPartitionBasedSampler(string partitionKeyPath)
+        public async Task TestGetPartitionInfoInEligibleDataSampler(string partitionKeyPath)
         {
             Container container = await _database.CreateContainerIfNotExistsAsync("myTestContainer", $"/{partitionKeyPath}");
 
-            Mock<EligibleDataSampler> partitionBasedSampler = new(container, null, 1, 1, _mockLogger.Object);
-            List<string> result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
+            Mock<EligibleDataSampler> eligibleDataSampler = new(container, null, 1, 1, _mockLogger.Object);
+            List<string> result = await eligibleDataSampler.Object.GetPartitionKeyPaths();
 
             if (partitionKeyPath == "anotherPojo/anotherProp")
             {

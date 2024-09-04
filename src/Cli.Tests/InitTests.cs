@@ -160,7 +160,7 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Verify that if database is null or empty, we will get error.and if graphQLSchema is null or empty.we will not get error.
+        /// Verify that if database is null or empty, we will get error.and if graphQLSchema is null or empty, we will not get error as passing graphQLSchema is optional now.
         /// </summary>
         [DataRow(null, "testcontainer", "", false, DisplayName = "Both database and schema are either null or empty.")]
         [DataRow("", "testcontainer", "testschema", false, DisplayName = "database is empty.")]

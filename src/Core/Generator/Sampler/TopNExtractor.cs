@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// The TopNSampler class is responsible for retrieving a specified number of recent records 
+    /// The TopNExtractor class is responsible for retrieving a specified number of recent records 
     /// from an Azure Cosmos DB container, optionally filtering by a maximum number of days.
     /// </summary>
     public class TopNExtractor : ISchemaGeneratorSampler

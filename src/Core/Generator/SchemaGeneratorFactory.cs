@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// and generating the schema from the sampled data.
         /// </summary>
         /// <param name="config">The runtime configuration containing details about the data source and connection information for Azure Cosmos DB.</param>
-        /// <param name="mode">The sampling mode to use when collecting sample data. This should be one of the defined sampling modes (e.g., TopNSampler, PartitionBasedSampler, TimeBasedSampler).</param>
+        /// <param name="mode">The sampling mode to use when collecting sample data. This should be one of the defined sampling modes (e.g., TopNExtractor, EligibleDataSampler, TimePartitionedSampler).</param>
         /// <param name="sampleCount">The number of samples to collect. This must be greater than zero if specified.</param>
         /// <param name="partitionKeyPath">The path of the partition key for partition-based sampling. This parameter is optional and used only for partition-based sampling.</param>
         /// <param name="days">The number of days to use for time-based sampling. This parameter is optional and should be greater than zero if specified.</param>

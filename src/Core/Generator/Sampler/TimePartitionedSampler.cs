@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// The TimeBasedSampler class is responsible for dividing a time range into subranges 
+    /// The TimePartitionedSampler class is responsible for dividing a time range into subranges 
     /// and retrieving the top N records from each subrange based on a specified configuration.
     /// </summary>
     public class TimePartitionedSampler : ISchemaGeneratorSampler

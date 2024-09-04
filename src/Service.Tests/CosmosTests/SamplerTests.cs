@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         callback: (item) => _sortedTimespansIdPk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
 
             // Insert additional items into the second container with a delay for unique timestamps and partitioned over name i.e planets name.
-            // Number of partitions would 9 as we have 9 unique names.
+            // Number of partitions would be 9 as we have 9 unique names.
             CreateItems(DATABASE_NAME, CONTAINER_NAME_NAME_PK, 15, "/name", waitInMs: 1000);
 
             // Retrieve timestamps for the second container to use in validation.

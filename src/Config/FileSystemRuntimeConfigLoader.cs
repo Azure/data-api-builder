@@ -135,7 +135,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         [NotNullWhen(true)] out RuntimeConfig? config,
         bool replaceEnvVar = false,
         ILogger? logger = null,
-        string? defaultDataSourceName = null)
+        string defaultDataSourceName = "")
     {
         if (_fileSystem.File.Exists(path))
         {
@@ -144,7 +144,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             bool configParsed = TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
             TrySetupConfigFileWatcher();
             config = RuntimeConfig;
-            if (RuntimeConfig is not null && defaultDataSourceName is not null)
+            if (RuntimeConfig is not null)
             {
                 RuntimeConfig.DefaultDataSourceName = defaultDataSourceName;
             }
@@ -173,7 +173,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string? defaultDataSourceName = null)
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string defaultDataSourceName = "")
     {
         return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar, defaultDataSourceName: defaultDataSourceName);
     }
@@ -184,7 +184,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public void HotReloadConfig(string defaultDataSourceName)
     {
-        TryLoadKnownConfig(out _, replaceEnvVar: true, defaultDataSourceName);
+        TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName);
     }
 
     /// <summary>

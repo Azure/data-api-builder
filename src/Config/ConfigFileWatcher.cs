@@ -36,17 +36,8 @@ public class ConfigFileWatcher
     {
         try
         {
-            if (_configLoader is null)
-            {
-                throw new ArgumentNullException("ConfigLoader can not be null.");
-            }
-
-            if (_configLoader.RuntimeConfig is null)
-            {
-                throw new ArgumentNullException("RuntimeConfig can not be null.");
-            }
-
-            if (_configLoader.RuntimeConfig.IsDevelopmentMode())
+            // if RuntimeConfig is null we hould abort any hot-reload.
+            if (_configLoader.RuntimeConfig is not null && _configLoader.RuntimeConfig.IsDevelopmentMode())
             {
                 _configLoader.HotReloadConfig(_configLoader.RuntimeConfig.DefaultDataSourceName);
             }

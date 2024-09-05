@@ -43,8 +43,6 @@ public class RuntimeConfigProvider
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
-    private RuntimeConfig? _runtimeConfig;
-
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         ConfigLoader = runtimeConfigLoader;

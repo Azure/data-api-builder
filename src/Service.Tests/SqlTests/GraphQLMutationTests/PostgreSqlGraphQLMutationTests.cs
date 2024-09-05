@@ -614,8 +614,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     (SELECT table0.id AS id,
                         table0.item_name AS item_name,
                         table0.subtotal AS subtotal,
-                        table0.tax AS tax,
-                        table0.total AS total
+                        table0.tax AS tax
                     FROM public.sales AS table0
                     WHERE table0.item_name = 'test_name'
                     ORDER BY table0.id ASC

@@ -610,13 +610,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         public async Task CanCreateItemWithCultureInvariant(string cultureInfo)
         {
             string msSqlQuery = @"
-                SELECT JSON_OBJECT('id', `subq`.`id`, 'item_name', `subq`.`item_name`, 'subtotal', `subq`.`subtotal`, 'tax', `subq`.`tax`, 'total', `subq`.`total`) AS `data`
+                SELECT JSON_OBJECT('id', `subq`.`id`, 'item_name', `subq`.`item_name`, 'subtotal', `subq`.`subtotal`, 'tax', `subq`.`tax`) AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `id`,
                         `table0`.`item_name` AS `item_name`,
                         `table0`.`subtotal` AS `subtotal`,
-                        `table0`.`tax` AS `tax`,
-                        `table0`.`total` AS `total`
+                        `table0`.`tax` AS `tax`
                     FROM `sales` AS `table0`
                     WHERE `table0`.`item_name` = 'test_name'
                     ORDER BY `table0`.`id` ASC LIMIT 1

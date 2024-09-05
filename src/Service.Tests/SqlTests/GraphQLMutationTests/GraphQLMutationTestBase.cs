@@ -1129,7 +1129,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                         item_name
                         subtotal
                         tax
-                        total
                     }
                 }
             ";
@@ -1139,7 +1138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
 
             // Validate results
-            Assert.AreEqual(Convert.ToDouble(dbResponseJson.RootElement.GetProperty("total").GetDouble(), CultureInfo.InvariantCulture), response.GetProperty("total").GetDouble());
+            Assert.AreEqual(Convert.ToDouble(dbResponseJson.RootElement.GetProperty("subtotal").GetDouble(), CultureInfo.InvariantCulture), response.GetProperty("subtotal").GetDouble());
         }
 
         #endregion

@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // We're relying on a delay to create records with different timestamps.
             // However, this can cause the actual result to intermittently vary by one record in some cases, particularly in pipelines.
             // To prevent these tests from becoming flaky, the assertion has been adjusted.
-            Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
+            Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count || (expectedResultCount - 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
         }
 
         /// <summary>

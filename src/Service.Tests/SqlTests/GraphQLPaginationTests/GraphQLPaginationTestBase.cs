@@ -970,7 +970,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             Assert.IsFalse(graphQLResponse.TryGetProperty("errors", out _), "Response contains errors");
 
             // Check the number of items
-            // Total number of rows in DB < 200, so when the pagesize exeeds 200, the number of rows returned in the result
+            // Total number of rows in DB < 200, so when the pagesize exceeds 200, the number of rows returned in the result
             // will be less than the pagesize.
             JsonElement items = graphQLResponse.GetProperty("items");
             Assert.AreEqual(items.GetArrayLength() == pageSize, pageSize <= 200);

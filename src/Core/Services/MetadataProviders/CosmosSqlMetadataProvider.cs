@@ -599,8 +599,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return string.Empty;
         }
 
-        // Use the runtimeConfigProvider to ensure we have current up to date
-        // state on development mode in case a hot-reload
+        // Use the internal, immutable copy so that we always return consistent results.
         public bool IsDevelopmentMode()
         {
             return _isDevelopmentMode;

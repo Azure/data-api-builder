@@ -192,13 +192,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
-                Entity? entity;
-                if (entities.TryGetValue(entityName, out entity) && entity is not null)
+                if (entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
                 {
                     if (!entity.Rest.Enabled)
                     {
                         continue;
                     }
+                }
+
+                if (entity is null)
+                {
+                    continue;
                 }
 
                 // Explicitly exclude setting the tag's Description property since the Name property is self-explanatory.
@@ -599,7 +603,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="entity">The entity.</param>
         /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
         /// <returns>Collection of OpenAPI OperationTypes and whether they should be created.</returns>
-        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity? entity, DatabaseObject dbObject)
+        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity entity, DatabaseObject dbObject)
         {
             Dictionary<OperationType, bool> configuredOperations = new()
             {

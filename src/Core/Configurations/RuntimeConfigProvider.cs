@@ -41,7 +41,7 @@ public class RuntimeConfigProvider
     /// </summary>
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
-    public RuntimeConfigLoader ConfigLoader { get; private set; }
+    private RuntimeConfigLoader ConfigLoader { get; set; }
 
     /// <summary>
     /// Accessor for the ConfigFilePath to avoid exposing the loader. If we are not

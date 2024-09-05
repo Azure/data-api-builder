@@ -3486,31 +3486,43 @@ type Planet @model(name:""PlanetAlias"") {
         {
             RuntimeConfig configWithCustomLogLevel = InitRuntimeWithLogLevel(expectedLevel);
 
-            //Try should fail and go to catch exception
+            // Try should fail and go to catch exception
             try
             {
                 string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
                 Assert.Fail();
             }
-            //Catch verifies that the exception is due to LogLevel having a value that does not exist
+            // Catch verifies that the exception is due to LogLevel having a value that does not exist
             catch (Exception ex)
             {
-                Assert.AreEqual(ex.GetType(), typeof(KeyNotFoundException));
+                Assert.AreEqual(typeof(KeyNotFoundException), ex.GetType());
             }
         }
 
+        /// <summary>
+        /// Helper method to create RuntimeConfig with specificed LogLevel value
+        /// </summary>
         private static RuntimeConfig InitRuntimeWithLogLevel(Level expectedLevel)
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
-            RuntimeConfig config = SqlTestHelper.SetupRuntimeConfig();
 
-            return config with
-            {
-                Runtime = config.Runtime with
-                {
-                    LogLevel = config.Runtime.LogLevel with { Value = expectedLevel }
-                }
-            };
+            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig);
+
+            LogLevelOptions logLevelOptions = new(Value: expectedLevel);
+            RuntimeConfig config = new(
+                Schema: baseConfig.Schema,
+                DataSource: baseConfig.DataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null),
+                    LogLevel: logLevelOptions
+                ),
+                Entities: baseConfig.Entities
+            );
+
+            return config;
         }
 
         /// <summary>

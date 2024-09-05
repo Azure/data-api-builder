@@ -301,7 +301,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     message: "{correlationId} Query execution error due to:\n{errorMessage}",
                     correlationId,
                     e.Message);
-                queryExecutionTimer.Stop();
+                throw DbExceptionParser.Parse(e);
             }
             finally
             {
@@ -370,8 +370,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
                     cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                queryExecutionTimer.Stop();
-                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return dataReaderHandler(dbDataReader, args);

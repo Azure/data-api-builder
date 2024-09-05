@@ -1,0 +1,59 @@
+type Planet @model(name:"PlanetAlias") {
+  id: ID!,
+  name: String,
+  dimension: String,
+  age: Int,
+  myBooleanProp: Boolean,
+  character: Character,
+  stars: [Star],
+  suns: [Sun],
+  moons: [Moon],
+  earth: Earth,
+  additionalAttributes: [AdditionalAttribute],
+  tags: [String]
+}
+type Character {
+  id: ID!,
+  name: String,
+  type: String,
+  homePlanet: Int,
+  primaryFunction: String,
+  star: Star
+}
+type Star {
+  name: String!,
+  id: ID,
+  tag: Tag
+}
+type Tag {
+  id: ID!,
+  name: String
+}
+type Sun {
+  id: ID!,
+  name: String
+}
+type Moon {
+  id: ID!,
+  name: String,
+  details: String,
+  moonAdditionalAttributes: [MoonAdditionalAttribute]
+}
+type MoonAdditionalAttribute {
+  id: ID!,
+  name: String,
+  moreAttributes: [MoreAttribute]
+}
+type MoreAttribute {
+  id: ID!,
+  name: String
+}
+type Earth {
+  id: ID!,
+  name: String,
+  type: String
+}
+type AdditionalAttribute {
+  id: ID!,
+  name: String
+}

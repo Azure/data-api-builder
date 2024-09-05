@@ -17,8 +17,12 @@ namespace Azure.DataApiBuilder.Config;
 /// or a file located on disk, depending on how the service is being run.
 /// </summary>
 /// <remarks>
-/// This class does not maintain any internal state of the loaded config, instead it will
-/// always generate a new config when it is requested.
+/// This class derives from RuntimeConfigLoader and therefore maintains an internal copy of
+/// the RuntimeConfig. The functions which load and parse the RuntimeConfig do not save
+/// this state, and it is the responsibility of the class that instantiates and uses the loader
+/// to manage how the RuntimeConfig is saved. This is a target for future refactor work which
+/// will move the responsibility of saving the RuntimeConfig entirely to this class.
+/// See: https://github.com/Azure/data-api-builder/issues/2362 for more information.
 ///
 /// To support better testability, the <see cref="IFileSystem"/> abstraction is provided
 /// which allows for mocking of the file system in tests, providing a way to run the test

@@ -856,9 +856,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         internal virtual void AddDbExecutionTimeToMiddlewareContext(long time)
         {
-            HttpContext? httpContext = HttpContextAccessor.HttpContext;
+            HttpContext? httpContext = HttpContextAccessor?.HttpContext;
             if (httpContext != null)
             {
+                // locking is because we could have multiple queries in a single http request and each query will pr processed in parallel leading to concurrent access of the httpContext.Items.
                 lock (_httpContextLock)
                 {
                     if (!httpContext.Items.ContainsKey(TOTALDBEXECUTIONTIME))

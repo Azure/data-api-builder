@@ -160,15 +160,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 });
             }
-            catch
+            finally
             {
                 queryExecutionTimer.Stop();
                 AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
-                throw;
             }
-
-            queryExecutionTimer.Stop();
-            AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
 
             return result;
         }
@@ -250,15 +246,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 });
             }
-            catch
+            finally
             {
                 queryExecutionTimer.Stop();
                 AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
-                throw;
             }
-
-            queryExecutionTimer.Stop();
-            AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
 
             return result;
         }
@@ -287,20 +279,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             queryExecutionTimer.Start();
             await conn.OpenAsync();
             DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
-
+            TResult? result = default(TResult);
             try
             {
                 using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
                     await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-                queryExecutionTimer.Stop();
-                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
-                    return await dataReaderHandler(dbDataReader, args);
+                    result = await dataReaderHandler(dbDataReader, args);
                 }
                 else
                 {
-                    return default(TResult);
+                    result = default(TResult);
                 }
             }
             catch (DbException e)
@@ -311,8 +301,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     message: "{correlationId} Query execution error due to:\n{errorMessage}",
                     correlationId,
                     e.Message);
-                throw DbExceptionParser.Parse(e);
+                queryExecutionTimer.Stop();
             }
+            finally
+            {
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -859,16 +856,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext? httpContext = HttpContextAccessor?.HttpContext;
             if (httpContext != null)
             {
-                // locking is because we could have multiple queries in a single http request and each query will pr processed in parallel leading to concurrent access of the httpContext.Items.
+                // locking is because we could have multiple queries in a single http request and each query will be processed in parallel leading to concurrent access of the httpContext.Items.
                 lock (_httpContextLock)
                 {
-                    if (!httpContext.Items.ContainsKey(TOTALDBEXECUTIONTIME))
+                    if (httpContext.Items.TryGetValue(TOTALDBEXECUTIONTIME, out object? currentValue) && currentValue is not null)
                     {
-                        httpContext.Items[TOTALDBEXECUTIONTIME] = (long)0;
+                        httpContext.Items[TOTALDBEXECUTIONTIME] = (long)currentValue + time;
                     }
-
-                    long currentTime = (long)httpContext.Items[TOTALDBEXECUTIONTIME]!;
-                    httpContext.Items[TOTALDBEXECUTIONTIME] = currentTime + time;
+                    else
+                    {
+                        httpContext.Items[TOTALDBEXECUTIONTIME] = time;
+                    }
                 }
             }
         }

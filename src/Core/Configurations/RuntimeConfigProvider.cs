@@ -65,9 +65,6 @@ public class RuntimeConfigProvider
         ConfigLoader = runtimeConfigLoader;
     }
 
-   
-
-
     /// <summary>
     /// Return the previous loaded config, or it will attempt to load the config that
     /// is known by the loader.

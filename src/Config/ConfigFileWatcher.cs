@@ -36,7 +36,7 @@ public class ConfigFileWatcher
     {
         try
         {
-            // if RuntimeConfig is null we hould abort any hot-reload.
+            // When RuntimeConfig is null, we abort hot-reload.
             if (_configLoader.RuntimeConfig is not null && _configLoader.RuntimeConfig.IsDevelopmentMode())
             {
                 _configLoader.HotReloadConfig(_configLoader.RuntimeConfig.DefaultDataSourceName);

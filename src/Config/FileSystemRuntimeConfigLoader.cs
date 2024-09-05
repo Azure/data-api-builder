@@ -152,14 +152,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             return configParsed;
         }
 
-        string errorMessage = $"Unable to find config file: {path} does not exist.";
+        string errorMessage = "Unable to find config file: {path} does not exist.";
         if (logger is null)
         {
             Console.Error.WriteLine(errorMessage);
         }
         else
         {
-            logger.LogError(message: errorMessage);
+            logger.LogError(message: errorMessage, path);
         }
 
         config = null;

@@ -43,10 +43,30 @@ public class RuntimeConfigProvider
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
+    /// <summary>
+    /// Accessor for the ConfigFilePath to avoid exposing the loader. If we are not
+    /// loading from the file system, we return empty string.
+    /// </summary>
+    public string ConfigFilePath
+    {
+        get
+        {
+            if (ConfigLoader is FileSystemRuntimeConfigLoader)
+            {
+                return ((FileSystemRuntimeConfigLoader)ConfigLoader).ConfigFilePath;
+            }
+
+            return string.Empty;
+        }
+    }
+
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         ConfigLoader = runtimeConfigLoader;
     }
+
+   
+
 
     /// <summary>
     /// Return the previous loaded config, or it will attempt to load the config that

@@ -158,9 +158,9 @@ public class RuntimeConfigProvider
                 throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
             }
 
-            if (ConfigLoader.RuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
+            if (runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
             {
-                ConfigLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, ConfigLoader.RuntimeConfig, ConfigLoader.RuntimeConfig.DataSource.ConnectionString);
+                ConfigLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, runtimeConfig, runtimeConfig.DataSource.ConnectionString);
             }
 
             ManagedIdentityAccessToken[ConfigLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;

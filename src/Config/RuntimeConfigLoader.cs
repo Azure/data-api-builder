@@ -24,6 +24,9 @@ public abstract class RuntimeConfigLoader
 {
     protected readonly string? _connectionString;
 
+    // Public to allow the RuntimeProvider and other users of class to set via out param.
+    // May be candidate to refactor by changing all of the Parse/Load functions to save
+    // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
     public RuntimeConfigLoader(string? connectionString = null)

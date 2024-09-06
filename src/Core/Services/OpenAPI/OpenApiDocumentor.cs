@@ -199,8 +199,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
                 }
-
-                if (entity is null)
+                else
                 {
                     continue;
                 }

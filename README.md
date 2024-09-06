@@ -49,7 +49,7 @@ To get started quickly with Data API builder for Azure Databases, you can use th
   <a href="https://www.youtube.com/watch?v=xAlaoDQolLw" target="_blank">
     <img src="https://img.youtube.com/vi/xAlaoDQolLw/0.jpg" alt="Play Video" width="280" />
   </a><br/>
-  Demo source code: http://aka.ms/dab/startrek
+  Demo source code: https://aka.ms/dab/startrek
 </p>
 
 #### Install Data API builder's cross-platform  command line

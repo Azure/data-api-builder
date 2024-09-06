@@ -319,6 +319,113 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test to validate that when a query is executed the httpcontext object is populated with the time it took to run the query.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestHttpContextIsPopulatedWithDbExecutionTime()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            HttpContext context = new DefaultHttpContext();
+            httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+
+            // Call the actual ExecuteQueryAsync method.
+            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<string>(),
+                It.IsAny<HttpContext>(),
+                It.IsAny<List<string>>())).CallBase();
+
+            await queryExecutor.Object.ExecuteQueryAsync<object>(
+                sqltext: string.Empty,
+                parameters: new Dictionary<string, DbConnectionParam>(),
+                dataReaderHandler: null,
+                dataSourceName: String.Empty,
+                httpContext: null,
+                args: null);
+            Assert.IsTrue(context.Items.ContainsKey("TotalDbExecutionTime"), "HttpContext object must contain the total db execution time after execution of a query");
+        }
+
+        /// <summary>
+        /// Test to validate that when a query is executed the httpcontext object is updated with time correctly when multiple threads are accessing it.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void TestToValidateLockingOfHttpContextObjectDuringCalcuationOfDbExecutionTime()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            HttpContext context = new DefaultHttpContext();
+            httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+
+            long timeToAdd = 50L;
+            int threadCount = 10;  // Simulate multiple threads
+            Task[] tasks = new Task[threadCount];
+
+            // Act
+            for (int i = 0; i < threadCount; i++)
+            {
+                tasks[i] = Task.Run(() =>
+                {
+                    queryExecutor.AddDbExecutionTimeToMiddlewareContext(timeToAdd);
+                });
+            }
+
+            Task.WaitAll(tasks);
+
+            // Assert
+            Assert.IsTrue(context.Items.ContainsKey("TotalDbExecutionTime"), "HttpContext object must contain the total db execution time after execution of a query");
+
+            Assert.AreEqual(50L * threadCount, context.Items["TotalDbExecutionTime"], "With 10 threads adding 50 to the total db execution time, context.items[TotalDbExecutionTime] must be 500");
+        }
+
+        /// <summary>
         /// Validates streaming logic for QueryExecutor
         /// In this test the DbDataReader.GetChars method is mocked to return 1024*1024 bytes (1MB) of data.
         /// Max available size is set to 5 MB.

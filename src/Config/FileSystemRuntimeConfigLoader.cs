@@ -147,12 +147,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             string json = _fileSystem.File.ReadAllText(path);
             bool configParsed = TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
             TrySetupConfigFileWatcher();
-            config = RuntimeConfig;
-            if (RuntimeConfig is not null)
+
+            if (RuntimeConfig is not null && !string.IsNullOrEmpty(defaultDataSourceName))
             {
                 RuntimeConfig.DefaultDataSourceName = defaultDataSourceName;
             }
 
+            config = RuntimeConfig;
             return configParsed;
         }
 

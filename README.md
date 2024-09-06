@@ -55,7 +55,6 @@ To get started quickly with Data API builder for Azure Databases, you can use th
 #### Install Data API builder's cross-platform  command line
     dotnet tool install microsoft.dataapibuilder --global
 
-
 ## Documentation
 
 Documentation is available [here](https://learn.microsoft.com/azure/data-api-builder/).

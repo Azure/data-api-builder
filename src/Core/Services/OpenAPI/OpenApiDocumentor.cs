@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -27,6 +28,7 @@ namespace Azure.DataApiBuilder.Core.Services
     public class OpenApiDocumentor : IOpenApiDocumentor
     {
         private readonly IMetadataProviderFactory _metadataProviderFactory;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly RuntimeConfig _runtimeConfig;
         private OpenApiResponses _defaultOpenApiResponses;
         private OpenApiDocument? _openApiDocument;
@@ -56,15 +58,24 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         public const string DOCUMENT_CREATION_FAILED_ERROR = "OpenAPI description document creation failed";
 
+        public void Documentor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
+        {
+            Console.BackgroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
+            Console.ResetColor();
+            CreateDocument(); //Skips checks that fail regeneration if doc already created or when rest endpoint is disabled.
+        }
+
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<CustomEventArgs> handler)
         {
+            handler.Subscribe(Documentor_ConfigChangeEventReceived);
             _metadataProviderFactory = metadataProviderFactory;
-            _runtimeConfig = runtimeConfigProvider.GetConfig();
+            _runtimeConfigProvider = runtimeConfigProvider;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
         }
 
@@ -102,6 +113,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
         public void CreateDocument()
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             if (_openApiDocument is not null)
             {
                 throw new DataApiBuilderException(
@@ -110,7 +122,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists);
             }
 
-            if (!_runtimeConfig.IsRestEnabled)
+            if (!runtimeConfig.IsRestEnabled)
             {
                 throw new DataApiBuilderException(
                     message: DOCUMENT_CREATION_UNSUPPORTED_ERROR,
@@ -120,8 +132,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
-                string restEndpointPath = _runtimeConfig.RestPath;
-                string? runtimeBaseRoute = _runtimeConfig.Runtime?.BaseRoute;
+                string restEndpointPath = runtimeConfig.RestPath;
+                string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
                 string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
                 OpenApiComponents components = new()
                 {
@@ -139,7 +151,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         new() { Url = url }
                     },
-                    Paths = BuildPaths(),
+                    Paths = BuildPaths(runtimeConfig),
                     Components = components
                 };
                 _openApiDocument = doc;
@@ -169,16 +181,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// "/EntityName"
         /// </example>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths()
+        private OpenApiPaths BuildPaths(RuntimeConfig runtimeConfig)
         {
             OpenApiPaths pathsCollection = new();
 
-            string defaultDataSourceName = _runtimeConfig.DefaultDataSourceName;
+            string defaultDataSourceName = runtimeConfig.DefaultDataSourceName;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 string entityName = entityDbMetadataMap.Key;
-                if (!_runtimeConfig.Entities.ContainsKey(entityName))
+                if (!runtimeConfig.Entities.ContainsKey(entityName))
                 {
                     // This can happen for linking entities which are not present in runtime config.
                     continue;
@@ -192,7 +204,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
-                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                if (runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
                 {
                     if (!entity.Rest.Enabled)
                     {

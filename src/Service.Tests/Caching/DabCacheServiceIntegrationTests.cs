@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         /// because the cache is empty and the factory method is expected to be called.
         /// </summary>
         [TestMethod]
-        public async Task JsonArray_CacheServiceInvokation_CacheEmpty_ReturnsFactoryResult()
+        public async Task JsonArray_CacheServiceInvocation_CacheEmpty_ReturnsFactoryResult()
         {
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
@@ -331,7 +331,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
 
             // Assert
-            Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
@@ -402,7 +401,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
 
             // Assert
-            Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);

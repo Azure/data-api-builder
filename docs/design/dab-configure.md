@@ -20,12 +20,14 @@ dab configure [options]
 
 ### Options
 
-Some of the supported options:
+Some Example of the options that we currently support:
 - `--config `: Specify the configuration file path.
 - `--runtime.graphql.depth-limit`: Max allowed depth of the nested query.
 - `--data-source.database-type`: Type of database to connect to.
 - `--data-source.options.schema`: Schema path for Cosmos DB for NoSql.
 - `--help`: Display help information about the command.
+
+**NOTE:** The goal is to make all the properties under the `runtime` and `data-source` section configurable via `configure` command.
 
 ### Naming Convention
 

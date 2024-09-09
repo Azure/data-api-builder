@@ -375,8 +375,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     DatabaseQueryMetadata queryMetadata = new(
                         queryText: queryString,
-                    dataSource: dataSourceName,
-                    queryParameters: structure.Parameters);
+                        dataSource: dataSourceName,
+                        queryParameters: structure.Parameters);
 
                     JsonArray? result = await _cache.GetOrSetAsync<JsonArray?>(
                         async () => await queryExecutor.ExecuteQueryAsync(
@@ -389,8 +389,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         queryMetadata,
                         runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
 
-                    byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
-                    JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+                    JsonDocument? cacheServiceResponse = null;
+
+                    if (result is not null)
+                    {
+                        byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+                        cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+                    }
+
                     return cacheServiceResponse;
                 }
             }

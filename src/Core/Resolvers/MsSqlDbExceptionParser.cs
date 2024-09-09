@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "22822", "22823", "22824", "22825", "3960", "5062"
             });
 
-            _errorMessages.Add(201, "Invalid request. Missing required procedure parameters.");
+            _errorMessages.Add(201, "Invalid request. Missing required request parameters.");
         }
 
         /// <inheritdoc/>

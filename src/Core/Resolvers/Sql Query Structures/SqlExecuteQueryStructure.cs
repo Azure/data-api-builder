@@ -53,19 +53,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                 }
-                else
+                else if (paramDefinition.HasConfigDefault)
                 {
                     // When the runtime config defines a default value for a parameter,
                     // create a parameter using that value and add it to the query structure.
                     // Database metadata does not indicate whether a SP parameter has a default value
                     // and as a result, we don't know whether an SP parameter is optional.
                     // Therefore, DAB relies on the database error to indicate that a required parameter is missing.
-                    if (paramDefinition.HasConfigDefault)
-                    {
-                        object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
-                        string parameterizedName = MakeDbConnectionParam(value, paramKey);
-                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
-                    }
+                    object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
+                    string parameterizedName = MakeDbConnectionParam(value, paramKey);
+                    ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                 }
             }
         }

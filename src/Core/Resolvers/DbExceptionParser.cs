@@ -79,6 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Gets a specific substatus code which describes the cause of the error in more detail.
+        /// Currently, the exception is utilized for MSSQL to determine the specific message to return.
         /// </summary>
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
         /// <returns>status code to be returned in the response.</returns>

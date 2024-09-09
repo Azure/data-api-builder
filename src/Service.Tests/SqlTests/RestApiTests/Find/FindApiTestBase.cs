@@ -1498,7 +1498,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 operationType: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
-                expectedErrorMessage: "Invalid request. Missing required procedure parameters.",
+                expectedErrorMessage: "Invalid request. Missing required request parameters.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseInputError.ToString()
                 );
@@ -1519,7 +1519,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 operationType: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
-                expectedErrorMessage: "Invalid request. Missing required procedure parameters.",
+                expectedErrorMessage: "Invalid request. Missing required request parameters.",
                 expectedStatusCode: HttpStatusCode.BadRequest,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseInputError.ToString()
                 );

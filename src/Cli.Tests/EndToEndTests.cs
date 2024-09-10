@@ -1107,4 +1107,33 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig.Runtime.Rest);
         Assert.AreEqual(isRequestBodyStrict, runtimeConfig.Runtime.Rest.RequestBodyStrict);
     }
+
+    /// <summary>
+    /// Tests that the CLI can update the database type in the configuration file and is case insensitive.
+    /// Command: dab configure --data-source.database-type {dbType}
+    /// </summary>
+    /// <param name="dbType">The database type to be set in the configuration.</param>
+    /// <param name="isSuccess">Expected success or failure of the operation.</param>
+    [DataTestMethod]
+    [DataRow("mysql", true, DisplayName = "Successful update with a valid value for database type")]
+    [DataRow("msql", false, DisplayName = "Failure as invalid value for database type")]
+    [DataRow("postgres", false, DisplayName = "Failure as invalid value for database type for PostgreSQL")]
+    [DataRow("POSTgreSQL", true, DisplayName = "Successful update with a valid value for database type for PostgreSQL with varying case")]
+    public void TestUpdateDatabaseType(string dbType, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--data-source.database-type", dbType };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
 }

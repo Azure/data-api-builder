@@ -150,5 +150,197 @@ namespace Cli.Tests
 
             Assert.AreEqual(newDepthLimit, config.Runtime?.GraphQL?.DepthLimit);
         }
+
+        /// <summary>
+        /// Tests the update of the database type in the runtime config.
+        /// dab configure `--data-source.database-type {dbType}`
+        /// This method verifies that the database type can be updated to various valid values, including different cases,
+        /// and ensures that the config file is correctly modified and parsed after the update.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("mssql", DisplayName = "Update the database type to MSSQL")]
+        [DataRow("MSSql", DisplayName = "Update the database type to MSSQL with different case")]
+        [DataRow("postgresql", DisplayName = "Update the database type to PostgreSQL")]
+        [DataRow("cosmosdb_nosql", DisplayName = "Update the database type to CosmosDB_NoSQL")]
+        [DataRow("cosmosdb_postgresql", DisplayName = "Update the database type to CosmosDB_PGSQL")]
+        [DataRow("mysql", DisplayName = "Update the database type to MySQL")]
+        public void TestDatabaseTypeUpdate(string dbType)
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: dbType,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.AreEqual(config.DataSource.DatabaseType, Enum.Parse<DatabaseType>(dbType, ignoreCase: true));
+        }
+
+        /// <summary>
+        /// Tests the update of the database type from CosmosDB_NoSQL to MSSQL in the runtime config.
+        /// This method verifies that the database type can be changed from CosmosDB_NoSQL to MSSQL and that the 
+        /// specific MSSQL option 'set-session-context' is correctly added to the configuration and the specific
+        /// cosmosDB options are removed.
+        /// Command: dab configure --data-source.database-type mssql --data-source.options.set-session-context true 
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTypeUpdateCosmosDB_NoSQLToMSSQL()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_COSMOSDB_NOSQL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: "mssql",
+                dataSourceOptionsSetSessionContext: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.MSSQL);
+            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("set-session-context", false), true);
+            Assert.IsFalse(config.DataSource.Options!.ContainsKey("database"));
+            Assert.IsFalse(config.DataSource.Options!.ContainsKey("container"));
+            Assert.IsFalse(config.DataSource.Options!.ContainsKey("schema"));
+        }
+
+        /// <summary>
+        /// Tests the update of the database type from MSSQL to CosmosDB_NoSQL in the runtime config.
+        /// This method verifies that the database type can be changed from MSSQL to CosmosDB_NoSQL and that the 
+        /// specific CosmosDB_NoSQL options such as database, container, and schema are correctly added to the config.
+        /// Command: dab configure --data-source.database-type cosmosdb_nosql
+        /// --data-source.options.database testdb --data-source.options.container testcontainer --data-source.options.schema testschema.gql
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTypeUpdateMSSQLToCosmosDB_NoSQL()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: "cosmosdb_nosql",
+                dataSourceOptionsDatabase: "testdb",
+                dataSourceOptionsContainer: "testcontainer",
+                dataSourceOptionsSchema: "testschema.gql",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
+            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("database"), "testdb");
+            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("container"), "testcontainer");
+            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("schema"), "testschema.gql");
+        }
+
+        /// <summary>
+        /// Tests configuring database type with an invalid database type value.
+        /// This method verifies that when an invalid database type is provided,
+        /// the runtime config is not updated. It ensures that the method correctly identifies and handles
+        /// invalid database types by returning false.
+        /// </summary>
+        [TestMethod]
+        public void TestConfiguringInvalidDatabaseType()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: "invalid",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests the failure scenario when attempting to add CosmosDB-specific options to an MSSQL database configuration.
+        /// This method verifies that the configuration process correctly fails when options such as database, container,
+        /// and schema, which are specific to CosmosDB_NoSQL, are provided for an MSSQL database type.
+        /// </summary>
+        [TestMethod]
+        public void TestFailureWhenAddingCosmosDbOptionsToMSSQLDatabase()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceOptionsDatabase: "testdb",
+                dataSourceOptionsContainer: "testcontainer",
+                dataSourceOptionsSchema: "testschema.gql",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests the failure scenario when attempting to add the 'set-session-context' option to a MySQL database configuration.
+        /// This method verifies that the configuration process correctly fails when the 'set-session-context' option,
+        /// which is specific to MSSQL/DWSQL, is provided for a MySQL database type.
+        /// </summary>
+        [TestMethod]
+        public void TestFailureWhenAddingSetSessionContextToMySQLDatabase()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: "mysql",
+                dataSourceOptionsSetSessionContext: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Sets up the mock file system with an initial configuration file.
+        /// This method adds a config file to the mock file system and verifies its existence.
+        /// It also attempts to parse the config file to ensure it is valid.
+        /// </summary>
+        /// <param name="jsonConfig">The config file data as a json string.</param>
+        private void SetupFileSystemWithInitialConfig(string jsonConfig)
+        {
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(jsonConfig));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+        }
     }
 }

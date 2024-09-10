@@ -255,10 +255,9 @@ namespace Azure.DataApiBuilder.Service.Services
             if (result is not null)
             {
                 context.RegisterForCleanup(() => result.Dispose());
-                // Since the JsonDocument instance is registered for disposal,
-                // we don't need to clone the root element. Since the JsonDocument
-                // won't be disposed of after this code block.
-                context.Result = result.RootElement;
+                // The disposal could occur before we were finished using the value from the jsondocument,
+                // thus needing to ensure copying the root element. Hence, we clone the root element.
+                context.Result = result.RootElement.Clone();
             }
             else
             {

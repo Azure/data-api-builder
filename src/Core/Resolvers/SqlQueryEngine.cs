@@ -353,10 +353,53 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName)
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
             string queryString = queryBuilder.Build(structure);
+
+            // Only proceed to use caching code when
+            // RuntimeConfig.Cache.Enabled is true
+            // RuntimeConfig.DataSource.Options.SetSessionContext is false
+            if (runtimeConfig.CanUseCache())
+            {
+                // Entity level cache behavior checks
+                bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
+
+                // Stored procedures do not support nor honor runtime config defined
+                // authorization policies. Here, DAB only checks that the entity has
+                // caching enabled and doesn't check for database policies. This explicitly
+                // differs from how the cache works for non-stored procedure requests.
+                if (entityCacheEnabled)
+                {
+                    DatabaseQueryMetadata queryMetadata = new(
+                        queryText: queryString,
+                        dataSource: dataSourceName,
+                        queryParameters: structure.Parameters);
+
+                    JsonArray? result = await _cache.GetOrSetAsync<JsonArray?>(
+                        async () => await queryExecutor.ExecuteQueryAsync(
+                            sqltext: queryString,
+                            parameters: structure.Parameters,
+                            dataReaderHandler: queryExecutor.GetJsonArrayAsync,
+                            httpContext: _httpContextAccessor.HttpContext!,
+                            args: null,
+                            dataSourceName: dataSourceName),
+                        queryMetadata,
+                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+
+                    JsonDocument? cacheServiceResponse = null;
+
+                    if (result is not null)
+                    {
+                        byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+                        cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+                    }
+
+                    return cacheServiceResponse;
+                }
+            }
 
             JsonArray? resultArray =
                 await queryExecutor.ExecuteQueryAsync(

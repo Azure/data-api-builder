@@ -147,7 +147,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             string json = _fileSystem.File.ReadAllText(path);
             if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
-                if(TrySetupConfigFileWatcher())
+                if (TrySetupConfigFileWatcher())
                 {
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
@@ -230,11 +230,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             index++)
         {
             if (!string.IsNullOrWhiteSpace(environmentPrecedence[index])
-                // The last index is for the default case - the last fallback option
-                // where environmentPrecedence[index] is string.Empty
-                // for that case, we still need to get the file name considering overrides
-                // so need to do an OR on the last index here
-                || index == environmentPrecedence.Length - 1)
+               // The last index is for the default case - the last fallback option
+               // where environmentPrecedence[index] is string.Empty
+               // for that case, we still need to get the file name considering overrides
+               // so need to do an OR on the last index here
+               || index == environmentPrecedence.Length - 1)
             {
                 configFileNameWithExtension = GetFileName(environmentPrecedence[index], considerOverrides);
             }

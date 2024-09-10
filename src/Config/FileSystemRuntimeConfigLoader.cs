@@ -53,8 +53,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public string ConfigFilePath { get; internal set; }
 
-    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
-        : base(connectionString)
+    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, HotReloadEventHandler<CustomEventArgs> handler, string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
+        : base(handler, connectionString)
     {
         _fileSystem = fileSystem;
         _baseConfigFilePath = baseConfigFilePath;

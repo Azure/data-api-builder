@@ -547,24 +547,11 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Takes in the RuntimeConfig object and checks the host mode.
-    /// If host mode is Development, return `LogLevel.Debug`, else
-    /// for production returns `LogLevel.Error`.
-    /// </summary>
-    public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
-    {
-        if (runtimeConfig.IsDevelopmentMode())
-        {
-            return LogLevel.Debug;
-        }
-
-        return LogLevel.Error;
-    }
-
-    /// <summary>
     /// Takes in the RuntimeConfig object and checks the LogLevel.
     /// If LogLevel is not null, it will return the current value as a LogLevel,
-    /// else it will take the default option by going to GetLogLevelBasedOnMode
+    /// else it will take the default option by checking host mode.
+    /// If host mode is Development, return `LogLevel.Debug`, else
+    /// for production returns `LogLevel.Error`.
     /// </summary>
     public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig)
     {
@@ -574,6 +561,11 @@ public record RuntimeConfig
             return (LogLevel)value;
         }
 
-        return GetLogLevelBasedOnMode(runtimeConfig);
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            return LogLevel.Debug;
+        }
+
+        return LogLevel.Error;
     }
 }

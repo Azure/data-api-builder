@@ -36,7 +36,6 @@ using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Castle.Components.DictionaryAdapter;
 using HotChocolate;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;

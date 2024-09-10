@@ -275,7 +275,6 @@ namespace Azure.DataApiBuilder.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
-            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
@@ -292,7 +291,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         _logger.LogError(
                             message: "Could not initialize the engine with the runtime config file: {configFilePath}",
-                            fileSystemRuntimeConfigLoader.ConfigFilePath);
+                            runtimeConfigProvider.ConfigFilePath);
                     }
 
                     hostLifetime.StopApplication();

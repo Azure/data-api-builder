@@ -3,6 +3,12 @@
 
 using Azure.DataApiBuilder.Core.Generator;
 using CommandLine;
+using System.IO.Abstractions;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Product;
+using Cli.Constants;
+using Microsoft.Extensions.Logging;
+using static Cli.Utils;
 
 namespace Cli.Commands
 {
@@ -59,5 +65,21 @@ namespace Cli.Commands
 
         [Option("sampling-group-count", HelpText = "Specify the number of groups for sampling. This option is applicable only when the 'TimePartitionedSampler' mode is selected.")]
         public int? GroupCount { get; }
+
+        public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
+            bool isSuccess = Exporter.Export(this, logger, loader, fileSystem);
+            if (isSuccess)
+            {
+                logger.LogInformation("Successfully exported the schema file.");
+                return CliReturnCode.SUCCESS;
+            }
+            else
+            {
+                logger.LogError("Failed to export the graphql schema.");
+                return CliReturnCode.GENERAL_ERROR;
+            }
+        }
     }
 }

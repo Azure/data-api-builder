@@ -67,7 +67,7 @@ namespace Cli
                     (ValidateOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (AddTelemetryOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (ConfigureOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (ExportOptions options) => Exporter.Export(options, cliLogger, loader, fileSystem),
+                    (ExportOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     errors => DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(errors));
 
             return result;

@@ -17,7 +17,7 @@ namespace Cli
     /// <summary>
     /// Provides functionality for exporting GraphQL schemas, either by generating from a Azure Cosmos DB database or fetching from a GraphQL API.
     /// </summary>
-    public class Exporter
+    internal class Exporter
     {
         private const int COSMOS_DB_RETRY_COUNT = 1;
         private const int DAB_SERVICE_RETRY_COUNT = 5;

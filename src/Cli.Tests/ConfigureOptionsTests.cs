@@ -167,12 +167,7 @@ namespace Cli.Tests
         public void TestDatabaseTypeUpdate(string dbType)
         {
             // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNotNull(config.Runtime);
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
             ConfigureOptions options = new(
                 dataSourceDatabaseType: dbType,
@@ -185,7 +180,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
             Assert.AreEqual(config.DataSource.DatabaseType, Enum.Parse<DatabaseType>(dbType, ignoreCase: true));
         }
@@ -201,12 +196,7 @@ namespace Cli.Tests
         public void TestDatabaseTypeUpdateCosmosDB_NoSQLToMSSQL()
         {
             // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_COSMOSDB_NOSQL_CONFIG));
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_COSMOSDB_NOSQL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNotNull(config.Runtime);
+            SetupFileSystemWithInitialConfig(INITIAL_COSMOSDB_NOSQL_CONFIG);
 
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "mssql",
@@ -220,7 +210,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
             Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.MSSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("set-session-context", false), true);
@@ -240,12 +230,7 @@ namespace Cli.Tests
         public void TestDatabaseTypeUpdateMSSQLToCosmosDB_NoSQL()
         {
             // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNotNull(config.Runtime);
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "cosmosdb_nosql",
@@ -261,7 +246,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
             Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("database"), "testdb");
@@ -279,12 +264,7 @@ namespace Cli.Tests
         public void TestConfiguringInvalidDatabaseType()
         {
             // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNotNull(config.Runtime);
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "invalid",
@@ -307,12 +287,7 @@ namespace Cli.Tests
         public void TestFailureWhenAddingCosmosDbOptionsToMSSQLDatabase()
         {
             // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNotNull(config.Runtime);
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
             ConfigureOptions options = new(
                 dataSourceOptionsDatabase: "testdb",
@@ -337,12 +312,7 @@ namespace Cli.Tests
         public void TestFailureWhenAddingSetSessionContextToMySQLDatabase()
         {
             // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNotNull(config.Runtime);
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
             ConfigureOptions options = new(
                 dataSourceDatabaseType: "mysql",
@@ -355,6 +325,22 @@ namespace Cli.Tests
 
             // Assert
             Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Sets up the mock file system with an initial configuration file.
+        /// This method adds a config file to the mock file system and verifies its existence.
+        /// It also attempts to parse the config file to ensure it is valid.
+        /// </summary>
+        /// <param name="jsonConfig">The config file data as a json string.</param>
+        private void SetupFileSystemWithInitialConfig(string jsonConfig)
+        {
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(jsonConfig));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
         }
     }
 }

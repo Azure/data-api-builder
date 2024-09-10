@@ -8,9 +8,9 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record LogLevelOptions
 {
     [JsonPropertyName("level")]
-    public Level? Value { get; set; }
+    public ExtendedLogLevel? Value { get; set; }
 
-    public LogLevelOptions(Level? Value = null)
+    public LogLevelOptions(ExtendedLogLevel? Value = null)
     {
         this.Value = Value;
     }

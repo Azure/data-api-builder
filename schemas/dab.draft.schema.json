@@ -267,7 +267,7 @@
           "additionalProperties": false,
           "properties": {
             "level": {
-              "description": "Set between the different level options for log level",
+              "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
               "type": "string",
               "default": null,
               "enum": [

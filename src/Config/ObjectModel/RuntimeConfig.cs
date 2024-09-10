@@ -7,6 +7,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -540,8 +541,39 @@ public record RuntimeConfig
     /// <summary>
     /// Retrieve the value of LogLevel from runtime
     /// </summary>
-    public Level? LogLevelValue()
+    public ExtendedLogLevel? IsLogLevel()
     {
         return Runtime?.LogLevel?.Value;
+    }
+
+    /// <summary>
+    /// Takes in the RuntimeConfig object and checks the host mode.
+    /// If host mode is Development, return `LogLevel.Debug`, else
+    /// for production returns `LogLevel.Error`.
+    /// </summary>
+    public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            return LogLevel.Debug;
+        }
+
+        return LogLevel.Error;
+    }
+
+    /// <summary>
+    /// Takes in the RuntimeConfig object and checks the LogLevel.
+    /// If LogLevel is not null, it will return the current value as a LogLevel,
+    /// else it will take the default option by going to GetLogLevelBasedOnMode
+    /// </summary>
+    public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig)
+    {
+        ExtendedLogLevel? value = runtimeConfig.IsLogLevel();
+        if (value is not null)
+        {
+            return (LogLevel)value;
+        }
+
+        return GetLogLevelBasedOnMode(runtimeConfig);
     }
 }

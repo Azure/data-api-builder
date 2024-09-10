@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Core.Generator;
-using CommandLine;
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.Generator;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
+using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 

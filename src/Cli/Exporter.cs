@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.IO.Abstractions;
+using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Generator;
@@ -10,6 +11,7 @@ using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 namespace Cli
 {
     /// <summary>
@@ -116,25 +118,41 @@ namespace Cli
             logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
         }
 
+        /// <summary>
+        /// Fetches the GraphQL schema from the DAB service, attempting to use the HTTPS endpoint first.
+        /// If the HTTPS endpoint fails, it falls back to using the HTTP endpoint.
+        /// Logs the process of fetching the schema and any fallback actions taken.
+        /// </summary>
+        /// <param name="runtimeConfig">The runtime config object containing the GraphQL path.</param>
+        /// <param name="logger">The logger instance used to log information and errors during the schema fetching process.</param>
+        /// <returns>The GraphQL schema as a string.</returns>
         internal string ExportGraphQLFromDabService(RuntimeConfig runtimeConfig, ILogger logger)
         {
             string schemaText;
             // Fetch the schema from the GraphQL API
             logger.LogInformation("Fetching schema from GraphQL API.");
 
-            try{
+            try
+            {
                 logger.LogInformation("Trying to fetch schema from DAB Service using HTTPS endpoint.");
-                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL:false);
+                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL: false);
             }
-            catch{
+            catch
+            {
                 logger.LogInformation("Failed to fetch schema from DAB Service using HTTPS endpoint. Trying with HTTP endpoint.");
-                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL:true);
+                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL: true);
             }
 
             return schemaText;
         }
 
-        internal virtual string GetGraphQLSchema(RuntimeConfig runtimeConfig, bool useFallbackURL = false){
+        /// <summary>
+        /// Retrieves the GraphQL schema from the DAB service using either the HTTPS or HTTP endpoint based on the specified fallback option.
+        /// </summary>
+        /// <param name="runtimeConfig">The runtime configuration containing the GraphQL path and other settings.</param>
+        /// <param name="useFallbackURL">A boolean flag indicating whether to use the fallback HTTP endpoint. If false, the method attempts to use the HTTPS endpoint.</param>
+        internal virtual string GetGraphQLSchema(RuntimeConfig runtimeConfig, bool useFallbackURL = false)
+        {
             HttpClient client;
             if (!useFallbackURL)
             {

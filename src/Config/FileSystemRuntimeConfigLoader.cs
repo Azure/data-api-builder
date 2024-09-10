@@ -145,16 +145,24 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         {
             Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
-            bool configParsed = TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
-            TrySetupConfigFileWatcher();
-
-            if (RuntimeConfig is not null && !string.IsNullOrEmpty(defaultDataSourceName))
+            if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
-                RuntimeConfig.DefaultDataSourceName = defaultDataSourceName;
+                if(TrySetupConfigFileWatcher())
+                {
+                    logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
+                }
+
+                if (!string.IsNullOrEmpty(defaultDataSourceName))
+                {
+                    RuntimeConfig.DefaultDataSourceName = defaultDataSourceName;
+                }
+
+                config = RuntimeConfig;
+                return true;
             }
 
-            config = RuntimeConfig;
-            return configParsed;
+            config = null;
+            return false;
         }
 
         string errorMessage = "Unable to find config file: {path} does not exist.";
@@ -187,8 +195,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    public void HotReloadConfig(string defaultDataSourceName)
+    public void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
     {
+        logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
         TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName);
     }
 

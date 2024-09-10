@@ -41,7 +41,7 @@ public class RuntimeConfigProvider
     /// </summary>
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
-    private RuntimeConfigLoader ConfigLoader { get; set; }
+    private RuntimeConfigLoader _configLoader;
 
     /// <summary>
     /// Accessor for the ConfigFilePath to avoid exposing the loader. If we are not
@@ -51,9 +51,9 @@ public class RuntimeConfigProvider
     {
         get
         {
-            if (ConfigLoader is FileSystemRuntimeConfigLoader)
+            if (_configLoader is FileSystemRuntimeConfigLoader)
             {
-                return ((FileSystemRuntimeConfigLoader)ConfigLoader).ConfigFilePath;
+                return ((FileSystemRuntimeConfigLoader)_configLoader).ConfigFilePath;
             }
 
             return string.Empty;
@@ -62,7 +62,7 @@ public class RuntimeConfigProvider
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
-        ConfigLoader = runtimeConfigLoader;
+        _configLoader = runtimeConfigLoader;
     }
 
     /// <summary>
@@ -74,13 +74,13 @@ public class RuntimeConfigProvider
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
-        if (ConfigLoader.RuntimeConfig is not null)
+        if (_configLoader.RuntimeConfig is not null)
         {
-            return ConfigLoader.RuntimeConfig;
+            return _configLoader.RuntimeConfig;
         }
 
         // While loading the config file, replace all the environment variables with their values.
-        if (!ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
+        if (!_configLoader.TryLoadKnownConfig(out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
         {
             throw new DataApiBuilderException(
                 message: "Runtime config isn't setup.",
@@ -98,10 +98,10 @@ public class RuntimeConfigProvider
     /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
-        RuntimeConfig? config = ConfigLoader.RuntimeConfig;
+        RuntimeConfig? config = _configLoader.RuntimeConfig;
         if (config is null)
         {
-            ConfigLoader.TryLoadKnownConfig(out config, replaceEnvVar: true);
+            _configLoader.TryLoadKnownConfig(out config, replaceEnvVar: true);
         }
 
         runtimeConfig = config;
@@ -116,8 +116,8 @@ public class RuntimeConfigProvider
     /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetLoadedConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
-        runtimeConfig = ConfigLoader.RuntimeConfig;
-        return ConfigLoader.RuntimeConfig is not null;
+        runtimeConfig = _configLoader.RuntimeConfig;
+        return _configLoader.RuntimeConfig is not null;
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public class RuntimeConfigProvider
                 replaceEnvVar: false,
                 replacementFailureMode: EnvironmentVariableReplacementFailureMode.Ignore))
         {
-            ConfigLoader.RuntimeConfig = runtimeConfig;
+            _configLoader.RuntimeConfig = runtimeConfig;
 
             if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
             {
@@ -156,10 +156,10 @@ public class RuntimeConfigProvider
 
             if (runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
             {
-                ConfigLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, runtimeConfig, runtimeConfig.DataSource.ConnectionString);
+                _configLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, runtimeConfig, runtimeConfig.DataSource.ConnectionString);
             }
 
-            ManagedIdentityAccessToken[ConfigLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
+            ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
         }
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
@@ -181,14 +181,14 @@ public class RuntimeConfigProvider
         string? accessToken,
         string dataSourceName)
     {
-        if (ConfigLoader.RuntimeConfig is null)
+        if (_configLoader.RuntimeConfig is null)
         {
             // if runtimeConfig is not set up, throw as cannot initialize.
             throw new DataApiBuilderException($"{nameof(RuntimeConfig)} has not been loaded.", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
         // Validate that the datasource exists in the runtimeConfig and then add or update access token.
-        if (ConfigLoader.RuntimeConfig.CheckDataSourceExists(dataSourceName))
+        if (_configLoader.RuntimeConfig.CheckDataSourceExists(dataSourceName))
         {
             ManagedIdentityAccessToken[dataSourceName] = accessToken;
             return true;
@@ -229,13 +229,13 @@ public class RuntimeConfigProvider
 
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: replaceEnvVar, replacementFailureMode: replacementFailureMode))
         {
-            ConfigLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
+            _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
-            ManagedIdentityAccessToken[ConfigLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
-            ConfigLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(ConfigLoader.RuntimeConfig.DefaultDataSourceName, ConfigLoader.RuntimeConfig.DataSource);
+            ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
+            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource);
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -246,11 +246,11 @@ public class RuntimeConfigProvider
     private async Task<bool> InvokeConfigLoadedHandlersAsync()
     {
         List<Task<bool>> configLoadedTasks = new();
-        if (ConfigLoader.RuntimeConfig is not null)
+        if (_configLoader.RuntimeConfig is not null)
         {
             foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
             {
-                configLoadedTasks.Add(configLoadedHandler(this, ConfigLoader.RuntimeConfig));
+                configLoadedTasks.Add(configLoadedHandler(this, _configLoader.RuntimeConfig));
             }
         }
 

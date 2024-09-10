@@ -2,11 +2,11 @@
 
 ## Overview
 
-The `dab configure` command is designed to simplify updating config properties outside of entities section. This document outlines the design, functionality, and implementation details of the `dab configure` command.
+The `dab configure` command is designed to simplify updating config properties outside of the **entities** section. This document outlines the design, functionality, and implementation details of the `dab configure` command.
 
 ## Objectives
 
-- Add support to CLI to configure `data-source` and `runtime` section of the runtime config.
+- Add support to CLI to configure the `data-source` and `runtime` sections of the runtime config.
 
 - Ensure configurations are validated before being applied.
 
@@ -20,12 +20,14 @@ dab configure [options]
 
 ### Options
 
-Some of the supported options:
+Some Example of the options that we currently support:
 - `--config `: Specify the configuration file path.
 - `--runtime.graphql.depth-limit`: Max allowed depth of the nested query.
 - `--data-source.database-type`: Type of database to connect to.
 - `--data-source.options.schema`: Schema path for Cosmos DB for NoSql.
 - `--help`: Display help information about the command.
+
+**NOTE:** The goal is to make all the properties under the `runtime` and `data-source` section configurable via `configure` command.
 
 ### Naming Convention
 
@@ -36,12 +38,12 @@ The configuration file consists of three main sections:
 2. runtime: Configures the runtime settings for REST, GraphQL, and host settings.
 3. entities: Entity related information.
 
-`dab configure` is only for updating `data-source` and `runtime` section of the config. For `entites` section we already have `dab update` command.
+`dab configure` is only for updating the `data-source` and `runtime` sections of the config. For the `entities` section, we already have the `dab update` command.
 
 #### Naming the option
 
 1. Identify the section to configure. `data-source` or `runtime`.
-2. Indentity the property in that section to update.
+2. Identify the property in that section to update.
 3. '.' is used for nesting.
 
 Example:
@@ -97,11 +99,11 @@ Example:
 
 2. Update the method `TryConfigureSettings` in `ConfigGenerator.cs` located at `src\Cli\ConfigGenerator.cs`.
 
-3. Use the excisting validation to make sure the user provided input is valid.
+3. Use the existing validation to make sure the user provided input is valid.
 
-4. Make sure the above method returns `false` in case of any failures and no changes should me made to the config in this case.
+4. Make sure the method `TryConfigureSettings(...)` returns `false` in case of any failures and no changes should me made to the config in this case.
 
-5. If everything is correct, apply the change and return `true`.
+5. If the required validations associated with the user input is correct, apply the change and return `true`.
 
 
 ## Testing

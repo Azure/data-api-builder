@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                             ""base-route"" : """", ""logger-level"" : { },");
             StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
             StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
-            
+
             string emptyRuntimeSubProps = minJsonWithHostSubProps + "{ } } }";
             TryParseAndAssertOnDefaults("{" + emptyRuntimeSubProps, out _);
 

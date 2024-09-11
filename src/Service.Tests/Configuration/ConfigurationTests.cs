@@ -3522,7 +3522,7 @@ type Planet @model(name:""PlanetAlias"") {
 
                 //Validate log-level property exists in runtime
                 JsonElement runtimeElement = root.GetProperty("runtime");
-                bool logLevelPropertyExists = runtimeElement.TryGetProperty("logger-level", out JsonElement logLevelElement);
+                bool logLevelPropertyExists = runtimeElement.TryGetProperty("log-level", out JsonElement logLevelElement);
                 Assert.AreEqual(expected: true, actual: logLevelPropertyExists);
 
                 //Validate level property inside log-level is of expected value

@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Test with empty sub properties of runtime
             minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
-                            ""base-route"" : """", ""logger-level"" : { },");
+                            ""base-route"" : """", ""log-level"" : { },");
             StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
             StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
 

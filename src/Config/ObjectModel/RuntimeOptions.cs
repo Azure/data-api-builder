@@ -15,6 +15,8 @@ public record RuntimeOptions
     public TelemetryOptions? Telemetry { get; init; }
     public EntityCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
+
+    [JsonPropertyName("log-level")]
     public LogLevelOptions? LoggerLevel { get; init; }
 
     [JsonConstructor]

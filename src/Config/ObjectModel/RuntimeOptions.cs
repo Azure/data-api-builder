@@ -15,7 +15,7 @@ public record RuntimeOptions
     public TelemetryOptions? Telemetry { get; init; }
     public EntityCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
-    public LogLevelOptions? LogLevel { get; init; }
+    public LogLevelOptions? LoggerLevel { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -26,7 +26,7 @@ public record RuntimeOptions
         TelemetryOptions? Telemetry = null,
         EntityCacheOptions? Cache = null,
         PaginationOptions? Pagination = null,
-        LogLevelOptions? LogLevel = null)
+        LogLevelOptions? LoggerLevel = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -35,7 +35,7 @@ public record RuntimeOptions
         this.Telemetry = Telemetry;
         this.Cache = Cache;
         this.Pagination = Pagination;
-        this.LogLevel = LogLevel;
+        this.LoggerLevel = LoggerLevel;
     }
 
     /// <summary>

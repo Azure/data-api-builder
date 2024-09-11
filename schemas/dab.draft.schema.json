@@ -261,7 +261,7 @@
             }
           }
         },
-        "log-level": {
+        "logger-level": {
           "type": "object",
           "description": "Global configuration of log level",
           "additionalProperties": false,

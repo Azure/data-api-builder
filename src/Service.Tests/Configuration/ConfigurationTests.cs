@@ -3456,22 +3456,22 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(ExtendedLogLevel.Trace, DisplayName = "Validates that log level Trace deserialized correctly")]
-        [DataRow(ExtendedLogLevel.Debug, DisplayName = "Validates log level Debug deserialized correctly")]
-        [DataRow(ExtendedLogLevel.Information, DisplayName = "Validates log level Information deserialized correctly")]
-        [DataRow(ExtendedLogLevel.Warning, DisplayName = "Validates log level Warning deserialized correctly")]
-        [DataRow(ExtendedLogLevel.Error, DisplayName = "Validates log level Error deserialized correctly")]
-        [DataRow(ExtendedLogLevel.Critical, DisplayName = "Validates log level Critical deserialized correctly")]
-        [DataRow(ExtendedLogLevel.None, DisplayName = "Validates log level None deserialized correctly")]
+        [DataRow(LogLevel.Trace, DisplayName = "Validates that log level Trace deserialized correctly")]
+        [DataRow(LogLevel.Debug, DisplayName = "Validates log level Debug deserialized correctly")]
+        [DataRow(LogLevel.Information, DisplayName = "Validates log level Information deserialized correctly")]
+        [DataRow(LogLevel.Warning, DisplayName = "Validates log level Warning deserialized correctly")]
+        [DataRow(LogLevel.Error, DisplayName = "Validates log level Error deserialized correctly")]
+        [DataRow(LogLevel.Critical, DisplayName = "Validates log level Critical deserialized correctly")]
+        [DataRow(LogLevel.None, DisplayName = "Validates log level None deserialized correctly")]
         [DataRow(null, DisplayName = "Validates log level Null deserialized correctly")]
-        public void TestExistingLogLevels(ExtendedLogLevel expectedLevel)
+        public void TestExistingLogLevels(LogLevel expectedLevel)
         {
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
 
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
-            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.LogLevel.Value);
+            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.LoggerLevel.Value);
         }
 
         /// <summary>
@@ -3482,7 +3482,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(-1, DisplayName = "Validates that a negative log level value, fails to build")]
         [DataRow(7, DisplayName = "Validates that a positive log level value that does not exist, fails to build")]
         [DataRow(12, DisplayName = "Validates that a bigger positive log level value that does not exist, fails to build")]
-        public void TestNonExistingLogLevels(ExtendedLogLevel expectedLevel)
+        public void TestNonExistingLogLevels(LogLevel expectedLevel)
         {
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
 
@@ -3504,11 +3504,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(ExtendedLogLevel.Debug)]
-        [DataRow(ExtendedLogLevel.Warning)]
-        [DataRow(ExtendedLogLevel.None)]
+        [DataRow(LogLevel.Debug)]
+        [DataRow(LogLevel.Warning)]
+        [DataRow(LogLevel.None)]
         [DataRow(null)]
-        public void LogLevelSerialization(ExtendedLogLevel expectedLevel)
+        public void LogLevelSerialization(LogLevel expectedLevel)
         {
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
@@ -3522,7 +3522,7 @@ type Planet @model(name:""PlanetAlias"") {
 
                 //Validate log-level property exists in runtime
                 JsonElement runtimeElement = root.GetProperty("runtime");
-                bool logLevelPropertyExists = runtimeElement.TryGetProperty("log-level", out JsonElement logLevelElement);
+                bool logLevelPropertyExists = runtimeElement.TryGetProperty("logger-level", out JsonElement logLevelElement);
                 Assert.AreEqual(expected: true, actual: logLevelPropertyExists);
 
                 //Validate level property inside log-level is of expected value
@@ -3533,34 +3533,9 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// Tests serialization for the case that the loglevel property is not included,
-        /// to ensure that it is not written to the Json config.
-        /// </summary>
-        [TestMethod]
-        [TestCategory(TestCategory.MSSQL)]
-        public void LogLevelSerializationForNonExistentProperty()
-        {
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity();
-            string configJson = runtimeConfig.ToJson();
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedRuntimeConfig));
-
-            string serializedConfig = deserializedRuntimeConfig.ToJson();
-
-            using (JsonDocument parsedDocument = JsonDocument.Parse(serializedConfig))
-            {
-                JsonElement root = parsedDocument.RootElement;
-
-                //Validate log-level property in runtime does not exist
-                JsonElement runtimeElement = root.GetProperty("runtime");
-                bool logLevelPropertyExists = runtimeElement.TryGetProperty("log-level", out JsonElement logLevelElement);
-                Assert.AreEqual(expected: false, actual: logLevelPropertyExists);
-            }
-        }
-
-        /// <summary>
         /// Helper method to create RuntimeConfig with specificed LogLevel value
         /// </summary>
-        private static RuntimeConfig InitializeRuntimeWithLogLevel(ExtendedLogLevel? expectedLevel)
+        private static RuntimeConfig InitializeRuntimeWithLogLevel(LogLevel? expectedLevel)
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
 
@@ -3575,7 +3550,7 @@ type Planet @model(name:""PlanetAlias"") {
                     Rest: new(),
                     GraphQL: new(),
                     Host: new(null, null),
-                    LogLevel: logLevelOptions
+                    LoggerLevel: logLevelOptions
                 ),
                 Entities: baseConfig.Entities
             );

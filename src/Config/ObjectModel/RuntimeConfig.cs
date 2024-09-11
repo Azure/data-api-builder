@@ -539,12 +539,12 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Retrieve the value of LogLevel from runtime
+    /// Checks if the property log-level or its value are null
     /// </summary>
-    public ExtendedLogLevel? IsLogLevel()
-    {
-        return Runtime?.LogLevel?.Value;
-    }
+    public bool IsLogLevelNull() =>
+        Runtime is null ||
+        Runtime.LoggerLevel is null ||
+        Runtime.LoggerLevel.Value is null;
 
     /// <summary>
     /// Takes in the RuntimeConfig object and checks the LogLevel.
@@ -555,7 +555,7 @@ public record RuntimeConfig
     /// </summary>
     public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig)
     {
-        ExtendedLogLevel? value = runtimeConfig.IsLogLevel();
+        LogLevel? value = runtimeConfig.Runtime?.LoggerLevel?.Value;
         if (value is not null)
         {
             return (LogLevel)value;

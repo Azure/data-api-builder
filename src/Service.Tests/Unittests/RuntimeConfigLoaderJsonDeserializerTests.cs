@@ -260,11 +260,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Test with empty sub properties of runtime
             minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
-                            ""base-route"" : """",");
-            StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""log-level"" : { }, ""host"" : ");
-            StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""log-level"" : { }, ""telemetry"" : ");
-            StringBuilder minJsonWithLogLevelSubProps = new(minJson + @"""host"" : { }, ""telemetry"" : { }, ""log - level"" : ");
-
+                            ""base-route"" : """", ""logger-level"" : { },");
+            StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
+            StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
+            
             string emptyRuntimeSubProps = minJsonWithHostSubProps + "{ } } }";
             TryParseAndAssertOnDefaults("{" + emptyRuntimeSubProps, out _);
 
@@ -278,12 +277,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string emptyTelemetrySubProps = minJsonWithTelemetrySubProps + "}";
             TryParseAndAssertOnDefaults("{" + emptyTelemetrySubProps, out _);
-
-            // Test with empty log-level sub-properties
-            minJsonWithLogLevelSubProps.Append(@"{ ""level"": { } } }");
-
-            string emptyLogLevelSubProps = minJsonWithLogLevelSubProps + "}";
-            TryParseAndAssertOnDefaults("{" + emptyLogLevelSubProps, out _);
         }
 
         #endregion Positive Tests
@@ -652,7 +645,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
             Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);
             Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
-            Assert.IsTrue(parsedConfig.IsLogLevel() is null);
+            Assert.IsTrue(parsedConfig.IsLogLevelNull());
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null
                 || !parsedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
             return true;

@@ -599,6 +599,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertIntoInsertableComplexView(postgresQuery);
         }
 
+        /// <summary>
+        /// <code>Do: </code> create an entry with a type Float
+        /// <code>Check: </code> that the type Float of new entry can be correctly viewed in different regional format settings
+        /// </summary>
+        [TestMethod]
+        [DataRow("en-US")]
+        [DataRow("en-DE")]
+        public async Task CanCreateItemWithCultureInvariant(string cultureInfo)
+        {
+            string msSqlQuery = @"
+                SELECT to_jsonb(subq) AS data
+                FROM
+                    (SELECT table0.id AS id,
+                        table0.item_name AS item_name,
+                        table0.subtotal AS subtotal,
+                        table0.tax AS tax
+                    FROM public.sales AS table0
+                    WHERE table0.item_name = 'test_name'
+                    ORDER BY table0.id ASC
+                    LIMIT 1) AS subq
+            ";
+
+            await CanCreateItemWithCultureInvariant(cultureInfo, msSqlQuery);
+        }
+
         /// <inheritdoc/>
         [TestMethod]
         [Ignore]

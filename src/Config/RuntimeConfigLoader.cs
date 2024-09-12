@@ -25,6 +25,11 @@ public abstract class RuntimeConfigLoader
     public HotReloadEventHandler<CustomEventArgs> Handler;
     protected readonly string? _connectionString;
 
+    // Public to allow the RuntimeProvider and other users of class to set via out param.
+    // May be candidate to refactor by changing all of the Parse/Load functions to save
+    // state in place of using out params.
+    public RuntimeConfig? RuntimeConfig;
+
     protected virtual void OnEventOccurred(CustomEventArgs args)
     {
         Handler?.OnEventOccurred(this, args);
@@ -64,6 +69,7 @@ public abstract class RuntimeConfigLoader
     /// value or not while deserializing. By default, no replacement happens.</param>
     /// <param name="dataSourceName"> datasource name for which to add connection string</param>
     /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
+    /// <param name="replacementFailureMode">Determines failure mode for env variable replacement.</param>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         ILogger? logger = null,

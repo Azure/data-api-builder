@@ -261,6 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             Mock<RuntimeConfigLoader> mockLoader = new(null);
             mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig, It.IsAny<bool>(), It.IsAny<string>())).Returns(true);
+            mockLoader.Object.RuntimeConfig = mockConfig;
 
             RuntimeConfigProvider provider = new(mockLoader.Object);
             provider.TryGetConfig(out RuntimeConfig _);

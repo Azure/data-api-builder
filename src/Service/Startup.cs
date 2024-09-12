@@ -275,7 +275,6 @@ namespace Azure.DataApiBuilder.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
-            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
@@ -292,7 +291,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         _logger.LogError(
                             message: "Could not initialize the engine with the runtime config file: {configFilePath}",
-                            fileSystemRuntimeConfigLoader.ConfigFilePath);
+                            runtimeConfigProvider.ConfigFilePath);
                     }
 
                     hostLifetime.StopApplication();
@@ -415,21 +414,6 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Takes in the RuntimeConfig object and checks the host mode.
-        /// If host mode is Development, return `LogLevel.Debug`, else
-        /// for production returns `LogLevel.Error`.
-        /// </summary>
-        public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
-        {
-            if (runtimeConfig.IsDevelopmentMode())
-            {
-                return LogLevel.Debug;
-            }
-
-            return LogLevel.Error;
-        }
-
-        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the 
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
@@ -445,7 +429,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
+                    MinimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig);
                 }
             }
 

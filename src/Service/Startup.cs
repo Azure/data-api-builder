@@ -414,21 +414,6 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Takes in the RuntimeConfig object and checks the host mode.
-        /// If host mode is Development, return `LogLevel.Debug`, else
-        /// for production returns `LogLevel.Error`.
-        /// </summary>
-        public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
-        {
-            if (runtimeConfig.IsDevelopmentMode())
-            {
-                return LogLevel.Debug;
-            }
-
-            return LogLevel.Error;
-        }
-
-        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the 
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
@@ -444,7 +429,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
+                    MinimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig);
                 }
             }
 

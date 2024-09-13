@@ -1,26 +1,25 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-
 namespace Azure.DataApiBuilder.Config
 {
     public class HotReloadEventHandler<TEventArgs> where TEventArgs : CustomEventArgs
     {
-        public event EventHandler<TEventArgs>? MetadataProvider_ConfigChangeEventOccurred;
+        //public IServiceProvider? ServiceProvider;
+        public event EventHandler<TEventArgs>? MetadataProviderFactory_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? Documentor_ConfigChangeEventOccurred;
 
-        public void MetadataProvider_ConfigChangeEventOccurred(object sender, TEventArgs args)
+        public void MetadataProvider_OnConfigChangeEventOccurred(object sender, TEventArgs args)
         {
-            MetadataProvider_ChangeEventOccurred?.Invoke(sender, args);
+            MetadataProviderFactory_ConfigChangeEventOccurred?.Invoke(sender, args);
         }
 
         public void MetadataProvider_Subscribe(EventHandler<TEventArgs> handler)
         {
-            MetadataProvider_ConfigChangeEventOccurred += handler;
+            MetadataProviderFactory_ConfigChangeEventOccurred += handler;
         }
 
-        public void Documentor_ConfigChangeEventOccurred(object sender, TEventArgs args)
+        public void Documentor_OnConfigChangeEventOccurred(object sender, TEventArgs args)
         {
             Documentor_ConfigChangeEventOccurred?.Invoke(sender, args);
         }

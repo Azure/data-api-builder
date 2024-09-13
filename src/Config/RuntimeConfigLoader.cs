@@ -30,12 +30,18 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
-    protected virtual void OnEventOccurred(CustomEventArgs args)
+    protected virtual void Documentor_ConfigChangeEventOccurred(CustomEventArgs args)
     {
-        Handler?.OnEventOccurred(this, args);
+        Handler?.Documentor_ConfigChangeEventOccurred(this, args);
     }
 
-    public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs> handler, string? connectionString = null)
+    public void SendEventNotification(string message = "")
+    {
+        CustomEventArgs args = new(message);
+        Documentor_ConfigChangeEventOccurred(args);
+    }
+
+        public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs> handler, string? connectionString = null)
     {
         Handler = handler;
         _connectionString = connectionString;

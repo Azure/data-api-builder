@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
         public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<CustomEventArgs> handler)
         {
-            handler.Subscribe(Documentor_ConfigChangeEventReceived);
+            handler.Documentor_Subscribe(Documentor_ConfigChangeEventReceived);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();

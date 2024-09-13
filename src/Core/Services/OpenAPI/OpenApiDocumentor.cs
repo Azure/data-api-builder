@@ -62,6 +62,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Console.BackgroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
             Console.ResetColor();
+            _openApiDocument = null;
             CreateDocument();
         }
 

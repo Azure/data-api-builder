@@ -32,7 +32,7 @@ public abstract class RuntimeConfigLoader
 
     protected virtual void Documentor_ConfigChangeEventOccurred(CustomEventArgs args)
     {
-        Handler?.Documentor_ConfigChangeEventOccurred(this, args);
+        Handler?.Documentor_OnConfigChangeEventOccurred(this, args);
     }
 
     public void SendEventNotification(string message = "")

@@ -5,7 +5,7 @@ using System;
 
 namespace Azure.DataApiBuilder.Config
 {
-    public class HotReloadEventHandler<TEventArgs> where TEventArgs : EventArgs
+    public class HotReloadEventHandler<TEventArgs> where TEventArgs : CustomEventArgs
     {
         public event EventHandler<TEventArgs>? MetadataProvider_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? Documentor_ConfigChangeEventOccurred;

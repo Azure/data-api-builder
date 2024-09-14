@@ -30,18 +30,20 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
+    // Signals a hot reload event for OpenApiDocumentor due to config change.
     protected virtual void Documentor_ConfigChangeEventOccurred(CustomEventArgs args)
     {
         Handler?.Documentor_OnConfigChangeEventOccurred(this, args);
     }
 
+    // Sends all of the notifications when a hot reload occurs.
     public void SendEventNotification(string message = "")
     {
         CustomEventArgs args = new(message);
         Documentor_ConfigChangeEventOccurred(args);
     }
 
-        public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs> handler, string? connectionString = null)
+    public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs> handler, string? connectionString = null)
     {
         Handler = handler;
         _connectionString = connectionString;

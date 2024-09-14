@@ -3,6 +3,11 @@
 
 namespace Azure.DataApiBuilder.Config
 {
+    /// <summary>
+    /// HotReloadEventHandler manages the events that are needed to signal refreshing
+    /// classes that must be updated during a hot reload.
+    /// </summary>
+    /// <typeparam name="TEventArgs">Args used for hot reload events.</typeparam>
     public class HotReloadEventHandler<TEventArgs> where TEventArgs : CustomEventArgs
     {
         public event EventHandler<TEventArgs>? MetadataProvider_ConfigChangeEventOccurred;

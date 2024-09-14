@@ -6,8 +6,8 @@ namespace Azure.DataApiBuilder.Config
     public class HotReloadEventHandler<TEventArgs> where TEventArgs : CustomEventArgs
     {
         //public IServiceProvider? ServiceProvider;
+        public event EventHandler<TEventArgs>? QueryManagerFactory_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? MetadataProviderFactory_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? Documentor_ConfigChangeEventOccurred;
 
         public void MetadataProvider_OnConfigChangeEventOccurred(object sender, TEventArgs args)
         {
@@ -19,14 +19,14 @@ namespace Azure.DataApiBuilder.Config
             MetadataProviderFactory_ConfigChangeEventOccurred += handler;
         }
 
-        public void Documentor_OnConfigChangeEventOccurred(object sender, TEventArgs args)
+        public void QueryManagerFactory_OnConfigChangeEventOccurred(object sender, TEventArgs args)
         {
-            Documentor_ConfigChangeEventOccurred?.Invoke(sender, args);
+            QueryManagerFactory_ConfigChangeEventOccurred?.Invoke(sender, args);
         }
 
-        public void Documentor_Subscribe(EventHandler<TEventArgs> handler)
+        public void QueryManagerFactory_Subscribe(EventHandler<TEventArgs> handler)
         {
-            Documentor_ConfigChangeEventOccurred += handler;
+            QueryManagerFactory_ConfigChangeEventOccurred += handler;
         }
     }
 }

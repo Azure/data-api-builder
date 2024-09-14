@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -26,8 +27,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <param name="runtimeConfigProvider">runtimeconfigprovider.</param>
         /// <param name="logger">logger.</param>
         /// <param name="contextAccessor">httpcontextaccessor.</param>
-        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor)
+        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor, HotReloadEventHandler<CustomEventArgs> handler)
         {
+            handler.QueryManagerFactory_Subscribe(QueryManagerFactory_ConfigChangeEventReceived);
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();
             _dbExceptionsParsers = new Dictionary<DatabaseType, DbExceptionParser>();
@@ -75,6 +77,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                 _queryExecutors.TryAdd(dataSource.DatabaseType, queryExecutor!);
                 _dbExceptionsParsers.TryAdd(dataSource.DatabaseType, exceptionParser!);
             }
+        }
+
+        public void QueryManagerFactory_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
+        {
+
         }
 
         /// <inheritdoc />

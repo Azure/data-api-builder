@@ -30,15 +30,15 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
-    protected virtual void Documentor_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void QueryManagerFactory_ConfigChangeEventOccurred(CustomEventArgs args)
     {
-        Handler?.Documentor_ConfigChangeEventOccurred(this, args);
+        Handler?.QueryManagerFactory_OnConfigChangeEventOccurred(this, args);
     }
 
     public void SendEventNotification(string message = "")
     {
         CustomEventArgs args = new(message);
-        Documentor_ConfigChangeEventOccurred(args);
+        QueryManagerFactory_ConfigChangeEventOccurred(args);
     }
 
         public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs> handler, string? connectionString = null)

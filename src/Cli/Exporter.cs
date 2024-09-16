@@ -11,6 +11,7 @@ using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 
+// This assembly is used to create dynamic proxy objects at runtime for the purpose of mocking dependencies in the tests.
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 namespace Cli
 {

@@ -1265,7 +1265,7 @@ namespace Cli
             }
             else
             {
-                minimumLogLevel = Startup.GetLogLevelBasedOnMode(deserializedRuntimeConfig);
+                minimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(deserializedRuntimeConfig);
                 HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
 
                 _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostMode} mode.", minimumLogLevel, hostModeType);

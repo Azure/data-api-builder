@@ -43,6 +43,18 @@ Data API builder is Open Source and works on any platform. It can be executed on
 
 To get started quickly with Data API builder for Azure Databases, you can use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial, that will help to get familiar with some basic tools and concepts while giving you a good experience on how much Data API builder for Azure Databases can make you more efficient, but removing the need to write a lot of plumbing code.
 
+### Walk-through video
+
+<p>
+  <a href="https://www.youtube.com/watch?v=xAlaoDQolLw" target="_blank">
+    <img src="https://img.youtube.com/vi/xAlaoDQolLw/0.jpg" alt="Play Video" width="280" />
+  </a><br/>
+  Demo source code: https://aka.ms/dab/startrek
+</p>
+
+#### Install Data API builder's cross-platform  command line
+    dotnet tool install microsoft.dataapibuilder --global
+
 ## Documentation
 
 Documentation is available [here](https://learn.microsoft.com/azure/data-api-builder/).

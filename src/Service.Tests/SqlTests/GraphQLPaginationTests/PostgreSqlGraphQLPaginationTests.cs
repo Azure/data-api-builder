@@ -86,5 +86,80 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 endCursorIdValue,
                 isLastPage);
         }
+
+        /// <inheritdoc />
+        [DataTestMethod]
+        [DataRow(1, DisplayName = "1 item per page")]
+        [DataRow(2, DisplayName = "2 items per page")]
+        [DataRow(19, DisplayName = "19 items per page")]
+        [DataRow(20, DisplayName = "20 items per page")]
+        [DataRow(37, DisplayName = "37 items per page")]
+        [DataRow(50, DisplayName = "50 items per page")]
+        [DataRow(99, DisplayName = "99 items per page")]
+        [DataRow(100, DisplayName = "100 items per page")]
+        [DataRow(1000, DisplayName = "1000 items per page")]
+        public async Task TestPaginantionForGivenPageSize(int pageSize)
+        {
+            // Fields to select
+            string fields = @"
+                typeid,
+                short_types,
+                int_types,
+                long_types,
+                string_types,
+                single_types,
+                float_types,
+                decimal_types,
+                boolean_types,
+                datetime_types,
+                bytearray_types,
+                uuid_types
+            ";
+
+            // Setup query to insert 100 new rows into the table
+            string setupQuery = @"
+                DO $$
+                DECLARE
+                    counter INT := 1;
+                BEGIN
+                    FOR counter IN 1..100 LOOP
+                        INSERT INTO type_table (
+                            id,
+                            short_types,
+                            int_types,
+                            long_types,
+                            string_types,
+                            single_types,
+                            float_types,
+                            decimal_types,
+                            boolean_types,
+                            datetime_types,
+                            bytearray_types
+                        )
+                        VALUES (
+                            counter + 100,
+                            32767,
+                            counter,
+                            counter,
+                            'Sample string',
+                            10.0,
+                            20.0,
+                            123456789.123456789,
+                            (counter % 2) = 1,
+                            '2023-01-01 12:00:00',
+                            NULL
+                        );
+                    END LOOP;
+                END $$;
+                ";
+
+            // Cleanup query to delete the rows inserted by the setup query
+            string cleanupQuery = @"
+                DELETE FROM type_table
+                WHERE id > 100 and id < 1000;
+                ";
+
+            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery, cleanupQuery);
+        }
     }
 }

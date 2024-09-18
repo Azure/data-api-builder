@@ -783,6 +783,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> create an entry with a type Float
+        /// <code>Check: </code> that the type Float of new entry can be correctly viewed in different regional format settings
+        /// </summary>
+        [TestMethod]
+        [DataRow("en-US")]
+        [DataRow("en-DE")]
+        public async Task CanCreateItemWithCultureInvariant(string cultureInfo)
+        {
+            string msSqlQuery = @"
+                SELECT TOP 1 [table0].[id] AS [id],
+                    [table0].[item_name] AS [item_name],
+                    [table0].[subtotal] AS [subtotal],
+                    [table0].[tax] AS [tax]
+                FROM [dbo].[sales] AS [table0]
+                WHERE [table0].[item_name] = 'test_name'
+                ORDER BY [table0].[id] ASC
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            await CanCreateItemWithCultureInvariant(cultureInfo, msSqlQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Execute a stored procedure and return the typename of the SP entity
         /// <code>Check :</code>if the mutation executed successfully and returned the correct typename
         /// </summary>

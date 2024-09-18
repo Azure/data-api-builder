@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Generator;
 using Cli.Commands;
 using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
@@ -11,46 +12,57 @@ using static Cli.Utils;
 
 namespace Cli
 {
+    /// <summary>
+    /// Provides functionality for exporting GraphQL schemas, either by generating from a Azure Cosmos DB database or fetching from a GraphQL API.
+    /// </summary>
     internal static class Exporter
     {
+        private const int COSMOS_DB_RETRY_COUNT = 1;
+        private const int DAB_SERVICE_RETRY_COUNT = 5;
+
+        private static readonly CancellationTokenSource _cancellationTokenSource = new();
+        private static readonly CancellationToken _cancellationToken = _cancellationTokenSource.Token;
+
+        /// <summary>
+        /// Exports the GraphQL schema to a file based on the provided options.
+        /// </summary>
+        /// <param name="options">The options for exporting, including output directory, schema file name, and other settings.</param>
+        /// <param name="logger">The logger instance for logging information and errors.</param>
+        /// <param name="loader">The loader for runtime configuration files.</param>
+        /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
+        /// <returns>Returns 0 if the export is successful, otherwise returns -1.</returns>
         public static int Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
-
-            CancellationTokenSource cancellationTokenSource = new();
-            CancellationToken cancellationToken = cancellationTokenSource.Token;
-
+            // Attempt to locate the runtime configuration file based on CLI options
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
                 logger.LogError("Failed to find the config file provided, check your options and try again.");
                 return -1;
             }
 
+            // Load the runtime configuration from the file
             if (!loader.TryLoadConfig(
                     runtimeConfigFile,
                     out RuntimeConfig? runtimeConfig,
                     replaceEnvVar: true) || runtimeConfig is null)
             {
-                logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
                 return -1;
             }
 
-            Task server = Task.Run(() =>
-            {
-                _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
-            }, cancellationToken);
+            // Do not retry if schema generation logic is running
+            int retryCount = options.Generate ? COSMOS_DB_RETRY_COUNT : DAB_SERVICE_RETRY_COUNT;
 
             bool isSuccess = false;
             if (options.GraphQL)
             {
-                int retryCount = 5;
                 int tries = 0;
 
                 while (tries < retryCount)
                 {
                     try
                     {
-                        ExportGraphQL(options, runtimeConfig, fileSystem);
+                        ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger).Wait();
                         isSuccess = true;
                         break;
                     }
@@ -66,16 +78,55 @@ namespace Cli
                 }
             }
 
-            cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Cancel();
             return isSuccess ? 0 : -1;
         }
 
-        private static void ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem)
+        /// <summary>
+        /// Exports the GraphQL schema either by generating it from a Azure Cosmos DB database or fetching it from a GraphQL API.
+        /// </summary>
+        /// <param name="options">The options for exporting, including sampling mode and schema file name.</param>
+        /// <param name="runtimeConfig">The runtime configuration for the export process.</param>
+        /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
+        /// <param name="logger">The logger instance for logging information and errors.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        private static async Task ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader, ILogger logger)
         {
+            string schemaText;
+            if (options.Generate)
+            {
+                schemaText = await ExportGraphQLFromCosmosDB(options, runtimeConfig, logger);
+            }
+            else
+            {
+                StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
+
+                Task dabService = Task.Run(() =>
+                {
+                    _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
+                }, _cancellationToken);
+
+                schemaText = ExportGraphQLFromDabService(runtimeConfig, logger);
+            }
+
+            // Write the schema content to a file
+            WriteSchemaFile(options, fileSystem, schemaText, logger);
+
+            logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
+        }
+
+        private static string ExportGraphQLFromDabService(RuntimeConfig runtimeConfig, ILogger logger)
+        {
+            string schemaText;
+            // Fetch the schema from the GraphQL API
+            logger.LogInformation("Fetching schema from GraphQL API.");
+
             HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
-                                        new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
-                                    )
-            { BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLPath}") };
+                                                    new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
+                                                )
+            {
+                BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLPath}")
+            };
 
             IntrospectionClient introspectionClient = new();
             Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
@@ -83,13 +134,56 @@ namespace Cli
 
             HotChocolate.Language.DocumentNode node = response.Result;
 
+            schemaText = node.ToString();
+            return schemaText;
+        }
+
+        private static async Task<string> ExportGraphQLFromCosmosDB(ExportOptions options, RuntimeConfig runtimeConfig, ILogger logger)
+        {
+            // Generate the schema from Azure Cosmos DB database
+            logger.LogInformation("Generating schema from the Azure Cosmos DB database using {0}", options.SamplingMode);
+            try
+            {
+                return await SchemaGeneratorFactory.Create(runtimeConfig,
+                  options.SamplingMode,
+                  options.NumberOfRecords,
+                  options.PartitionKeyPath,
+                  options.MaxDays,
+                  options.GroupCount,
+                  logger);
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Failed to generate schema from Azure Cosmos DB database: {0}", e.Message);
+                logger.LogDebug(e.StackTrace);
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Writes the generated schema to a file in the specified output directory.
+        /// </summary>
+        /// <param name="options">The options containing the output directory and schema file name.</param>
+        /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
+        /// <param name="content">The schema content to be written to the file.</param>
+        private static void WriteSchemaFile(ExportOptions options, IFileSystem fileSystem, string content, ILogger logger)
+        {
+
+            if (string.IsNullOrEmpty(content))
+            {
+                logger.LogError("There is nothing to write");
+                return;
+            }
+
+            // Ensure the output directory exists
             if (!fileSystem.Directory.Exists(options.OutputDirectory))
             {
                 fileSystem.Directory.CreateDirectory(options.OutputDirectory);
             }
 
+            // Construct the path for the schema file and write the content to it
             string outputPath = fileSystem.Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
-            fileSystem.File.WriteAllText(outputPath, node.ToString());
+            fileSystem.File.WriteAllText(outputPath, content);
         }
     }
 }

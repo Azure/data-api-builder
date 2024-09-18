@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -23,6 +24,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
+        private const string TOTALDBEXECUTIONTIME = "TotalDbExecutionTime";
+        private static readonly object _httpContextLock = new();
+
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
         protected RuntimeConfigProvider ConfigProvider { get; }
@@ -106,49 +110,63 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
 
-            return _retryPolicy.Execute(() =>
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
+            TResult? result = default(TResult?);
+
+            try
             {
-                retryAttempt++;
-                try
+                result = _retryPolicy.Execute(() =>
                 {
-                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
-                    if (!ConfigProvider.IsLateConfigured)
+                    retryAttempt++;
+                    try
                     {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                        if (!ConfigProvider.IsLateConfigured)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        }
+
+                        TResult? result = ExecuteQueryAgainstDb(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
+
+                        if (retryAttempt > 1)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            int maxRetries = _maxRetryCount + 1;
+                            // This implies that the request got successfully executed during one of retry attempts.
+                            QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
+                        }
+
+                        return result;
                     }
-
-                    TResult? result = ExecuteQueryAgainstDb(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
-
-                    if (retryAttempt > 1)
+                    catch (DbException e)
                     {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        int maxRetries = _maxRetryCount + 1;
-                        // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
-                    }
+                        if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                        {
+                            throw;
+                        }
+                        else
+                        {
+                            QueryExecutorLogger.LogError(
+                                exception: e,
+                                message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                                HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                                e.Message);
 
-                    return result;
-                }
-                catch (DbException e)
-                {
-                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
-                    {
-                        throw;
+                            // Throw custom DABException
+                            throw DbExceptionParser.Parse(e);
+                        }
                     }
-                    else
-                    {
-                        QueryExecutorLogger.LogError(
-                            exception: e,
-                            message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                            HttpContextExtensions.GetLoggerCorrelationId(httpContext),
-                            e.Message);
+                });
+            }
+            finally
+            {
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
 
-                        // Throw custom DABException
-                        throw DbExceptionParser.Parse(e);
-                    }
-                }
-            });
+            return result;
         }
 
         /// <inheritdoc/>
@@ -178,49 +196,63 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
-            return await _retryPolicyAsync.ExecuteAsync(async () =>
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
+            TResult? result = default(TResult);
+
+            try
             {
-                retryAttempt++;
-                try
+                result = await _retryPolicyAsync.ExecuteAsync(async () =>
                 {
-                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
-                    if (!ConfigProvider.IsLateConfigured)
+                    retryAttempt++;
+                    try
                     {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                        if (!ConfigProvider.IsLateConfigured)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        }
+
+                        TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
+
+                        if (retryAttempt > 1)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            int maxRetries = _maxRetryCount + 1;
+                            // This implies that the request got successfully executed during one of retry attempts.
+                            QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
+                        }
+
+                        return result;
                     }
-
-                    TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
-
-                    if (retryAttempt > 1)
+                    catch (DbException e)
                     {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        int maxRetries = _maxRetryCount + 1;
-                        // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
-                    }
+                        if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                        {
+                            throw;
+                        }
+                        else
+                        {
+                            QueryExecutorLogger.LogError(
+                                exception: e,
+                                message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                                HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                                e.Message);
 
-                    return result;
-                }
-                catch (DbException e)
-                {
-                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
-                    {
-                        throw;
+                            // Throw custom DABException
+                            throw DbExceptionParser.Parse(e);
+                        }
                     }
-                    else
-                    {
-                        QueryExecutorLogger.LogError(
-                            exception: e,
-                            message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                            HttpContextExtensions.GetLoggerCorrelationId(httpContext),
-                            e.Message);
+                });
+            }
+            finally
+            {
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
 
-                        // Throw custom DABException
-                        throw DbExceptionParser.Parse(e);
-                    }
-                }
-            });
+            return result;
         }
 
         /// <summary>
@@ -243,20 +275,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName,
             List<string>? args = null)
         {
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
             await conn.OpenAsync();
             DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
-
+            TResult? result = default(TResult);
             try
             {
                 using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
                     await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
-                    return await dataReaderHandler(dbDataReader, args);
+                    result = await dataReaderHandler(dbDataReader, args);
                 }
                 else
                 {
-                    return default(TResult);
+                    result = default(TResult);
                 }
             }
             catch (DbException e)
@@ -269,6 +303,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     e.Message);
                 throw DbExceptionParser.Parse(e);
             }
+            finally
+            {
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -320,6 +361,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName,
             List<string>? args = null)
         {
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
             conn.Open();
             DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
@@ -803,6 +846,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     message: $"The JSON result size exceeds max result size of {_maxResponseSizeMB}MB. Please use pagination to reduce size of result.",
                     statusCode: HttpStatusCode.RequestEntityTooLarge,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
+            }
+        }
+
+        internal virtual void AddDbExecutionTimeToMiddlewareContext(long time)
+        {
+            HttpContext? httpContext = HttpContextAccessor?.HttpContext;
+            if (httpContext != null)
+            {
+                // locking is because we could have multiple queries in a single http request and each query will be processed in parallel leading to concurrent access of the httpContext.Items.
+                lock (_httpContextLock)
+                {
+                    if (httpContext.Items.TryGetValue(TOTALDBEXECUTIONTIME, out object? currentValue) && currentValue is not null)
+                    {
+                        httpContext.Items[TOTALDBEXECUTIONTIME] = (long)currentValue + time;
+                    }
+                    else
+                    {
+                        httpContext.Items[TOTALDBEXECUTIONTIME] = time;
+                    }
+                }
             }
         }
     }

@@ -10,7 +10,6 @@ namespace Azure.DataApiBuilder.Config
     /// <typeparam name="TEventArgs">Args used for hot reload events.</typeparam>
     public class HotReloadEventHandler<TEventArgs> where TEventArgs : CustomEventArgs
     {
-        public event EventHandler<TEventArgs>? MetadataProvider_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? Documentor_ConfigChangeEventOccurred;
 
         public void Documentor_OnConfigChangeEventOccurred(object sender, TEventArgs args)

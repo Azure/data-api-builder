@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
-    public HotReloadEventHandler<CustomEventArgs> Handler;
+    public HotReloadEventHandler<CustomEventArgs>? Handler;
     protected readonly string? _connectionString;
 
     // Public to allow the RuntimeProvider and other users of class to set via out param.
@@ -43,7 +43,7 @@ public abstract class RuntimeConfigLoader
         Documentor_ConfigChangeEventOccurred(args);
     }
 
-    public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs> handler, string? connectionString = null)
+    public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs>? handler, string? connectionString = null)
     {
         Handler = handler;
         _connectionString = connectionString;

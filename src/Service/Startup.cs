@@ -78,6 +78,7 @@ namespace Azure.DataApiBuilder.Service
         public void ConfigureServices(IServiceCollection services)
         {
             HotReloadEventHandler<CustomEventArgs> hotReloadEventHandler = new();
+            services.AddSingleton(hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
@@ -660,7 +661,7 @@ namespace Azure.DataApiBuilder.Service
                     try
                     {
                         IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-                        openApiDocumentor.CreateDocument();
+                        openApiDocumentor.CreateDocument(isHotReloadScenario: false);
                     }
                     catch (DataApiBuilderException dabException)
                     {

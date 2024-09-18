@@ -205,7 +205,7 @@ public record RuntimeConfig
             IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {

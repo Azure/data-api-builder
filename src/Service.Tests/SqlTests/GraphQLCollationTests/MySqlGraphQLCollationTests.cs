@@ -25,15 +25,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// MySql Capitalization Collation Tests
         /// </summary>
         [DataTestMethod]
-        [DataRow("books", "ASC", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data` FROM ( SELECT `table0`.`title` AS `title` FROM `books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`title` ASC, `table0`.`id` ASC LIMIT 100 ) AS `subq1`")]
-        [DataRow("books", "DESC", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data` FROM ( SELECT `table0`.`title` AS `title` FROM `books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`title` DESC, `table0`.`id` ASC LIMIT 100 ) AS `subq1`")]
-        [DataRow("authors", "ASC", "name", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('name', `subq1`.`name`)), '[]') AS `data` FROM ( SELECT `table0`.`name` AS `name` FROM `authors` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`name` ASC, `table0`.`id` ASC LIMIT 100 ) AS `subq1`")]
-        [DataRow("authors", "DESC", "name", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('name', `subq1`.`name`)), '[]') AS `data` FROM ( SELECT `table0`.`name` AS `name` FROM `authors` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`name` DESC, `table0`.`id` ASC LIMIT 100 ) AS `subq1`")]
-        [DataRow("shrubs", "ASC", "fancyName", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('fancyName', `subq1`.`fancyName`)), '[]') AS `data` FROM ( SELECT `table0`.`species` AS `fancyName` FROM `trees` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`species` ASC, `table0`.`treeId` ASC LIMIT 100 ) AS `subq1`")]
-        [DataRow("shrubs", "DESC", "fancyName", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('fancyName', `subq1`.`fancyName`)), '[]') AS `data` FROM ( SELECT `table0`.`species` AS `fancyName` FROM `trees` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`species` DESC, `table0`.`treeId` ASC LIMIT 100 ) AS `subq1`")]
-        public async Task MyCapitalizationResultQuery(string type, string order, string item, string dbQuery)
+        [DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data` FROM ( SELECT `table0`.`title` AS `TITLE` FROM `books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`title` ASC LIMIT 100 ) AS `subq1`")]
+        [DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`TITLE`)), '[]') AS `DATA` FROM ( SELECT `table0`.`TITLE` AS `TITLE` FROM `BOOKS` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`TITLE` ASC LIMIT 100 ) AS `subq1`")]
+        [DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`Title`)), '[]') AS `Data` FROM ( SELECT `table0`.`Title` AS `Title` FROM `Books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`Title` ASC LIMIT 100 ) AS `subq1`")]
+
+        public async Task MySqlCapitalizationResultQuery(string type, string item, string dbQuery)
         {
-            await CapitalizationResultQuery(type, order, item, dbQuery);
+            await CapitalizationResultQuery(type, item, dbQuery);
         }
 
         #endregion

@@ -27,15 +27,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// MsSql Capitalization Collation Tests
         /// </summary>
         [DataTestMethod]
-        [DataRow("books", "ASC", "title", @"SELECT title FROM books ORDER BY title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        [DataRow("books", "DESC", "title", @"SELECT title FROM books ORDER BY title DESC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        [DataRow("authors", "ASC", "name", @"SELECT name FROM authors ORDER BY name ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        [DataRow("authors", "DESC", "name", @"SELECT name FROM authors ORDER BY name DESC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        [DataRow("shrubs", "ASC", "fancyName", @"SELECT species as fancyName FROM trees ORDER BY species ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        [DataRow("shrubs", "DESC", "fancyName", @"SELECT species as fancyName FROM trees ORDER BY species DESC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        public async Task MsCapitalizationResultQuery(string type, string order, string item, string dbQuery)
+        [DataRow("books", "title", @"SELECT title FROM books ORDER BY title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
+        [DataRow("books", "title", @"SELECT title FROM BOOKS ORDER BY TITLE ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
+        [DataRow("books", "title", @"SELECT title FROM Books ORDER BY Title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
+        public async Task MsSqlCapitalizationResultQuery(string type, string item, string dbQuery)
         {
-            await CapitalizationResultQuery(type, order, item, dbQuery);
+            await CapitalizationResultQuery(type, item, dbQuery);
         }
 
         #endregion

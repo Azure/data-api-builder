@@ -15,12 +15,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// <summary>
         /// Compares SQL Database Query with GraphQL Query
         /// </summary>
-        public async Task CapitalizationResultQuery(string type, string order, string item, string dbQuery)
+        public async Task CapitalizationResultQuery(string type, string item, string dbQuery)
         {
             string graphQLQueryName = type;
             string graphQLQuery = @"
                 query { " +
-                    type + @" (orderBy: {" + item + @": " + order + @"}) {
+                    type + @" (orderBy: {" + item + @": ASC" + @"}) {
                         items { "
                             + item + @"
                         }

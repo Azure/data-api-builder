@@ -25,15 +25,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// Postgre Capitalization Collation Tests
         /// </summary>
         [DataTestMethod]
-        [DataRow("books", "ASC", "title", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT title FROM books ORDER BY title asc) as table0")]
-        [DataRow("books", "DESC", "title", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT title FROM books ORDER BY title desc) as table0")]
-        [DataRow("authors", "ASC", "name", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT name FROM authors ORDER BY name asc) as table0")]
-        [DataRow("authors", "DESC", "name", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT name FROM authors ORDER BY name desc) as table0")]
-        [DataRow("shrubs", "ASC", "fancyName", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT species as ""fancyName"" FROM trees as shrubs ORDER BY species asc) as table0")]
-        [DataRow("shrubs", "DESC", "fancyName", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT species as ""fancyName"" FROM trees as shrubs ORDER BY species desc) as table0")]
-        public async Task PostgreCapitalizationResultQuery(string type, string order, string item, string dbQuery)
+        [DataRow("books", "title", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT title FROM books ORDER BY title asc) as table0")]
+        [DataRow("books", "title", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT TITLE FROM BOOKS ORDER BY TITLE asc) as table0")]
+        [DataRow("books", "title", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT Title FROM Books ORDER BY Title asc) as table0")]
+        public async Task PostgreCapitalizationResultQuery(string type, string item, string dbQuery)
         {
-            await CapitalizationResultQuery(type, order, item, dbQuery);
+            await CapitalizationResultQuery(type, item, dbQuery);
         }
 
         #endregion

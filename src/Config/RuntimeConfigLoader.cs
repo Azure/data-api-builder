@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
-    public HotReloadEventHandler<CustomEventArgs> Handler;
+    public HotReloadEventHandler<CustomEventArgs>? Handler;
     protected readonly string? _connectionString;
 
     // Public to allow the RuntimeProvider and other users of class to set via out param.
@@ -35,13 +35,46 @@ public abstract class RuntimeConfigLoader
         Handler?.QueryManagerFactory_OnConfigChangeEventOccurred(this, args);
     }
 
+    protected virtual void MetadataProviderFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    {
+        Handler?.MetadataProviderFactory_OnConfigChangeEventOccurred(this, args);
+    }
+
+    protected virtual void QueryEngineFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    {
+        Handler?.QueryEngineFactory_OnConfigChangeEventOccurred(this, args);
+    }
+
+    protected virtual void MutationEngineFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    {
+        Handler?.MutationEngineFactory_OnConfigChangeEventOccurred(this, args);
+    }
+    protected virtual void QueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    {
+        Handler?.QueryExecutor_OnConfigChangeEventOccurred(this, args);
+    }
+    protected virtual void MsSqlQueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    {
+        Handler?.MsSqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
+    }
+    protected virtual void MySqlQueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    {
+        Handler?.MySqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
+    }
+
     public void SendEventNotification(string message = "")
     {
         CustomEventArgs args = new(message);
         QueryManagerFactory_ConfigChangeEventOccurred(args);
+        MetadataProviderFactory_ConfigChangeEventOccurred(args);
+        QueryEngineFactory_ConfigChangeEventOccurred(args);
+        MutationEngineFactory_ConfigChangeEventOccurred(args);
+        QueryExecutor_ConfigChangeEventOccurred(args);
+        MsSqlQueryExecutor_ConfigChangeEventOccurred(args);
+        MySqlQueryExecutor_ConfigChangeEventOccurred(args);
     }
 
-        public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs> handler, string? connectionString = null)
+    public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs>? handler, string? connectionString = null)
     {
         Handler = handler;
         _connectionString = connectionString;

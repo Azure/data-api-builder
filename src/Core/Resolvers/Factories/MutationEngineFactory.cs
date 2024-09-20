@@ -3,6 +3,7 @@
 
 using System.Net;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -19,6 +20,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
     public class MutationEngineFactory : IMutationEngineFactory
     {
         private readonly Dictionary<DatabaseType, IMutationEngine> _mutationEngines;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IAbstractQueryManagerFactory _queryManagerFactory;
+        private readonly IMetadataProviderFactory _metadataProviderFactory;
+        private readonly CosmosClientProvider _cosmosClientProvider;
+        private readonly IQueryEngineFactory _queryEngineFactory;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly GQLFilterParser _gQLFilterParser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MutationEngineFactory"/> class.
@@ -38,16 +47,38 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IQueryEngineFactory queryEngineFactory,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
-            GQLFilterParser gQLFilterParser)
+            GQLFilterParser gQLFilterParser,
+            HotReloadEventHandler<CustomEventArgs> handler)
+
         {
+            handler.MutationEngineFactory_Subscribe(MutationEngineFactory_ConfigChangeEventReceived);
+            _cosmosClientProvider = cosmosClientProvider;
+            _queryManagerFactory = queryManagerFactory;
+            _metadataProviderFactory = metadataProviderFactory;
+            _httpContextAccessor = httpContextAccessor;
+            _authorizationResolver = authorizationResolver;
+            _queryEngineFactory = queryEngineFactory;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _gQLFilterParser = gQLFilterParser;
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
 
-            RuntimeConfig config = runtimeConfigProvider.GetConfig();
+            ConfigureQueryEngines();
+        }
+
+        private void ConfigureQueryEngines()
+        {
+            RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
             if (config.SqlDataSourceUsed)
             {
                 IMutationEngine mutationEngine = new SqlMutationEngine(
-                                       queryManagerFactory, metadataProviderFactory, queryEngineFactory, authorizationResolver, gQLFilterParser, httpContextAccessor, runtimeConfigProvider);
+                    _queryManagerFactory,
+                    _metadataProviderFactory,
+                    _queryEngineFactory,
+                    _authorizationResolver,
+                    _gQLFilterParser,
+                    _httpContextAccessor,
+                    _runtimeConfigProvider);
                 _mutationEngines.Add(DatabaseType.MySQL, mutationEngine);
                 _mutationEngines.Add(DatabaseType.MSSQL, mutationEngine);
                 _mutationEngines.Add(DatabaseType.PostgreSQL, mutationEngine);
@@ -56,9 +87,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
             if (config.CosmosDataSourceUsed)
             {
-                IMutationEngine mutationEngine = new CosmosMutationEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver);
+                IMutationEngine mutationEngine = new CosmosMutationEngine(_cosmosClientProvider, _metadataProviderFactory, _authorizationResolver);
                 _mutationEngines.Add(DatabaseType.CosmosDB_NoSQL, mutationEngine);
             }
+        }
+
+        public void MutationEngineFactory_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
+        {
+            ConfigureQueryEngines();
         }
 
         /// <inheritdoc/>

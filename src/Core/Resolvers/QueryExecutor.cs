@@ -53,9 +53,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                              ILogger<IQueryExecutor> logger,
                              RuntimeConfigProvider configProvider,
                              IHttpContextAccessor httpContextAccessor,
-                             HotReloadEventHandler<CustomEventArgs> handler)
+                             HotReloadEventHandler<CustomEventArgs>? handler)
         {
-            handler.QueryExecutor_Subscribe(QueryExecutor_ConfigChangeEventReceived);
+            handler?.QueryExecutor_Subscribe(QueryExecutor_ConfigChangeEventReceived);
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
@@ -85,6 +85,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     });
         }
 
+        /// <summary>
+        /// Function registered for callback during a hot-reload scenario.
+        /// </summary>
+        /// <param name="sender">The calling object.</param>
+        /// <param name="args">Event arguments.</param>
         public void QueryExecutor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
         {
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();

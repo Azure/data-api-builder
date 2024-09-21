@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly ILogger<IQueryExecutor> _logger;
         private readonly IHttpContextAccessor _contextAccessor;
-        private readonly HotReloadEventHandler<CustomEventArgs> _handler;
+        private readonly HotReloadEventHandler<CustomEventArgs>? _handler;
 
         /// <summary>
         /// Initiates an instance of QueryManagerFactory
@@ -32,9 +32,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <param name="runtimeConfigProvider">runtimeconfigprovider.</param>
         /// <param name="logger">logger.</param>
         /// <param name="contextAccessor">httpcontextaccessor.</param>
-        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor, HotReloadEventHandler<CustomEventArgs> handler)
+        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor, HotReloadEventHandler<CustomEventArgs>? handler)
         {
-            handler.QueryManagerFactory_Subscribe(QueryManagerFactory_ConfigChangeEventReceived);
+            handler?.QueryManagerFactory_Subscribe(QueryManagerFactory_ConfigChangeEventReceived);
             _handler = handler;
             _runtimeConfigProvider = runtimeConfigProvider;
             _logger = logger;

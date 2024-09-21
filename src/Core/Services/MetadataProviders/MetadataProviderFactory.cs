@@ -28,10 +28,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             IFileSystem fileSystem,
-            HotReloadEventHandler<CustomEventArgs> handler,
+            HotReloadEventHandler<CustomEventArgs>? handler,
             bool isValidateOnly = false)
         {
-            handler.MetadataProviderFactory_Subscribe(MetadataProviderFactory_ConfigChangeEventReceived);
+            handler?.MetadataProviderFactory_Subscribe(MetadataProviderFactory_ConfigChangeEventReceived);
             _runtimeConfigProvider = runtimeConfigProvider;
             _queryManagerFactory = queryManagerFactory;
             _logger = logger;

@@ -69,26 +69,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<CustomEventArgs> handler)
+            HotReloadEventHandler<CustomEventArgs>? handler)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
                   httpContextAccessor,
                   handler)
         {
-            handler.MsSqlQueryExecutor_Subscribe(MsSqlQueryExecutor_ConfigChangeEventReceived);
+            handler?.MsSqlQueryExecutor_Subscribe(MsSqlQueryExecutor_ConfigChangeEventReceived);
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType is DatabaseType.MSSQL || x.Value.DatabaseType is DatabaseType.DWSQL);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
+            ConfigureMsSqlQueryEecutor();
+        }
+
+        /// <summary>
+        /// Configure during construction or a hot-reload scenario.
+        /// </summary>
+        private void ConfigureMsSqlQueryEecutor()
+        {
+            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType is DatabaseType.MSSQL || x.Value.DatabaseType is DatabaseType.DWSQL);
 
             foreach ((string dataSourceName, DataSource dataSource) in mssqldbs)
             {
                 SqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
 
-                if (runtimeConfigProvider.IsLateConfigured)
+                if (_runtimeConfigProvider.IsLateConfigured)
                 {
                     builder.Encrypt = SqlConnectionEncryptOption.Mandatory;
                     builder.TrustServerCertificate = false;
@@ -101,11 +109,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <summary>
+        /// Function registered for callback during a hot-reload scenario.
+        /// </summary>
+        /// <param name="sender">The calling object.</param>
+        /// <param name="args">Event arguments.</param>
         public void MsSqlQueryExecutor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;
+            ConfigureMsSqlQueryEecutor();
         }
 
         /// <summary>

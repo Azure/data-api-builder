@@ -60,20 +60,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<CustomEventArgs> handler)
+            HotReloadEventHandler<CustomEventArgs>? handler)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
                   httpContextAccessor,
                   handler)
         {
-            handler.PostgreSqlQueryExecutor_Subscribe(PostgreSqlQueryExecutor_ConfigChangeEventReceived);
+            handler?.PostgreSqlQueryExecutor_Subscribe(PostgreSqlQueryExecutor_ConfigChangeEventReceived);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
             ConfigurePostgreSqlQueryExecutor();
         }
 
+        /// <summary>
+        /// Configure during construction or a hot-reload scenario.
+        /// </summary>
         private void ConfigurePostgreSqlQueryExecutor()
         {
             IEnumerable<KeyValuePair<string, DataSource>> postgresqldbs = _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
@@ -93,6 +96,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <summary>
+        /// Function registered for callback during a hot-reload scenario.
+        /// </summary>
+        /// <param name="sender">The calling object.</param>
+        /// <param name="args">Event arguments.</param>
         public void PostgreSqlQueryExecutor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();

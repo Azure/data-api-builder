@@ -59,20 +59,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<CustomEventArgs> handler)
+            HotReloadEventHandler<CustomEventArgs>? handler)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
                   httpContextAccessor,
                   handler)
         {
-            handler.MySqlQueryExecutor_Subscribe(MySqlQueryExecutor_ConfigChangeEventReceived);
+            handler?.MySqlQueryExecutor_Subscribe(MySqlQueryExecutor_ConfigChangeEventReceived);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
             ConfigureMySqlQueryExecutor();
         }
 
+        /// <summary>
+        /// Configure during construction or a hot-reload scenario.
+        /// </summary>
         private void ConfigureMySqlQueryExecutor()
         {
             IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
@@ -96,10 +99,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <summary>
+        /// Function registered for callback during a hot-reload scenario.
+        /// </summary>
+        /// <param name="sender">The calling object.</param>
+        /// <param name="args">Event arguments.</param>
         public void MySqlQueryExecutor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;
+            ConfigureMySqlQueryExecutor();
         }
 
         /// <summary>

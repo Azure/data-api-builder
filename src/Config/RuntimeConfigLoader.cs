@@ -62,6 +62,11 @@ public abstract class RuntimeConfigLoader
         Handler?.MySqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
     }
 
+    /// <summary>
+    /// Sends the notification to the event handler to trigger the hot-reload events
+    /// that have subscribed for configuration changes.
+    /// </summary>
+    /// <param name="message"></param>
     public void SendEventNotification(string message = "")
     {
         CustomEventArgs args = new(message);

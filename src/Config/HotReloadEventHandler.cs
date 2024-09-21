@@ -5,7 +5,6 @@ namespace Azure.DataApiBuilder.Config
 {
     public class HotReloadEventHandler<TEventArgs> where TEventArgs : CustomEventArgs
     {
-        //public IServiceProvider? ServiceProvider;
         public event EventHandler<TEventArgs>? QueryManagerFactory_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? MetadataProviderFactory_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? QueryEngineFactory_ConfigChangeEventOccurred;

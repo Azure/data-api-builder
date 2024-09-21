@@ -321,7 +321,8 @@ public class RuntimeConfigValidator : IConfigValidator
         QueryManagerFactory queryManagerFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
             logger: loggerFactory.CreateLogger<IQueryExecutor>(),
-            contextAccessor: null!);
+            contextAccessor: null!,
+            handler: null);
 
         // create metadata provider factory to validate metadata against the database
         MetadataProviderFactory metadataProviderFactory = new(
@@ -329,7 +330,8 @@ public class RuntimeConfigValidator : IConfigValidator
             queryManagerFactory: queryManagerFactory,
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,
-            isValidateOnly: _isValidateOnly);
+            isValidateOnly: _isValidateOnly,
+            handler: null);
         await metadataProviderFactory.InitializeAsync();
 
         ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());

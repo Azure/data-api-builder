@@ -135,21 +135,16 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(spRequestCtx.EntityName);
             StoredProcedureDefinition storedProcedureDefinition =
                 TryGetStoredProcedureDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
-
-            HashSet<string> missingFields = new();
             HashSet<string> extraFields = new(spRequestCtx.ResolvedParameters.Keys);
             foreach ((string paramKey, ParameterDefinition paramDefinition) in storedProcedureDefinition.Parameters)
             {
-                // If parameter not specified in request OR config
-                if (!spRequestCtx.ResolvedParameters!.ContainsKey(paramKey)
-                    && !paramDefinition.HasConfigDefault)
-                {
-                    // Ideally should check if a default is set in sql, but no easy way to do so - would have to parse procedure's object definition
-                    // See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
-                    // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant. 
-                    missingFields.Add(paramKey);
-                }
-                else
+                // If a required stored procedure parameter value is missing in the request and
+                // the runtime config doesn't define default value, the request is invalid.
+                // Ideally should check if a default is set in sql, but no easy way to do so - would have to parse procedure's object definition
+                // See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
+                // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant. 
+                if (spRequestCtx.ResolvedParameters!.ContainsKey(paramKey)
+                    || paramDefinition.HasConfigDefault)
                 {
                     extraFields.Remove(paramKey);
                 }
@@ -166,17 +161,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
-
-            // If missing a parameter in the request and do not have a default specified in config
-            if (missingFields.Count > 0)
-            {
-                throw new DataApiBuilderException(
-                    message: $"Invalid request. Missing required procedure parameters: {string.Join(", ", missingFields)}" +
-                                $" for entity: {spRequestCtx.EntityName}",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-
         }
 
         /// <summary>

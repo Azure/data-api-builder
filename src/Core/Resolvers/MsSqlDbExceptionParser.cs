@@ -4,6 +4,7 @@
 using System.Data.Common;
 using System.Net;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -19,7 +20,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // HashSet of Error codes ('Number') which are to be considered as bad requests.
             BadRequestExceptionCodes.UnionWith(new List<string>
             {
-                "157", "158", "169", "404", "412", "414", "415",
+                "157", "158", "169",
+                "201", // Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
+                "404", "412", "414", "415",
                 "489", "513", "515", "544", "545", "547",
                 "550", "611", "681", "1060", "4005", "4006",
                 "4007", "4403", "4405", "4406", "4417", "4418", "4420",
@@ -56,6 +59,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "548", "2627", "22818", "22819", "22820", "22821",
                 "22822", "22823", "22824", "22825", "3960", "5062"
             });
+
+            _errorMessages.Add(201, "Invalid request. Missing required request parameters.");
         }
 
         /// <inheritdoc/>
@@ -80,6 +85,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string errorNumber = ((SqlException)e).Number.ToString();
             return TransientExceptionCodes.Contains(errorNumber);
+        }
+
+        /// <inheritdoc/>
+        public override DataApiBuilderException.SubStatusCodes GetResultSubStatusCodeForException(DbException e)
+        {
+            int errorCode = ((SqlException)e).Number;
+            // MSSQL 201 - Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
+            // Pending revisions of error code classifications, this is a temporary fix to determine substatus code.
+            if (errorCode == 201)
+            {
+                return DataApiBuilderException.SubStatusCodes.DatabaseInputError;
+            }
+
+            return DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed;
+        }
+
+        /// <summary>
+        /// Returns a sanitized error message to be returned to the user.
+        /// Development mode: returns specific database message which may contain database object names
+        /// and not just DAB overridden entity names or field mappings.
+        /// For MSSQL, also looks up any DAB overridden error messages in "_errorMessages" dictionary.
+        /// e.g. message may contain: "dbo.CxStoredProcName" instead of "MySpEntityName"
+        /// Production mode: returns generic database error message.
+        /// </summary>
+        /// <param name="e">Exception occurred in the database.</param>
+        /// <returns>Error message returned to client.</returns>
+        public override string GetMessage(DbException e)
+        {
+            if (_developerMode)
+            {
+                return e.Message;
+            }
+
+            int errorCode = ((SqlException)e).Number;
+            return _errorMessages.ContainsKey(errorCode) ? _errorMessages[errorCode] : GENERIC_DB_EXCEPTION_MESSAGE;
         }
     }
 }

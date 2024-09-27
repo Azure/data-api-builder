@@ -20,7 +20,7 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             DocumentorOnConfigChanged?.Invoke(sender, args);
         }
 
-        public void Documentor_Subscribe(EventHandler<TEventArgs> handler)
+        public void DocumentorSubscribe(EventHandler<TEventArgs> handler)
         {
             DocumentorOnConfigChanged += handler;
         }

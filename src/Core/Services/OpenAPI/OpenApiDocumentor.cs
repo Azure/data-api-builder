@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         public const string DOCUMENT_CREATION_FAILED_ERROR = "OpenAPI description document creation failed";
 
-        public void Documentor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
+        public void Documentor_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
         {
             Console.BackgroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<CustomEventArgs> handler)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<HotReloadEventArgs> handler)
         {
             handler.Documentor_Subscribe(Documentor_ConfigChangeEventReceived);
             _metadataProviderFactory = metadataProviderFactory;

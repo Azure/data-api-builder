@@ -4,10 +4,11 @@
 namespace Azure.DataApiBuilder.Config;
 
 /// <summary>
-/// HotReloadEventHandler manages the events that are needed to signal refreshing
-/// classes that must be updated during a hot reload. Events are defied in this class
-/// rather than in the RuntimeConfigLoader where they are raised because of the interaction
-/// between events and base and derived classes. For more information please see:
+/// HotReloadEventHandler defines event invocation and subscription functions that are
+/// used to facilitate updating DAB components' state due to a hot reload.
+/// The events defined in this class are invoked in this class (versus being invoked in RuntimeConfigLoader)
+/// because events are a special type of delegate that can only be invoked from within the class that declared them.
+/// For more information about where events should be invoked, please see:
 /// https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-raise-base-class-events-in-derived-classes
 /// </summary>
 /// <typeparam name="TEventArgs">Args used for hot reload events.</typeparam>

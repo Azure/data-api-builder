@@ -43,7 +43,7 @@ public abstract class RuntimeConfigLoader
         DocumentorOnConfigChanged(args);
     }
 
-    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler, string? connectionString = null)
+    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _handler = handler;
         _connectionString = connectionString;

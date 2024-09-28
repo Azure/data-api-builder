@@ -186,7 +186,7 @@
               "description": "Configuration properties for multiple mutation operations",
               "additionalProperties": false,
               "properties": {
-                "create":{
+                "create": {
                   "type": "object",
                   "description": "Options for multiple create operations",
                   "additionalProperties": false,
@@ -258,6 +258,28 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "log-level": {
+          "type": "object",
+          "description": "Global configuration of log level",
+          "additionalProperties": false,
+          "properties": {
+            "level": {
+              "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
+              "type": "string",
+              "default": null,
+              "enum": [
+                "trace",
+                "debug",
+                "information",
+                "warning",
+                "error",
+                "critical",
+                "none",
+                null
+              ]
             }
           }
         },

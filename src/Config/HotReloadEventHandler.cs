@@ -13,16 +13,15 @@ namespace Azure.DataApiBuilder.Config;
 /// </summary>
 /// <typeparam name="TEventArgs">Args used for hot reload events.</typeparam>
 public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEventArgs
+{
+    public event EventHandler<TEventArgs>? DocumentorOnConfigChanged;
+
+    public void DocumentorOnConfigChangedEvent(object sender, TEventArgs args)
     {
-        public event EventHandler<TEventArgs>? DocumentorOnConfigChanged;
-
-        public void DocumentorOnConfigChangedEvent(object sender, TEventArgs args)
-        {
-            DocumentorOnConfigChanged?.Invoke(sender, args);
-        }
-
-        public void DocumentorSubscribe(EventHandler<TEventArgs> handler)
-        {
-            DocumentorOnConfigChanged += handler;
-        }
+        DocumentorOnConfigChanged?.Invoke(sender, args);
     }
+    public void DocumentorSubscribe(EventHandler<TEventArgs> handler)
+    {
+        DocumentorOnConfigChanged += handler;
+    }
+}

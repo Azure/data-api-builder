@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
-    public HotReloadEventHandler<CustomEventArgs>? Handler;
+    private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
     // Public to allow the RuntimeProvider and other users of class to set via out param.
@@ -30,36 +30,36 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
-    protected virtual void QueryManagerFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void QueryManagerFactory_ConfigChangeEventOccurred(HotReloadEventArgs args)
     {
-        Handler?.QueryManagerFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.QueryManagerFactory_OnConfigChangeEventOccurred(this, args);
     }
 
-    protected virtual void MetadataProviderFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MetadataProviderFactory_ConfigChangeEventOccurred(HotReloadEventArgs args)
     {
-        Handler?.MetadataProviderFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.MetadataProviderFactory_OnConfigChangeEventOccurred(this, args);
     }
 
-    protected virtual void QueryEngineFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void QueryEngineFactory_ConfigChangeEventOccurred(HotReloadEventArgs args)
     {
-        Handler?.QueryEngineFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.QueryEngineFactory_OnConfigChangeEventOccurred(this, args);
     }
 
-    protected virtual void MutationEngineFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MutationEngineFactory_ConfigChangeEventOccurred(HotReloadEventArgs args)
     {
-        Handler?.MutationEngineFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.MutationEngineFactory_OnConfigChangeEventOccurred(this, args);
     }
-    protected virtual void QueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void QueryExecutor_ConfigChangeEventOccurred(HotReloadEventArgs args)
     {
-        Handler?.QueryExecutor_OnConfigChangeEventOccurred(this, args);
+        _handler?.QueryExecutor_OnConfigChangeEventOccurred(this, args);
     }
-    protected virtual void MsSqlQueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MsSqlQueryExecutor_ConfigChangeEventOccurred(HotReloadEventArgs args)
     {
-        Handler?.MsSqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
+        _handler?.MsSqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
     }
-    protected virtual void MySqlQueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MySqlQueryExecutor_ConfigChangeEventOccurred(HotReloadEventArgs args)
     {
-        Handler?.MySqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
+        _handler?.MySqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public abstract class RuntimeConfigLoader
     /// <param name="message"></param>
     public void SendEventNotification(string message = "")
     {
-        CustomEventArgs args = new(message);
+        HotReloadEventArgs args = new(message);
         QueryManagerFactory_ConfigChangeEventOccurred(args);
         MetadataProviderFactory_ConfigChangeEventOccurred(args);
         QueryEngineFactory_ConfigChangeEventOccurred(args);
@@ -77,11 +77,18 @@ public abstract class RuntimeConfigLoader
         QueryExecutor_ConfigChangeEventOccurred(args);
         MsSqlQueryExecutor_ConfigChangeEventOccurred(args);
         MySqlQueryExecutor_ConfigChangeEventOccurred(args);
+        DocumentorOnConfigChanged(args);
     }
 
-    public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs>? handler, string? connectionString = null)
+    // Signals a hot reload event for OpenApiDocumentor due to config change.
+    protected virtual void DocumentorOnConfigChanged(HotReloadEventArgs args)
     {
-        Handler = handler;
+        _handler?.DocumentorOnConfigChangedEvent(this, args);
+    }
+
+    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
+    {
+        _handler = handler;
         _connectionString = connectionString;
     }
 
@@ -239,6 +246,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new HostOptionsConvertorFactory());
+        options.Converters.Add(new LogLevelOptionsConverterFactory());
 
         if (replaceEnvVar)
         {

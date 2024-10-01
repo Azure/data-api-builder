@@ -26,6 +26,6 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException">Raised when document is already generated
         /// or a failure occurs during generation.</exception>
         /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
-        public void CreateDocument();
+        public void CreateDocument(bool isHotReloadScenario);
     }
 }

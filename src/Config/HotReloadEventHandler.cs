@@ -3,7 +3,7 @@
 
 namespace Azure.DataApiBuilder.Config
 {
-    public class HotReloadEventHandler<TEventArgs> where TEventArgs : CustomEventArgs
+    public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEventArgs
     {
         public event EventHandler<TEventArgs>? QueryManagerFactory_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? MetadataProviderFactory_ConfigChangeEventOccurred;
@@ -13,6 +13,16 @@ namespace Azure.DataApiBuilder.Config
         public event EventHandler<TEventArgs>? MsSqlQueryExecutor_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? MySqlQueryExecutor_ConfigChangeEventOccurred;
         public event EventHandler<TEventArgs>? PostgreSqlQueryExecutor_ConfigChangeEventOccurred;
+        public event EventHandler<TEventArgs>? DocumentorOnConfigChanged;
+
+        public void DocumentorOnConfigChangedEvent(object sender, TEventArgs args)
+        {
+            DocumentorOnConfigChanged?.Invoke(sender, args);
+        }
+        public void DocumentorSubscribe(EventHandler<TEventArgs> handler)
+        {
+            DocumentorOnConfigChanged += handler;
+        }
 
         public void QueryManagerFactory_OnConfigChangeEventOccurred(object sender, TEventArgs args)
         {

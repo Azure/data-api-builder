@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.IO.Abstractions;
+using System.Runtime.CompilerServices;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Generator;
@@ -10,12 +11,14 @@ using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 
+// This assembly is used to create dynamic proxy objects at runtime for the purpose of mocking dependencies in the tests.
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 namespace Cli
 {
     /// <summary>
     /// Provides functionality for exporting GraphQL schemas, either by generating from a Azure Cosmos DB database or fetching from a GraphQL API.
     /// </summary>
-    internal static class Exporter
+    internal class Exporter
     {
         private const int COSMOS_DB_RETRY_COUNT = 1;
         private const int DAB_SERVICE_RETRY_COUNT = 5;
@@ -31,13 +34,13 @@ namespace Cli
         /// <param name="loader">The loader for runtime configuration files.</param>
         /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
         /// <returns>Returns 0 if the export is successful, otherwise returns -1.</returns>
-        public static int Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static bool Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             // Attempt to locate the runtime configuration file based on CLI options
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
                 logger.LogError("Failed to find the config file provided, check your options and try again.");
-                return -1;
+                return false;
             }
 
             // Load the runtime configuration from the file
@@ -47,7 +50,7 @@ namespace Cli
                     replaceEnvVar: true) || runtimeConfig is null)
             {
                 logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
-                return -1;
+                return false;
             }
 
             // Do not retry if schema generation logic is running
@@ -79,7 +82,7 @@ namespace Cli
             }
 
             _cancellationTokenSource.Cancel();
-            return isSuccess ? 0 : -1;
+            return isSuccess;
         }
 
         /// <summary>
@@ -106,7 +109,8 @@ namespace Cli
                     _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
                 }, _cancellationToken);
 
-                schemaText = ExportGraphQLFromDabService(runtimeConfig, logger);
+                Exporter exporter = new();
+                schemaText = exporter.ExportGraphQLFromDabService(runtimeConfig, logger);
             }
 
             // Write the schema content to a file
@@ -115,18 +119,58 @@ namespace Cli
             logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
         }
 
-        private static string ExportGraphQLFromDabService(RuntimeConfig runtimeConfig, ILogger logger)
+        /// <summary>
+        /// Fetches the GraphQL schema from the DAB service, attempting to use the HTTPS endpoint first.
+        /// If the HTTPS endpoint fails, it falls back to using the HTTP endpoint.
+        /// Logs the process of fetching the schema and any fallback actions taken.
+        /// </summary>
+        /// <param name="runtimeConfig">The runtime config object containing the GraphQL path.</param>
+        /// <param name="logger">The logger instance used to log information and errors during the schema fetching process.</param>
+        /// <returns>The GraphQL schema as a string.</returns>
+        internal string ExportGraphQLFromDabService(RuntimeConfig runtimeConfig, ILogger logger)
         {
             string schemaText;
             // Fetch the schema from the GraphQL API
             logger.LogInformation("Fetching schema from GraphQL API.");
 
-            HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
+            try
+            {
+                logger.LogInformation("Trying to fetch schema from DAB Service using HTTPS endpoint.");
+                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL: false);
+            }
+            catch
+            {
+                logger.LogInformation("Failed to fetch schema from DAB Service using HTTPS endpoint. Trying with HTTP endpoint.");
+                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL: true);
+            }
+
+            return schemaText;
+        }
+
+        /// <summary>
+        /// Retrieves the GraphQL schema from the DAB service using either the HTTPS or HTTP endpoint based on the specified fallback option.
+        /// </summary>
+        /// <param name="runtimeConfig">The runtime configuration containing the GraphQL path and other settings.</param>
+        /// <param name="useFallbackURL">A boolean flag indicating whether to use the fallback HTTP endpoint. If false, the method attempts to use the HTTPS endpoint.</param>
+        internal virtual string GetGraphQLSchema(RuntimeConfig runtimeConfig, bool useFallbackURL = false)
+        {
+            HttpClient client;
+            if (!useFallbackURL)
+            {
+                client = new( // CodeQL[SM02185] Loading internal server connection
                                                     new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
                                                 )
+                {
+                    BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLPath}")
+                };
+            }
+            else
             {
-                BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLPath}")
-            };
+                client = new()
+                {
+                    BaseAddress = new Uri($"http://localhost:5000{runtimeConfig.GraphQLPath}")
+                };
+            }
 
             IntrospectionClient introspectionClient = new();
             Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
@@ -134,8 +178,7 @@ namespace Cli
 
             HotChocolate.Language.DocumentNode node = response.Result;
 
-            schemaText = node.ToString();
-            return schemaText;
+            return node.ToString();
         }
 
         private static async Task<string> ExportGraphQLFromCosmosDB(ExportOptions options, RuntimeConfig runtimeConfig, ILogger logger)

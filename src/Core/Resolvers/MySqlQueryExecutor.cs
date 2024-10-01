@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<CustomEventArgs>? handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sender">The calling object.</param>
         /// <param name="args">Event arguments.</param>
-        public void MySqlQueryExecutor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
+        public void MySqlQueryExecutor_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;

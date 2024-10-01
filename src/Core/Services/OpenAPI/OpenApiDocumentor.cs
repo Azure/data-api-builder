@@ -57,13 +57,22 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         public const string DOCUMENT_CREATION_FAILED_ERROR = "OpenAPI description document creation failed";
 
+        public void DocumentorOnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            Console.BackgroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
+            Console.ResetColor();
+            CreateDocument(doOverrideExistingDocument: true);
+        }
+
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<CustomEventArgs> handler)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<HotReloadEventArgs> handler)
         {
+            handler.DocumentorSubscribe(DocumentorOnConfigChanged);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
@@ -101,10 +110,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException">Raised when document is already generated
         /// or a failure occurs during generation.</exception>
         /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
-        public void CreateDocument()
+        public void CreateDocument(bool doOverrideExistingDocument = false)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            if (_openApiDocument is not null)
+            if (_openApiDocument is not null && !doOverrideExistingDocument)
             {
                 throw new DataApiBuilderException(
                     message: DOCUMENT_ALREADY_GENERATED_ERROR,

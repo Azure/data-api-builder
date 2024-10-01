@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            HotReloadEventHandler<CustomEventArgs> hotReloadEventHandler = new();
+            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
             services.AddSingleton(hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
@@ -239,6 +239,11 @@ namespace Azure.DataApiBuilder.Service
             {
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
+
+            // Allows DAB to override the HTTP error code set by HotChocolate.
+            // This is used to ensure HTTP code 4XX is set when the datatbase
+            // returns a "bad request" error such as stored procedure params missing.
+            services.AddHttpResultSerializer<DabGraphQLResultSerializer>();
 
             server.AddErrorFilter(error =>
                 {
@@ -416,21 +421,6 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Takes in the RuntimeConfig object and checks the host mode.
-        /// If host mode is Development, return `LogLevel.Debug`, else
-        /// for production returns `LogLevel.Error`.
-        /// </summary>
-        public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
-        {
-            if (runtimeConfig.IsDevelopmentMode())
-            {
-                return LogLevel.Debug;
-            }
-
-            return LogLevel.Error;
-        }
-
-        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the 
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
@@ -446,7 +436,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
+                    MinimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig);
                 }
             }
 
@@ -661,7 +651,7 @@ namespace Azure.DataApiBuilder.Service
                     try
                     {
                         IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-                        openApiDocumentor.CreateDocument();
+                        openApiDocumentor.CreateDocument(isHotReloadScenario: false);
                     }
                     catch (DataApiBuilderException dabException)
                     {

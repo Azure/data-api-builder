@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO.Abstractions.TestingHelpers;
@@ -49,14 +50,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
 
-            Mock<DbExceptionParser> parser = new(provider);
+            // Invoke base class implementation if no expectation overrides the member
+            // (a.k.a. "Partial Mocks" in Rhino Mocks): default is false.
+            // Without setting CallBase = true, the base class implementation of GetMessage(e) will
+            // not be invoked and will return null.
+            // https://github.com/devlooped/moq/wiki/Quickstart#customizing-mock-behavior
+            Mock<DbExceptionParser> parser = new(provider) { CallBase = true };
             DbException e = SqlTestHelper.CreateSqlException(connectionEstablishmentError, expected);
-            string actual = parser.Object.Parse(e).Message;
-            Assert.AreEqual(expected, actual);
+            Exception parsedException = parser.Object.Parse(e);
+            Assert.AreEqual(expected: expected, actual: parsedException.Message);
         }
 
         /// <summary>
-        /// Method to validate usage of the DbExceptionParser.IsTransientException method.
+        /// Method to validate usage of the MsSqlDbExceptionParser.IsTransientException method.
         /// </summary>
         /// <param name="expected">boolean value indicating if exception is expected to be transient or not.</param>
         /// <param name="number">number to be populated in SqlException.Number field</param>

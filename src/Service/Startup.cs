@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            HotReloadEventHandler<CustomEventArgs> hotReloadEventHandler = new();
+            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
             services.AddSingleton(hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(

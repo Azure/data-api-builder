@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
-    public HotReloadEventHandler<CustomEventArgs>? Handler;
+    private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
     // Public to allow the RuntimeProvider and other users of class to set via out param.
@@ -30,36 +30,41 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
-    protected virtual void QueryManagerFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void QueryManagerFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        Handler?.QueryManagerFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.OnConfigChangedEvent(nameof(QueryManagerFactoryOnConfigChangedEvent), this, args);
     }
 
-    protected virtual void MetadataProviderFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MetadataProviderFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        Handler?.MetadataProviderFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.OnConfigChangedEvent(nameof(MetadataProviderFactoryOnConfigChangedEvent), this, args);
     }
 
-    protected virtual void QueryEngineFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void QueryEngineFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        Handler?.QueryEngineFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.OnConfigChangedEvent(nameof(QueryEngineFactoryOnConfigChangedEvent), this, args);
     }
 
-    protected virtual void MutationEngineFactory_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MutationEngineFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        Handler?.MutationEngineFactory_OnConfigChangeEventOccurred(this, args);
+        _handler?.OnConfigChangedEvent(nameof(MutationEngineFactoryOnConfigChangedEvent), this, args);
     }
-    protected virtual void QueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void QueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        Handler?.QueryExecutor_OnConfigChangeEventOccurred(this, args);
+        _handler?.OnConfigChangedEvent(nameof(QueryExecutorOnConfigChangedEvent), this, args);
     }
-    protected virtual void MsSqlQueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MsSqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        Handler?.MsSqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
+        _handler?.OnConfigChangedEvent(nameof(MsSqlQueryExecutorOnConfigChangedEvent), this, args);
     }
-    protected virtual void MySqlQueryExecutor_ConfigChangeEventOccurred(CustomEventArgs args)
+    protected virtual void MySqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        Handler?.MySqlQueryExecutor_OnConfigChangeEventOccurred(this, args);
+        _handler?.OnConfigChangedEvent(nameof(MySqlQueryExecutorOnConfigChangedEvent), this, args);
+    }
+
+    protected virtual void PostgreSqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
+    {
+        _handler?.OnConfigChangedEvent(nameof(PostgreSqlQueryExecutorOnConfigChangedEvent), this, args);
     }
 
     /// <summary>
@@ -69,19 +74,21 @@ public abstract class RuntimeConfigLoader
     /// <param name="message"></param>
     public void SendEventNotification(string message = "")
     {
-        CustomEventArgs args = new(message);
-        QueryManagerFactory_ConfigChangeEventOccurred(args);
-        MetadataProviderFactory_ConfigChangeEventOccurred(args);
-        QueryEngineFactory_ConfigChangeEventOccurred(args);
-        MutationEngineFactory_ConfigChangeEventOccurred(args);
-        QueryExecutor_ConfigChangeEventOccurred(args);
-        MsSqlQueryExecutor_ConfigChangeEventOccurred(args);
-        MySqlQueryExecutor_ConfigChangeEventOccurred(args);
+        HotReloadEventArgs args = new(message);
+        QueryManagerFactoryOnConfigChangedEvent(args);
+        MetadataProviderFactoryOnConfigChangedEvent(args);
+        QueryEngineFactoryOnConfigChangedEvent(args);
+        MutationEngineFactoryOnConfigChangedEvent(args);
+        QueryExecutorOnConfigChangedEvent(args);
+        MsSqlQueryExecutorOnConfigChangedEvent(args);
+        MySqlQueryExecutorOnConfigChangedEvent(args);
+        PostgreSqlQueryExecutorOnConfigChangedEvent(args);
+
     }
 
-    public RuntimeConfigLoader(HotReloadEventHandler<CustomEventArgs>? handler, string? connectionString = null)
+    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
-        Handler = handler;
+        _handler = handler;
         _connectionString = connectionString;
     }
 

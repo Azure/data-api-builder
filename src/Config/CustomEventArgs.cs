@@ -1,15 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Config
-{
-    public class CustomEventArgs : EventArgs
-    {
-        public string Message { get; set; }
+namespace Azure.DataApiBuilder.Config;
 
-        public CustomEventArgs(string message)
-        {
-            Message = message;
-        }
+public class HotReloadEventArgs : EventArgs
+{
+    public string Message { get; set; }
+
+    public HotReloadEventArgs(string message)
+    {
+        Message = message;
     }
 }

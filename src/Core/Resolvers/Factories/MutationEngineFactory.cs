@@ -48,10 +48,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            HotReloadEventHandler<CustomEventArgs> handler)
+            HotReloadEventHandler<HotReloadEventArgs> handler)
 
         {
-            handler.MutationEngineFactory_Subscribe(MutationEngineFactory_ConfigChangeEventReceived);
+            handler.Subscribe(nameof(MutationEngineFactoryOnConfigChanged), MutationEngineFactoryOnConfigChanged);
             _cosmosClientProvider = cosmosClientProvider;
             _queryManagerFactory = queryManagerFactory;
             _metadataProviderFactory = metadataProviderFactory;
@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
         }
 
-        public void MutationEngineFactory_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
+        public void MutationEngineFactoryOnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
             ConfigureQueryEngines();

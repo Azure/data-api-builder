@@ -43,9 +43,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             DabCacheService cache,
-            HotReloadEventHandler<CustomEventArgs> handler)
+            HotReloadEventHandler<HotReloadEventArgs> handler)
         {
-            handler.QueryEngineFactory_Subscribe(QueryEngineFactory_ConfigChangeEventReceived);
+            handler.Subscribe(nameof(QueryEngineFactoryOnConfigChanged), QueryEngineFactoryOnConfigChanged);
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
             _runtimeConfigProvider = runtimeConfigProvider;
             _queryManagerFactory = queryManagerFactory;
@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
         }
 
-        public void QueryEngineFactory_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
+        public void QueryEngineFactoryOnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
             ConfigureQueryEngines();

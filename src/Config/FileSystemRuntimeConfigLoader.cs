@@ -197,9 +197,21 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
     {
-        logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName);
-        SendEventNotification("Sending Hot-Reload event notification.");
+       /* ILogger<RuntimeConfigValidator>? validatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
+
+        RuntimeConfigProvider runtimeConfigProvider = new(this);
+        RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, _fileSystem, validatorLogger, true);
+
+        if (runtimeConfigValidator.TryValidateConfig(ConfigFilePath, LoggerFactoryForCli).Result)
+        {*/
+            logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
+            TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName);
+            SendEventNotification("Sending Hot-Reload event notification.");
+       /* }
+        else
+        {
+            logger?.LogWarning(message: "Hot-reload process was not able to start, there is an error in config: {ConfigFilePath}", ConfigFilePath);
+        }*/
     }
 
     /// <summary>

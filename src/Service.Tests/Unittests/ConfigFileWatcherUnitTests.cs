@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Not using mocked filesystem so we pick up real file changes for hot reload
             FileSystem fileSystem = new();
             fileSystem.File.WriteAllText(configName, initialConfig);
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configName, string.Empty);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, null, configName, string.Empty);
             RuntimeConfigProvider configProvider = new(configLoader);
 
             // Must GetConfig() to start file watching

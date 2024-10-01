@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+                    msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object, null);
                 }
             }
 
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
 
             // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
-            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
             IDictionary<string, DbConnectionParam> parameters = new Dictionary<string, DbConnectionParam>();
             parameters.Add("@param1", new DbConnectionParam("My Awesome book", DbType.AnsiString, SqlDbType.VarChar));
             parameters.Add("@param2", new DbConnectionParam("Ramen", DbType.String, SqlDbType.NVarChar));
@@ -402,7 +402,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             HttpContext context = new DefaultHttpContext();
             httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
-            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             long timeToAdd = 50L;
             int threadCount = 10;  // Simulate multiple threads
@@ -461,7 +461,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
 
             // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             try
             {
@@ -522,7 +522,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
 
             // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             try
             {

@@ -288,7 +288,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         runtimeConfigProvider,
                         _dbExceptionParser,
                         pgQueryExecutorLogger.Object,
-                        httpContextAccessor.Object);
+                        httpContextAccessor.Object,
+                        null);
                     _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                     _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
@@ -308,7 +309,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         runtimeConfigProvider,
                         _dbExceptionParser,
                         msSqlQueryExecutorLogger.Object,
-                        httpContextAccessor.Object);
+                        httpContextAccessor.Object,
+                        null);
                     _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                     _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
@@ -328,7 +330,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         runtimeConfigProvider,
                         _dbExceptionParser,
                         mySqlQueryExecutorLogger.Object,
-                        httpContextAccessor.Object);
+                        httpContextAccessor.Object,
+                        null);
                     _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                     _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
@@ -348,7 +351,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         runtimeConfigProvider,
                         _dbExceptionParser,
                         DwSqlQueryExecutorLogger.Object,
-                        httpContextAccessor.Object);
+                        httpContextAccessor.Object,
+                        null);
                     _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                     _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 

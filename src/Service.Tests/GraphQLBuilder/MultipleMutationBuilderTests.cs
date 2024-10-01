@@ -395,13 +395,15 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             IAbstractQueryManagerFactory queryManagerfactory = new QueryManagerFactory(
                 runtimeConfigProvider: runtimeConfigProvider,
                 logger: executorLogger.Object,
-                contextAccessor: httpContextAccessor.Object);
+                contextAccessor: httpContextAccessor.Object,
+                handler: null);
 
             // Setup metadata provider factory.
             IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(
                 runtimeConfigProvider: runtimeConfigProvider,
                 queryManagerFactory: queryManagerfactory,
                 logger: metadatProviderLogger.Object,
+                handler: null,
                 fileSystem: null);
 
             // Collecte all the metadata from the database.
@@ -425,7 +427,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 authorizationResolver: authorizationResolver,
                 gQLFilterParser: graphQLFilterParser,
                 logger: queryEngineLogger.Object,
-                cache: cacheService);
+                cache: cacheService,
+                handler: null);
 
             // Setup mock mutation engine factory.
             Mock<IMutationEngineFactory> mutationEngineFactory = new();

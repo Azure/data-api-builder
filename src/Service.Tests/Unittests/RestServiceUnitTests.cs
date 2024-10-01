@@ -140,7 +140,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 provider,
                 dbExceptionParser.Object,
                 queryExecutorLogger.Object,
-                httpContextAccessor.Object);
+                httpContextAccessor.Object,
+                null);
 
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);

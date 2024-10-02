@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Test with empty sub properties of runtime
             minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
-                            ""base-route"" : """",");
+                            ""base-route"" : """", ""log-level"" : { },");
             StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
             StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
 
@@ -645,6 +645,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
             Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);
             Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
+            Assert.IsTrue(parsedConfig.IsLogLevelNull());
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null
                 || !parsedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
             return true;

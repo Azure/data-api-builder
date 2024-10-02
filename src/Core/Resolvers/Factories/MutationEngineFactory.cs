@@ -61,10 +61,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             _runtimeConfigProvider = runtimeConfigProvider;
             _gQLFilterParser = gQLFilterParser;
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
-            ConfigureQueryEngines();
+            ConfigureMutationEngines();
         }
 
-        private void ConfigureQueryEngines()
+        private void ConfigureMutationEngines()
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         public void MutationEngineFactoryOnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
-            ConfigureQueryEngines();
+            ConfigureMutationEngines();
         }
 
         /// <inheritdoc/>

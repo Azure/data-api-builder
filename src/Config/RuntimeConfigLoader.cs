@@ -30,6 +30,12 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
+    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
+    {
+        _handler = handler;
+        _connectionString = connectionString;
+    }
+
     protected virtual void QueryManagerFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
         _handler?.OnConfigChangedEvent(nameof(QueryManagerFactoryOnConfigChangedEvent), this, args);
@@ -67,9 +73,18 @@ public abstract class RuntimeConfigLoader
         _handler?.OnConfigChangedEvent(nameof(PostgreSqlQueryExecutorOnConfigChangedEvent), this, args);
     }
 
+    // Signals a hot reload event for OpenApiDocumentor due to config change.
+    protected virtual void DocumentorOnConfigChanged(HotReloadEventArgs args)
+    {
+        _handler?.OnConfigChangedEvent(nameof(DocumentorOnConfigChanged), this, args);
+    }
+
     /// <summary>
     /// Sends the notification to the event handler to trigger the hot-reload events
-    /// that have subscribed for configuration changes.
+    /// that have subscribed for configuration changes. The order here matters since
+    /// there are dependencies that we must refresh one after another. If adding to this
+    /// method make sure that you add the event trigger after any required dependencies have
+    /// been refreshed by previously called event triggers.
     /// </summary>
     /// <param name="message"></param>
     public void SendEventNotification(string message = "")
@@ -83,13 +98,7 @@ public abstract class RuntimeConfigLoader
         MsSqlQueryExecutorOnConfigChangedEvent(args);
         MySqlQueryExecutorOnConfigChangedEvent(args);
         PostgreSqlQueryExecutorOnConfigChangedEvent(args);
-
-    }
-
-    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
-    {
-        _handler = handler;
-        _connectionString = connectionString;
+        DocumentorOnConfigChanged(args);
     }
 
     /// <summary>
@@ -246,6 +255,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new HostOptionsConvertorFactory());
+        options.Converters.Add(new LogLevelOptionsConverterFactory());
 
         if (replaceEnvVar)
         {

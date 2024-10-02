@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <param name="contextAccessor">httpcontextaccessor.</param>
         public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor, HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.QueryManagerFactorySubscribe(QueryManagerFactoryOnConfigChanged);
+            handler?.Subscribe(nameof(QueryManagerFactoryOnConfigChanged), QueryManagerFactoryOnConfigChanged);
             _handler = handler;
             _runtimeConfigProvider = runtimeConfigProvider;
             _logger = logger;

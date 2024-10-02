@@ -35,7 +35,7 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
     public void OnConfigChangedEvent(string eventName, object sender, TEventArgs args)
     {
         if (_eventHandlers.TryGetValue(eventName, out EventHandler<TEventArgs>? handler))
-    {
+        {
             handler?.Invoke(sender, args);
         }
     }
@@ -43,7 +43,7 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
     public void Subscribe(string eventName, EventHandler<TEventArgs> handler)
     {
         if (_eventHandlers.ContainsKey(eventName))
-    {
+        {
             _eventHandlers[eventName] = handler;
         }
     }

@@ -3,12 +3,14 @@
 
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -72,8 +74,25 @@ public class RuntimeConfigProvider
     /// <returns>The RuntimeConfig instance.</returns>
     /// <remark>Dont use this method if environment variable references need to be retained.</remark>
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
-    public RuntimeConfig GetConfig()
+    public RuntimeConfig GetConfig(bool isNewConfigDetected = false, bool isNewConfigValidated = true)
     {
+        //Only used in hot reload to validate the configuration file
+        if (isNewConfigDetected && !isNewConfigValidated)
+        {
+            IFileSystem fileSystem = new FileSystem();
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
+
+            isNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
+
+            if (!isNewConfigValidated)
+            {
+                throw new Exception(
+                    message: "Failed validation of configuration file.");
+            }
+        }
+
         if (_configLoader.RuntimeConfig is not null)
         {
             return _configLoader.RuntimeConfig;

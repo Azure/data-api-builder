@@ -158,7 +158,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 }
 
                 config = RuntimeConfig;
+                usedRuntimeConfig = RuntimeConfig;
                 return true;
+            }
+
+            if (usedRuntimeConfig is not null)
+            {
+                RuntimeConfig = usedRuntimeConfig;
             }
 
             config = null;
@@ -197,21 +203,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
     {
-       /* ILogger<RuntimeConfigValidator>? validatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
-
-        RuntimeConfigProvider runtimeConfigProvider = new(this);
-        RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, _fileSystem, validatorLogger, true);
-
-        if (runtimeConfigValidator.TryValidateConfig(ConfigFilePath, LoggerFactoryForCli).Result)
-        {*/
-            logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-            TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName);
-            SendEventNotification("Sending Hot-Reload event notification.");
-       /* }
-        else
+        logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
+        if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName))
         {
-            logger?.LogWarning(message: "Hot-reload process was not able to start, there is an error in config: {ConfigFilePath}", ConfigFilePath);
-        }*/
+            logger?.LogWarning(message: "Unable to hot-reload configuration file due to failure to parse the file");
+        }
+
+        SendEventNotification("Sending Hot-Reload event notification.");
     }
 
     /// <summary>

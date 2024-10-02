@@ -63,8 +63,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public FileSystemRuntimeConfigLoader(
         IFileSystem fileSystem,
         HotReloadEventHandler<HotReloadEventArgs>? handler = null,
-        string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string?
-        connectionString = null)
+        string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME,
+        string? connectionString = null)
         : base(handler, connectionString)
     {
         _fileSystem = fileSystem;

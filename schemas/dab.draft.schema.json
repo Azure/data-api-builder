@@ -153,13 +153,6 @@
               "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
               "default": 100,
               "minimum": 1
-            },
-            "max-response-size-mb": {
-              "type": "integer",
-              "description": "Specifies the maximum size, in megabytes, of the database response allowed in a single result. If set to null, the default value is 158 MB.",
-              "default": 158,
-              "minimum": 1,
-              "maximum": 158
             }
           }
         },
@@ -234,6 +227,13 @@
           "description": "Global hosting configuration",
           "additionalProperties": false,
           "properties": {
+            "max-response-size-mb": {
+              "type": "integer",
+              "description": "Specifies the maximum size, in megabytes, of the database response allowed in a single result. If set to null, the default value is 158 MB.",
+              "default": 158,
+              "minimum": 1,
+              "maximum": 158
+            },
             "mode": {
               "description": "Set if running in Development or Production mode",
               "type": "string",

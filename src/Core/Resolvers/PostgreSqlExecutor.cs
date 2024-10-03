@@ -11,6 +11,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -67,7 +68,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor,
                   handler)
         {
-            handler?.Subscribe(nameof(PostgreSqlQueryExecutorOnConfigChanged), PostgreSqlQueryExecutorOnConfigChanged);
+            handler?.Subscribe(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, PostgreSqlQueryExecutorOnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;

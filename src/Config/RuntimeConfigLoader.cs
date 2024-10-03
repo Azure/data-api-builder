@@ -16,6 +16,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Config;
@@ -38,45 +39,45 @@ public abstract class RuntimeConfigLoader
 
     protected virtual void QueryManagerFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(QueryManagerFactoryOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, this, args);
     }
 
     protected virtual void MetadataProviderFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(MetadataProviderFactoryOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, this, args);
     }
 
     protected virtual void QueryEngineFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(QueryEngineFactoryOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, this, args);
     }
 
     protected virtual void MutationEngineFactoryOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(MutationEngineFactoryOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, this, args);
     }
     protected virtual void QueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(QueryExecutorOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
     }
     protected virtual void MsSqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(MsSqlQueryExecutorOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
     }
     protected virtual void MySqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(MySqlQueryExecutorOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
     }
 
     protected virtual void PostgreSqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(PostgreSqlQueryExecutorOnConfigChangedEvent), this, args);
+        _handler?.OnConfigChangedEvent(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
     }
 
     // Signals a hot reload event for OpenApiDocumentor due to config change.
     protected virtual void DocumentorOnConfigChanged(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(nameof(DocumentorOnConfigChanged), this, args);
+        _handler?.OnConfigChangedEvent(DOCUMENTOR_ON_CONFIG_CHANGED, this, args);
     }
 
     /// <summary>

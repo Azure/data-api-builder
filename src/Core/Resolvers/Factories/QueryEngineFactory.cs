@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -45,7 +46,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             DabCacheService cache,
             HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.Subscribe(nameof(QueryEngineFactoryOnConfigChanged), QueryEngineFactoryOnConfigChanged);
+            handler?.Subscribe(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, QueryEngineFactoryOnConfigChanged);
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
             _runtimeConfigProvider = runtimeConfigProvider;
             _queryManagerFactory = queryManagerFactory;

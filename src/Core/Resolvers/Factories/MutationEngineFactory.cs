@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -51,7 +52,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             HotReloadEventHandler<HotReloadEventArgs>? handler)
 
         {
-            handler?.Subscribe(nameof(MutationEngineFactoryOnConfigChanged), MutationEngineFactoryOnConfigChanged);
+            handler?.Subscribe(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, MutationEngineFactoryOnConfigChanged);
             _cosmosClientProvider = cosmosClientProvider;
             _queryManagerFactory = queryManagerFactory;
             _metadataProviderFactory = metadataProviderFactory;

@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -55,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                              IHttpContextAccessor httpContextAccessor,
                              HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.Subscribe(nameof(QueryExecutorOnConfigChanged), QueryExecutorOnConfigChanged);
+            handler?.Subscribe(QUERY_EXECUTOR_ON_CONFIG_CHANGED, QueryExecutorOnConfigChanged);
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
+
 namespace Azure.DataApiBuilder.Config;
 
 /// <summary>
@@ -20,15 +22,15 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
     {
         _eventHandlers = new Dictionary<string, EventHandler<TEventArgs>?>
         {
-            { "QueryManagerFactoryOnConfigChanged", null },
-            { "MetadataProviderFactoryOnConfigChanged", null },
-            { "QueryEngineFactoryOnConfigChanged", null },
-            { "MutationEngineFactoryOnConfigChanged", null },
-            { "QueryExecutorOnConfigChanged", null },
-            { "MsSqlQueryExecutorOnConfigChanged", null },
-            { "MySqlQueryExecutorOnConfigChanged", null },
-            { "PostgreSqlQueryExecutorOnConfigChanged", null },
-            { "DocumentorOnConfigChanged", null }
+            { QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, null },
+            { METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, null },
+            { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
+            { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
+            { QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { DOCUMENTOR_ON_CONFIG_CHANGED, null }
         };
     }
 

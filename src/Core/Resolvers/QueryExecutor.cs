@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                              ILogger<IQueryExecutor> logger,
                              RuntimeConfigProvider configProvider,
                              IHttpContextAccessor httpContextAccessor,
-                             HotReloadEventHandler<HotReloadEventArgs>? handler)
+                             HotReloadEventHandler<HotReloadEventArgs>? handler = null)
         {
             handler?.Subscribe(nameof(QueryExecutorOnConfigChanged), QueryExecutorOnConfigChanged);
             DbExceptionParser = dbExceptionParser;

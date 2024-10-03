@@ -48,10 +48,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            HotReloadEventHandler<HotReloadEventArgs> handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler)
 
         {
-            handler.Subscribe(nameof(MutationEngineFactoryOnConfigChanged), MutationEngineFactoryOnConfigChanged);
+            handler?.Subscribe(nameof(MutationEngineFactoryOnConfigChanged), MutationEngineFactoryOnConfigChanged);
             _cosmosClientProvider = cosmosClientProvider;
             _queryManagerFactory = queryManagerFactory;
             _metadataProviderFactory = metadataProviderFactory;

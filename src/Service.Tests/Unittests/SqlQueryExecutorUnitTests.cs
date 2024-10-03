@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
@@ -270,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
             queryExecutor.Setup(x => x.PrepareDbCommand(
@@ -349,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
@@ -402,7 +402,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             HttpContext context = new DefaultHttpContext();
             httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
-            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
 
             long timeToAdd = 50L;
             int threadCount = 10;  // Simulate multiple threads

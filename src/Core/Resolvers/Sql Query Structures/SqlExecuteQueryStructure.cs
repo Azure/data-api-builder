@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -43,35 +41,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (requestParams.TryGetValue(paramKey, out object? requestParamValue))
                 {
                     // Parameterize, then add referencing parameter to ProcedureParameters dictionary
-                    string? parametrizedName = null;
+                    string? parameterizedName;
                     if (requestParamValue is not null)
                     {
-                        parametrizedName = MakeDbConnectionParam(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
+                        parameterizedName = MakeDbConnectionParam(GetParamAsSystemType(requestParamValue.ToString()!, paramKey, systemType), paramKey);
                     }
                     else
                     {
-                        parametrizedName = MakeDbConnectionParam(value: null, paramKey);
+                        parameterizedName = MakeDbConnectionParam(value: null, paramKey);
                     }
 
-                    ProcedureParameters.Add(paramKey, $"{parametrizedName}");
+                    ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                 }
-                else
+                else if (paramDefinition.HasConfigDefault)
                 {
-                    // Fill with default value from runtime config
-                    if (paramDefinition.HasConfigDefault)
-                    {
-                        object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
-                        string parameterizedName = MakeDbConnectionParam(value, paramKey);
-                        ProcedureParameters.Add(paramKey, $"{parameterizedName}");
-                    }
-                    else
-                    {
-                        // In case required parameters not found in request and no default specified in config
-                        // Should already be handled in the request validation step
-                        throw new DataApiBuilderException(message: $"Did not provide all procedure params, missing: \"{paramKey}\"",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                    }
+                    // When the runtime config defines a default value for a parameter,
+                    // create a parameter using that value and add it to the query structure.
+                    // Database metadata does not indicate whether a SP parameter has a default value
+                    // and as a result, we don't know whether an SP parameter is optional.
+                    // Therefore, DAB relies on the database error to indicate that a required parameter is missing.
+                    object? value = paramDefinition.ConfigDefaultValue == null ? null : GetParamAsSystemType(paramDefinition.ConfigDefaultValue!.ToString()!, paramKey, systemType);
+                    string parameterizedName = MakeDbConnectionParam(value, paramKey);
+                    ProcedureParameters.Add(paramKey, $"{parameterizedName}");
                 }
             }
         }

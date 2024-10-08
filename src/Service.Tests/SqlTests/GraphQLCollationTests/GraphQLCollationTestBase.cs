@@ -14,8 +14,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
 
         /// <summary>
         /// Compares SQL Database Query with GraphQL Query
+        /// To ensure that GraphQL is working as expected with different collations
         /// </summary>
-        public async Task CapitalizationResultQuery(string type, string item, string dbQuery)
+        public async Task CapitalizationResultQuery(string type, string item, string dbQuery, string defaultCollationQuery, string newCollationQuery)
         {
             string graphQLQueryName = type;
             string graphQLQuery = @"
@@ -28,12 +29,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
                 }
             ";
 
+            //Change collation to be case sensitive before executing GraphQL test
+            await GetDatabaseResultAsync(newCollationQuery);
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+
+            //Change collation back to default before executing expected test
+            await GetDatabaseResultAsync(defaultCollationQuery);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
-
         #endregion
     }
 }

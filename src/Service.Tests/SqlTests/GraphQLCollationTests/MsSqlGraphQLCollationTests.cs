@@ -32,8 +32,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// </summary>
         [DataTestMethod]
         [DataRow("books", "title", @"SELECT title FROM books ORDER BY title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        //[DataRow("books", "title", @"SELECT title FROM BOOKS ORDER BY TITLE ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        //[DataRow("books", "title", @"SELECT title FROM Books ORDER BY Title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
+        [DataRow("authors", "name", @"SELECT name FROM authors ORDER BY name ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
+        [DataRow("fungi", "habitat", @"SELECT habitat FROM fungi ORDER BY habitat ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
         public async Task MsSqlCapitalizationResultQuery(string type, string item, string dbQuery)
         {
             string defaultCollationQuery = MsSqlCollationQuery(type, item, DEFAULT_COLLATION);
@@ -42,13 +42,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         }
 
         /// <summary>
-        /// Changes collation from a column on a table in the database for MsSql
+        /// Creates collation query for a specific column on a table in the database for MsSql
         /// </summary>
         private static string MsSqlCollationQuery(string table, string column, string newCollation)
         {
             string dbQuery = @"
                 ALTER TABLE dbo." + table + @"
-                ALTER COLUMN " + column + @" varchar(max) COLLATE " + newCollation; //Check if there is a way to obtain the datatype (varchar(max))
+                ALTER COLUMN " + column + @" varchar(max) COLLATE " + newCollation;
             return dbQuery;
         }
         #endregion

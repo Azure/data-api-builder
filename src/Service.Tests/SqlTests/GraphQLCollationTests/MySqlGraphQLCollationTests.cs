@@ -29,9 +29,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// MySql Capitalization Collation Tests
         /// </summary>
         [DataTestMethod]
-        [DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data` FROM ( SELECT `table0`.`title` AS `TITLE` FROM `books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`title` ASC LIMIT 100 ) AS `subq1`")]
-        //[DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`TITLE`)), '[]') AS `DATA` FROM ( SELECT `table0`.`TITLE` AS `TITLE` FROM `books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`TITLE` ASC LIMIT 100 ) AS `subq1`")]
-        //[DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`Title`)), '[]') AS `Data` FROM ( SELECT `table0`.`Title` AS `Title` FROM `Books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`Title` ASC LIMIT 100 ) AS `subq1`")]
+        [DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data` FROM ( SELECT `table0`.`title` AS `title` FROM `books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`title` ASC LIMIT 100 ) AS `subq1`")]
+        [DataRow("authors", "name", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('name', `subq1`.`name`)), '[]') AS `data` FROM ( SELECT `table0`.`name` AS `name` FROM `authors` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`name` ASC LIMIT 100 ) AS `subq1`")]
+        [DataRow("fungi", "habitat", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('habitat', `subq1`.`habitat`)), '[]') AS `data` FROM ( SELECT `table0`.`habitat` AS `habitat` FROM `fungi` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`habitat` ASC LIMIT 100 ) AS `subq1`")]
 
         public async Task MySqlCapitalizationResultQuery(string type, string item, string dbQuery)
         {
@@ -41,14 +41,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         }
 
         /// <summary>
-        /// Changes collation from a column on a table in the database for MySql
+        /// Creates collation query for a specific column on a table in the database for MySql
         /// </summary>
         private static string MySqlCollationQuery(string table, string column, string newCollation)
         {
             string dbQuery = @"
                 ALTER TABLE " + table + @"
                 MODIFY COLUMN " + column + @" text
-                CHARACTER SET utf8mb4 COLLATE " + newCollation; //Should I make utf8mb4 a variable??
+                CHARACTER SET utf8mb4 COLLATE " + newCollation;
             return dbQuery;
         }
         #endregion

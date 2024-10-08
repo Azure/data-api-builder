@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
+    private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
     // Public to allow the RuntimeProvider and other users of class to set via out param.
@@ -29,8 +30,22 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
-    public RuntimeConfigLoader(string? connectionString = null)
+    // Signals a hot reload event for OpenApiDocumentor due to config change.
+    protected virtual void DocumentorOnConfigChanged(HotReloadEventArgs args)
     {
+        _handler?.DocumentorOnConfigChangedEvent(this, args);
+    }
+
+    // Sends all of the notifications when a hot reload occurs.
+    public void SendEventNotification(string message = "")
+    {
+        HotReloadEventArgs args = new(message);
+        DocumentorOnConfigChanged(args);
+    }
+
+    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
+    {
+        _handler = handler;
         _connectionString = connectionString;
     }
 

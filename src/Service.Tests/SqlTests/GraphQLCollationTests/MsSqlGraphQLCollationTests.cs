@@ -28,17 +28,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
 
         #region Tests
         /// <summary>
-        /// MsSql Capitalization Collation Tests
+        /// MsSql Collation Tests to ensure that GraphQL is working properly when there is a change in case sensitivity on the database
         /// </summary>
         [DataTestMethod]
         [DataRow("books", "title", @"SELECT title FROM books ORDER BY title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
         [DataRow("authors", "name", @"SELECT name FROM authors ORDER BY name ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
         [DataRow("fungi", "habitat", @"SELECT habitat FROM fungi ORDER BY habitat ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        public async Task MsSqlCapitalizationResultQuery(string type, string item, string dbQuery)
+        public async Task MsSqlCaseSensitiveResultQuery(string type, string item, string dbQuery)
         {
             string defaultCollationQuery = MsSqlCollationQuery(type, item, DEFAULT_COLLATION);
             string newCollationQuery = MsSqlCollationQuery(type, item, CASE_SENSITIVE_COLLATION);
-            await CapitalizationResultQuery(type, item, dbQuery, defaultCollationQuery, newCollationQuery);
+            await CaseSensitiveResultQuery(type, item, dbQuery, defaultCollationQuery, newCollationQuery);
         }
 
         /// <summary>

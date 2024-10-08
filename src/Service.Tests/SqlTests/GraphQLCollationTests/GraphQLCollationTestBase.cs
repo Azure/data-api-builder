@@ -14,9 +14,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
 
         /// <summary>
         /// Compares SQL Database Query with GraphQL Query
-        /// To ensure that GraphQL is working as expected with different collations
+        /// To ensure that GraphQL is working as expected with case sensitive collations
         /// </summary>
-        public async Task CapitalizationResultQuery(string type, string item, string dbQuery, string defaultCollationQuery, string newCollationQuery)
+        public async Task CaseSensitiveResultQuery(string type, string item, string dbQuery, string defaultCollationQuery, string newCollationQuery)
         {
             string graphQLQueryName = type;
             string graphQLQuery = @"

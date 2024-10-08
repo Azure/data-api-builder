@@ -37,47 +37,9 @@ public abstract class RuntimeConfigLoader
         _connectionString = connectionString;
     }
 
-    protected virtual void QueryManagerFactoryOnConfigChangedEvent(HotReloadEventArgs args)
+    protected virtual void OnConfigChangedEvent(HotReloadEventArgs args)
     {
-        _handler?.OnConfigChangedEvent(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, this, args);
-    }
-
-    protected virtual void MetadataProviderFactoryOnConfigChangedEvent(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, this, args);
-    }
-
-    protected virtual void QueryEngineFactoryOnConfigChangedEvent(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, this, args);
-    }
-
-    protected virtual void MutationEngineFactoryOnConfigChangedEvent(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, this, args);
-    }
-    protected virtual void QueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
-    }
-    protected virtual void MsSqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
-    }
-    protected virtual void MySqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
-    }
-
-    protected virtual void PostgreSqlQueryExecutorOnConfigChangedEvent(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, this, args);
-    }
-
-    // Signals a hot reload event for OpenApiDocumentor due to config change.
-    protected virtual void DocumentorOnConfigChanged(HotReloadEventArgs args)
-    {
-        _handler?.OnConfigChangedEvent(DOCUMENTOR_ON_CONFIG_CHANGED, this, args);
+        _handler?.OnConfigChangedEvent(this, args);
     }
 
     /// <summary>
@@ -90,16 +52,15 @@ public abstract class RuntimeConfigLoader
     /// <param name="message"></param>
     public void SendEventNotification(string message = "")
     {
-        HotReloadEventArgs args = new(message);
-        QueryManagerFactoryOnConfigChangedEvent(args);
-        MetadataProviderFactoryOnConfigChangedEvent(args);
-        QueryEngineFactoryOnConfigChangedEvent(args);
-        MutationEngineFactoryOnConfigChangedEvent(args);
-        QueryExecutorOnConfigChangedEvent(args);
-        MsSqlQueryExecutorOnConfigChangedEvent(args);
-        MySqlQueryExecutorOnConfigChangedEvent(args);
-        PostgreSqlQueryExecutorOnConfigChangedEvent(args);
-        DocumentorOnConfigChanged(args);
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
     }
 
     /// <summary>

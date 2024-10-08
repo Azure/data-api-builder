@@ -34,9 +34,9 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
         };
     }
 
-    public void OnConfigChangedEvent(string eventName, object sender, TEventArgs args)
+    public void OnConfigChangedEvent(object sender, TEventArgs args)
     {
-        if (_eventHandlers.TryGetValue(eventName, out EventHandler<TEventArgs>? handler))
+        if (_eventHandlers.TryGetValue(args.EventName, out EventHandler<TEventArgs>? handler))
         {
             handler?.Invoke(sender, args);
         }

@@ -145,7 +145,7 @@
             "max-page-size": {
               "type": [
                 "integer",
-                "null"
+                null
               ],
               "description": "Defines the maximum number of records that can be returned in a single page of results. If set to null, the default value is 100,000.",
               "default": 100000,
@@ -154,7 +154,7 @@
             "default-page-size": {
               "type": [
                 "integer",
-                "null"
+                null
               ],
               "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
               "default": 100,
@@ -236,7 +236,7 @@
             "max-response-size-mb": {
              "type": [
                 "integer",
-                "null"
+                null
               ]
               "description": "Specifies the maximum size, in megabytes, of the database response allowed in a single result. If set to null, the default value is 158 MB.",
               "default": 158,

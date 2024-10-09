@@ -152,7 +152,10 @@
               "minimum": 1
             },
             "default-page-size": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
               "default": 100,
               "minimum": 1

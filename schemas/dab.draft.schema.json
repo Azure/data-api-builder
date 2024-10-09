@@ -234,7 +234,10 @@
           "additionalProperties": false,
           "properties": {
             "max-response-size-mb": {
-              "type": "integer",
+             "type": [
+                "integer",
+                "null"
+              ]
               "description": "Specifies the maximum size, in megabytes, of the database response allowed in a single result. If set to null, the default value is 158 MB.",
               "default": 158,
               "minimum": 1,

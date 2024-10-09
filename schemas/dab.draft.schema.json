@@ -143,7 +143,10 @@
           "type": "object",
           "properties": {
             "max-page-size": {
-              "type": "integer",
+              "type": [
+                "integer",
+                "null"
+              ],
               "description": "Defines the maximum number of records that can be returned in a single page of results. If set to null, the default value is 100,000.",
               "default": 100000,
               "minimum": 1

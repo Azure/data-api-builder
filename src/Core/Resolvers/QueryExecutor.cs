@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                              IHttpContextAccessor httpContextAccessor,
                              HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.Subscribe(QUERY_EXECUTOR_ON_CONFIG_CHANGED, QueryExecutorOnConfigChanged);
+            handler?.Subscribe(QUERY_EXECUTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sender">The calling object.</param>
         /// <param name="args">Event arguments.</param>
-        public void QueryExecutorOnConfigChanged(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             _maxResponseSizeMB = ConfigProvider.GetConfig().MaxResponseSizeMB();

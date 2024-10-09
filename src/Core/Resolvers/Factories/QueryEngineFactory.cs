@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             DabCacheService cache,
             HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.Subscribe(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, QueryEngineFactoryOnConfigChanged);
+            handler?.Subscribe(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
             _runtimeConfigProvider = runtimeConfigProvider;
             _queryManagerFactory = queryManagerFactory;
@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
         }
 
-        public void QueryEngineFactoryOnConfigChanged(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
             ConfigureQueryEngines();

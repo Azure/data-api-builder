@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor contextAccessor,
             HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.Subscribe(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, QueryManagerFactoryOnConfigChanged);
+            handler?.Subscribe(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _handler = handler;
             _runtimeConfigProvider = runtimeConfigProvider;
             _logger = logger;
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
         }
 
-        public void QueryManagerFactoryOnConfigChanged(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();

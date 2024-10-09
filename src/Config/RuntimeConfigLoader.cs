@@ -50,7 +50,7 @@ public abstract class RuntimeConfigLoader
     /// been refreshed by previously called event triggers.
     /// </summary>
     /// <param name="message"></param>
-    public void SendEventNotification(string message = "")
+    protected void SendEventNotification(string message = "")
     {
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));

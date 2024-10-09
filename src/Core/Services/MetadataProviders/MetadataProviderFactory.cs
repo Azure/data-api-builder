@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             HotReloadEventHandler<HotReloadEventArgs>? handler,
             bool isValidateOnly = false)
         {
-            handler?.Subscribe(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, MetadataProviderFactoryOnConfigChanged);
+            handler?.Subscribe(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _runtimeConfigProvider = runtimeConfigProvider;
             _queryManagerFactory = queryManagerFactory;
             _logger = logger;
@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
         }
 
-        public void MetadataProviderFactoryOnConfigChanged(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             ConfigureMetadataProviders();
         }

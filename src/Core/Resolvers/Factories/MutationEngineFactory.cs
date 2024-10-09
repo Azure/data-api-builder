@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             HotReloadEventHandler<HotReloadEventArgs>? handler)
 
         {
-            handler?.Subscribe(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, MutationEngineFactoryOnConfigChanged);
+            handler?.Subscribe(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _cosmosClientProvider = cosmosClientProvider;
             _queryManagerFactory = queryManagerFactory;
             _metadataProviderFactory = metadataProviderFactory;
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
         }
 
-        public void MutationEngineFactoryOnConfigChanged(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
             ConfigureMutationEngines();

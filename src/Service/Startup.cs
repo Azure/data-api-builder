@@ -547,7 +547,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
             services.AddAuthentication()
                     .AddEnvDetectedEasyAuth()
-                    .AddJwtBearer(authenticationScheme: "Bearer")
+                    .AddJwtBearer()
                     .AddSimulatorAuthentication();
         }
 

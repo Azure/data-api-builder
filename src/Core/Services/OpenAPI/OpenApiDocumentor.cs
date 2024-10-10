@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Console.BackgroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
             Console.ResetColor();
-            CreateDocument(isHotReloadScenario: true, isNewConfigDetected: true, isNewConfigValidated: false);
+            CreateDocument(isHotReloadScenario: true);
         }
 
         /// <summary>
@@ -110,9 +110,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException">Raised when document is already generated
         /// or a failure occurs during generation.</exception>
         /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
-        public void CreateDocument(bool isHotReloadScenario = false, bool isNewConfigDetected = false, bool isNewConfigValidated = true)
+        public void CreateDocument(bool isHotReloadScenario = false)
         {
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig(isNewConfigDetected, isNewConfigValidated);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             if (_openApiDocument is not null && !isHotReloadScenario)
             {
                 throw new DataApiBuilderException(

@@ -74,22 +74,33 @@ public class RuntimeConfigProvider
     /// <returns>The RuntimeConfig instance.</returns>
     /// <remark>Dont use this method if environment variable references need to be retained.</remark>
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
-    public RuntimeConfig GetConfig(bool isNewConfigDetected = false, bool isNewConfigValidated = true)
+    public RuntimeConfig GetConfig()
     {
-        //Only used in hot reload to validate the configuration file
-        if (isNewConfigDetected && !isNewConfigValidated)
+        // Only used in hot reload to validate the configuration file
+        if (_configLoader.isNewConfigDetected && !_configLoader.isNewConfigValidated)
         {
             IFileSystem fileSystem = new FileSystem();
             ILoggerFactory loggerFactory = new LoggerFactory();
             ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
 
-            isNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
+            _configLoader.isNewConfigDetected = false;
+            _configLoader.isNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
 
-            if (!isNewConfigValidated)
+            // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
+            if (_configLoader.isNewConfigValidated)
             {
-                throw new Exception(
-                    message: "Failed validation of configuration file.");
+                _configLoader.lastValidRuntimeConfig = _configLoader.RuntimeConfig;
+            }
+            else
+            {
+                _configLoader.isNewConfigValidated = true;
+                _configLoader.RuntimeConfig = _configLoader.lastValidRuntimeConfig;
+
+                throw new DataApiBuilderException(
+                    message: "Failed validation of configuration file.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
         }
 

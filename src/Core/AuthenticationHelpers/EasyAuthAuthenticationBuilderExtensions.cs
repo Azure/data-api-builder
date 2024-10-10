@@ -43,4 +43,40 @@ public static class EasyAuthAuthenticationBuilderExtensions
             });
         return builder;
     }
+
+    /// <summary>
+    /// Used for ConfigureAuthenticationV2() where all EasyAuth schemes are registered.
+    /// This function doesn't register EasyAuthType.AppService if the AppService environment is not detected.
+    /// </summary>
+    /// <exception cref="System.ArgumentNullException"></exception>
+    public static AuthenticationBuilder AddEnvDetectedEasyAuth(this AuthenticationBuilder builder)
+    {
+        if (builder is null)
+        {
+            throw new ArgumentNullException(nameof(builder));
+        }
+
+        builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+           authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+           displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+           options =>
+           {
+               options.EasyAuthProvider = EasyAuthType.StaticWebApps;
+           });
+
+        bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
+
+        if (appServiceEnvironmentDetected)
+        {
+            builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+                authenticationScheme: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                displayName: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                options =>
+                {
+                    options.EasyAuthProvider = EasyAuthType.AppService;
+                });
+        }
+
+        return builder;
+    }
 }

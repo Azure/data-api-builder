@@ -27,7 +27,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

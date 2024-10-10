@@ -67,7 +67,7 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
     {
         if (Context.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER].Count > 0)
         {
-            ClaimsIdentity? identity = Options.EasyAuthProvider switch
+            ClaimsIdentity? identity = OptionsMonitor.CurrentValue.EasyAuthProvider switch
             {
                 EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context, Logger),
                 EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger),

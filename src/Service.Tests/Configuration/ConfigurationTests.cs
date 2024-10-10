@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;

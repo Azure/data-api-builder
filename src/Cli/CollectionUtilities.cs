@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Core;
+namespace Cli;
 
 /// <summary>
 /// A class which contains useful methods for processing collections.

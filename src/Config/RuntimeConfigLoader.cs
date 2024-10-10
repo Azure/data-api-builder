@@ -22,11 +22,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
-    // Change Token Code
     private DabChangeToken _changeToken;
-    private readonly List<IDisposable> _changeTokenRegistrations;
-
-    // Other
     private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
@@ -38,13 +34,23 @@ public abstract class RuntimeConfigLoader
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _changeToken = new DabChangeToken();
-        _changeTokenRegistrations = new List<IDisposable>(1)
-        {
-            ChangeToken.OnChange(GetChangeToken, PostChangeTokenChangedAction)
-        };
-
         _handler = handler;
         _connectionString = connectionString;
+    }
+
+    // Signals changes to the config to listeners.
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
+    }
+
+    // Raises the changed event.
+    private void RaiseChanged()
+    {
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
     }
 
     // Signals a hot reload event for OpenApiDocumentor due to config change.
@@ -59,29 +65,6 @@ public abstract class RuntimeConfigLoader
         HotReloadEventArgs args = new(message);
         DocumentorOnConfigChanged(args);
         RaiseChanged();
-    }
-
-    // Raises the changed event.
-    private void RaiseChanged()
-    {
-        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
-        previousToken.SignalChange();
-    }
-
-    private void PostChangeTokenChangedAction()
-    {
-        Console.WriteLine("Howdy! Change token has been signalled :)");
-    }
-
-    /// <summary>
-    /// producer
-    /// </summary>
-    /// <returns></returns>
-#pragma warning disable CA1024 // Use properties where appropriate
-    public IChangeToken GetChangeToken()
-#pragma warning restore CA1024 // Use properties where appropriate
-    {
-        return _changeToken;
     }
 
     /// <summary>

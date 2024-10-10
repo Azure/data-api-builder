@@ -171,10 +171,14 @@ public class ClientRoleHeaderAuthenticationMiddleware
                 return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
             case nameof(EasyAuthType.AppService):
                 return EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
-            case "AzureAD":
-                return JwtBearerDefaults.AuthenticationScheme;
-            default:
+            case nameof(EasyAuthType.StaticWebApps):
                 return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+            case "AzureAD":
+            case "EntraID":
+                return JwtBearerDefaults.AuthenticationScheme;
+            case "Custom":
+            default:
+                return GenericOAuthDefaults.AUTHENTICATIONSCHEME;
         }
     }
 }

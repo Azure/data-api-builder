@@ -88,10 +88,10 @@ namespace Azure.DataApiBuilder.Service
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, hotReloadEventHandler, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
-            services.AddSingleton<JwtConfigChangeRelay>();
             services.AddSingleton(fileSystem);
             services.AddSingleton(configLoader);
             services.AddSingleton(configProvider);
+
             if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
                 && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
@@ -175,7 +175,16 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthV2(services, configLoader);
+            // Use HotReload aware authentication configuration when in development mode
+            // and when runtime config was provided at startup.
+            if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
+            {
+                ConfigureAuthV2(services, configProvider);
+            }
+            else
+            {
+                ConfigureAuthentication(services, configProvider);
+            }
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
@@ -529,15 +538,13 @@ namespace Azure.DataApiBuilder.Service
         /// Wires up all DAB supported authentication providers. DAB uses the user configured
         /// authentcation provider to determine which provider to use for authentication at request time.
         /// </summary>
-        private void ConfigureAuthV2(IServiceCollection services, RuntimeConfigLoader configLoader)
+        private static void ConfigureAuthV2(IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
         {
-            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(configLoader));
-            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new ConfigurationChangeTokenSource<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, Configuration));
-            //services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<JwtBearerOptions>, JwtBearerPostConfigureOptions>());
-            // Purposely 
+            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(runtimeConfigProvider));
+            services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
             services.AddAuthentication()
                     .AddEnvDetectedEasyAuth()
-                    .AddJwtBearer()
+                    .AddJwtBearer(authenticationScheme: "Bearer")
                     .AddSimulatorAuthentication();
         }
 
@@ -623,8 +630,12 @@ namespace Azure.DataApiBuilder.Service
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
-                    JwtConfigChangeRelay relay = app.ApplicationServices.GetService<JwtConfigChangeRelay>()!;
-                    relay.ConfigureJwtBearerProvider();
+
+                    if (!runtimeConfigProvider.IsLateConfigured)
+                    {
+                        //JwtConfigChangeRelay relay = app.ApplicationServices.GetService<JwtConfigChangeRelay>()!;
+                        //relay.ConfigureJwtBearerProvider();
+                    }
                 }
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =

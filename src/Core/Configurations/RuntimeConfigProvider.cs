@@ -45,7 +45,15 @@ public class RuntimeConfigProvider
     private RuntimeConfigLoader _configLoader;
     private DabChangeToken _changeToken = new();
     private readonly List<IDisposable>? _changeTokenRegistrations;
-    private JwtConfigChangeRelay? _changeRelay;
+
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
+    {
+        _configLoader = runtimeConfigLoader;
+        _changeTokenRegistrations = new List<IDisposable>(1)
+        {
+            ChangeToken.OnChange(_configLoader.GetChangeToken, RaiseChanged)
+        };
+    }
 
     // Raises the changed event.
     private void RaiseChanged()
@@ -55,7 +63,7 @@ public class RuntimeConfigProvider
     }
 
     /// <summary>
-    /// producer
+    /// Change Token producer
     /// </summary>
     /// <returns></returns>
 #pragma warning disable CA1024 // Use properties where appropriate
@@ -80,21 +88,6 @@ public class RuntimeConfigProvider
 
             return string.Empty;
         }
-    }
-
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader, JwtConfigChangeRelay jwtConfigChangeRelay)
-    {
-        _configLoader = runtimeConfigLoader;
-        _changeRelay = jwtConfigChangeRelay;
-        _changeTokenRegistrations = new List<IDisposable>(1)
-        {
-            ChangeToken.OnChange(_configLoader.GetChangeToken, RaiseChanged)
-        };
-    }
-
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
-    {
-        _configLoader = runtimeConfigLoader;
     }
 
     /// <summary>
@@ -273,6 +266,15 @@ public class RuntimeConfigProvider
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Runtimeconfig is hot-reloadable when the configuration is not in production mode and not late configured.
+    /// </summary>
+    /// <returns>True when config is hot-reloadable.</returns>
+    public bool IsConfigHotReloadable()
+    {
+        return !IsLateConfigured || !(_configLoader.RuntimeConfig?.Runtime?.Host?.Mode == HostMode.Production);
     }
 
     private async Task<bool> InvokeConfigLoadedHandlersAsync()

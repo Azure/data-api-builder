@@ -5,10 +5,13 @@ namespace Azure.DataApiBuilder.Config;
 
 public class HotReloadEventArgs : EventArgs
 {
+    public string EventName { get; set; }
+
     public string Message { get; set; }
 
-    public HotReloadEventArgs(string message)
+    public HotReloadEventArgs(string eventName, string message)
     {
+        EventName = eventName;
         Message = message;
     }
 }

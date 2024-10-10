@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Mock<IQueryEngineFactory> queryEngineFactory = new();
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
             Mock<ILogger<ISqlMetadataProvider>> logger = new();
-            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, queryManagerfactory.Object, logger.Object, fs);
+            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, queryManagerfactory.Object, logger.Object, fs, handler: null);
             Mock<IAuthorizationResolver> authResolver = new();
 
             GraphQLSchemaCreator creator = new(provider, queryEngineFactory.Object, mutationEngineFactory.Object, metadataProviderFactory, authResolver.Object);

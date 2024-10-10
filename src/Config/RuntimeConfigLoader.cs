@@ -16,6 +16,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Config;
@@ -30,23 +31,36 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
-    // Signals a hot reload event for OpenApiDocumentor due to config change.
-    protected virtual void DocumentorOnConfigChanged(HotReloadEventArgs args)
-    {
-        _handler?.DocumentorOnConfigChangedEvent(this, args);
-    }
-
-    // Sends all of the notifications when a hot reload occurs.
-    public void SendEventNotification(string message = "")
-    {
-        HotReloadEventArgs args = new(message);
-        DocumentorOnConfigChanged(args);
-    }
-
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _handler = handler;
         _connectionString = connectionString;
+    }
+
+    protected virtual void OnConfigChangedEvent(HotReloadEventArgs args)
+    {
+        _handler?.OnConfigChangedEvent(this, args);
+    }
+
+    /// <summary>
+    /// Sends the notification to the event handler to trigger the hot-reload events
+    /// that have subscribed for configuration changes. The order here matters since
+    /// there are dependencies that we must refresh one after another. If adding to this
+    /// method make sure that you add the event trigger after any required dependencies have
+    /// been refreshed by previously called event triggers.
+    /// </summary>
+    /// <param name="message"></param>
+    protected void SendEventNotification(string message = "")
+    {
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
     }
 
     /// <summary>

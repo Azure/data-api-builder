@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -10,6 +11,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -29,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// from the configuration controller.
         /// Key: datasource name, Value: access token for this datasource.
         /// </summary>
-        private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
+        private Dictionary<string, string?> _accessTokensFromConfiguration;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
@@ -51,19 +53,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
-                  httpContextAccessor)
+                  httpContextAccessor,
+                  handler)
         {
+            handler?.Subscribe(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, MySqlQueryExecutorOnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
-            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
+            _runtimeConfigProvider = runtimeConfigProvider;
+            ConfigureMySqlQueryExecutor();
+        }
+
+        /// <summary>
+        /// Configure during construction or a hot-reload scenario.
+        /// </summary>
+        private void ConfigureMySqlQueryExecutor()
+        {
+            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
 
             foreach ((string dataSourceName, DataSource dataSource) in mysqldbs)
             {
@@ -74,7 +90,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     AllowUserVariables = true
                 };
 
-                if (runtimeConfigProvider.IsLateConfigured)
+                if (_runtimeConfigProvider.IsLateConfigured)
                 {
                     builder.SslMode = MySqlSslMode.VerifyFull;
                 }
@@ -82,6 +98,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionStringBuilders.TryAdd(dataSourceName, builder);
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
+        }
+
+        /// <summary>
+        /// Function registered for callback during a hot-reload scenario.
+        /// </summary>
+        /// <param name="sender">The calling object.</param>
+        /// <param name="args">Event arguments.</param>
+        public void MySqlQueryExecutorOnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
+            _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;
+            ConfigureMySqlQueryExecutor();
         }
 
         /// <summary>

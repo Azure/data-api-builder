@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
+
 namespace Azure.DataApiBuilder.Config;
 
 /// <summary>
@@ -14,14 +16,37 @@ namespace Azure.DataApiBuilder.Config;
 /// <typeparam name="TEventArgs">Args used for hot reload events.</typeparam>
 public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEventArgs
 {
-    public event EventHandler<TEventArgs>? DocumentorOnConfigChanged;
+    private readonly Dictionary<string, EventHandler<TEventArgs>?> _eventHandlers;
 
-    public void DocumentorOnConfigChangedEvent(object sender, TEventArgs args)
+    public HotReloadEventHandler()
     {
-        DocumentorOnConfigChanged?.Invoke(sender, args);
+        _eventHandlers = new Dictionary<string, EventHandler<TEventArgs>?>
+        {
+            { QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, null },
+            { METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, null },
+            { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
+            { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
+            { QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { DOCUMENTOR_ON_CONFIG_CHANGED, null }
+        };
     }
-    public void DocumentorSubscribe(EventHandler<TEventArgs> handler)
+
+    public void OnConfigChangedEvent(object sender, TEventArgs args)
     {
-        DocumentorOnConfigChanged += handler;
+        if (_eventHandlers.TryGetValue(args.EventName, out EventHandler<TEventArgs>? handler))
+        {
+            handler?.Invoke(sender, args);
+        }
+    }
+
+    public void Subscribe(string eventName, EventHandler<TEventArgs> handler)
+    {
+        if (_eventHandlers.ContainsKey(eventName))
+        {
+            _eventHandlers[eventName] = handler;
+        }
     }
 }

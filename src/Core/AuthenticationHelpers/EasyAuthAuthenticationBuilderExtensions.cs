@@ -43,4 +43,35 @@ public static class EasyAuthAuthenticationBuilderExtensions
             });
         return builder;
     }
+
+    public static AuthenticationBuilder AddEnvDetectedEasyAuth(this AuthenticationBuilder builder)
+    {
+        if (builder is null)
+        {
+            throw new System.ArgumentNullException(nameof(builder));
+        }
+
+        builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+           authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+           displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+           options =>
+           {
+               options.EasyAuthProvider = EasyAuthType.StaticWebApps;
+           });
+
+        bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
+
+        if (appServiceEnvironmentDetected)
+        {
+            builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+                authenticationScheme: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                displayName: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                options =>
+                {
+                    options.EasyAuthProvider = EasyAuthType.AppService;
+                });
+        }
+
+        return builder;
+    }
 }

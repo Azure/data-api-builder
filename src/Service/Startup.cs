@@ -41,6 +41,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -87,10 +88,10 @@ namespace Azure.DataApiBuilder.Service
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, hotReloadEventHandler, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
+            services.AddSingleton<JwtConfigChangeRelay>();
             services.AddSingleton(fileSystem);
-            services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
-
+            services.AddSingleton(configProvider);
             if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
                 && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
@@ -174,7 +175,7 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthentication(services, configProvider);
+            ConfigureAuthV2(services, configLoader);
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
@@ -525,6 +526,22 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
+        /// Wires up all DAB supported authentication providers. DAB uses the user configured
+        /// authentcation provider to determine which provider to use for authentication at request time.
+        /// </summary>
+        private void ConfigureAuthV2(IServiceCollection services, RuntimeConfigLoader configLoader)
+        {
+            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(configLoader));
+            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new ConfigurationChangeTokenSource<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, Configuration));
+            //services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<JwtBearerOptions>, JwtBearerPostConfigureOptions>());
+            // Purposely 
+            services.AddAuthentication()
+                    .AddEnvDetectedEasyAuth()
+                    .AddJwtBearer()
+                    .AddSimulatorAuthentication();
+        }
+
+        /// <summary>
         /// Configure Application Insights Telemetry based on the loaded runtime configuration. If Application Insights
         /// is enabled, we can track different events and metrics.
         /// </summary>
@@ -606,6 +623,8 @@ namespace Azure.DataApiBuilder.Service
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                    JwtConfigChangeRelay relay = app.ApplicationServices.GetService<JwtConfigChangeRelay>()!;
+                    relay.ConfigureJwtBearerProvider();
                 }
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =

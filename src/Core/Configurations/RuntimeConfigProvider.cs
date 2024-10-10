@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -42,6 +43,27 @@ public class RuntimeConfigProvider
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
     private RuntimeConfigLoader _configLoader;
+    private DabChangeToken _changeToken = new();
+    private readonly List<IDisposable>? _changeTokenRegistrations;
+    private JwtConfigChangeRelay? _changeRelay;
+
+    // Raises the changed event.
+    private void RaiseChanged()
+    {
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
+    }
+
+    /// <summary>
+    /// producer
+    /// </summary>
+    /// <returns></returns>
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
+    }
 
     /// <summary>
     /// Accessor for the ConfigFilePath to avoid exposing the loader. If we are not
@@ -58,6 +80,16 @@ public class RuntimeConfigProvider
 
             return string.Empty;
         }
+    }
+
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader, JwtConfigChangeRelay jwtConfigChangeRelay)
+    {
+        _configLoader = runtimeConfigLoader;
+        _changeRelay = jwtConfigChangeRelay;
+        _changeTokenRegistrations = new List<IDisposable>(1)
+        {
+            ChangeToken.OnChange(_configLoader.GetChangeToken, RaiseChanged)
+        };
     }
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)

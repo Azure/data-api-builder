@@ -13,5 +13,12 @@ public static class EasyAuthAuthenticationDefaults
     /// </summary>
     public const string AUTHENTICATIONSCHEME = "EasyAuthAuthentication";
 
+    /// <summary>
+    /// EasyAuth authentication scheme names granularized by provider
+    /// to enable compatility with HotReloading authentication settings.
+    /// </summary>
+    public const string SWAAUTHSCHEME = "StaticWebAppsAuthentication";
+    public const string APPSERVICEAUTHSCHEME = "AppServiceAuthentication";
+
     public const string INVALID_PAYLOAD_ERROR = "Invalid EasyAuth Payload.";
 }

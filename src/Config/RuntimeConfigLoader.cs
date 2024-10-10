@@ -14,7 +14,7 @@ using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
@@ -22,6 +22,11 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
+    // Change Token Code
+    private DabChangeToken _changeToken;
+    private readonly List<IDisposable> _changeTokenRegistrations;
+
+    // Other
     private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
@@ -29,6 +34,18 @@ public abstract class RuntimeConfigLoader
     // May be candidate to refactor by changing all of the Parse/Load functions to save
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
+
+    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
+    {
+        _changeToken = new DabChangeToken();
+        _changeTokenRegistrations = new List<IDisposable>(1)
+        {
+            ChangeToken.OnChange(GetChangeToken, PostChangeTokenChangedAction)
+        };
+
+        _handler = handler;
+        _connectionString = connectionString;
+    }
 
     // Signals a hot reload event for OpenApiDocumentor due to config change.
     protected virtual void DocumentorOnConfigChanged(HotReloadEventArgs args)
@@ -41,12 +58,30 @@ public abstract class RuntimeConfigLoader
     {
         HotReloadEventArgs args = new(message);
         DocumentorOnConfigChanged(args);
+        RaiseChanged();
     }
 
-    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
+    // Raises the changed event.
+    private void RaiseChanged()
     {
-        _handler = handler;
-        _connectionString = connectionString;
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
+    }
+
+    private void PostChangeTokenChangedAction()
+    {
+        Console.WriteLine("Howdy! Change token has been signalled :)");
+    }
+
+    /// <summary>
+    /// producer
+    /// </summary>
+    /// <returns></returns>
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
     }
 
     /// <summary>
@@ -299,7 +334,7 @@ public abstract class RuntimeConfigLoader
 
         // If the connection string does not contain the `Application Name` property, add it.
         // or if the connection string contains the `Application Name` property, replace it with the DataApiBuilder Application Name.
-        if (connectionStringBuilder.ApplicationName.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(connectionStringBuilder.ApplicationName))
         {
             connectionStringBuilder.ApplicationName = applicationName;
         }

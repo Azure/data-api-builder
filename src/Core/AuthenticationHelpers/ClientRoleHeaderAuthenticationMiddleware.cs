@@ -3,10 +3,12 @@
 
 using System.Security.Claims;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -23,11 +25,11 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers;
 /// </summary>
 public class ClientRoleHeaderAuthenticationMiddleware
 {
+    private const string ANONYOUMOUS_ROLE = "Anonymous";
+    private const string AUTHENTICATED_ROLE = "Authenticated";
     private readonly RequestDelegate _nextMiddleware;
-
     private ILogger<ClientRoleHeaderAuthenticationMiddleware> _logger;
-
-    private bool _isLateConfigured;
+    private RuntimeConfigProvider _runtimeConfigProvider;
 
     // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
     private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
@@ -38,7 +40,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
     {
         _nextMiddleware = next;
         _logger = logger;
-        _isLateConfigured = runtimeConfigProvider.IsLateConfigured;
+        _runtimeConfigProvider = runtimeConfigProvider;
     }
 
     /// <summary>
@@ -61,7 +63,9 @@ public class ClientRoleHeaderAuthenticationMiddleware
         // 1. Succeeded - Authenticated
         // 2. Failure - Token issue
         // 3. None - No token provided, no auth result.
-        AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
+        AuthenticationOptions? dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
+        string scheme = ResolveConfiguredAuthNScheme(dabAuthNOptions?.Provider);
+        AuthenticateResult authNResult = await httpContext.AuthenticateAsync(scheme);
 
         // Reject and terminate the request when an invalid token is provided
         // Write challenge response metadata (HTTP 401 Unauthorized response code
@@ -69,11 +73,19 @@ public class ClientRoleHeaderAuthenticationMiddleware
         // https://github.com/dotnet/aspnetcore/blob/3fe12b935c03138f76364dc877a7e069e254b5b2/src/Security/Authentication/JwtBearer/src/JwtBearerHandler.cs#L217
         if (authNResult.Failure is not null)
         {
-            await httpContext.ChallengeAsync();
+            await httpContext.ChallengeAsync(scheme);
             return;
         }
 
-        string clientDefinedRole = AuthorizationType.Anonymous.ToString();
+        // Manually set the httpContext.User to the Principal from the AuthenticateResult
+        // when we exclude setting a default authentication scheme in Startup.cs AddAuthentication().
+        // https://learn.microsoft.com/aspnet/core/security/authorization/limitingidentitybyscheme?view=aspnetcore-8.0
+        if (authNResult.Succeeded)
+        {
+            httpContext.User = authNResult.Principal;
+        }
+
+        string clientDefinedRole = ANONYOUMOUS_ROLE;
 
         // A request can be authenticated in 2 cases:
         // 1. When the request has a valid jwt/easyauth token,
@@ -82,7 +94,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
 
         if (isAuthenticatedRequest)
         {
-            clientDefinedRole = AuthorizationType.Authenticated.ToString();
+            clientDefinedRole = AUTHENTICATED_ROLE;
         }
 
         // Attempt to inject CLIENT_ROLE_HEADER:clientDefinedRole into the httpContext
@@ -106,17 +118,16 @@ public class ClientRoleHeaderAuthenticationMiddleware
 
         // Log the request's authenticated status (anonymous/authenticated) and user role,
         // only in the non-hosted scenario.
-        if (!_isLateConfigured)
+        if (!_runtimeConfigProvider.IsLateConfigured)
         {
             string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
             string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() : AuthorizationType.Anonymous.ToString();
             _logger.LogDebug(
-                message: "{correlationId} Request authentication state: {requestAuthStatus}.",
+                message: "{correlationId} AuthN state: {requestAuthStatus}. Role: {clientDefinedRole}. Scheme: {scheme}",
                 correlationId,
-                requestAuthStatus);
-            _logger.LogDebug("{correlationId} The request will be executed in the context of the role: {clientDefinedRole}",
-                correlationId,
-                clientDefinedRole);
+                requestAuthStatus,
+                clientDefinedRole,
+                scheme);
         }
 
         // When the user is not in the clientDefinedRole and the client role header
@@ -150,6 +161,21 @@ public class ClientRoleHeaderAuthenticationMiddleware
     {
         return roleName.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase) ||
                 roleName.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
+    {
+        switch (configuredProviderName)
+        {
+            case AuthenticationOptions.SIMULATOR_AUTHENTICATION:
+                return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
+            case nameof(EasyAuthType.AppService):
+                return EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
+            case "AzureAD":
+                return JwtBearerDefaults.AuthenticationScheme;
+            default:
+                return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+        }
     }
 }
 

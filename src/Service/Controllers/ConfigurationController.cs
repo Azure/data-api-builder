@@ -6,9 +6,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Controllers
@@ -19,11 +17,9 @@ namespace Azure.DataApiBuilder.Service.Controllers
     {
         RuntimeConfigProvider _configurationProvider;
         private readonly ILogger<ConfigurationController> _logger;
-        private readonly IConfiguration _configuration;
 
-        public ConfigurationController(RuntimeConfigProvider configurationProvider, ILogger<ConfigurationController> logger, IConfiguration configuration)
+        public ConfigurationController(RuntimeConfigProvider configurationProvider, ILogger<ConfigurationController> logger)
         {
-            _configuration = configuration;
             _configurationProvider = configurationProvider;
             _logger = logger;
         }
@@ -73,31 +69,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
             return BadRequest();
         }
-
-        [HttpPost("changeJwtProvider")]
-        public ActionResult ChangeJwtProvider([FromBody] JwtConfigPostParameters jwtConfig)
-        {
-            try
-            {
-                _configuration.GetSection("JwtBearer");
-                _configuration["Authentication:Schemes:Bearer:ValidAudiences"] = jwtConfig.Audience;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(
-                    exception: e,
-                    message: "{correlationId} Exception during configuration initialization.",
-                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
-            }
-
-            return BadRequest();
-        }
-
-        public record class JwtConfigPostParameters(
-            string SchemeName,
-            string Audience,
-            string Authority)
-        { }
 
         /// <summary>
         /// Takes in the runtime configuration, schema, connection string and access token and configures the runtime.

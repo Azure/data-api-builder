@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service
             // and when runtime config was provided at startup.
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
             {
-                ConfigureAuthV2(services, configProvider);
+                ConfigureAuthenticationV2(services, configProvider);
             }
             else
             {
@@ -537,8 +537,11 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Wires up all DAB supported authentication providers. DAB uses the user configured
         /// authentcation provider to determine which provider to use for authentication at request time.
+        /// JwtBearerOptions are hydrated when ConfigureJwtBearerOptions is called by OptionsFactory internally by .NET.
         /// </summary>
-        private static void ConfigureAuthV2(IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
+        /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/49586#issuecomment-1671838595">Guidance for registering IOptionsChangeTokenSource</seealso>
+        /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/21491#issuecomment-624240160">Guidance for registering named options.</seealso>
+        private static void ConfigureAuthenticationV2(IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
         {
             services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(runtimeConfigProvider));
             services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
@@ -630,12 +633,6 @@ namespace Azure.DataApiBuilder.Service
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
-
-                    if (!runtimeConfigProvider.IsLateConfigured)
-                    {
-                        //JwtConfigChangeRelay relay = app.ApplicationServices.GetService<JwtConfigChangeRelay>()!;
-                        //relay.ConfigureJwtBearerProvider();
-                    }
                 }
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =

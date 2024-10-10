@@ -55,7 +55,15 @@ public class RuntimeConfigProvider
         };
     }
 
-    // Raises the changed event.
+    /// <summary>
+    /// Swaps out the old change token with a new change token and
+    /// signals that a change has occurred.
+    /// </summary>
+    /// <seealso cref="https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Configuration/src/ConfigurationProvider.cs">
+    /// Example usage of Interlocked.Exchange(...) to refresh change token.</seealso>
+    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange?view=net-8.0">
+    /// Sets a variable to a specified value as an atomic operation.
+    /// </seealso>
     private void RaiseChanged()
     {
         DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
@@ -63,9 +71,9 @@ public class RuntimeConfigProvider
     }
 
     /// <summary>
-    /// Change Token producer
+    /// Change token producer which returns an uncancelled/unsignalled change token.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>DabChangeToken</returns>
 #pragma warning disable CA1024 // Use properties where appropriate
     public IChangeToken GetChangeToken()
 #pragma warning restore CA1024 // Use properties where appropriate

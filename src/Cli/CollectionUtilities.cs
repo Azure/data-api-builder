@@ -5,7 +5,10 @@ namespace Cli;
 
 /// <summary>
 /// A class which contains useful methods for processing collections.
+/// Pulled from Microsoft.IdentityModel.JsonWebTokens which changed the
+/// helper to be internal.
 /// </summary>
+/// <seealso cref="https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/dev/src/Microsoft.IdentityModel.Tokens/CollectionUtilities.cs"/>
 internal static class CollectionUtilities
 {
     /// <summary>

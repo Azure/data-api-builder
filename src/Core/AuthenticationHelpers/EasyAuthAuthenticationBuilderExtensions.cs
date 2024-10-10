@@ -44,11 +44,16 @@ public static class EasyAuthAuthenticationBuilderExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Used for ConfigureAuthenticationV2() where all EasyAuth schemes are registered.
+    /// This function doesn't register EasyAuthType.AppService if the AppService environment is not detected.
+    /// </summary>
+    /// <exception cref="System.ArgumentNullException"></exception>
     public static AuthenticationBuilder AddEnvDetectedEasyAuth(this AuthenticationBuilder builder)
     {
         if (builder is null)
         {
-            throw new System.ArgumentNullException(nameof(builder));
+            throw new ArgumentNullException(nameof(builder));
         }
 
         builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(

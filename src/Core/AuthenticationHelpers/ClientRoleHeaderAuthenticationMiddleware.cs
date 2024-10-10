@@ -59,12 +59,16 @@ public class ClientRoleHeaderAuthenticationMiddleware
     /// <param name="httpContext">Request metadata</param>
     public async Task InvokeAsync(HttpContext httpContext)
     {
+        // Determine the authentication scheme to use based on dab-config.json.
+        // Compatible with both ConfigureAuthentication and ConfigureAuthenticationV2 in startup.cs.
+        // This means that this code is resilient to whether or not the default authentication scheme is set in startup.
+        AuthenticationOptions? dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
+        string scheme = ResolveConfiguredAuthNScheme(dabAuthNOptions?.Provider);
+
         // authNResult will be one of:
         // 1. Succeeded - Authenticated
         // 2. Failure - Token issue
         // 3. None - No token provided, no auth result.
-        AuthenticationOptions? dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
-        string scheme = ResolveConfiguredAuthNScheme(dabAuthNOptions?.Provider);
         AuthenticateResult authNResult = await httpContext.AuthenticateAsync(scheme);
 
         // Reject and terminate the request when an invalid token is provided
@@ -163,6 +167,12 @@ public class ClientRoleHeaderAuthenticationMiddleware
                 roleName.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Uses the dab-config.json's Authentication provider name to resolve the
+    /// authentication scheme to use with httpContext.AuthenticateAsync(scheme).
+    /// </summary>
+    /// <param name="configuredProviderName">Dab config defined authentication provider name.</param>
+    /// <returns>Authentication Scheme</returns>
     private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
     {
         switch (configuredProviderName)
@@ -178,6 +188,9 @@ public class ClientRoleHeaderAuthenticationMiddleware
                 return JwtBearerDefaults.AuthenticationScheme;
             case "Custom":
             default:
+                // Changing this value is a breaking change because non-out of box
+                // authentication provider names supplied in dab-config.json indicate
+                // that JWT bearer authentication should be used.
                 return GenericOAuthDefaults.AUTHENTICATIONSCHEME;
         }
     }

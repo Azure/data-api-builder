@@ -3,6 +3,7 @@
 
 using System.Net;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -11,6 +12,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -20,7 +22,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
     /// </summary>
     public class QueryEngineFactory : IQueryEngineFactory
     {
-        private readonly Dictionary<DatabaseType, IQueryEngine> _queryEngines;
+        // Internally mutated during Hot-Reload
+        private Dictionary<DatabaseType, IQueryEngine> _queryEngines;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IAbstractQueryManagerFactory _queryManagerFactory;
+        private readonly IMetadataProviderFactory _metadataProviderFactory;
+        private readonly CosmosClientProvider _cosmosClientProvider;
+        private readonly IHttpContextAccessor _contextAccessor;
+        private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly GQLFilterParser _gQLFilterParser;
+        private readonly DabCacheService _cache;
+        private readonly ILogger<IQueryEngine> _logger;
 
         /// <inheritdoc/>
         public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
@@ -31,16 +43,39 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
-            DabCacheService cache)
+            DabCacheService cache,
+            HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
+            handler?.Subscribe(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _queryManagerFactory = queryManagerFactory;
+            _metadataProviderFactory = metadataProviderFactory;
+            _cosmosClientProvider = cosmosClientProvider;
+            _contextAccessor = contextAccessor;
+            _authorizationResolver = authorizationResolver;
+            _gQLFilterParser = gQLFilterParser;
+            _cache = cache;
+            _logger = logger;
 
-            RuntimeConfig config = runtimeConfigProvider.GetConfig();
+            ConfigureQueryEngines();
+        }
+
+        public void ConfigureQueryEngines()
+        {
+            RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
             if (config.SqlDataSourceUsed)
             {
                 IQueryEngine queryEngine = new SqlQueryEngine(
-                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider, cache);
+                    _queryManagerFactory,
+                    _metadataProviderFactory,
+                    _contextAccessor,
+                    _authorizationResolver,
+                    _gQLFilterParser,
+                    _logger,
+                    _runtimeConfigProvider,
+                    _cache);
                 _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
                 _queryEngines.Add(DatabaseType.MySQL, queryEngine);
                 _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);
@@ -49,10 +84,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
             if (config.CosmosDataSourceUsed)
             {
-                IQueryEngine queryEngine = new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser, runtimeConfigProvider, cache);
+                IQueryEngine queryEngine = new CosmosQueryEngine(_cosmosClientProvider, _metadataProviderFactory, _authorizationResolver, _gQLFilterParser, _runtimeConfigProvider, _cache);
                 _queryEngines.Add(DatabaseType.CosmosDB_NoSQL, queryEngine);
             }
+        }
 
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
+            ConfigureQueryEngines();
         }
 
         /// <inheritdoc/>

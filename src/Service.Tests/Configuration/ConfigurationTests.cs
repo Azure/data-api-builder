@@ -1828,7 +1828,10 @@ type Moon {
 
         /// <summary>
         /// Test different graphql endpoints in different host modes
-        /// when accessed interactively via browser.
+        /// when accessed interactively via browser. Note that the
+        /// branding for "Banana Cake Pop" has changed to "Nitro", and
+        /// we have updated the graphql endpoint test for dev mode to reflect
+        /// this change, but it may need to be updated again in the future.
         /// </summary>
         /// <param name="endpoint">The endpoint route</param>
         /// <param name="hostMode">The mode in which the service is executing.</param>

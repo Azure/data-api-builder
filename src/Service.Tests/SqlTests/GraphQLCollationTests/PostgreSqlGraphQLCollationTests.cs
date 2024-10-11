@@ -32,11 +32,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         [DataRow("comics", "title", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT title FROM comics ORDER BY title asc) as table0")]
         [DataRow("authors", "name", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT name FROM authors ORDER BY name asc) as table0")]
         [DataRow("fungi", "habitat", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT habitat FROM fungi ORDER BY habitat asc) as table0")]
-        public async Task PostgresCaseSensitiveResultQuery(string type, string item, string dbQuery)
+        public async Task PostgresCaseSensitiveResultQuery(string objectType, string fieldName, string dbQuery)
         {
-            string defaultCollationQuery = PostgresCollationQuery(type, item, DEFAULT_COLLATION);
-            string newCollationQuery = PostgresCollationQuery(type, item, CASE_INSENSITIVE_COLLATION);
-            await CaseSensitiveResultQuery(type, item, dbQuery, defaultCollationQuery, newCollationQuery);
+            string defaultCollationQuery = PostgresCollationQuery(objectType, fieldName, DEFAULT_COLLATION);
+            string newCollationQuery = PostgresCollationQuery(objectType, fieldName, CASE_INSENSITIVE_COLLATION);
+            await CaseSensitiveResultQuery(objectType, fieldName, dbQuery, defaultCollationQuery, newCollationQuery);
         }
 
         /// <summary>

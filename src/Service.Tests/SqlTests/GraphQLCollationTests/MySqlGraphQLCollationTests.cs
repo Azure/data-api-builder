@@ -33,11 +33,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         [DataRow("authors", "name", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('name', `subq1`.`name`)), '[]') AS `data` FROM ( SELECT `table0`.`name` AS `name` FROM `authors` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`name` ASC LIMIT 100 ) AS `subq1`")]
         [DataRow("fungi", "habitat", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('habitat', `subq1`.`habitat`)), '[]') AS `data` FROM ( SELECT `table0`.`habitat` AS `habitat` FROM `fungi` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`habitat` ASC LIMIT 100 ) AS `subq1`")]
 
-        public async Task MySqlCaseSensitiveResultQuery(string type, string item, string dbQuery)
+        public async Task MySqlCaseSensitiveResultQuery(string objectType, string fieldName, string dbQuery)
         {
-            string defaultCollationQuery = MySqlCollationQuery(type, item, DEFAULT_COLLATION);
-            string newCollationQuery = MySqlCollationQuery(type, item, CASE_SENSITIVE_COLLATION);
-            await CaseSensitiveResultQuery(type, item, dbQuery, defaultCollationQuery, newCollationQuery);
+            string defaultCollationQuery = MySqlCollationQuery(objectType, fieldName, DEFAULT_COLLATION);
+            string newCollationQuery = MySqlCollationQuery(objectType, fieldName, CASE_SENSITIVE_COLLATION);
+            await CaseSensitiveResultQuery(objectType, fieldName, dbQuery, defaultCollationQuery, newCollationQuery);
         }
 
         /// <summary>

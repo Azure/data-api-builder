@@ -34,11 +34,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         [DataRow("comics", "title", @"SELECT title FROM comics ORDER BY title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
         [DataRow("authors", "name", @"SELECT name FROM authors ORDER BY name ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
         [DataRow("fungi", "habitat", @"SELECT habitat FROM fungi ORDER BY habitat ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
-        public async Task MsSqlCaseSensitiveResultQuery(string type, string item, string dbQuery)
+        public async Task MsSqlCaseSensitiveResultQuery(string objectType, string fieldName, string dbQuery)
         {
-            string defaultCollationQuery = MsSqlCollationQuery(type, item, DEFAULT_COLLATION);
-            string newCollationQuery = MsSqlCollationQuery(type, item, CASE_SENSITIVE_COLLATION);
-            await CaseSensitiveResultQuery(type, item, dbQuery, defaultCollationQuery, newCollationQuery);
+            string defaultCollationQuery = MsSqlCollationQuery(objectType, fieldName, DEFAULT_COLLATION);
+            string newCollationQuery = MsSqlCollationQuery(objectType, fieldName, CASE_SENSITIVE_COLLATION);
+            await CaseSensitiveResultQuery(objectType, fieldName, dbQuery, defaultCollationQuery, newCollationQuery);
         }
 
         /// <summary>

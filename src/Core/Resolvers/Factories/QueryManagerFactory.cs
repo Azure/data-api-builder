@@ -2,11 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -16,9 +18,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
     /// </summary>
     public class QueryManagerFactory : IAbstractQueryManagerFactory
     {
-        private readonly IDictionary<DatabaseType, IQueryBuilder> _queryBuilders;
-        private readonly IDictionary<DatabaseType, IQueryExecutor> _queryExecutors;
-        private readonly IDictionary<DatabaseType, DbExceptionParser> _dbExceptionsParsers;
+        // Internally mutated during Hot-Reload
+        private IDictionary<DatabaseType, IQueryBuilder> _queryBuilders;
+        private IDictionary<DatabaseType, IQueryExecutor> _queryExecutors;
+        private IDictionary<DatabaseType, DbExceptionParser> _dbExceptionsParsers;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ILogger<IQueryExecutor> _logger;
+        private readonly IHttpContextAccessor _contextAccessor;
+        private readonly HotReloadEventHandler<HotReloadEventArgs>? _handler;
 
         /// <summary>
         /// Initiates an instance of QueryManagerFactory
@@ -26,12 +33,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <param name="runtimeConfigProvider">runtimeconfigprovider.</param>
         /// <param name="logger">logger.</param>
         /// <param name="contextAccessor">httpcontextaccessor.</param>
-        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor)
+        public QueryManagerFactory(
+            RuntimeConfigProvider runtimeConfigProvider,
+            ILogger<IQueryExecutor> logger,
+            IHttpContextAccessor contextAccessor,
+            HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
+            handler?.Subscribe(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
+            _handler = handler;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _logger = logger;
+            _contextAccessor = contextAccessor;
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();
             _dbExceptionsParsers = new Dictionary<DatabaseType, DbExceptionParser>();
-            foreach (DataSource dataSource in runtimeConfigProvider.GetConfig().ListAllDataSources())
+
+            ConfigureQueryManagerFactory();
+        }
+
+        private void ConfigureQueryManagerFactory()
+        {
+
+            foreach (DataSource dataSource in _runtimeConfigProvider.GetConfig().ListAllDataSources())
             {
                 IQueryBuilder? queryBuilder = null;
                 IQueryExecutor? queryExecutor = null;
@@ -49,23 +72,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                         break;
                     case DatabaseType.MSSQL:
                         queryBuilder = new MsSqlQueryBuilder();
-                        exceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
-                        queryExecutor = new MsSqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
+                        exceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
+                        queryExecutor = new MsSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
                         break;
                     case DatabaseType.MySQL:
                         queryBuilder = new MySqlQueryBuilder();
-                        exceptionParser = new MySqlDbExceptionParser(runtimeConfigProvider);
-                        queryExecutor = new MySqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
+                        exceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
+                        queryExecutor = new MySqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
                         break;
                     case DatabaseType.PostgreSQL:
                         queryBuilder = new PostgresQueryBuilder();
-                        exceptionParser = new PostgreSqlDbExceptionParser(runtimeConfigProvider);
-                        queryExecutor = new PostgreSqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
+                        exceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
+                        queryExecutor = new PostgreSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
                         break;
                     case DatabaseType.DWSQL:
                         queryBuilder = new DwSqlQueryBuilder();
-                        exceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
-                        queryExecutor = new MsSqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
+                        exceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
+                        queryExecutor = new MsSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
                         break;
                     default:
                         throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage);
@@ -75,6 +98,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                 _queryExecutors.TryAdd(dataSource.DatabaseType, queryExecutor!);
                 _dbExceptionsParsers.TryAdd(dataSource.DatabaseType, exceptionParser!);
             }
+        }
+
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
+            _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();
+            _dbExceptionsParsers = new Dictionary<DatabaseType, DbExceptionParser>();
+            ConfigureQueryManagerFactory();
         }
 
         /// <inheritdoc />

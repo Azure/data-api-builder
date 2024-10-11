@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.Data;
 using System.Data.Common;
 using System.IO.Abstractions;
@@ -269,8 +270,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
-            Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+            EventHandler handler = null;
+            Mock <MsSqlQueryExecutor> queryExecutor
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, handler);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
             queryExecutor.Setup(x => x.PrepareDbCommand(

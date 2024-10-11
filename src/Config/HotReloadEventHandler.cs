@@ -1,107 +1,52 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Config
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
+
+namespace Azure.DataApiBuilder.Config;
+
+/// <summary>
+/// HotReloadEventHandler defines event invocation and subscription functions that are
+/// used to facilitate updating DAB components' state due to a hot reload.
+/// The events defined in this class are invoked in this class (versus being invoked in RuntimeConfigLoader)
+/// because events are a special type of delegate that can only be invoked from within the class that declared them.
+/// For more information about where events should be invoked, please see:
+/// https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-raise-base-class-events-in-derived-classes
+/// </summary>
+/// <typeparam name="TEventArgs">Args used for hot reload events.</typeparam>
+public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEventArgs
 {
-    public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEventArgs
+    private readonly Dictionary<string, EventHandler<TEventArgs>?> _eventHandlers;
+
+    public HotReloadEventHandler()
     {
-        public event EventHandler<TEventArgs>? QueryManagerFactory_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? MetadataProviderFactory_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? QueryEngineFactory_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? MutationEngineFactory_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? QueryExecutor_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? MsSqlQueryExecutor_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? MySqlQueryExecutor_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? PostgreSqlQueryExecutor_ConfigChangeEventOccurred;
-        public event EventHandler<TEventArgs>? DocumentorOnConfigChanged;
+        _eventHandlers = new Dictionary<string, EventHandler<TEventArgs>?>
+        {
+            { QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, null },
+            { METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, null },
+            { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
+            { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
+            { QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { DOCUMENTOR_ON_CONFIG_CHANGED, null }
+        };
+    }
 
-        public void DocumentorOnConfigChangedEvent(object sender, TEventArgs args)
+    public void OnConfigChangedEvent(object sender, TEventArgs args)
+    {
+        if (_eventHandlers.TryGetValue(args.EventName, out EventHandler<TEventArgs>? handler))
         {
-            DocumentorOnConfigChanged?.Invoke(sender, args);
+            handler?.Invoke(sender, args);
         }
-        public void DocumentorSubscribe(EventHandler<TEventArgs> handler)
-        {
-            DocumentorOnConfigChanged += handler;
-        }
+    }
 
-        public void QueryManagerFactory_OnConfigChangeEventOccurred(object sender, TEventArgs args)
+    public void Subscribe(string eventName, EventHandler<TEventArgs> handler)
+    {
+        if (_eventHandlers.ContainsKey(eventName))
         {
-            QueryManagerFactory_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void QueryManagerFactory_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            QueryManagerFactory_ConfigChangeEventOccurred += handler;
-        }
-
-        public void MetadataProviderFactory_OnConfigChangeEventOccurred(object sender, TEventArgs args)
-        {
-            MetadataProviderFactory_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void MetadataProviderFactory_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            MetadataProviderFactory_ConfigChangeEventOccurred += handler;
-        }
-
-        public void QueryEngineFactory_OnConfigChangeEventOccurred(object sender, TEventArgs args)
-        {
-            QueryEngineFactory_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void QueryEngineFactory_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            QueryEngineFactory_ConfigChangeEventOccurred += handler;
-        }
-
-        public void MutationEngineFactory_OnConfigChangeEventOccurred(object sender, TEventArgs args)
-        {
-            MutationEngineFactory_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void MutationEngineFactory_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            MutationEngineFactory_ConfigChangeEventOccurred += handler;
-        }
-
-        public void QueryExecutor_OnConfigChangeEventOccurred(object sender, TEventArgs args)
-        {
-            QueryExecutor_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void QueryExecutor_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            QueryExecutor_ConfigChangeEventOccurred += handler;
-        }
-
-        public void MsSqlQueryExecutor_OnConfigChangeEventOccurred(object sender, TEventArgs args)
-        {
-            MsSqlQueryExecutor_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void MsSqlQueryExecutor_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            MsSqlQueryExecutor_ConfigChangeEventOccurred += handler;
-        }
-
-        public void MySqlQueryExecutor_OnConfigChangeEventOccurred(object sender, TEventArgs args)
-        {
-            MySqlQueryExecutor_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void MySqlQueryExecutor_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            MySqlQueryExecutor_ConfigChangeEventOccurred += handler;
-        }
-
-        public void PostgreSqlQueryExecutor_OnConfigChangeEventOccurred(object sender, TEventArgs args)
-        {
-            PostgreSqlQueryExecutor_ConfigChangeEventOccurred?.Invoke(sender, args);
-        }
-
-        public void PostgreSqlQueryExecutor_Subscribe(EventHandler<TEventArgs> handler)
-        {
-            PostgreSqlQueryExecutor_ConfigChangeEventOccurred += handler;
+            _eventHandlers[eventName] = handler;
         }
     }
 }

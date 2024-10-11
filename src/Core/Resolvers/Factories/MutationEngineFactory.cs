@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -48,10 +49,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            HotReloadEventHandler<HotReloadEventArgs> handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler)
 
         {
-            handler.MutationEngineFactory_Subscribe(MutationEngineFactory_ConfigChangeEventReceived);
+            handler?.Subscribe(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _cosmosClientProvider = cosmosClientProvider;
             _queryManagerFactory = queryManagerFactory;
             _metadataProviderFactory = metadataProviderFactory;
@@ -61,10 +62,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             _runtimeConfigProvider = runtimeConfigProvider;
             _gQLFilterParser = gQLFilterParser;
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
-            ConfigureQueryEngines();
+            ConfigureMutationEngines();
         }
 
-        private void ConfigureQueryEngines()
+        private void ConfigureMutationEngines()
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
@@ -91,10 +92,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
         }
 
-        public void MutationEngineFactory_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _mutationEngines = new Dictionary<DatabaseType, IMutationEngine>();
-            ConfigureQueryEngines();
+            ConfigureMutationEngines();
         }
 
         /// <inheritdoc/>

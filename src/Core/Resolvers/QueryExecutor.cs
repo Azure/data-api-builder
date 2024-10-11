@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -55,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                              IHttpContextAccessor httpContextAccessor,
                              HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.QueryExecutor_Subscribe(QueryExecutor_ConfigChangeEventReceived);
+            handler?.Subscribe(QUERY_EXECUTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
@@ -90,7 +91,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sender">The calling object.</param>
         /// <param name="args">Event arguments.</param>
-        public void QueryExecutor_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             _maxResponseSizeMB = ConfigProvider.GetConfig().MaxResponseSizeMB();

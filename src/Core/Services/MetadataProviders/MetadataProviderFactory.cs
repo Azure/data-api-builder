@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
@@ -31,7 +32,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             HotReloadEventHandler<HotReloadEventArgs>? handler,
             bool isValidateOnly = false)
         {
-            handler?.MetadataProviderFactory_Subscribe(MetadataProviderFactory_ConfigChangeEventReceived);
+            handler?.Subscribe(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _runtimeConfigProvider = runtimeConfigProvider;
             _queryManagerFactory = queryManagerFactory;
             _logger = logger;
@@ -59,12 +60,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
         }
 
-        public void MetadataProviderFactory_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             ConfigureMetadataProviders();
         }
-
-        
 
         /// <inheritdoc />
         public ISqlMetadataProvider GetMetadataProvider(string dataSourceName)

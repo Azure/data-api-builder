@@ -403,8 +403,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 runtimeConfigProvider: runtimeConfigProvider,
                 queryManagerFactory: queryManagerfactory,
                 logger: metadatProviderLogger.Object,
-                handler: null,
-                fileSystem: null);
+                fileSystem: null,
+                handler: null);
 
             // Collecte all the metadata from the database.
             await metadataProviderFactory.InitializeAsync();

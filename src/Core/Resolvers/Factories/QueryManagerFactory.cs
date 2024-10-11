@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -32,9 +33,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <param name="runtimeConfigProvider">runtimeconfigprovider.</param>
         /// <param name="logger">logger.</param>
         /// <param name="contextAccessor">httpcontextaccessor.</param>
-        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor, HotReloadEventHandler<HotReloadEventArgs>? handler)
+        public QueryManagerFactory(
+            RuntimeConfigProvider runtimeConfigProvider,
+            ILogger<IQueryExecutor> logger,
+            IHttpContextAccessor contextAccessor,
+            HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler?.QueryManagerFactory_Subscribe(QueryManagerFactory_ConfigChangeEventReceived);
+            handler?.Subscribe(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _handler = handler;
             _runtimeConfigProvider = runtimeConfigProvider;
             _logger = logger;
@@ -95,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
         }
 
-        public void QueryManagerFactory_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();

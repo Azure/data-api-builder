@@ -16,6 +16,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -69,15 +70,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<HotReloadEventArgs>? handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
                   httpContextAccessor,
                   handler)
         {
-            handler?.MsSqlQueryExecutor_Subscribe(MsSqlQueryExecutor_ConfigChangeEventReceived);
-            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+            handler?.Subscribe(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sender">The calling object.</param>
         /// <param name="args">Event arguments.</param>
-        public void MsSqlQueryExecutor_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
+        public void MsSqlQueryExecutorOnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();

@@ -11,6 +11,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -60,14 +61,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<HotReloadEventArgs>? handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
                   httpContextAccessor,
                   handler)
         {
-            handler?.PostgreSqlQueryExecutor_Subscribe(PostgreSqlQueryExecutor_ConfigChangeEventReceived);
+            handler?.Subscribe(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, PostgreSqlQueryExecutorOnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
@@ -101,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sender">The calling object.</param>
         /// <param name="args">Event arguments.</param>
-        public void PostgreSqlQueryExecutor_ConfigChangeEventReceived(object? sender, HotReloadEventArgs args)
+        public void PostgreSqlQueryExecutorOnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;

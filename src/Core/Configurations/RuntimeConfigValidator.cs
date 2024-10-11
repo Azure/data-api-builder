@@ -318,6 +318,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
     {
+        // Only used for validation so we don't need the handler which is for hot reload scenarios.
         QueryManagerFactory queryManagerFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
             logger: loggerFactory.CreateLogger<IQueryExecutor>(),
@@ -325,6 +326,7 @@ public class RuntimeConfigValidator : IConfigValidator
             handler: null);
 
         // create metadata provider factory to validate metadata against the database
+        // Only used for validation so we don't need the handler which is for hot reload scenarios.
         MetadataProviderFactory metadataProviderFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
             queryManagerFactory: queryManagerFactory,

@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -70,12 +71,17 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<CustomEventArgs> handler)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler.Documentor_Subscribe(Documentor_ConfigChangeEventReceived);
+            handler?.Subscribe(DOCUMENTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
+        }
+
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            CreateDocument(doOverrideExistingDocument: true);
         }
 
         /// <summary>
@@ -109,11 +115,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <exception cref="DataApiBuilderException">Raised when document is already generated
         /// or a failure occurs during generation.</exception>
-        /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
-        public void CreateDocument(bool isHotReloadScenario = false)
+        /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/
+        public void CreateDocument(bool doOverrideExistingDocument = false)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            if (_openApiDocument is not null && !isHotReloadScenario)
+            if (_openApiDocument is not null && !doOverrideExistingDocument)
             {
                 throw new DataApiBuilderException(
                     message: DOCUMENT_ALREADY_GENERATED_ERROR,

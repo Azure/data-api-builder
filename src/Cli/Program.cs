@@ -36,7 +36,7 @@ namespace Cli
 
             // Sets up the filesystem used for reading and writing runtime configuration files.
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             return Execute(args, cliLogger, fileSystem, loader);
         }

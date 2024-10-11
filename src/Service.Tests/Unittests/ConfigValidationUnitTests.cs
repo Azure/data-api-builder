@@ -2276,7 +2276,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FileSystemRuntimeConfigLoader runtimeConfigLoader;
             if (userProvidedConfigFilePath is not null)
             {
-                runtimeConfigLoader = new(fileSystem, userProvidedConfigFilePath);
+                runtimeConfigLoader = new(fileSystem, handler: null, userProvidedConfigFilePath);
             }
             else
             {

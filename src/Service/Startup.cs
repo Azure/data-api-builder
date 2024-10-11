@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            HotReloadEventHandler<CustomEventArgs> hotReloadEventHandler = new();
+            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
             services.AddSingleton(hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
@@ -239,6 +239,11 @@ namespace Azure.DataApiBuilder.Service
             {
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
+
+            // Allows DAB to override the HTTP error code set by HotChocolate.
+            // This is used to ensure HTTP code 4XX is set when the datatbase
+            // returns a "bad request" error such as stored procedure params missing.
+            services.AddHttpResultSerializer<DabGraphQLResultSerializer>();
 
             server.AddErrorFilter(error =>
                 {

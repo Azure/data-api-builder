@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             EventHandler handler = null;
-            Mock <MsSqlQueryExecutor> queryExecutor
+            Mock<MsSqlQueryExecutor> queryExecutor
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, handler);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());

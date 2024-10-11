@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         {
             string defaultCollationQuery = MySqlCollationQuery(objectType, fieldName, DEFAULT_COLLATION);
             string newCollationQuery = MySqlCollationQuery(objectType, fieldName, CASE_SENSITIVE_COLLATION);
-            await CaseSensitiveResultQuery(objectType, fieldName, dbQuery, defaultCollationQuery, newCollationQuery);
+            await TestQueryingWithCaseSensitiveCollation(objectType, fieldName, dbQuery, defaultCollationQuery, newCollationQuery);
         }
 
         /// <summary>

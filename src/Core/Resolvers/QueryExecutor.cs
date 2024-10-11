@@ -8,6 +8,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -51,8 +53,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<IQueryExecutor> logger,
                              RuntimeConfigProvider configProvider,
-                             IHttpContextAccessor httpContextAccessor)
+                             IHttpContextAccessor httpContextAccessor,
+                             HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
+            handler?.Subscribe(QUERY_EXECUTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
@@ -80,6 +84,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
                     });
+        }
+
+        /// <summary>
+        /// Function registered for callback during a hot-reload scenario.
+        /// </summary>
+        /// <param name="sender">The calling object.</param>
+        /// <param name="args">Event arguments.</param>
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
+            _maxResponseSizeMB = ConfigProvider.GetConfig().MaxResponseSizeMB();
+            _maxResponseSizeBytes = _maxResponseSizeMB * 1024 * 1024;
         }
 
         /// <inheritdoc/>

@@ -67,7 +67,22 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
     {
         if (Context.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER].Count > 0)
         {
-            ClaimsIdentity? identity = OptionsMonitor.CurrentValue.EasyAuthProvider switch
+            // 'Options' is hydrated using named options (authentication scheme name) from the internal OptionsMonitor
+            // when the base class AuthenticationHandler::InitializeAsync() method
+            // is invoked -> which is once for every request.
+            // - We shouldn't use OptionsMonitor.CurrentValue.EasyAuthProvider because there exists a default
+            // EasyAuthAuthenticationOptions instance implicitly registered in the DI container which is set as "currentValue."
+            // The default EasyAuthAuthenticationOptions instance resolves the default EasyAuth enum value StaticWebApps
+            // which prevents AppService authentication from working when configured.
+            // The OptionsMonitorCache contains two options registrations:
+            // 1. Named (the one we want as configured in startup.cs)
+            // 2. Unnamed Default (we don't want this one).
+            // We could remove the unnamed option from the OptionsMonitorCache by overridding the base class (essentially a NOOP)
+            // function InitializeHandlerAsync (aspnetcore issue 57393), though that is unneeded by accessing options as done below.
+            // https://github.com/dotnet/aspnetcore/blob/v8.0.10/src/Security/Authentication/Core/src/AuthenticationHandler.cs#L155
+            // https://github.com/dotnet/aspnetcore/issues/17539
+            // https://github.com/dotnet/aspnetcore/issues/57393#issuecomment-2296992453
+            ClaimsIdentity? identity = Options.EasyAuthProvider switch
             {
                 EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context, Logger),
                 EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger),

@@ -27,20 +27,29 @@ public static class EasyAuthAuthenticationBuilderExtensions
             throw new System.ArgumentNullException(nameof(builder));
         }
 
-        builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
-            authenticationScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-            displayName: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME,
-            options =>
-            {
-                if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
+        if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
+        {
+            //builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<EasyAuthAuthenticationOptions>, EasyAuthConfigureOptions>());
+
+            builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+                authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+                displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+                options =>
                 {
                     options.EasyAuthProvider = EasyAuthType.StaticWebApps;
-                }
-                else if (easyAuthAuthenticationProvider is EasyAuthType.AppService)
+                });
+        }
+        else
+        {
+            builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+                authenticationScheme: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                displayName: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                options =>
                 {
                     options.EasyAuthProvider = EasyAuthType.AppService;
-                }
-            });
+                });
+        }
+
         return builder;
     }
 

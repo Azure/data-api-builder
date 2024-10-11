@@ -1836,7 +1836,7 @@ type Moon {
         /// <param name="expectedContent">The expected phrase in the response body.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Banana Cake Pop",
+        [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Nitro",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
         [DataRow("/graphql", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "GraphQL endpoint with no query in production mode.")]

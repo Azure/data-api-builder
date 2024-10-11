@@ -1827,7 +1827,10 @@ type Moon {
 
         /// <summary>
         /// Test different graphql endpoints in different host modes
-        /// when accessed interactively via browser.
+        /// when accessed interactively via browser. Note that the
+        /// branding for "Banana Cake Pop" has changed to "Nitro", and
+        /// we have updated the graphql endpoint test for dev mode to reflect
+        /// this change, but it may need to be updated again in the future.
         /// </summary>
         /// <param name="endpoint">The endpoint route</param>
         /// <param name="hostMode">The mode in which the service is executing.</param>
@@ -1835,7 +1838,7 @@ type Moon {
         /// <param name="expectedContent">The expected phrase in the response body.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Banana Cake Pop",
+        [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Nitro",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
         [DataRow("/graphql", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "GraphQL endpoint with no query in production mode.")]

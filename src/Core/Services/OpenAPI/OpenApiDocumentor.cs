@@ -18,6 +18,7 @@ using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -57,25 +58,22 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         public const string DOCUMENT_CREATION_FAILED_ERROR = "OpenAPI description document creation failed";
 
-        public void DocumentorOnConfigChanged(object? sender, HotReloadEventArgs args)
-        {
-            Console.BackgroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
-            Console.ResetColor();
-            CreateDocument(doOverrideExistingDocument: true);
-        }
-
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<HotReloadEventArgs> handler)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
-            handler.DocumentorSubscribe(DocumentorOnConfigChanged);
+            handler?.Subscribe(DOCUMENTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
+        }
+
+        public void OnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            CreateDocument(doOverrideExistingDocument: true);
         }
 
         /// <summary>

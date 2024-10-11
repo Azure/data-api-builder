@@ -206,6 +206,7 @@ public record RuntimeConfig
             IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
+            // This loader is not used as a part of hot reload and therefore does not need a handler.
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)

@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.CommandLine;
 using System.Data;
 using System.Data.Common;
 using System.IO.Abstractions;

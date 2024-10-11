@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// MySql Collation Tests to ensure that GraphQL is working properly when there is a change in case sensitivity on the database
         /// </summary>
         [DataTestMethod]
-        [DataRow("books", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data` FROM ( SELECT `table0`.`title` AS `title` FROM `books` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`title` ASC LIMIT 100 ) AS `subq1`")]
+        [DataRow("comics", "title", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data` FROM ( SELECT `table0`.`title` AS `title` FROM `comics` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`title` ASC LIMIT 100 ) AS `subq1`")]
         [DataRow("authors", "name", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('name', `subq1`.`name`)), '[]') AS `data` FROM ( SELECT `table0`.`name` AS `name` FROM `authors` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`name` ASC LIMIT 100 ) AS `subq1`")]
         [DataRow("fungi", "habitat", @"SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('habitat', `subq1`.`habitat`)), '[]') AS `data` FROM ( SELECT `table0`.`habitat` AS `habitat` FROM `fungi` AS `table0` WHERE 1 = 1 ORDER BY `table0`.`habitat` ASC LIMIT 100 ) AS `subq1`")]
 

@@ -56,13 +56,24 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
                 };
 
-                _metadataProviders.Add(dataSourceName, metadataProvider);
+                // In a hot reload scenario, the metadata might be updated dynamically. The below code will ensure that:
+                // 1. The _metadataProviders dictionary does not end up with duplicate keys, which would cause an exception.
+                // 2. The metadata provider for a given data source is always up-to-date, reflecting the latest configuration.
+                if(_metadataProviders.ContainsKey(dataSourceName))
+                {
+                    _metadataProviders[dataSourceName] = metadataProvider;
+                }
+                else
+                {
+                    _metadataProviders.Add(dataSourceName, metadataProvider);
+                }
             }
         }
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             ConfigureMetadataProviders();
+            InitializeAsync().Wait();
         }
 
         /// <inheritdoc />

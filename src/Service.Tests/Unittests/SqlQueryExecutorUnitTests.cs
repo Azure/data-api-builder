@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+                    msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
 
             // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
-            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
             IDictionary<string, DbConnectionParam> parameters = new Dictionary<string, DbConnectionParam>();
             parameters.Add("@param1", new DbConnectionParam("My Awesome book", DbType.AnsiString, SqlDbType.VarChar));
             parameters.Add("@param2", new DbConnectionParam("Ramen", DbType.String, SqlDbType.NVarChar));
@@ -462,7 +462,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
 
             // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             try
             {
@@ -523,7 +523,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
 
             // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             try
             {

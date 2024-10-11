@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MySqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            MySqlQueryExecutor mySqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+            MySqlQueryExecutor mySqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    mySqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+                    mySqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 

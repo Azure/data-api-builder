@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object, null);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             using SqlConnection conn = new(defaultSourceConnectionString);
             await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, DATA_SOURCE_NAME_1);

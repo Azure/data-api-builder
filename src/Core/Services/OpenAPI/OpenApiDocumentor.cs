@@ -58,14 +58,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         public const string DOCUMENT_CREATION_FAILED_ERROR = "OpenAPI description document creation failed";
 
-        public void Documentor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
-        {
-            Console.BackgroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
-            Console.ResetColor();
-            CreateDocument(isHotReloadScenario: true);
-        }
-
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
         /// </summary>
@@ -115,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <exception cref="DataApiBuilderException">Raised when document is already generated
         /// or a failure occurs during generation.</exception>
-        /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/
+        /// <seealso cref="https://github.com/microsoft/OpenAPI.NET/blob/1.6.3/src/Microsoft.OpenApi/OpenApiSpecVersion.cs"/>
         public void CreateDocument(bool doOverrideExistingDocument = false)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();

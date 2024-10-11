@@ -37,18 +37,6 @@ public abstract class RuntimeConfigLoader
 
     public bool isNewConfigValidated = true;
 
-    // Signals a hot reload event for OpenApiDocumentor due to config change.
-    protected virtual void Documentor_ConfigChangeEventOccurred(CustomEventArgs args)
-    {
-        Handler?.Documentor_OnConfigChangeEventOccurred(this, args);
-    }
-
-    // Sends all of the notifications when a hot reload occurs.
-    public void SendEventNotification(string message = "")
-    {
-        CustomEventArgs args = new(message);
-        Documentor_ConfigChangeEventOccurred(args);
-    }
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _handler = handler;

@@ -223,7 +223,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
         isNewConfigDetected = true;
         isNewConfigValidated = false;
-        SendEventNotification("Sending Hot-Reload event notification.");
+        SendEventNotification();
     }
 
     /// <summary>

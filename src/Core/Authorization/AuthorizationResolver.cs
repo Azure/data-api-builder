@@ -37,10 +37,7 @@ public class AuthorizationResolver : IAuthorizationResolver
 
     public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
-    public AuthorizationResolver(
-        RuntimeConfigProvider runtimeConfigProvider,
-        IMetadataProviderFactory metadataProviderFactory
-        )
+    public AuthorizationResolver(RuntimeConfigProvider runtimeConfigProvider, IMetadataProviderFactory metadataProviderFactory)
     {
         _metadataProviderFactory = metadataProviderFactory;
         if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
@@ -245,7 +242,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// during runtime.
     /// </summary>
     /// <param name="runtimeConfig"></param>
-    public void SetEntityPermissionMap(RuntimeConfig runtimeConfig)
+    private void SetEntityPermissionMap(RuntimeConfig runtimeConfig)
     {
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
@@ -422,7 +419,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="operation">operation type.</param>
     /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
     /// <returns>IEnumerable of all available operations.</returns>
-    public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
+    private static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
     {
         if (sourceType is EntitySourceType.StoredProcedure)
         {
@@ -441,7 +438,8 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
     /// <param name="entityName">Entity from request</param>
     /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
-    private static void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
+    private static void PopulateAllowedExposedColumns(
+        HashSet<string> allowedExposedColumns,
         string entityName,
         HashSet<string> allowedDBColumns,
         ISqlMetadataProvider metadataProvider)
@@ -566,7 +564,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// </remarks>
     /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
     /// <returns>Dictionary with claimType -> list of claim mappings.</returns>
-    public static Dictionary<string, List<Claim>> GetAllAuthenticatedUserClaims(HttpContext? context)
+    private static Dictionary<string, List<Claim>> GetAllAuthenticatedUserClaims(HttpContext? context)
     {
         Dictionary<string, List<Claim>> resolvedClaims = new();
         if (context is null)
@@ -696,7 +694,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
     /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
     /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-    public static string GetClaimValue(Claim claim)
+    private static string GetClaimValue(Claim claim)
     {
         /* An example Claim object:
          * claim.Type: "user_email"
@@ -737,23 +735,6 @@ public class AuthorizationResolver : IAuthorizationResolver
     public IEnumerable<string> GetRolesForEntity(string entityName)
     {
         return EntityPermissionsMap[entityName].RoleToOperationMap.Keys;
-    }
-
-    /// <summary>
-    /// Returns a list of roles which define permissions for the provided operation.
-    /// i.e. list of roles which allow the operation 'Read' on entityName.
-    /// </summary>
-    /// <param name="entityName">Entity to lookup permissions</param>
-    /// <param name="operation">Operation to lookup applicable roles</param>
-    /// <returns>Collection of roles.</returns>
-    public IEnumerable<string> GetRolesForOperation(string entityName, EntityActionOperation operation)
-    {
-        if (EntityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) && roleList is not null)
-        {
-            return roleList;
-        }
-
-        return new List<string>();
     }
 
     /// <summary>

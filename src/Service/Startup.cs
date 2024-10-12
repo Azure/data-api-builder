@@ -317,6 +317,7 @@ namespace Azure.DataApiBuilder.Service
             else
             {
                 // Config provided during runtime.
+                runtimeConfigProvider.IsLateConfigured = true;
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (sender, newConfig) =>
                 {
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);

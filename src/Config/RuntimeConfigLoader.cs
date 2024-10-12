@@ -43,9 +43,9 @@ public abstract class RuntimeConfigLoader
     /// Change token producer which returns an uncancelled/unsignalled change token.
     /// </summary>
     /// <returns>DabChangeToken</returns>
-    #pragma warning disable CA1024 // Use properties where appropriate
+#pragma warning disable CA1024 // Use properties where appropriate
     public IChangeToken GetChangeToken()
-    #pragma warning restore CA1024 // Use properties where appropriate
+#pragma warning restore CA1024 // Use properties where appropriate
     {
         return _changeToken;
     }

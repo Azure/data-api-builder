@@ -44,15 +44,12 @@ public class RuntimeConfigProvider
 
     private RuntimeConfigLoader _configLoader;
     private DabChangeToken _changeToken = new();
-    private readonly List<IDisposable>? _changeTokenRegistrations;
+    private readonly IDisposable _changeTokenRegistration;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         _configLoader = runtimeConfigLoader;
-        _changeTokenRegistrations = new List<IDisposable>(1)
-        {
-            ChangeToken.OnChange(_configLoader.GetChangeToken, RaiseChanged)
-        };
+        _changeTokenRegistration = ChangeToken.OnChange(_configLoader.GetChangeToken, RaiseChanged);
     }
 
     /// <summary>
@@ -79,6 +76,14 @@ public class RuntimeConfigProvider
 #pragma warning restore CA1024 // Use properties where appropriate
     {
         return _changeToken;
+    }
+
+    /// <summary>
+    /// Removes all change registration subscriptions.
+    /// </summary>
+    public void Dispose()
+    {
+        _changeTokenRegistration.Dispose();
     }
 
     /// <summary>

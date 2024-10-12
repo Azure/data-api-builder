@@ -942,7 +942,7 @@ type Moon {
             string swaTokenPayload = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
                 addAuthenticated: true,
                 specificRole: POST_STARTUP_CONFIG_ROLE);
-            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
+            message.Headers.Add(Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, POST_STARTUP_CONFIG_ROLE);
             HttpResponseMessage authorizedResponse = await httpClient.SendAsync(message);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
@@ -2264,7 +2264,7 @@ type Moon {
             string[] args = new[]
             {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
-        };
+            };
 
             // Non-Hosted Scenario
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
@@ -2896,8 +2896,8 @@ type Moon {
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
-            AuthenticationOptions AuthenticationOptions = new(Provider: EasyAuthType.StaticWebApps.ToString(), null);
-            HostOptions staticWebAppsHostOptions = new(null, AuthenticationOptions);
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: EasyAuthType.StaticWebApps.ToString(), null);
+            HostOptions staticWebAppsHostOptions = new(null, authenticationOptions);
 
             RuntimeOptions runtimeOptions = configuration.Runtime;
             RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, staticWebAppsHostOptions, "/data-api");
@@ -3223,11 +3223,11 @@ type Planet @model(name:""PlanetAlias"") {
             RuntimeConfig config = configProvider.GetConfig();
 
             // Setup configuration
-            AuthenticationOptions AuthenticationOptions = new(Provider: authType.ToString(), null);
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: authType.ToString(), Jwt: null);
             RuntimeOptions runtimeOptions = new(
                 Rest: new(),
                 GraphQL: new(),
-                Host: new(null, AuthenticationOptions, hostMode)
+                Host: new(Cors: null, authenticationOptions, hostMode)
             );
             RuntimeConfig configWithCustomHostMode = config with { Runtime = runtimeOptions };
 
@@ -4153,6 +4153,7 @@ type Planet @model(name:""PlanetAlias"") {
         private static void CreateCustomConfigFile(bool globalRestEnabled, Dictionary<string, Entity> entityMap)
         {
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
@@ -4160,7 +4161,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(Enabled: globalRestEnabled),
                     GraphQL: new(),
-                    Host: new(null, null)
+                    Host: hostOptions
                 ),
                 Entities: new(entityMap));
 
@@ -4534,9 +4535,11 @@ type Planet @model(name:""PlanetAlias"") {
 
             entityMap.Add("Publisher", publisherEntity);
 
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
+
             RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
                                               DataSource: dataSource,
-                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: null),
                                               Entities: new(entityMap));
             return runtimeConfig;
         }
@@ -4582,11 +4585,13 @@ type Planet @model(name:""PlanetAlias"") {
                 );
             entityMap.Add("Publisher", anotherEntity);
 
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
+
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
                 Runtime: new(restOptions, graphqlOptions,
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: cacheOptions),
+                    Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: cacheOptions),
                 Entities: new(entityMap)
             );
         }

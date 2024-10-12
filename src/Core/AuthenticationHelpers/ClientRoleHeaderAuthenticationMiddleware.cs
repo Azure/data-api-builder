@@ -62,8 +62,12 @@ public class ClientRoleHeaderAuthenticationMiddleware
         // Determine the authentication scheme to use based on dab-config.json.
         // Compatible with both ConfigureAuthentication and ConfigureAuthenticationV2 in startup.cs.
         // This means that this code is resilient to whether or not the default authentication scheme is set in startup.
-        AuthenticationOptions? dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
-        string scheme = ResolveConfiguredAuthNScheme(dabAuthNOptions?.Provider);
+        string scheme = EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+        if (!_runtimeConfigProvider.IsLateConfigured)
+        {
+            AuthenticationOptions? dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
+            scheme = ResolveConfiguredAuthNScheme(dabAuthNOptions?.Provider);
+        }
 
         // authNResult will be one of:
         // 1. Succeeded - Authenticated

@@ -204,19 +204,19 @@ namespace Cli
 
             if (!IsURIComponentValid(restPath))
             {
-                _logger.LogError("{apiType} path {message}", ApiType.REST, RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                _logger.LogError("{apiType} path {message}", ApiType.REST, RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
             if (!IsURIComponentValid(options.GraphQLPath))
             {
-                _logger.LogError("{apiType} path {message}", ApiType.GraphQL, RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                _logger.LogError("{apiType} path {message}", ApiType.GraphQL, RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
             if (!IsURIComponentValid(runtimeBaseRoute))
             {
-                _logger.LogError("Runtime base-route {message}", RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                _logger.LogError("Runtime base-route {message}", RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
@@ -539,6 +539,11 @@ namespace Cli
                 return false;
             }
 
+            if (!TryConfigureRuntime(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
             if (options.DepthLimit is not null && !TryUpdateDepthLimit(options, ref runtimeConfig))
             {
                 return false;
@@ -675,6 +680,99 @@ namespace Cli
             catch (Exception e)
             {
                 _logger.LogError("Failed to update the depth limit: {e}", e);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to update the depth limit in the GraphQL runtime settings based on the provided value.
+        /// Validates that any user-provided depth limit is an integer within the valid range of [1 to Int32.MaxValue] or -1.
+        /// A depth limit of -1 is considered a special case that disables the GraphQL depth limit.
+        /// [NOTE:] This method expects the provided depth limit to be not null.
+        /// </summary>
+        /// <param name="options">Options including the new depth limit.</param>
+        /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        private static bool TryConfigureRuntime(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            // GraphQL: Enabled, Path, Allow-Introspection
+            GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL;
+            if (options.RuntimeGraphQLEnabled != null ||
+                options.RuntimeGraphQLPath != null ||
+                options.RuntimeGraphQLAllowIntrospection != null ||
+                options.RuntimeGraphQLMultipleMutationsCreateEnabled != null)
+            {
+                UpdateConfigureGraphQLValues(options, ref updatedGraphQLOptions);
+                runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { GraphQL = updatedGraphQLOptions } };
+            }
+
+            return runtimeConfig != null;
+        }
+
+        private static void UpdateConfigureGraphQLValues(
+            ConfigureOptions options,
+            ref GraphQLRuntimeOptions? updatedGraphQLOptions)
+        {
+            object? updatedValue;
+
+            // Runtime.GraphQL.Enabled
+            updatedValue = options?.RuntimeGraphQLEnabled;
+            if (updatedValue != null) 
+            {
+                updatedGraphQLOptions = updatedGraphQLOptions! with { Enabled = (bool)updatedValue };
+                _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Enabled as {updatedValue}");
+            }
+
+            // Runtime.GraphQL.Path
+            updatedValue = options?.RuntimeGraphQLPath;
+            if (updatedValue != null) 
+            {
+                RuntimeConfigValidatorUtil.TryValidateUriComponent((string)updatedValue, out string exceptionMessage);
+                if (exceptionMessage != null)
+                {
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { Path = (string)updatedValue };
+                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Path as {updatedValue}");
+                }
+            }
+
+            // Runtime.GraphQL.Allow-Introspection
+            updatedValue = options?.RuntimeGraphQLAllowIntrospection;
+            if (updatedValue != null) 
+            {
+                updatedGraphQLOptions = updatedGraphQLOptions! with { AllowIntrospection = (bool)updatedValue };
+                _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as {updatedValue}");
+            }
+
+            // Runtime.GraphQL.Multiple-mutations.Create.Enabled
+            updatedValue = options?.RuntimeGraphQLMultipleMutationsCreateEnabled;
+            Console.WriteLine(updatedValue);
+            if (updatedValue != null) 
+            {
+                MultipleCreateOptions multipleCreateOptions = new ((bool)updatedValue);
+                updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions)};
+                _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as {updatedValue}");
+            }
+        }
+
+        public static bool ValidateConfigParameter(
+            object? updatedValue,
+            Type supportedType,
+            string failureMessage)
+        {
+            if (updatedValue != null)
+            {
+                if (updatedValue.GetType() != supportedType)
+                {
+                    _logger.LogError(failureMessage);
+                    return false;
+                }
+            }
+            else
+            {
                 return false;
             }
 

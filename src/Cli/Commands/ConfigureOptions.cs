@@ -26,6 +26,10 @@ namespace Cli.Commands
             string? dataSourceOptionsSchema = null,
             bool? dataSourceOptionsSetSessionContext = null,
             int? depthLimit = null,
+            bool? runtimeGraphQLEnabled = null,
+            string? runtimeGraphQLPath = null,
+            bool? runtimeGraphQLAllowIntrospection = null,
+            bool? runtimeGraphQLMultipleMutationsCreateEnabled = null,
             string? config = null)
             : base(config)
         {
@@ -36,6 +40,10 @@ namespace Cli.Commands
             DataSourceOptionsSchema = dataSourceOptionsSchema;
             DataSourceOptionsSetSessionContext = dataSourceOptionsSetSessionContext;
             DepthLimit = depthLimit;
+            RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
+            RuntimeGraphQLPath = runtimeGraphQLPath;
+            RuntimeGraphQLAllowIntrospection = runtimeGraphQLAllowIntrospection;
+            RuntimeGraphQLMultipleMutationsCreateEnabled = runtimeGraphQLMultipleMutationsCreateEnabled;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -58,6 +66,18 @@ namespace Cli.Commands
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
+
+        [Option("runtime.graphql.enabled", Required = false, HelpText = "Configure enabled/disable graphQL runtime options.")]
+        public bool? RuntimeGraphQLEnabled { get; }
+
+        [Option("runtime.graphql.path", Required = false, HelpText = "Configure path for graphQL runtime options.")]
+        public string? RuntimeGraphQLPath { get; }
+
+        [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Configure allow-introspection for runtime options.")]
+        public bool? RuntimeGraphQLAllowIntrospection { get; }
+
+        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Configure allow-introspection for runtime options.")]
+        public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

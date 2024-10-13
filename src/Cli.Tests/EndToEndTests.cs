@@ -327,6 +327,29 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.graphql.{key} value
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("/updatedPath", true, DisplayName = "Success in updating graphQL path values.")]
+    public void TestUpdateGraphQLPathRuntimeSettings(string path, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Path in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.graphql.path", path };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Path was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
     /// Test to verify authentication options with init command containing
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.

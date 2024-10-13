@@ -1610,41 +1610,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
         /// <param name="expectError">Exception expected</param>
         [DataTestMethod]
-        [DataRow("/.", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("/.", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character .")]
-        [DataRow("/:", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("/:", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character :")]
-        [DataRow("/?", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("/?", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character ?")]
-        [DataRow("/#", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("/#", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character #")]
-        [DataRow("//", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("//", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character /")]
-        [DataRow("/[", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("/[", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character [")]
-        [DataRow("/)", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("/)", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character )")]
-        [DataRow("/@", $"REST path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
+        [DataRow("/@", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character @")]
-        [DataRow("/!", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/!", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved character !")]
-        [DataRow("/$", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/$", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved character $")]
-        [DataRow("/&", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/&", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved character &")]
-        [DataRow("/'", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/'", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved character '")]
-        [DataRow("/+", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/+", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved character +")]
-        [DataRow("/;", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/;", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved character ;")]
-        [DataRow("/=", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/=", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved character =")]
-        [DataRow("/?#*(=", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/?#*(=", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing multiple reserved characters /?#*(=")]
-        [DataRow("/+&,", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/+&,", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved characters /+&,")]
-        [DataRow("/@)", $"GraphQL path {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
+        [DataRow("/@)", $"GraphQL path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing reserved characters /@)")]
         [DataRow("", "GraphQL path cannot be null or empty.", ApiType.GraphQL, true,
             DisplayName = "Empty GraphQL path prefix.")]
@@ -2181,9 +2181,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Runtime base-route specified as whitespace string for AppService authentication provider fails config validation.")]
         [DataRow("/base-route", "AppService", true, "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
             DisplayName = "Runtime base-route specified for non-Static Web Apps authentication provider - AppService.")]
-        [DataRow("/base+?route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
+        [DataRow("/base+?route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
             DisplayName = "Runtime base-route specified for Static Web Apps authentication provider containing reserved characters +?")]
-        [DataRow("/base%&#route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
+        [DataRow("/base%&#route", "StaticWebApps", true, $"Runtime base-route {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}",
             DisplayName = "Runtime base-route specified for Static Web Apps authentication provider containing reserved characters %&#")]
         [DataRow("base-route", "StaticWebApps", true, $"Runtime base-route should start with a '/'.",
             DisplayName = "Runtime base-route specified for Static Web Apps authentication provider not starting with '/'")]

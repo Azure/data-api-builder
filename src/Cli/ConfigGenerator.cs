@@ -728,7 +728,7 @@ namespace Cli
 
             // Runtime.GraphQL.Enabled
             updatedValue = options?.RuntimeGraphQLEnabled;
-            if (updatedValue != null) 
+            if (updatedValue != null)
             {
                 updatedGraphQLOptions = updatedGraphQLOptions! with { Enabled = (bool)updatedValue };
                 _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Enabled as '{updatedValue}'");
@@ -736,7 +736,7 @@ namespace Cli
 
             // Runtime.GraphQL.Path
             updatedValue = options?.RuntimeGraphQLPath;
-            if (updatedValue != null) 
+            if (updatedValue != null)
             {
                 bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent((string)updatedValue, out string exceptionMessage);
                 if (status)
@@ -754,7 +754,7 @@ namespace Cli
 
             // Runtime.GraphQL.Allow-Introspection
             updatedValue = options?.RuntimeGraphQLAllowIntrospection;
-            if (updatedValue != null) 
+            if (updatedValue != null)
             {
                 updatedGraphQLOptions = updatedGraphQLOptions! with { AllowIntrospection = (bool)updatedValue };
                 _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as '{updatedValue}'");
@@ -762,10 +762,10 @@ namespace Cli
 
             // Runtime.GraphQL.Multiple-mutations.Create.Enabled
             updatedValue = options?.RuntimeGraphQLMultipleMutationsCreateEnabled;
-            if (updatedValue != null) 
+            if (updatedValue != null)
             {
-                MultipleCreateOptions multipleCreateOptions = new ((bool)updatedValue);
-                updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions)};
+                MultipleCreateOptions multipleCreateOptions = new((bool)updatedValue);
+                updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
                 _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'");
             }
 

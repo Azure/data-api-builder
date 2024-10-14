@@ -44,7 +44,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
-    
+
     public RuntimeConfigValidator(
         RuntimeConfigProvider runtimeConfigProvider,
         IFileSystem fileSystem,

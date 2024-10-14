@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
+using Azure.DataApiBuilder.Config.Utilities;
+
 namespace Azure.DataApiBuilder.Config;
 
 /// <summary>
@@ -12,7 +15,7 @@ public class ConfigFileWatcher
 {
     private FileSystemWatcher? _fileWatcher;
     private FileSystemRuntimeConfigLoader _configLoader;
-
+    private byte[] _runtimeConfigHash;
     public ConfigFileWatcher(FileSystemRuntimeConfigLoader configLoader, string directoryName, string configFileName)
     {
         _fileWatcher = new FileSystemWatcher(directoryName)
@@ -20,6 +23,7 @@ public class ConfigFileWatcher
             Filter = configFileName,
             EnableRaisingEvents = true
         };
+        _runtimeConfigHash = FileUtilities.ComputeHash(filePath: directoryName+"/"+configFileName);
 
         _configLoader = configLoader;
         _fileWatcher.Changed += OnConfigFileChange;
@@ -36,9 +40,15 @@ public class ConfigFileWatcher
     {
         try
         {
-            // When RuntimeConfig is null, we abort hot-reload.
-            if (_configLoader.RuntimeConfig is not null && _configLoader.RuntimeConfig.IsDevelopmentMode())
+            if (_fileWatcher is null || _configLoader.RuntimeConfig is null || !_configLoader.RuntimeConfig.IsDevelopmentMode())
             {
+                return;
+            }
+
+            byte[] updatedRuntimeConfigFileHash = FileUtilities.ComputeHash(filePath: _fileWatcher.Path + "/" + _fileWatcher.Filter);
+            if (!_runtimeConfigHash.SequenceEqual(updatedRuntimeConfigFileHash))
+            {
+                _runtimeConfigHash = updatedRuntimeConfigFileHash;
                 _configLoader.HotReloadConfig(_configLoader.RuntimeConfig.DefaultDataSourceName);
             }
         }

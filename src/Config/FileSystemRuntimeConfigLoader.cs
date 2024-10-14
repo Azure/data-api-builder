@@ -148,7 +148,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         if (_fileSystem.File.Exists(path))
         {
             Console.WriteLine($"Loading config file from {path}.");
-            string json = _fileSystem.File.ReadAllText(path);
+            Console.WriteLine($"FullPath: {_fileSystem.Path.GetFullPath(path)}");
+            using FileSystemStream fs = _fileSystem.File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using StreamReader sr = new((FileStream)fs);
+            string json = sr.ReadToEnd();
             if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
                 if (TrySetupConfigFileWatcher())

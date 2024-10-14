@@ -63,6 +63,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             ConfigureMetadataProviders();
+            // Creates a new task to run this initialization and blocks until it completes.
+            // Avoids making the entire hot-reload process async.
+            Task.Run(() => this.InitializeAsync().GetAwaiter().GetResult());
         }
 
         /// <inheritdoc />

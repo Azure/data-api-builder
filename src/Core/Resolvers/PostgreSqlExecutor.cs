@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -10,6 +11,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -30,7 +32,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// from the configuration controller.
         /// Key: datasource name, Value: access token for this datasource.
         /// </summary>
-        private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
+        private Dictionary<string, string?> _accessTokensFromConfiguration;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
@@ -52,25 +54,39 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+
         public PostgreSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
-                  httpContextAccessor)
+                  httpContextAccessor,
+                  handler)
         {
-            IEnumerable<KeyValuePair<string, DataSource>> postgresqldbs = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
+            handler?.Subscribe(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, PostgreSqlQueryExecutorOnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            ConfigurePostgreSqlQueryExecutor();
+        }
+
+        /// <summary>
+        /// Configure during construction or a hot-reload scenario.
+        /// </summary>
+        private void ConfigurePostgreSqlQueryExecutor()
+        {
+            IEnumerable<KeyValuePair<string, DataSource>> postgresqldbs = _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
 
             foreach ((string dataSourceName, DataSource dataSource) in postgresqldbs)
             {
                 NpgsqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
 
-                if (runtimeConfigProvider.IsLateConfigured)
+                if (_runtimeConfigProvider.IsLateConfigured)
                 {
                     builder.SslMode = SslMode.VerifyFull;
                 }
@@ -79,6 +95,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
+        }
+
+        /// <summary>
+        /// Function registered for callback during a hot-reload scenario.
+        /// </summary>
+        /// <param name="sender">The calling object.</param>
+        /// <param name="args">Event arguments.</param>
+        public void PostgreSqlQueryExecutorOnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
+            _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;
+            ConfigurePostgreSqlQueryExecutor();
         }
 
         /// <summary>

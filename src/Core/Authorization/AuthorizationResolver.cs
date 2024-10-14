@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -37,9 +38,15 @@ public class AuthorizationResolver : IAuthorizationResolver
 
     public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
-    public AuthorizationResolver(RuntimeConfigProvider runtimeConfigProvider, IMetadataProviderFactory metadataProviderFactory)
+    public AuthorizationResolver(
+        RuntimeConfigProvider runtimeConfigProvider,
+        IMetadataProviderFactory metadataProviderFactory,
+        HotReloadEventHandler<HotReloadEventArgs>? handler = null)
     {
         _metadataProviderFactory = metadataProviderFactory;
+        _runtimeConfigProvider = runtimeConfigProvider;
+        handler?.Subscribe(DabConfigEvents.AUTHZ_RESOLVER_ON_CONFIG_CHANGED, OnConfigChanged);
+
         if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
         {
             // Datastructure constructor will pull required properties from metadataprovider.
@@ -53,8 +60,16 @@ public class AuthorizationResolver : IAuthorizationResolver
                 return Task.FromResult(true);
             });
         }
+    }
 
-        _runtimeConfigProvider = runtimeConfigProvider;
+    /// <summary>
+    /// Executed when a hot-reload event occurs. Pulls the latest
+    /// runtimeconfig object from the provider and updates authorization
+    /// rules used by the DAB engine.
+    /// </summary>
+    protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
+    {
+        SetEntityPermissionMap(_runtimeConfigProvider.GetConfig());
     }
 
     /// <summary>
@@ -419,7 +434,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="operation">operation type.</param>
     /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
     /// <returns>IEnumerable of all available operations.</returns>
-    private static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
+    public protected static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
     {
         if (sourceType is EntitySourceType.StoredProcedure)
         {
@@ -564,7 +579,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// </remarks>
     /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
     /// <returns>Dictionary with claimType -> list of claim mappings.</returns>
-    private static Dictionary<string, List<Claim>> GetAllAuthenticatedUserClaims(HttpContext? context)
+    public static Dictionary<string, List<Claim>> GetAllAuthenticatedUserClaims(HttpContext? context)
     {
         Dictionary<string, List<Claim>> resolvedClaims = new();
         if (context is null)

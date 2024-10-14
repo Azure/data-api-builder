@@ -24,13 +24,11 @@ public static class EasyAuthAuthenticationBuilderExtensions
     {
         if (builder is null)
         {
-            throw new System.ArgumentNullException(nameof(builder));
+            throw new ArgumentNullException(nameof(builder));
         }
 
         if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
         {
-            //builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<EasyAuthAuthenticationOptions>, EasyAuthConfigureOptions>());
-
             builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
                 authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
                 displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
@@ -54,6 +52,7 @@ public static class EasyAuthAuthenticationBuilderExtensions
     }
 
     /// <summary>
+    /// Registers the StaticWebApps and AppService EasyAuth authentication schemes.
     /// Used for ConfigureAuthenticationV2() where all EasyAuth schemes are registered.
     /// This function doesn't register EasyAuthType.AppService if the AppService environment is not detected.
     /// </summary>
@@ -77,6 +76,8 @@ public static class EasyAuthAuthenticationBuilderExtensions
 
         if (appServiceEnvironmentDetected)
         {
+            // Loggers not available at this point in startup.
+            Console.WriteLine("AppService environment detected, configuring EasyAuth.AppService authentication scheme.");
             builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
                 authenticationScheme: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
                 displayName: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,

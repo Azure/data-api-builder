@@ -175,10 +175,11 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            // Use HotReload aware authentication configuration when in development mode
-            // and when runtime config was provided at startup.
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
             {
+                // Development mode implies support for "Hot Reload". The V2 authentication function
+                // wires up all DAB supported authentication providers (schemes) so that at request time,
+                // the runtime config defined authenitication provider is used to authenticate requests.
                 ConfigureAuthenticationV2(services, configProvider);
             }
             else
@@ -536,9 +537,13 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Wires up all DAB supported authentication providers. DAB uses the user configured
-        /// authentcation provider to determine which provider to use for authentication at request time.
-        /// JwtBearerOptions are hydrated when ConfigureJwtBearerOptions is called by OptionsFactory internally by .NET.
+        /// Registers all DAB supported authentication providers (schemes) so that at request time,
+        /// DAB can use the runtime config's defined provider to authenticate requests.
+        /// The function includes JWT specific configuration handling:
+        /// - IOptionsChangeTokenSource<JwtBearerOptions> : Registers a change token source for dynamic config updates which
+        /// is used internally by JwtBearerHandler's OptionsMonitor to listen for changes in JwtBearerOptions.
+        /// - IConfigureOptions<JwtBearerOptions> : Registers named JwtBearerOptions whose "Configure(...)" function is
+        /// called by OptionsFactory internally by .NET to fetch the latest configuration from the RuntimeConfigProvider.
         /// </summary>
         /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/49586#issuecomment-1671838595">Guidance for registering IOptionsChangeTokenSource</seealso>
         /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/21491#issuecomment-624240160">Guidance for registering named options.</seealso>

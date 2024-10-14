@@ -331,6 +331,13 @@ public class EndToEndTests
     /// </summary>
     [DataTestMethod]
     [DataRow("/updatedPath", true, DisplayName = "Success in updating graphQL path values.")]
+    [DataRow("/updated-Path", true, DisplayName = "Success in updating graphQL path values.")]
+    [DataRow("/updated_Path", true, DisplayName = "Success in updating graphQL path values.")]
+    [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
+    [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
+    [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
+    [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
+    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
     public void TestUpdateGraphQLPathRuntimeSettings(string path, bool isSuccess)
     {
         // Initialize the config file.

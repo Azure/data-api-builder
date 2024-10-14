@@ -12,7 +12,7 @@ namespace Cli.Tests
         private MockFileSystem? _fileSystem;
         private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
         private const string TEST_RUNTIME_CONFIG_FILE = "test-update-runtime-setting.json";
-        
+
         [TestInitialize]
         public void TestInitialize()
         {
@@ -137,7 +137,8 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
         /// in runtime.[DataTestMethod]
         [DataRow("/updatedPath", DisplayName = "Update path->/upatedPath for GraphQL.")]
-        [DataRow("/updated_Path", DisplayName = "Update path->/updated_Path for GraphQL depth limit to -1.")]
+        [DataRow("/updated_Path", DisplayName = "Update path->/updated_Path for GraphQL.")]
+        [DataRow("/updated-Path", DisplayName = "Update path->/updated-Path for GraphQL.")]
         [TestMethod]
         public void TestUpdatePathForGraphQLSettings(string updatedEnabledValue)
         {

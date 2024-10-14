@@ -36,6 +36,10 @@ public static class RuntimeConfigValidatorUtil
         {
             exceptionMessageSuffix = "should start with a '/'.";
         }
+        else if(uriComponent.Any(x => Char.IsWhiteSpace(x)))
+        {
+            exceptionMessageSuffix = "updated Path contains white spaces.";
+        }
         else
         {
             uriComponent = uriComponent.Substring(1);

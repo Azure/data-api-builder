@@ -434,7 +434,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="operation">operation type.</param>
     /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
     /// <returns>IEnumerable of all available operations.</returns>
-    public protected static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
+    public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
     {
         if (sourceType is EntitySourceType.StoredProcedure)
         {

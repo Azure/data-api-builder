@@ -67,7 +67,6 @@ public abstract class RuntimeConfigLoader
         // RuntimeConfig must already be updated and is implied to have been updated by the time
         // this function is called.
         OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
-
     }
 
     /// <summary>

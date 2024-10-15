@@ -568,6 +568,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             ODataASTVisitor visitor = new(this, MetadataProvider, operation);
+
             try
             {
                 DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);

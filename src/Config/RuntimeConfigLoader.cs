@@ -93,7 +93,6 @@ public abstract class RuntimeConfigLoader
         ILogger? logger = null,
         string? connectionString = null,
         bool replaceEnvVar = false,
-        string dataSourceName = "",
         Dictionary<string, string>? datasourceNameToConnectionString = null,
         EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
@@ -109,7 +108,7 @@ public abstract class RuntimeConfigLoader
             }
 
             // retreive current connection string from config
-            string updatedConnectionString = config.DataSource.ConnectionString;
+            string updatedConnectionString = config.DataSource.ConnectionString;            
 
             if (!string.IsNullOrEmpty(connectionString))
             {
@@ -123,7 +122,7 @@ public abstract class RuntimeConfigLoader
             }
 
             // add to dictionary if datasourceName is present (will either be the default or the one provided)
-            datasourceNameToConnectionString.TryAdd(dataSourceName, updatedConnectionString);
+            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
 
             // iterate over dictionary and update runtime config with connection strings.
             foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
@@ -143,7 +142,7 @@ public abstract class RuntimeConfigLoader
                 }
 
                 ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(dataSourceName, ds);
+                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
 
                 if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
                 {

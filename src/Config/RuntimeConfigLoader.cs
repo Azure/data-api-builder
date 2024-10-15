@@ -108,7 +108,7 @@ public abstract class RuntimeConfigLoader
             }
 
             // retreive current connection string from config
-            string updatedConnectionString = config.DataSource.ConnectionString;            
+            string updatedConnectionString = config.DataSource.ConnectionString;       
 
             if (!string.IsNullOrEmpty(connectionString))
             {

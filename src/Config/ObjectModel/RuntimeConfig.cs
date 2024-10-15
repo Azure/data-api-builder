@@ -178,7 +178,12 @@ public record RuntimeConfig
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
-    public RuntimeConfig(string? Schema, DataSource DataSource, RuntimeEntities Entities, RuntimeOptions? Runtime = null, DataSourceFiles? DataSourceFiles = null)
+    public RuntimeConfig(
+        string? Schema,
+        DataSource DataSource,
+        RuntimeEntities Entities,
+        RuntimeOptions? Runtime = null,
+        DataSourceFiles? DataSourceFiles = null)
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
@@ -189,13 +194,13 @@ public record RuntimeConfig
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>
         {
-            { DefaultDataSourceName, this.DataSource }
+            { this.DefaultDataSourceName, this.DataSource }
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, DefaultDataSourceName);
+            _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
         }
 
         // Process data source and entities information for each database in multiple database scenario.

@@ -56,10 +56,6 @@ public abstract class RuntimeConfigLoader
         OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
     }
 
@@ -97,7 +93,6 @@ public abstract class RuntimeConfigLoader
         ILogger? logger = null,
         string? connectionString = null,
         bool replaceEnvVar = false,
-        string dataSourceName = "",
         Dictionary<string, string>? datasourceNameToConnectionString = null,
         EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
@@ -115,12 +110,6 @@ public abstract class RuntimeConfigLoader
             // retreive current connection string from config
             string updatedConnectionString = config.DataSource.ConnectionString;
 
-            // set dataSourceName to default if not provided
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = config.DefaultDataSourceName;
-            }
-
             if (!string.IsNullOrEmpty(connectionString))
             {
                 // update connection string if provided.
@@ -133,7 +122,7 @@ public abstract class RuntimeConfigLoader
             }
 
             // add to dictionary if datasourceName is present (will either be the default or the one provided)
-            datasourceNameToConnectionString.TryAdd(dataSourceName, updatedConnectionString);
+            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
 
             // iterate over dictionary and update runtime config with connection strings.
             foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
@@ -153,7 +142,7 @@ public abstract class RuntimeConfigLoader
                 }
 
                 ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(dataSourceName, ds);
+                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
 
                 if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
                 {

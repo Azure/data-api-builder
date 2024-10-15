@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor,
                   handler)
         {
-            handler?.Subscribe(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, OnConfigChanged);
+            handler?.Subscribe(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, MsSqlQueryExecutorOnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;

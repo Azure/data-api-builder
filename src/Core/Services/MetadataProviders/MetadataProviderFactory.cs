@@ -62,7 +62,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            _metadataProviders.Clear();
             ConfigureMetadataProviders();
+            InitializeAsync().GetAwaiter().GetResult();
         }
 
         /// <inheritdoc />

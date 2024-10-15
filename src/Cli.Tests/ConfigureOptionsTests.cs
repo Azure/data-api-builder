@@ -114,7 +114,7 @@ namespace Cli.Tests
         /// in runtime.
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update enabled to be false for GraphQL.")]
-        [DataRow(true, DisplayName = "Update enabled to be true for GraphQL depth limit to -1.")]
+        [DataRow(true, DisplayName = "Update enabled to be true for GraphQL.")]
         public void TestUpdateEnabledForGraphQLSettings(bool updatedEnabledValue)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -163,7 +163,7 @@ namespace Cli.Tests
         /// in runtime.
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update AllowIntrospection to be false for GraphQL.")]
-        [DataRow(true, DisplayName = "Update AllowIntrospection to be true for GraphQL depth limit to -1.")]
+        [DataRow(true, DisplayName = "Update AllowIntrospection to be true for GraphQL.")]
         public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedValue)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -187,7 +187,7 @@ namespace Cli.Tests
         /// in runtime.
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update MultipleMutation.Create.Enabled to be false for GraphQL.")]
-        [DataRow(true, DisplayName = "Update MultipleMutation.Create.Enabled to be true for GraphQL depth limit to -1.")]
+        [DataRow(true, DisplayName = "Update MultipleMutation.Create.Enabled to be true for GraphQL.")]
         public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedValue)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);

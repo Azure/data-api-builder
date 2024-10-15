@@ -111,7 +111,8 @@ namespace Cli.Tests
 
         /// <summary>
         /// Tests that running "dab configure --runtime.graphql" on a config with various values results
-        /// in runtime.
+        /// in runtime. Takes in updated value for graphql.enabled and 
+        /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update enabled to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update enabled to be true for GraphQL.")]
@@ -134,8 +135,9 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.
+        /// Tests that running "dab configure --runtime.graphql" on a config with various values results
+        /// in runtime. Takes in updated value for graphql.path and 
+        /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
         [DataRow("/updatedPath", DisplayName = "Update path->/upatedPath for GraphQL.")]
         [DataRow("/updated_Path", DisplayName = "Update path->/updated_Path for GraphQL.")]
@@ -159,8 +161,9 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.
+        /// Tests that running "dab configure --runtime.graphql" on a config with various values results
+        /// in runtime. Takes in updated value for graphql.allow-introspection and 
+        /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update AllowIntrospection to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update AllowIntrospection to be true for GraphQL.")]
@@ -183,8 +186,9 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.
+        /// Tests that running "dab configure --runtime.graphql" on a config with various values results
+        /// in runtime. Takes in updated value for multiple mutations.create.enabled and 
+        /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update MultipleMutation.Create.Enabled to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update MultipleMutation.Create.Enabled to be true for GraphQL.")]
@@ -207,10 +211,11 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.
+        /// Tests that running "dab configure --runtime.graphql" on a config with various values results
+        /// in runtime. Takes in updatedPath and updated value for allow-introspection and 
+        /// validates whether the runtime config reflects those updated values
         [TestMethod]
-        public void TestUpdateMultipleForGraphQLSettings()
+        public void TestUpdateMultipleParametersForGraphQLSettings()
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 

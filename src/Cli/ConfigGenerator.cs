@@ -539,7 +539,7 @@ namespace Cli
                 return false;
             }
 
-            if (!TryConfigureRuntime(options, ref runtimeConfig))
+            if (!TryConfigureRuntimeOptions(options, ref runtimeConfig))
             {
                 return false;
             }
@@ -687,15 +687,14 @@ namespace Cli
         }
 
         /// <summary>
-        /// Attempts to update the depth limit in the GraphQL runtime settings based on the provided value.
-        /// Validates that any user-provided depth limit is an integer within the valid range of [1 to Int32.MaxValue] or -1.
-        /// A depth limit of -1 is considered a special case that disables the GraphQL depth limit.
-        /// [NOTE:] This method expects the provided depth limit to be not null.
+        /// Attempts to update the Config parameters in the GraphQL runtime settings based on the provided value.
+        /// Performs the update on the runtimeConfig which is passed as reference
+        /// Returns true if the update has been performed, else false
         /// </summary>
-        /// <param name="options">Options including the new depth limit.</param>
+        /// <param name="options">Options including the graphql runtime parameters.</param>
         /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
         /// <returns>True if the update was successful, false otherwise.</returns>
-        private static bool TryConfigureRuntime(
+        private static bool TryConfigureRuntimeOptions(
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
@@ -720,6 +719,14 @@ namespace Cli
             return runtimeConfig != null;
         }
 
+        /// <summary>
+        /// Attempts to update the Config parameters in the GraphQL runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated GraphQL options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedGraphQLOptions">updatedGraphQLOptions.</param>
+        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
         private static bool UpdateConfigureGraphQLValues(
             ConfigureOptions options,
             ref GraphQLRuntimeOptions? updatedGraphQLOptions)
@@ -767,27 +774,6 @@ namespace Cli
                 MultipleCreateOptions multipleCreateOptions = new((bool)updatedValue);
                 updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
                 _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'");
-            }
-
-            return true;
-        }
-
-        public static bool ValidateConfigParameter(
-            object? updatedValue,
-            Type supportedType,
-            string failureMessage)
-        {
-            if (updatedValue != null)
-            {
-                if (updatedValue.GetType() != supportedType)
-                {
-                    _logger.LogError(failureMessage);
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
             }
 
             return true;

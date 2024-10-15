@@ -110,11 +110,11 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.[DataTestMethod]
+        /// Tests that running "dab configure --runtime.graphql" on a config with various values results
+        /// in runtime.
+        [DataTestMethod]
         [DataRow(false, DisplayName = "Update enabled to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update enabled to be true for GraphQL depth limit to -1.")]
-        [TestMethod]
         public void TestUpdateEnabledForGraphQLSettings(bool updatedEnabledValue)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -126,7 +126,7 @@ namespace Cli.Tests
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
 
-            // Assert: Validate the Depth Limit is added
+            // Assert: Validate the Enabled Flag is updated
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Enabled);
@@ -135,80 +135,80 @@ namespace Cli.Tests
 
         /// <summary>
         /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.[DataTestMethod]
+        /// in runtime.
+        [DataTestMethod]
         [DataRow("/updatedPath", DisplayName = "Update path->/upatedPath for GraphQL.")]
         [DataRow("/updated_Path", DisplayName = "Update path->/updated_Path for GraphQL.")]
         [DataRow("/updated-Path", DisplayName = "Update path->/updated-Path for GraphQL.")]
-        [TestMethod]
-        public void TestUpdatePathForGraphQLSettings(string updatedEnabledValue)
+        public void TestUpdatePathForGraphQLSettings(string updatedValue)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attmepts to update enabled flag
+            // Act: Attmepts to update path value
             ConfigureOptions options = new(
-                runtimeGraphQLPath: updatedEnabledValue,
+                runtimeGraphQLPath: updatedValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
 
-            // Assert: Validate the Depth Limit is added
+            // Assert: Validate the Path update is updated
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
-            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.GraphQL.Path);
+            Assert.AreEqual(updatedValue, runtimeConfig.Runtime.GraphQL.Path);
         }
 
         /// <summary>
         /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.[DataTestMethod]
+        /// in runtime.
+        [DataTestMethod]
         [DataRow(false, DisplayName = "Update AllowIntrospection to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update AllowIntrospection to be true for GraphQL depth limit to -1.")]
-        [TestMethod]
-        public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedEnabledValue)
+        public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedValue)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attmepts to update enabled flag
+            // Act: Attmepts to update allow-introspection flag
             ConfigureOptions options = new(
-                runtimeGraphQLAllowIntrospection: updatedEnabledValue,
+                runtimeGraphQLAllowIntrospection: updatedValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
 
-            // Assert: Validate the Depth Limit is added
+            // Assert: Validate the Allow-Introspection value is updated
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.AllowIntrospection);
-            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
+            Assert.AreEqual(updatedValue, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
         }
 
         /// <summary>
         /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.[DataTestMethod]
+        /// in runtime.
+        [DataTestMethod]
         [DataRow(false, DisplayName = "Update MultipleMutation.Create.Enabled to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update MultipleMutation.Create.Enabled to be true for GraphQL depth limit to -1.")]
-        [TestMethod]
-        public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedEnabledValue)
+        public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedValue)
         {
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attmepts to update enabled flag
+            // Act: Attmepts to update multiple-mutations.create.enabled flag
             ConfigureOptions options = new(
-                runtimeGraphQLMultipleMutationsCreateEnabled: updatedEnabledValue,
+                runtimeGraphQLMultipleMutationsCreateEnabled: updatedValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
 
-            // Assert: Validate the Depth Limit is added
+            // Assert: Validate the Multiple-Mutation.Create.Enabled is updated
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.MultipleMutationOptions?.MultipleCreateOptions?.Enabled);
-            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
+            Assert.AreEqual(updatedValue, runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
         }
 
         /// <summary>
         /// Tests that running "dab configure --runtime.graphql" on a config with variuos values results
-        /// in runtime.[DataTestMethod]
+        /// in runtime.
         [TestMethod]
         public void TestUpdateMultipleForGraphQLSettings()
         {
@@ -216,7 +216,7 @@ namespace Cli.Tests
 
             bool updatedAllowIntrospectionValue = false;
             string updatedPathValue = "/updatedPath";
-            // Act: Attmepts to update enabled flag
+            // Act: Attmepts to update the path value and allow-introspection flag
             ConfigureOptions options = new(
                 runtimeGraphQLPath: updatedPathValue,
                 runtimeGraphQLAllowIntrospection: updatedAllowIntrospectionValue,
@@ -224,7 +224,7 @@ namespace Cli.Tests
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
 
-            // Assert: Validate the Depth Limit is added
+            // Assert: Validate the path is updated and allow introspection is updated
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);

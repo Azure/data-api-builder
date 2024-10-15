@@ -1654,11 +1654,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "GraphQL path not starting with forward slash.")]
         [DataRow("/-api", null, ApiType.GraphQL, false,
             DisplayName = "GraphQL path containing hyphen (-)")]
-        [DataRow("/api path", "GraphQL path updated Path contains white spaces.", ApiType.GraphQL, true,
+        [DataRow("/api path", "GraphQL path contains white spaces.", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing space in between")]
-        [DataRow("/ apipath", "REST path updated Path contains white spaces.", ApiType.REST, true,
+        [DataRow("/ apipath", "REST path contains white spaces.", ApiType.REST, true,
             DisplayName = "REST path containing space at the start")]
-        [DataRow("/ api_path", "GraphQL path updated Path contains white spaces.", ApiType.GraphQL, true,
+        [DataRow("/ api_path", "GraphQL path contains white spaces.", ApiType.GraphQL, true,
             DisplayName = "GraphQL path prefix containing space at the start and underscore in between.")]
         [DataRow("/", null, ApiType.REST, false,
             DisplayName = "REST path containing only a forward slash.")]
@@ -2175,7 +2175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Runtime base-route specified as null for AppService authentication provider passes config validation.")]
         [DataRow(null, "StaticWebApps", false,
             DisplayName = "Runtime base-route specified as null for Static Web Apps authentication provider passes config validation.")]
-        [DataRow("/    ", "StaticWebApps", true, "Runtime base-route updated Path contains white spaces.",
+        [DataRow("/    ", "StaticWebApps", true, "Runtime base-route contains white spaces.",
             DisplayName = "Runtime base-route specified as whitespace string for Static Web Apps authentication provider passes config validation.")]
         [DataRow("/    ", "AppService", true, "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
             DisplayName = "Runtime base-route specified as whitespace string for AppService authentication provider fails config validation.")]

@@ -38,7 +38,7 @@ public static class RuntimeConfigValidatorUtil
         }
         else if (uriComponent.Any(x => Char.IsWhiteSpace(x)))
         {
-            exceptionMessageSuffix = "updated Path contains white spaces.";
+            exceptionMessageSuffix = "contains white spaces.";
         }
         else
         {

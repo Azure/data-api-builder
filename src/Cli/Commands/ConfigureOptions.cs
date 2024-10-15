@@ -67,16 +67,16 @@ namespace Cli.Commands
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
 
-        [Option("runtime.graphql.enabled", Required = false, HelpText = "Configure enabled/disable graphQL runtime options.")]
+        [Option("runtime.graphql.enabled", Required = false, HelpText = "Configure enable/disable flag for graphQL runtime options.")]
         public bool? RuntimeGraphQLEnabled { get; }
 
         [Option("runtime.graphql.path", Required = false, HelpText = "Configure path for graphQL runtime options.")]
         public string? RuntimeGraphQLPath { get; }
 
-        [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Configure allow-introspection for runtime options.")]
+        [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Configure allow-introspection for graphql runtime options.")]
         public bool? RuntimeGraphQLAllowIntrospection { get; }
 
-        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Configure allow-introspection for runtime options.")]
+        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Configure multiple-mutations.create.enabled in graphql runtime options.")]
         public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

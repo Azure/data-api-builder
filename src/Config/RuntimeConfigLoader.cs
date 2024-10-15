@@ -56,10 +56,6 @@ public abstract class RuntimeConfigLoader
         OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
     }
 
@@ -105,34 +101,15 @@ public abstract class RuntimeConfigLoader
 
         try
         {
-            // Use an intermediate object to inject default data source name in the case of hot reload.
-            RuntimeConfig? tempConfig = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
+            config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
 
-            if (tempConfig is null)
+            if (config is null)
             {
-                config = null;
                 return false;
             }
 
-            // If a dataSourceName was provided we use that, otherwise use the GUID generated from tempConfig construction.
-            dataSourceName = string.IsNullOrWhiteSpace(dataSourceName) ? tempConfig.DefaultDataSourceName : dataSourceName;
-
-            config = new RuntimeConfig(
-                tempConfig.Schema,
-                tempConfig.DataSource,
-                tempConfig.Entities,
-                tempConfig.Runtime,
-                tempConfig.DataSourceFiles,
-                dataSourceName);
-
             // retreive current connection string from config
             string updatedConnectionString = config.DataSource.ConnectionString;
-
-            // set dataSourceName to default if not provided
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = config.DefaultDataSourceName;
-            }
 
             if (!string.IsNullOrEmpty(connectionString))
             {

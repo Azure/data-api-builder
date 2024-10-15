@@ -183,14 +183,13 @@ public record RuntimeConfig
         DataSource DataSource,
         RuntimeEntities Entities,
         RuntimeOptions? Runtime = null,
-        DataSourceFiles? DataSourceFiles = null,
-        string DefaultDataSourceName = "")
+        DataSourceFiles? DataSourceFiles = null)
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this.DefaultDataSourceName = string.IsNullOrWhiteSpace(DefaultDataSourceName) ? Guid.NewGuid().ToString() : DefaultDataSourceName;
+        this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>

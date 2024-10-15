@@ -26,10 +26,6 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             { METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, null },
             { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
             { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
-            { QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
             { DOCUMENTOR_ON_CONFIG_CHANGED, null }
         };
     }

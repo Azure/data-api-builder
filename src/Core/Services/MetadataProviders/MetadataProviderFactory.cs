@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     /// <inheritdoc />
     public class MetadataProviderFactory : IMetadataProviderFactory
     {
-        private readonly IDictionary<string, ISqlMetadataProvider> _metadataProviders;
+        private IDictionary<string, ISqlMetadataProvider> _metadataProviders;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly IAbstractQueryManagerFactory _queryManagerFactory;
         private readonly ILogger<ISqlMetadataProvider> _logger;
@@ -62,10 +62,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
             ConfigureMetadataProviders();
-            // Creates a new task to run this initialization and blocks until it completes.
-            // Avoids making the entire hot-reload process async.
-            Task.Run(() => this.InitializeAsync().GetAwaiter().GetResult());
+            // Blocks the current thread until initialization is finished.
+            this.InitializeAsync().GetAwaiter().GetResult();
         }
 
         /// <inheritdoc />

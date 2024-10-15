@@ -156,11 +156,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
 
-                if (!string.IsNullOrEmpty(defaultDataSourceName))
-                {
-                    RuntimeConfig.DefaultDataSourceName = defaultDataSourceName;
-                }
-
                 config = RuntimeConfig;
                 return true;
             }

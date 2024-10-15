@@ -105,12 +105,25 @@ public abstract class RuntimeConfigLoader
 
         try
         {
-            config = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
+            // Use an intermediate object to inject default data source name in the case of hot reload.
+            RuntimeConfig? tempConfig = JsonSerializer.Deserialize<RuntimeConfig>(json, options);
 
-            if (config is null)
+            if (tempConfig is null)
             {
+                config = null;
                 return false;
             }
+
+            // If a dataSourceName was provided we use that, otherwise use the GUID generated from tempConfig construction.
+            dataSourceName = string.IsNullOrWhiteSpace(dataSourceName) ? tempConfig.DefaultDataSourceName : dataSourceName;
+
+            config = new RuntimeConfig(
+                tempConfig.Schema,
+                tempConfig.DataSource,
+                tempConfig.Entities,
+                tempConfig.Runtime,
+                tempConfig.DataSourceFiles,
+                dataSourceName);
 
             // retreive current connection string from config
             string updatedConnectionString = config.DataSource.ConnectionString;

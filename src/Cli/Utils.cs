@@ -7,9 +7,9 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
@@ -175,7 +175,7 @@ namespace Cli
                 uriComponent = uriComponent.Substring(1);
             }
 
-            return !DoesUriComponentContainReservedChars(uriComponent);
+            return !RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(uriComponent);
         }
 
         /// <summary>

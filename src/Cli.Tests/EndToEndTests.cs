@@ -330,9 +330,9 @@ public class EndToEndTests
     /// This test checks behavior of executing `dab configure --runtime.graphql.{key} value
     /// </summary>
     [DataTestMethod]
-    [DataRow("/updatedPath", true, DisplayName = "Success in updating graphQL path values.")]
-    [DataRow("/updated-Path", true, DisplayName = "Success in updating graphQL path values.")]
-    [DataRow("/updated_Path", true, DisplayName = "Success in updating graphQL path values.")]
+    [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]
+    [DataRow("/updated-Path", true, DisplayName = "Success in updated GraphQL Path to /updated-Path.")]
+    [DataRow("/updated_Path", true, DisplayName = "Success in updated GraphQL Path to /updated_Path.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]

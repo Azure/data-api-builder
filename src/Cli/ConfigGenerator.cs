@@ -698,7 +698,7 @@ namespace Cli
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
-            // GraphQL: Enabled, Path, Allow-Introspection
+            // GraphQL: Enabled, Path, Allow-Introspection and Multiple-Mutations.Create.Enabled
             GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL;
             if (options.RuntimeGraphQLEnabled != null ||
                 options.RuntimeGraphQLPath != null ||

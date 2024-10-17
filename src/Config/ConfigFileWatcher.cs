@@ -45,6 +45,9 @@ public class ConfigFileWatcher
                 return;
             }
 
+            // Multiple file change notifications may be raised for a single file change.
+            // Use file hashes to ensure that HotReload operation is only executed when a net-new
+            // runtime config is detected.
             byte[] updatedRuntimeConfigFileHash = FileUtilities.ComputeHash(filePath: _fileWatcher.Path + "/" + _fileWatcher.Filter);
             if (!_runtimeConfigHash.SequenceEqual(updatedRuntimeConfigFileHash))
             {

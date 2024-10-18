@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// of the file contents differ from what was previously detected. For this test,
         /// the file contents differ MyValue -> MyChangedValue.
         /// The config file name is specific to this test in order to avoid concurrently
-        /// running tests from stepping over eachother due to acquiring a handle(s) to the file.
+        /// running tests from stepping over each other due to acquiring a handle(s) to the file.
         /// </summary>
         [TestMethod]
         public void ConfigFileWatcher_NotifiedOfOneNetNewChanges()

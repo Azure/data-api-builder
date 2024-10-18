@@ -9,6 +9,18 @@ namespace Azure.DataApiBuilder.Config.Utilities;
 internal class FileUtilities
 {
     /// <summary>
+    /// Limit the number of retries when failures occur.
+    /// </summary>
+    private static readonly int _runLimit = 3;
+
+    /// <summary>
+    /// Base of the exponential retry back-off.
+    /// -> base ^ runCount
+    /// e.g. 2^1 , 2^2, 2^3, etc.
+    /// </summary>
+    private static readonly int _exponentialRetryBase = 2;
+
+    /// <summary>
     /// Computes the SHA256 hash for the input data (file contents) at the given path.
     /// Includes an exponential back-off retry mechanism to accommodate
     /// circumstances where the file may be in use by another process.
@@ -29,9 +41,8 @@ internal class FileUtilities
         // Exponential back-off retry mechanism.
         int runCount = 1;
 
-        // Arbitrary limit of 3 attempts to load the file.
-        // Maximum 8 seconds (2^3) of wait time due to retries.
-        while (runCount < 4)
+        // Maximum 2^_runLimit seconds of wait time due to retries.
+        while (runCount <= _runLimit)
         {
             try
             {
@@ -62,7 +73,7 @@ internal class FileUtilities
                     throw;
                 }
 
-                Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(2, runCount)));
+                Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(_exponentialRetryBase, runCount)));
                 runCount++;
             }
         }

@@ -137,7 +137,17 @@ public class AuthorizationResolver : IAuthorizationResolver
 
         if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
         {
-            return false;
+            if (ROLE_ANONYMOUS.Equals(roleName, StringComparison.OrdinalIgnoreCase) ||
+                ROLE_AUTHENTICATED.Equals(roleName, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // roleName is a custom role and derives from authenticated role. Let's try with authenticated role.
+            if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(ROLE_AUTHENTICATED, out roleMetadata) && roleMetadata is null)
+            {
+                return false;
+            }
         }
 
         // Short circuit when OperationMetadata lookup fails. When lookup succeeds, operationToColumnMap will be populated

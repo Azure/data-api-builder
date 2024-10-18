@@ -31,6 +31,12 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
+    public RuntimeConfig? lastValidRuntimeConfig;
+
+    public bool isNewConfigDetected;
+
+    public bool isNewConfigValidated = true;
+
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _handler = handler;

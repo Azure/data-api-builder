@@ -158,7 +158,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
                 if (!string.IsNullOrEmpty(defaultDataSourceName))
                 {
-                    RuntimeConfig.DefaultDataSourceName = defaultDataSourceName;
+                    RuntimeConfig.UpdateDefaultDataSourceName(defaultDataSourceName);
                 }
 
                 config = RuntimeConfig;

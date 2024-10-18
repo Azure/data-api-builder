@@ -77,12 +77,14 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+            services.AddSingleton(hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, hotReloadEventHandler, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);
@@ -238,6 +240,11 @@ namespace Azure.DataApiBuilder.Service
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
 
+            // Allows DAB to override the HTTP error code set by HotChocolate.
+            // This is used to ensure HTTP code 4XX is set when the datatbase
+            // returns a "bad request" error such as stored procedure params missing.
+            services.AddHttpResultSerializer<DabGraphQLResultSerializer>();
+
             server.AddErrorFilter(error =>
                 {
                     if (error.Exception is not null)
@@ -275,7 +282,6 @@ namespace Azure.DataApiBuilder.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
-            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
@@ -292,7 +298,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         _logger.LogError(
                             message: "Could not initialize the engine with the runtime config file: {configFilePath}",
-                            fileSystemRuntimeConfigLoader.ConfigFilePath);
+                            runtimeConfigProvider.ConfigFilePath);
                     }
 
                     hostLifetime.StopApplication();
@@ -415,21 +421,6 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Takes in the RuntimeConfig object and checks the host mode.
-        /// If host mode is Development, return `LogLevel.Debug`, else
-        /// for production returns `LogLevel.Error`.
-        /// </summary>
-        public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
-        {
-            if (runtimeConfig.IsDevelopmentMode())
-            {
-                return LogLevel.Debug;
-            }
-
-            return LogLevel.Error;
-        }
-
-        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the 
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
@@ -445,7 +436,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
+                    MinimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig);
                 }
             }
 
@@ -660,7 +651,7 @@ namespace Azure.DataApiBuilder.Service
                     try
                     {
                         IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-                        openApiDocumentor.CreateDocument();
+                        openApiDocumentor.CreateDocument(isHotReloadScenario: false);
                     }
                     catch (DataApiBuilderException dabException)
                     {

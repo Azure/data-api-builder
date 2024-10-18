@@ -7,6 +7,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -132,7 +133,7 @@ public record RuntimeConfig
     }
 
     [JsonIgnore]
-    public string DefaultDataSourceName { get; private set; }
+    public string DefaultDataSourceName { get; set; }
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
@@ -205,7 +206,8 @@ public record RuntimeConfig
             IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            // This loader is not used as a part of hot reload and therefore does not need a handler.
+            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
@@ -535,5 +537,36 @@ public record RuntimeConfig
         {
             return defaultPageSize;
         }
+    }
+
+    /// <summary>
+    /// Checks if the property log-level or its value are null
+    /// </summary>
+    public bool IsLogLevelNull() =>
+        Runtime is null ||
+        Runtime.LoggerLevel is null ||
+        Runtime.LoggerLevel.Value is null;
+
+    /// <summary>
+    /// Takes in the RuntimeConfig object and checks the LogLevel.
+    /// If LogLevel is not null, it will return the current value as a LogLevel,
+    /// else it will take the default option by checking host mode.
+    /// If host mode is Development, return `LogLevel.Debug`, else
+    /// for production returns `LogLevel.Error`.
+    /// </summary>
+    public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig)
+    {
+        LogLevel? value = runtimeConfig.Runtime?.LoggerLevel?.Value;
+        if (value is not null)
+        {
+            return (LogLevel)value;
+        }
+
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            return LogLevel.Debug;
+        }
+
+        return LogLevel.Error;
     }
 }

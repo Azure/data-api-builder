@@ -324,10 +324,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
         {
             // For 'timestamp' columns sc.is_computed = 0.
-            string query = "SELECT ifsc.column_name from sys.columns as sc INNER JOIN INFORMATION_SCHEMA.COLUMNS as ifsc " +
-                "ON (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +
-                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) and ifsc.table_name = {tableParamName} " +
-                $"AND ifsc.table_schema = {schemaParamName} and ifsc.column_name = sc.name;";
+            string query = "SELECT ifsc.COLUMN_NAME from sys.columns as sc INNER JOIN INFORMATION_SCHEMA.COLUMNS as ifsc " +
+                "ON (sc.is_computed = 1 or ifsc.DATA_TYPE = 'timestamp') " +
+                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) AND ifsc.TABLE_SCHEMA = {schemaParamName} " +
+                $"AND ifsc.TABLE_NAME = {tableParamName} AND ifsc.COLUMN_NAME = sc.name;";
 
             return query;
         }

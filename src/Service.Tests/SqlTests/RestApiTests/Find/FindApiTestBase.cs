@@ -1476,8 +1476,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Validates that parameters of a SP sent through the request body are ignored and
-        /// results in a 400 Bad Request due to missing required parameters. 
+        /// For a HTTP GET request, validates that request body contents are ignored.
+        /// e.g. Any stored procedure parameters sent through the request body
+        /// are not considered.
+        /// Validates that a request with missing required parameters results in a 400 Bad Request response.
+        /// The expected error message contents align with the expected "Development" mode response.
         /// </summary>
         [TestMethod]
         public virtual async Task FindApiTestForSPWithRequiredParamsInRequestBody()
@@ -1496,14 +1499,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 operationType: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
-                expectedStatusCode: HttpStatusCode.BadRequest
+                expectedErrorMessage: "Procedure or function 'get_book_by_id' expects parameter '@id', which was not supplied.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseInputError.ToString()
                 );
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operations on a stored procedure missing a required parameter
-        /// Expect a 400 Bad Request to be returned
+        /// Validates that a request with missing required parameters results in a 400 Bad Request response.
+        /// The expected error message contents align with the expected "Development" mode response.
         /// </summary>
         [TestMethod]
         public virtual async Task FindStoredProcedureWithMissingParameter()
@@ -1516,8 +1520,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 operationType: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
-                expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
-                expectedStatusCode: HttpStatusCode.BadRequest
+                expectedErrorMessage: "Procedure or function 'get_book_by_id' expects parameter '@id', which was not supplied.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseInputError.ToString()
                 );
         }
 

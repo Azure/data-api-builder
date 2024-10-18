@@ -53,7 +53,10 @@ public class DabCacheService
     /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
     /// <returns>JSON Response</returns>
     /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
-    public async ValueTask<JsonElement?> GetOrSetAsync<JsonElement>(IQueryExecutor queryExecutor, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl)
+    public async ValueTask<JsonElement?> GetOrSetAsync<JsonElement>(
+        IQueryExecutor queryExecutor,
+        DatabaseQueryMetadata queryMetadata,
+        int cacheEntryTtl)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
         JsonElement? result = await _cache.GetOrSetAsync(
@@ -87,7 +90,10 @@ public class DabCacheService
     /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
     /// <returns>JSON Response</returns>
     /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
-    public async ValueTask<TResult?> GetOrSetAsync<TResult>(Func<Task<TResult>> executeQueryAsync, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl)
+    public async ValueTask<TResult?> GetOrSetAsync<TResult>(
+        Func<Task<TResult>> executeQueryAsync,
+        DatabaseQueryMetadata queryMetadata,
+        int cacheEntryTtl)
     {
 
         string cacheKey = CreateCacheKey(queryMetadata);

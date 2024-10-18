@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -1072,6 +1073,31 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
             Assert.AreEqual(patchResponse.GetProperty("tags").ToString(), JsonSerializer.Serialize(update.tags));
             Assert.AreEqual(patchResponse.GetProperty("stars").ToString(), JsonSerializer.Serialize(update.stars));
             Assert.AreEqual(patchResponse.GetProperty("moons").ToString(), JsonSerializer.Serialize(update.moons));
+        }
+
+        [TestMethod]
+        [DataRow("en-US")]
+        [DataRow("en-DE")]
+        public async Task CanCreateItemWithCultureInvariant(string cultureInfo)
+        {
+            CultureInfo ci = new(cultureInfo);
+            CultureInfo.DefaultThreadCurrentCulture = ci;
+
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"", age: 10.15 }}) {{
+        id
+        name
+        age
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
+
+            // Validate results
+            Assert.AreEqual(Convert.ToDouble(10.15, CultureInfo.InvariantCulture), response.GetProperty("age").GetDouble());
         }
 
         /// <summary>

@@ -356,8 +356,8 @@ WHERE
         /// <inheritdoc/>
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
         {
-            string query = "select column_name as column_name from information_schema.columns " +
-                $"where table_schema = {schemaParamName} and table_name = {tableParamName} and generation_expression != '';";
+            string query = "select COLUMN_NAME as COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS " +
+                $"where TABLE_SCHEMA = {schemaParamName} and TABLE_NAME = {tableParamName} and GENERATION_EXPRESSION != '';";
             return query;
         }
 

@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -304,12 +305,12 @@ namespace Azure.DataApiBuilder.Core.Services
             SyntaxKind valueKind = node.Kind;
             return valueKind switch
             {
-                SyntaxKind.IntValue => Convert.ToInt32(node.Value), // spec
-                SyntaxKind.FloatValue => Convert.ToDouble(node.Value), // spec
+                SyntaxKind.IntValue => Convert.ToInt32(node.Value, CultureInfo.InvariantCulture), // spec
+                SyntaxKind.FloatValue => Convert.ToDouble(node.Value, CultureInfo.InvariantCulture), // spec
                 SyntaxKind.BooleanValue => Convert.ToBoolean(node.Value), // spec
-                SyntaxKind.StringValue => Convert.ToString(node.Value), // spec
+                SyntaxKind.StringValue => Convert.ToString(node.Value, CultureInfo.InvariantCulture), // spec
                 SyntaxKind.NullValue => null, // spec
-                _ => Convert.ToString(node.Value)
+                _ => Convert.ToString(node.Value, CultureInfo.InvariantCulture)
             };
         }
 

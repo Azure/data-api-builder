@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config.Utilities;
 
 namespace Azure.DataApiBuilder.Config;
@@ -25,7 +26,7 @@ public class ConfigFileWatcher
     /// Watches a specific file for modifications and alerts
     /// this class when a change is detected.
     /// </summary>
-    private FileSystemWatcher? _fileWatcher;
+    private IFileSystemWatcher? _fileWatcher;
 
     /// <summary>
     /// Hash of runtime config file.
@@ -39,16 +40,24 @@ public class ConfigFileWatcher
     /// </summary>
     public event EventHandler? NewFileContentsDetected;
 
-    public ConfigFileWatcher(string directoryName, string configFileName)
-    {
-        _fileWatcher = new FileSystemWatcher(directoryName)
-        {
-            Filter = configFileName,
-            EnableRaisingEvents = true
-        };
+    /// <summary>
+    /// Path of the directory being watched by the file watcher.
+    /// </summary>
+    public string WatchedDirectory { get; private set; }
 
-        _runtimeConfigHash = FileUtilities.ComputeHash(filePath: directoryName + "/" + configFileName);
+    /// <summary>
+    /// Name of the file being watched by the file watcher.
+    /// </summary>
+    public string WatchedFile { get; private set; }
+
+    public ConfigFileWatcher(IFileSystemWatcher fileWatcher, string directoryName, string configFileName)
+    {
+        WatchedDirectory = directoryName;
+        WatchedFile = configFileName;
+        _fileWatcher = fileWatcher;
+        _fileWatcher.Path = WatchedDirectory;
         _fileWatcher.Changed += OnConfigFileChange;
+        _runtimeConfigHash = FileUtilities.ComputeHash(_fileWatcher.FileSystem, filePath: WatchedDirectory + "/" + WatchedFile);
     }
 
     /// <summary>
@@ -78,7 +87,7 @@ public class ConfigFileWatcher
                 // Multiple file change notifications may be raised for a single file change.
                 // Use file hashes to ensure that HotReload operation is only executed when a net-new
                 // runtime config is detected.
-                byte[] updatedRuntimeConfigFileHash = FileUtilities.ComputeHash(filePath: _fileWatcher.Path + "/" + _fileWatcher.Filter);
+                byte[] updatedRuntimeConfigFileHash = FileUtilities.ComputeHash(_fileWatcher.FileSystem, filePath: WatchedDirectory + "/" + WatchedFile);
                 if (!_runtimeConfigHash.SequenceEqual(updatedRuntimeConfigFileHash))
                 {
                     _runtimeConfigHash = updatedRuntimeConfigFileHash;

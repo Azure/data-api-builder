@@ -119,7 +119,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         {
             try
             {
-                _configFileWatcher = new(GetConfigDirectoryName(), GetConfigFileName());
+                _configFileWatcher = new(new FileSystemWatcherWrapper(_fileSystem), GetConfigDirectoryName(), GetConfigFileName());
                 _configFileWatcher.NewFileContentsDetected += OnNewFileContentsDetected;
             }
             catch (Exception ex)

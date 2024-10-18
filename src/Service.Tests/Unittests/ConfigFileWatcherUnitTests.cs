@@ -1,14 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.IO;
 using System.IO.Abstractions;
+using System.Text;
 using System.Threading;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
@@ -162,6 +163,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             }
         }
 
+        #region ConfigFileWatcher NewFileContentsDetected event invocation tests
+
+        private const string UNEXPECTED_INVOCATION_COUNT_ERR = "Unexpected number of invocations of the NewFileContentsDetected event.";
+        private const string FILECHANGE_EVENT_NOT_RAISED_ERR = "The file system's file-changed event was not raised.";
+
         /// <summary>
         /// This test validates that overwriting a file with the different contents
         /// results in ConfigFileWatcher's NewFileContentsDetected event being raised.
@@ -177,8 +183,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Arrange
             int fileChangeNotificationsReceived = 0;
             string configName = "ConfigFileWatcher_NotifiedOfOneNetNewChanges.json";
-            File.WriteAllText(configName, "MyValue");
-            ConfigFileWatcher fileWatcher = new(directoryName: Directory.GetCurrentDirectory(), configFileName: configName);
+
+            // Mock filesystem calls for when FileUtilities.ComputeHash() utilizes the filesystem.
+            // For this test, we assume the file exists because we are validating the behavior
+            // of differing config file contents triggering a NewFileContentsDetected event.
+            IFileSystem fileSystem = Mock.Of<IFileSystem>();
+            Mock.Get(fileSystem).Setup(fs => fs.Directory.GetCurrentDirectory()).Returns(Directory.GetCurrentDirectory());
+            Mock.Get(fileSystem).Setup(fs => fs.File.Exists(It.IsAny<string>())).Returns(true);
+
+            // Mock file system to return different byte arrays for each read which occurs in
+            // FileUtilities.ComputeHash() called by ConfigFileWatcher.
+            // The first read occurs during ConfigFileWatcher's initialization
+            // The second read occurs during the manual invocation of a "file changed" event.
+            Mock.Get(fileSystem).SetupSequence(fs => fs.File.ReadAllBytes(It.IsAny<string>()))
+                .Returns(Encoding.UTF8.GetBytes("FirstValue"))
+                .Returns(Encoding.UTF8.GetBytes("SecondValue"))
+                .Returns(Encoding.UTF8.GetBytes("SecondValue"));
+
+            Mock<IFileSystemWatcher> fileSystemWatcherMock = new();
+            fileSystemWatcherMock.Setup(mock => mock.FileSystem).Returns(fileSystem);
+
+            ConfigFileWatcher fileWatcher = new(fileSystemWatcherMock.Object, directoryName: Directory.GetCurrentDirectory(), configFileName: configName);
             fileWatcher.NewFileContentsDetected += (sender, e) =>
             {
                 // For testing, modification of fileChangeNotificationsRecieved
@@ -186,14 +211,38 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 Interlocked.Increment(ref fileChangeNotificationsReceived);
             };
 
-            // Act - Write to the file twice to implicitly trigger
-            // multiple file change events for the ConfigFileWatcher's filesystem watcher.
-            ModifyConfigFile(configFileName: configName, configContent: "MyChangedValue");
+            // Track the number of invocations so far so we can prove that
+            // fileSystemWatcherMock.Raise() actually triggers a "file changed" event.
+            int numberFileSystemWatcherMockInvocations = fileSystemWatcherMock.Invocations.Count;
 
-            // Assert -> allow time for the file change events to be processed.
-            // Wait time is arbitrary.
-            Thread.Sleep(millisecondsTimeout: 500);
-            Assert.AreEqual(expected: 1, actual: fileChangeNotificationsReceived);
+            // Act
+            // Manually induce two "file changed" events to simulate a file change
+            // which is detected by ConfigFileWatcher's OnConfigFileChange() method.
+            // Upon detecting a net-new config (due to differing hash),
+            // ConfigFileWatcher triggers its NewFileContentsDetected event.
+            int expectedInvocationCount = 2;
+            for (int invocations = 1; invocations <= expectedInvocationCount; invocations++)
+            {
+                fileSystemWatcherMock.Raise(mock => mock.Changed += null, this, new FileSystemEventArgs(
+                    changeType: WatcherChangeTypes.Changed,
+                    directory: fileSystem.Directory.GetCurrentDirectory(),
+                    name: configName));
+            }
+
+            // Assert
+            // Even though the ConfigFileWatcher's NewFileContentsDetected is raised,
+            // we still expected the underlying FileSystemWatcher's file changed event to
+            // have been raised more than once.
+            // The ConfigFileWatcher's job is to ensure it only raises its NewFileContentsDetected
+            // event when the new file's hash differs from the currently tracked file hash.
+            Assert.AreEqual(
+                expected: expectedInvocationCount,
+                actual: fileSystemWatcherMock.Invocations.Count - numberFileSystemWatcherMockInvocations,
+                message: FILECHANGE_EVENT_NOT_RAISED_ERR);
+            Assert.AreEqual(
+                expected: 1,
+                actual: fileChangeNotificationsReceived,
+                message: UNEXPECTED_INVOCATION_COUNT_ERR);
         }
 
         /// <summary>
@@ -212,10 +261,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             int fileChangeNotificationsReceived = 0;
             string configName = "ConfigFileWatcher_NotifiedOfZeroNetNewChange.json";
 
-            // Write initial value to file.
-            File.WriteAllText(configName, "MyValue");
+            // Mock filesystem calls for when FileUtilities.ComputeHash() utilizes the filesystem.
+            // For this test, we assume the file exists because we are validating the behavior
+            // of differing config file contents triggering a NewFileContentsDetected event.
+            IFileSystem fileSystem = Mock.Of<IFileSystem>();
+            Mock.Get(fileSystem).Setup(fs => fs.Directory.GetCurrentDirectory()).Returns(Directory.GetCurrentDirectory());
+            Mock.Get(fileSystem).Setup(fs => fs.File.Exists(It.IsAny<string>())).Returns(true);
 
-            ConfigFileWatcher fileWatcher = new(directoryName: Directory.GetCurrentDirectory(), configFileName: configName);
+            // Mock file system to return different byte arrays for each read which occurs in
+            // FileUtilities.ComputeHash() called by ConfigFileWatcher.
+            // The first read occurs during ConfigFileWatcher's initialization
+            // The second read occurs during the manual invocation of a "file changed" event.
+            Mock.Get(fileSystem).SetupSequence(fs => fs.File.ReadAllBytes(It.IsAny<string>()))
+                .Returns(Encoding.UTF8.GetBytes("FirstValue"))
+                .Returns(Encoding.UTF8.GetBytes("FirstValue"));
+
+            Mock<IFileSystemWatcher> fileSystemWatcherMock = new();
+            fileSystemWatcherMock.Setup(mock => mock.FileSystem).Returns(fileSystem);
+
+            ConfigFileWatcher fileWatcher = new(fileSystemWatcherMock.Object, directoryName: Directory.GetCurrentDirectory(), configFileName: configName);
             fileWatcher.NewFileContentsDetected += (sender, e) =>
             {
                 // For testing, modification of fileChangeNotificationsRecieved
@@ -223,47 +287,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 Interlocked.Increment(ref fileChangeNotificationsReceived);
             };
 
-            // Act - Write to the file multiple times with the same value to implicitly trigger
-            // multiple file change events for the ConfigFileWatcher's filesystem watcher.
-            ModifyConfigFile(configFileName: configName, configContent: "MyValue");
+            // Track the number of invocations so far so we can prove that
+            // fileSystemWatcherMock.Raise() actually triggers a "file changed" event.
+            int numberFileSystemWatcherMockInvocations = fileSystemWatcherMock.Invocations.Count;
 
-            // Assert -> allow time for the file change events to be processed.
-            // Wait time is arbitrary.
-            Thread.Sleep(millisecondsTimeout: 500);
-            Assert.AreEqual(expected: 0, actual: fileChangeNotificationsReceived);
+            // Act
+            // Manually induce two "file changed" events to simulate a file change
+            // which is detected by ConfigFileWatcher's OnConfigFileChange() method.
+            // Upon detecting the same config (due to same hash), ConfigFileWatcher
+            // skips triggering its NewFileContentsDetected event.
+            fileSystemWatcherMock.Raise(mock => mock.Changed += null, this, new FileSystemEventArgs(
+                changeType: WatcherChangeTypes.Changed,
+                directory: fileSystem.Directory.GetCurrentDirectory(),
+                name: configName));
+
+            // Assert
+            // Even though the ConfigFileWatcher's NewFileContentsDetected is not raised,
+            // we still expected the underlying FileSystemWatcher's file changed event to be raised.
+            // The ConfigFileWatcher's job is to ensure it only raises its NewFileContentsDetected
+            // event when the new file's hash differs from the currently tracked file hash.
+            Assert.AreEqual(
+                expected: 1,
+                actual: fileSystemWatcherMock.Invocations.Count - numberFileSystemWatcherMockInvocations,
+                message: FILECHANGE_EVENT_NOT_RAISED_ERR);
+            Assert.AreEqual(
+                expected: 0,
+                actual: fileChangeNotificationsReceived,
+                message: UNEXPECTED_INVOCATION_COUNT_ERR);
         }
-
-        /// <summary>
-        /// Wrapper around File.WriteAllText() such that IOExceptions result in retries
-        /// to allow for other handles on file to be dropped.
-        /// RunCount and sleep time are arbitrary.
-        /// </summary>
-        /// <param name="configFileName">Name of write-target config file.</param>
-        /// <param name="configContent">Content to write to file.</param>
-        private static void ModifyConfigFile(string configFileName, string configContent)
-        {
-            int runCount = 1;
-            while (runCount < 4)
-            {
-                try
-                {
-                    File.WriteAllText(configFileName, configContent);
-                    return;
-                }
-                catch (IOException ex)
-                {
-                    Console.WriteLine($"IO Exception, retrying due to {ex.Message}");
-                    if (runCount == 3)
-                    {
-                        throw;
-                    }
-
-                    // Constant backoff because we don't want this to hold up the CI/CD pipelines.
-                    // Wait time is arbitrary.
-                    Thread.Sleep(millisecondsTimeout: 500);
-                    runCount++;
-                }
-            }
-        }
+        #endregion
     }
 }

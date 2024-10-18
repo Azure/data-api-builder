@@ -179,23 +179,29 @@ public class ClientRoleHeaderAuthenticationMiddleware
     /// <returns>Authentication Scheme</returns>
     private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
     {
-        switch (configuredProviderName)
+        if (string.Equals(configuredProviderName, SupportedAuthNProviders.APP_SERVICE, StringComparison.OrdinalIgnoreCase))
         {
-            case AuthenticationOptions.SIMULATOR_AUTHENTICATION:
-                return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
-            case nameof(EasyAuthType.AppService):
-                return EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
-            case nameof(EasyAuthType.StaticWebApps):
-                return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
-            case "AzureAD":
-            case "EntraID":
-                return JwtBearerDefaults.AuthenticationScheme;
-            case "Custom":
-            default:
-                // Changing this value is a breaking change because non-out of box
-                // authentication provider names supplied in dab-config.json indicate
-                // that JWT bearer authentication should be used.
-                return GenericOAuthDefaults.AUTHENTICATIONSCHEME;
+            return EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
+        {
+            return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.SIMULATOR, StringComparison.OrdinalIgnoreCase))
+        {
+            return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.AZURE_AD, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase))
+        {
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+        else
+        {
+            // Changing this value is a breaking change because non-out of box
+            // authentication provider names supplied in dab-config.json indicate
+            // that JWT bearer authentication should be used.
+            return GenericOAuthDefaults.AUTHENTICATIONSCHEME;
         }
     }
 }

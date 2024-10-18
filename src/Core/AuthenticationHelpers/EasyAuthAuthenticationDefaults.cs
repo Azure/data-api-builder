@@ -5,7 +5,7 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers;
 
 /// <summary>
 /// EasyAuth authentication scheme names granularized by provider
-/// to enable compatility with HotReloading authentication settings.
+/// to enable compatibility with HotReloading authentication settings.
 /// Authentication schemes:
 /// - Correlate to an authentication handler
 /// - Indicate to AuthenticateAsync which handler to use

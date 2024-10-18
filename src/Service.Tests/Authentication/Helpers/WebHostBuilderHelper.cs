@@ -41,8 +41,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
         /// - DAB's Simulator/ EasyAuth authentication middleware and ClientRoleHeader middleware
         /// - dotnet's authorization middleware.
         /// </summary>
-        /// <param name="provider">Runtime configured identity provider name. This is different that authentication scheme name because
-        /// the configured value is simpler.</param>
+        /// <param name="provider">Runtime configured identity provider name. This is different than the
+        /// authentication scheme name because the configured value is simpler.</param>
         /// <param name="useAuthorizationMiddleware">Whether to include authorization middleware in request pipeline.</param>
         /// <returns>IHost to be used to create a TestServer</returns>
         public static async Task<IHost> CreateWebHost(

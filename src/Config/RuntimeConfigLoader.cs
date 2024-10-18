@@ -71,14 +71,14 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Sends the notification to the event handler to trigger the hot-reload events
-    /// that have subscribed for configuration changes. The order here matters since
-    /// there are dependencies that we must refresh one after another. If adding to this
-    /// method make sure that you add the event trigger after any required dependencies have
+    /// Notifies event handler and change token subscribers that a hot-reload has occurred.
+    /// Order here matters because some dependencies must be updated before others.
+    /// When modifying this function:
+    /// - Ensure that you add new event trigger(s) after any required dependencies have
     /// been refreshed by previously called event triggers.
     /// </summary>
     /// <param name="message"></param>
-    protected void SendEventNotification(string message = "")
+    protected void SignalConfigChanged(string message = "")
     {
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));

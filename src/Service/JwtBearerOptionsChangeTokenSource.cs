@@ -20,7 +20,7 @@ public class JwtBearerOptionsChangeTokenSource : IOptionsChangeTokenSource<JwtBe
     private readonly RuntimeConfigProvider _configProvider;
 
     /// <summary>
-    /// Get RuntimeConfigProvider to use as the change event source.
+    /// Get RuntimeConfigProvider to use as the change token source.
     /// </summary>
     /// <param name="configProvider">Change token source.</param>
     public JwtBearerOptionsChangeTokenSource(RuntimeConfigProvider configProvider)

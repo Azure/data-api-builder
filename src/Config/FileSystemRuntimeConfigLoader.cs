@@ -175,15 +175,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         if (_fileSystem.File.Exists(path))
         {
-            Console.WriteLine($"Loading config file from {path}.");
-            Console.WriteLine($"FullPath: {_fileSystem.Path.GetFullPath(path)}");
+            Console.WriteLine($"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
 
-            // Use File.OpenRead because DAB doesn't need write access to the file.
+            // Use File.ReadAllText because DAB doesn't need write access to the file
+            // and ensures the file handle is released immediately after reading.
             // Previous usage of File.Open may cause file locking issues when
             // actively using hot-reload and modifying the config file in a text editor.
-            using FileSystemStream fs = _fileSystem.File.OpenRead(path);
-            using StreamReader sr = new((FileStream)fs);
-            string json = sr.ReadToEnd();
+            string json = _fileSystem.File.ReadAllText(path);
             if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
                 if (TrySetupConfigFileWatcher())

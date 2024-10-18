@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Microsoft.IdentityModel.Tokens;
-
 namespace Cli.Tests
 {
     public static class TestHelper

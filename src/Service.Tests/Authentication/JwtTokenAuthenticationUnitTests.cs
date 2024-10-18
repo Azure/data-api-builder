@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -298,8 +299,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         {
             // Setup RuntimeConfigProvider object for the pipeline.
             MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = new(new MockFileSystem());
+            AuthenticationOptions authOptions = new()
+            {
+                Provider = "AzureAD"
+            };
+
+            RuntimeConfig runtimeConfig = RuntimeConfigAuthHelper.CreateTestConfigWithAuthNProvider(authOptions);
+            fileSystemRuntimeConfigLoader.RuntimeConfig = runtimeConfig;
+            RuntimeConfigProvider runtimeConfigProvider = new(fileSystemRuntimeConfigLoader);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>

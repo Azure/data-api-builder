@@ -5,7 +5,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Http;
@@ -55,15 +55,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         #region Helper Methods
         /// <summary>
         /// Creates the TestServer with the minimum middleware setup necessary to
-        /// test EasyAuth authentication mechanisms.
+        /// test the "Simulator" authentication provider's authentication mechanisms.
         /// Sends a request with a clientRoleHeader to the TestServer created.
         /// </summary>
         /// <param name="clientRole">Name of role to include in header.</param>
-        /// <returns></returns>
         public static async Task<HttpContext> SendRequestAndGetHttpContextState(string? clientRole = null)
         {
             using IHost host = await WebHostBuilderHelper.CreateWebHost(
-                provider: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME,
+                provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION,
                 useAuthorizationMiddleware: true);
 
             TestServer server = host.GetTestServer();

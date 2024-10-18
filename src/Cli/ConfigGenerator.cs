@@ -12,7 +12,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using static Cli.Utils;
 
 namespace Cli

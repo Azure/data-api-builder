@@ -41,6 +41,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -88,8 +89,8 @@ namespace Azure.DataApiBuilder.Service
             RuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);
-            services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
+            services.AddSingleton(configProvider);
 
             if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
                 && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
@@ -174,7 +175,17 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthentication(services, configProvider);
+            if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
+            {
+                // Development mode implies support for "Hot Reload". The V2 authentication function
+                // wires up all DAB supported authentication providers (schemes) so that at request time,
+                // the runtime config defined authenitication provider is used to authenticate requests.
+                ConfigureAuthenticationV2(services, configProvider);
+            }
+            else
+            {
+                ConfigureAuthentication(services, configProvider);
+            }
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
@@ -307,6 +318,7 @@ namespace Azure.DataApiBuilder.Service
             else
             {
                 // Config provided during runtime.
+                runtimeConfigProvider.IsLateConfigured = true;
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (sender, newConfig) =>
                 {
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
@@ -522,6 +534,27 @@ namespace Azure.DataApiBuilder.Service
                 // is not present.
                 SetStaticWebAppsAuthentication(services);
             }
+        }
+
+        /// <summary>
+        /// Registers all DAB supported authentication providers (schemes) so that at request time,
+        /// DAB can use the runtime config's defined provider to authenticate requests.
+        /// The function includes JWT specific configuration handling:
+        /// - IOptionsChangeTokenSource<JwtBearerOptions> : Registers a change token source for dynamic config updates which
+        /// is used internally by JwtBearerHandler's OptionsMonitor to listen for changes in JwtBearerOptions.
+        /// - IConfigureOptions<JwtBearerOptions> : Registers named JwtBearerOptions whose "Configure(...)" function is
+        /// called by OptionsFactory internally by .NET to fetch the latest configuration from the RuntimeConfigProvider.
+        /// </summary>
+        /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/49586#issuecomment-1671838595">Guidance for registering IOptionsChangeTokenSource</seealso>
+        /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/21491#issuecomment-624240160">Guidance for registering named options.</seealso>
+        private static void ConfigureAuthenticationV2(IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
+        {
+            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(runtimeConfigProvider));
+            services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
+            services.AddAuthentication()
+                    .AddEnvDetectedEasyAuth()
+                    .AddJwtBearer()
+                    .AddSimulatorAuthentication();
         }
 
         /// <summary>

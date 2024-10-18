@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             _metadataProviders.Clear();
             ConfigureMetadataProviders();
-            InitializeAsync().GetAwaiter().GetResult();
+            InitializeAsync().Wait();
         }
 
         /// <inheritdoc />

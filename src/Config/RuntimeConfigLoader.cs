@@ -65,9 +65,8 @@ public abstract class RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    /// <param name="dataSourceName">The data source name to be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "");
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -85,15 +84,12 @@ public abstract class RuntimeConfigLoader
     /// <param name="connectionString">connectionString to add to config if specified</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing. By default, no replacement happens.</param>
-    /// <param name="dataSourceName"> datasource name for which to add connection string</param>
-    /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
     /// <param name="replacementFailureMode">Determines failure mode for env variable replacement.</param>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         ILogger? logger = null,
         string? connectionString = null,
         bool replaceEnvVar = false,
-        Dictionary<string, string>? datasourceNameToConnectionString = null,
         EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
         JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar, replacementFailureMode);
@@ -116,12 +112,9 @@ public abstract class RuntimeConfigLoader
                 updatedConnectionString = connectionString;
             }
 
-            if (datasourceNameToConnectionString is null)
-            {
-                datasourceNameToConnectionString = new Dictionary<string, string>();
-            }
+            Dictionary<string, string> datasourceNameToConnectionString = new();
 
-            // add to dictionary if datasourceName is present (will either be the default or the one provided)
+            // add to dictionary if datasourceName is present
             datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
 
             // iterate over dictionary and update runtime config with connection strings.

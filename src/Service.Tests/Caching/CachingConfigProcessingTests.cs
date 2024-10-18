@@ -59,8 +59,6 @@ public class CachingConfigProcessingTests
             logger: null,
             connectionString: null,
             replaceEnvVar: false,
-            dataSourceName: string.Empty,
-            datasourceNameToConnectionString: null,
             replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
 
         // Assert
@@ -108,8 +106,6 @@ public class CachingConfigProcessingTests
             logger: null,
             connectionString: null,
             replaceEnvVar: false,
-            dataSourceName: string.Empty,
-            datasourceNameToConnectionString: null,
             replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
 
         // Assert
@@ -148,8 +144,6 @@ public class CachingConfigProcessingTests
             logger: null,
             connectionString: null,
             replaceEnvVar: false,
-            dataSourceName: string.Empty,
-            datasourceNameToConnectionString: null,
             replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
 
         // Assert
@@ -196,8 +190,6 @@ public class CachingConfigProcessingTests
             logger: null,
             connectionString: null,
             replaceEnvVar: false,
-            dataSourceName: string.Empty,
-            datasourceNameToConnectionString: null,
             replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
 
         // Assert
@@ -227,8 +219,6 @@ public class CachingConfigProcessingTests
                        logger: null,
                        connectionString: null,
                        replaceEnvVar: false,
-                       dataSourceName: string.Empty,
-                       datasourceNameToConnectionString: null,
                        replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
 
         // Assert
@@ -265,8 +255,6 @@ public class CachingConfigProcessingTests
                        logger: null,
                        connectionString: null,
                        replaceEnvVar: false,
-                       dataSourceName: string.Empty,
-                       datasourceNameToConnectionString: null,
                        replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
         Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
 
@@ -315,8 +303,6 @@ public class CachingConfigProcessingTests
                        logger: null,
                        connectionString: null,
                        replaceEnvVar: false,
-                       dataSourceName: string.Empty,
-                       datasourceNameToConnectionString: null,
                        replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
         Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
 
@@ -359,8 +345,6 @@ public class CachingConfigProcessingTests
                        logger: null,
                        connectionString: null,
                        replaceEnvVar: false,
-                       dataSourceName: string.Empty,
-                       datasourceNameToConnectionString: null,
                        replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
         Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
 

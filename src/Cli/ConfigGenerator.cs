@@ -687,9 +687,10 @@ namespace Cli
         }
 
         /// <summary>
-        /// Attempts to update the Config parameters in the GraphQL runtime settings based on the provided value.
+        /// Attempts to update the Config parameters in the runtime settings based on the provided value.
         /// Performs the update on the runtimeConfig which is passed as reference
         /// Returns true if the update has been performed, else false
+        /// Currently, used to update only GraphQL settings
         /// </summary>
         /// <param name="options">Options including the graphql runtime parameters.</param>
         /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
@@ -705,7 +706,7 @@ namespace Cli
                 options.RuntimeGraphQLAllowIntrospection != null ||
                 options.RuntimeGraphQLMultipleMutationsCreateEnabled != null)
             {
-                bool status = UpdateConfigureGraphQLValues(options, ref updatedGraphQLOptions);
+                bool status = TryUpdateConfigureGraphQLValues(options, ref updatedGraphQLOptions);
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { GraphQL = updatedGraphQLOptions } };
@@ -727,56 +728,63 @@ namespace Cli
         /// <param name="options">options.</param>
         /// <param name="updatedGraphQLOptions">updatedGraphQLOptions.</param>
         /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
-        private static bool UpdateConfigureGraphQLValues(
+        private static bool TryUpdateConfigureGraphQLValues(
             ConfigureOptions options,
             ref GraphQLRuntimeOptions? updatedGraphQLOptions)
         {
             object? updatedValue;
-
-            // Runtime.GraphQL.Enabled
-            updatedValue = options?.RuntimeGraphQLEnabled;
-            if (updatedValue != null)
+            try
             {
-                updatedGraphQLOptions = updatedGraphQLOptions! with { Enabled = (bool)updatedValue };
-                _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Enabled as '{updatedValue}'");
-            }
-
-            // Runtime.GraphQL.Path
-            updatedValue = options?.RuntimeGraphQLPath;
-            if (updatedValue != null)
-            {
-                bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent((string)updatedValue, out string exceptionMessage);
-                if (status)
+                // Runtime.GraphQL.Enabled
+                updatedValue = options?.RuntimeGraphQLEnabled;
+                if (updatedValue != null)
                 {
-                    updatedGraphQLOptions = updatedGraphQLOptions! with { Path = (string)updatedValue };
-                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}'");
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Enabled as '{updatedValue}'");
                 }
-                else
+
+                // Runtime.GraphQL.Path
+                updatedValue = options?.RuntimeGraphQLPath;
+                if (updatedValue != null)
                 {
-                    _logger.LogError($"Failure in updating RuntimeConfig with Runtime.GraphQL.Path " +
-                        $"as '{updatedValue}' due to exception message: {exceptionMessage}");
-                    return false;
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent((string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedGraphQLOptions = updatedGraphQLOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}'");
+                    }
+                    else
+                    {
+                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.GraphQL.Path " +
+                            $"as '{updatedValue}' due to exception message: {exceptionMessage}");
+                        return false;
+                    }
                 }
-            }
 
-            // Runtime.GraphQL.Allow-Introspection
-            updatedValue = options?.RuntimeGraphQLAllowIntrospection;
-            if (updatedValue != null)
+                // Runtime.GraphQL.Allow-Introspection
+                updatedValue = options?.RuntimeGraphQLAllowIntrospection;
+                if (updatedValue != null)
+                {
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { AllowIntrospection = (bool)updatedValue };
+                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as '{updatedValue}'");
+                }
+
+                // Runtime.GraphQL.Multiple-mutations.Create.Enabled
+                updatedValue = options?.RuntimeGraphQLMultipleMutationsCreateEnabled;
+                if (updatedValue != null)
+                {
+                    MultipleCreateOptions multipleCreateOptions = new((bool)updatedValue);
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
+                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'");
+                }
+
+                return true;
+            }
+            catch(Exception ex)
             {
-                updatedGraphQLOptions = updatedGraphQLOptions! with { AllowIntrospection = (bool)updatedValue };
-                _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as '{updatedValue}'");
+                _logger.LogError($"Failure in updating RuntimeConfig with exception message: {ex.Message}.");
+                return false;
             }
-
-            // Runtime.GraphQL.Multiple-mutations.Create.Enabled
-            updatedValue = options?.RuntimeGraphQLMultipleMutationsCreateEnabled;
-            if (updatedValue != null)
-            {
-                MultipleCreateOptions multipleCreateOptions = new((bool)updatedValue);
-                updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
-                _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'");
-            }
-
-            return true;
         }
 
         /// <summary>

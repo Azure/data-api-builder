@@ -327,7 +327,10 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// This test checks behavior of executing `dab configure --runtime.graphql.{key} value
+    /// This test checks behavior of executing `dab configure --runtime.graphql.path {value}`
+    /// Validates that path values with permitted characters result in DAB engine starting successfully.
+    /// Ensures that invalid characters provided for path result in failed engine startup 
+    /// due to validation failure.
     /// </summary>
     [DataTestMethod]
     [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]

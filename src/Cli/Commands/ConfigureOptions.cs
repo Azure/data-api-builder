@@ -67,16 +67,16 @@ namespace Cli.Commands
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
 
-        [Option("runtime.graphql.enabled", Required = false, HelpText = "Configure enable/disable flag for graphQL runtime options.")]
+        [Option("runtime.graphql.enabled", Required = false, HelpText = "Enable DAB's GraphQL endpoint in Runtime Config. Allowed values: true(default) or false (boolean).")]
         public bool? RuntimeGraphQLEnabled { get; }
 
-        [Option("runtime.graphql.path", Required = false, HelpText = "Configure path for graphQL runtime options.")]
+        [Option("runtime.graphql.path", Required = false, HelpText = "Customize DAB's GraphQL endpoint path in Runtime Config. Allowed values: string. Conditions: Starting with '/', no spaces and no reserved characters.")]
         public string? RuntimeGraphQLPath { get; }
 
-        [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Configure allow-introspection for graphql runtime options.")]
+        [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Allow/Deny GraphQL introspection requests in Runtime Config. Allowed values: true(default) or false (boolean).")]
         public bool? RuntimeGraphQLAllowIntrospection { get; }
 
-        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Configure multiple-mutations.create.enabled in graphql runtime options.")]
+        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Enable/Disable multiple-mutation create operations on DAB's generated GraphQL schema in Runtime Config. Allowed values: true(default) or false (boolean).")]
         public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

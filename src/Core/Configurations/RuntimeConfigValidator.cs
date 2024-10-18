@@ -568,7 +568,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 );
         }
 
-        if (RuntimeConfigValidatorUtil._reservedUriCharsRgx.IsMatch(pathForEntity))
+        if (RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(pathForEntity))
         {
             throw new DataApiBuilderException(
                 message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",

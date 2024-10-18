@@ -16,13 +16,13 @@ public static class RuntimeConfigValidatorUtil
     private static readonly string _reservedUriChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
 
     //  Regex to validate rest/graphql custom path prefix.
-    public static readonly Regex _reservedUriCharsRgx = new(_reservedUriChars, RegexOptions.Compiled);
+    private static readonly Regex _reservedUriCharsRgx = new(_reservedUriChars, RegexOptions.Compiled);
 
     public const string URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG = "contains one or more reserved characters.";
 
     /// <summary>
-    /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
-    /// any reserved characters. In case the URI component is not well formed the exception message containing
+    /// Method to validate that the REST/GraphQL URI component is well formed such that it does not contain
+    /// any reserved characters or spaces. In case the URI component is not well formed the exception message containing
     /// the reason for ill-formed URI component is returned. Else we return an empty string.
     /// </summary>
     /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>

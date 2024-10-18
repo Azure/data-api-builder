@@ -197,7 +197,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
         TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true);
-        SendEventNotification();
+        SignalConfigChanged();
     }
 
     /// <summary>

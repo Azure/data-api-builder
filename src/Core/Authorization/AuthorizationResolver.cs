@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -16,6 +15,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Azure.DataApiBuilder.Core.Authorization;
 

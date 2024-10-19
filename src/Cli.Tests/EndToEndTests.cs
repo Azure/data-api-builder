@@ -327,6 +327,39 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.graphql.path {value}`
+    /// Validates that path values with permitted characters result in DAB engine starting successfully.
+    /// Ensures that invalid characters provided for path result in failed engine startup 
+    /// due to validation failure.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]
+    [DataRow("/updated-Path", true, DisplayName = "Success in updated GraphQL Path to /updated-Path.")]
+    [DataRow("/updated_Path", true, DisplayName = "Success in updated GraphQL Path to /updated_Path.")]
+    [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
+    [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
+    [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
+    [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
+    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    public void TestUpdateGraphQLPathRuntimeSettings(string path, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Path in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.graphql.path", path };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Path was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
     /// Test to verify authentication options with init command containing
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.

@@ -57,7 +57,7 @@ public class ConfigFileWatcher
         _fileWatcher = fileWatcher;
         _fileWatcher.Path = WatchedDirectory;
         _fileWatcher.Changed += OnConfigFileChange;
-        _runtimeConfigHash = FileUtilities.ComputeHash(_fileWatcher.FileSystem, filePath: WatchedDirectory + "/" + WatchedFile);
+        _runtimeConfigHash = FileUtilities.ComputeHash(_fileWatcher.FileSystem, filePath: Path.Combine(WatchedDirectory, WatchedFile));
     }
 
     /// <summary>

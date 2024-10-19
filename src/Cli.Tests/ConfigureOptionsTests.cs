@@ -118,9 +118,10 @@ namespace Cli.Tests
         [DataRow(true, DisplayName = "Update enabled to be true for GraphQL.")]
         public void TestUpdateEnabledForGraphQLSettings(bool updatedEnabledValue)
         {
+            // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attmepts to update enabled flag
+            // Act: Attempts to update enabled flag
             ConfigureOptions options = new(
                 runtimeGraphQLEnabled: updatedEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
@@ -139,16 +140,17 @@ namespace Cli.Tests
         /// in runtime config update. Takes in updated value for graphql.path and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow("/updatedPath", DisplayName = "Update path->/upatedPath for GraphQL.")]
-        [DataRow("/updated_Path", DisplayName = "Update path->/updated_Path for GraphQL.")]
-        [DataRow("/updated-Path", DisplayName = "Update path->/updated-Path for GraphQL.")]
-        public void TestUpdatePathForGraphQLSettings(string updatedValue)
+        [DataRow("/updatedPath", DisplayName = "Update path to /updatedPath for GraphQL.")]
+        [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in GraphQL path name.")]
+        [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in GraphQL path name.")]
+        public void TestUpdatePathForGraphQLSettings(string updatedPathValue)
         {
+            // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attmepts to update path value
+            // Act: Attempts to update path value
             ConfigureOptions options = new(
-                runtimeGraphQLPath: updatedValue,
+                runtimeGraphQLPath: updatedPathValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
@@ -157,7 +159,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
-            Assert.AreEqual(updatedValue, runtimeConfig.Runtime.GraphQL.Path);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.GraphQL.Path);
         }
 
         /// <summary>
@@ -168,13 +170,14 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update AllowIntrospection to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update AllowIntrospection to be true for GraphQL.")]
-        public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedValue)
+        public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedAllowIntrospectionValue)
         {
+            // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attmepts to update allow-introspection flag
+            // Act: Attempts to update allow-introspection flag
             ConfigureOptions options = new(
-                runtimeGraphQLAllowIntrospection: updatedValue,
+                runtimeGraphQLAllowIntrospection: updatedAllowIntrospectionValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
@@ -183,7 +186,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.AllowIntrospection);
-            Assert.AreEqual(updatedValue, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
+            Assert.AreEqual(updatedAllowIntrospectionValue, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
         }
 
         /// <summary>
@@ -194,13 +197,14 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update MultipleMutation.Create.Enabled to be false for GraphQL.")]
         [DataRow(true, DisplayName = "Update MultipleMutation.Create.Enabled to be true for GraphQL.")]
-        public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedValue)
+        public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedMultipleMutationsCreateEnabledValue)
         {
+            // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attmepts to update multiple-mutations.create.enabled flag
+            // Act: Attempts to update multiple-mutations.create.enabled flag
             ConfigureOptions options = new(
-                runtimeGraphQLMultipleMutationsCreateEnabled: updatedValue,
+                runtimeGraphQLMultipleMutationsCreateEnabled: updatedMultipleMutationsCreateEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
@@ -209,7 +213,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.MultipleMutationOptions?.MultipleCreateOptions?.Enabled);
-            Assert.AreEqual(updatedValue, runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
+            Assert.AreEqual(updatedMultipleMutationsCreateEnabledValue, runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
         }
 
         /// <summary>
@@ -219,11 +223,13 @@ namespace Cli.Tests
         [TestMethod]
         public void TestUpdateMultipleParametersForGraphQLSettings()
         {
+            // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
             bool updatedAllowIntrospectionValue = false;
             string updatedPathValue = "/updatedPath";
-            // Act: Attmepts to update the path value and allow-introspection flag
+
+            // Act: Attempts to update the path value and allow-introspection flag
             ConfigureOptions options = new(
                 runtimeGraphQLPath: updatedPathValue,
                 runtimeGraphQLAllowIntrospection: updatedAllowIntrospectionValue,

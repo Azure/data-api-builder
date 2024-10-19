@@ -747,7 +747,7 @@ namespace Cli
                 updatedValue = options?.RuntimeGraphQLPath;
                 if (updatedValue != null)
                 {
-                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent((string)updatedValue, out string exceptionMessage);
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
                     if (status)
                     {
                         updatedGraphQLOptions = updatedGraphQLOptions! with { Path = (string)updatedValue };
@@ -773,14 +773,14 @@ namespace Cli
                 updatedValue = options?.RuntimeGraphQLMultipleMutationsCreateEnabled;
                 if (updatedValue != null)
                 {
-                    MultipleCreateOptions multipleCreateOptions = new((bool)updatedValue);
+                    MultipleCreateOptions multipleCreateOptions = new(enabled: (bool)updatedValue);
                     updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
                     _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'");
                 }
 
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError($"Failure in updating RuntimeConfig with exception message: {ex.Message}.");
                 return false;

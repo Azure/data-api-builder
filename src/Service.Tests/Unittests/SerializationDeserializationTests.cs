@@ -281,7 +281,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             _options = new()
             {
-#if NET8_0_OR_GREATER
                 // ObjectConverter behavior different in .NET8 most likely due to
                 // .NET7 breaking change:
                 // - https://learn.microsoft.com/dotnet/core/compatibility/serialization/7.0/polymorphic-serialization#affected-apis
@@ -293,13 +292,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                     new DatabaseObjectConverter(),
                     new TypeConverter()
                 }
-#else
-                Converters = {
-                    new DatabaseObjectConverter(),
-                    new TypeConverter(),
-                    new ObjectConverter()
-                }
-#endif
             };
 
             _columnDefinition = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("John"), false);

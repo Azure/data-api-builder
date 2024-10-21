@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <summary>
         /// Prefix used for specifying limit in the query string of the URL.
         /// </summary>
-        public const string FIRST_URL = "$first";
+        public const string FIRST_URL = "$top";
         /// <summary>
         /// Prefix used for specifying paging in the query string of the URL.
         /// </summary>

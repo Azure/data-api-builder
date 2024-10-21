@@ -14,7 +14,7 @@ using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
@@ -23,6 +23,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
+    private DabChangeToken _changeToken;
     private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
@@ -39,8 +40,35 @@ public abstract class RuntimeConfigLoader
 
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
+        _changeToken = new DabChangeToken();
         _handler = handler;
         _connectionString = connectionString;
+    }
+
+    /// <summary>
+    /// Change token producer which returns an uncancelled/unsignalled change token.
+    /// </summary>
+    /// <returns>DabChangeToken</returns>
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
+    }
+
+    /// <summary>
+    /// Swaps out the old change token with a new change token and
+    /// signals that a change has occurred.
+    /// </summary>
+    /// <seealso cref="https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Configuration/src/ConfigurationProvider.cs">
+    /// Example usage of Interlocked.Exchange(...) to refresh change token.</seealso>
+    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange?view=net-8.0">
+    /// Sets a variable to a specified value as an atomic operation.
+    /// </seealso>
+    private void RaiseChanged()
+    {
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
     }
 
     protected virtual void OnConfigChangedEvent(HotReloadEventArgs args)
@@ -49,14 +77,14 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Sends the notification to the event handler to trigger the hot-reload events
-    /// that have subscribed for configuration changes. The order here matters since
-    /// there are dependencies that we must refresh one after another. If adding to this
-    /// method make sure that you add the event trigger after any required dependencies have
+    /// Notifies event handler and change token subscribers that a hot-reload has occurred.
+    /// Order here matters because some dependencies must be updated before others.
+    /// When modifying this function:
+    /// - Ensure that you add new event trigger(s) after any required dependencies have
     /// been refreshed by previously called event triggers.
     /// </summary>
     /// <param name="message"></param>
-    protected void SendEventNotification(string message = "")
+    protected void SignalConfigChanged(string message = "")
     {
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
@@ -67,6 +95,9 @@ public abstract class RuntimeConfigLoader
         OnConfigChangedEvent(new HotReloadEventArgs(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+
+        // Signal that a change has occurred to all change token listeners.
+        RaiseChanged();
     }
 
     /// <summary>
@@ -319,7 +350,7 @@ public abstract class RuntimeConfigLoader
 
         // If the connection string does not contain the `Application Name` property, add it.
         // or if the connection string contains the `Application Name` property, replace it with the DataApiBuilder Application Name.
-        if (connectionStringBuilder.ApplicationName.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(connectionStringBuilder.ApplicationName))
         {
             connectionStringBuilder.ApplicationName = applicationName;
         }

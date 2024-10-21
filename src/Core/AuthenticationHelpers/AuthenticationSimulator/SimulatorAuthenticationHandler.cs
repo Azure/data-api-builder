@@ -85,7 +85,7 @@ public class SimulatorAuthenticationHandler : AuthenticationHandler<Authenticati
 
         // AuthenticationTicket is Asp.Net Core Abstraction of Authentication information
         // of the authenticated user.
-        AuthenticationTicket ticket = new(claimsPrincipal, EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME);
+        AuthenticationTicket ticket = new(claimsPrincipal, SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
         AuthenticateResult success = AuthenticateResult.Success(ticket);
         return Task.FromResult(success);
     }

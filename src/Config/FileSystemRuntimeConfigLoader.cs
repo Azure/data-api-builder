@@ -223,7 +223,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
         IsNewConfigDetected = true;
         IsNewConfigValidated = false;
-        SendEventNotification();
+        SignalConfigChanged();
     }
 
     /// <summary>

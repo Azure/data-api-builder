@@ -26,6 +26,10 @@ namespace Cli.Commands
             string? dataSourceOptionsSchema = null,
             bool? dataSourceOptionsSetSessionContext = null,
             int? depthLimit = null,
+            bool? runtimeGraphQLEnabled = null,
+            string? runtimeGraphQLPath = null,
+            bool? runtimeGraphQLAllowIntrospection = null,
+            bool? runtimeGraphQLMultipleMutationsCreateEnabled = null,
             string? config = null)
             : base(config)
         {
@@ -36,6 +40,10 @@ namespace Cli.Commands
             DataSourceOptionsSchema = dataSourceOptionsSchema;
             DataSourceOptionsSetSessionContext = dataSourceOptionsSetSessionContext;
             DepthLimit = depthLimit;
+            RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
+            RuntimeGraphQLPath = runtimeGraphQLPath;
+            RuntimeGraphQLAllowIntrospection = runtimeGraphQLAllowIntrospection;
+            RuntimeGraphQLMultipleMutationsCreateEnabled = runtimeGraphQLMultipleMutationsCreateEnabled;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -58,6 +66,18 @@ namespace Cli.Commands
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
+
+        [Option("runtime.graphql.enabled", Required = false, HelpText = "Enable DAB's GraphQL endpoint. Default: true (boolean).")]
+        public bool? RuntimeGraphQLEnabled { get; }
+
+        [Option("runtime.graphql.path", Required = false, HelpText = "Customize DAB's GraphQL endpoint path. Allowed values: string. Conditions: Prefix with '/', no spaces and no reserved characters.")]
+        public string? RuntimeGraphQLPath { get; }
+
+        [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Allow/Deny GraphQL introspection requests in GraphQL Schema. Default: true (boolean).")]
+        public bool? RuntimeGraphQLAllowIntrospection { get; }
+
+        [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Enable/Disable multiple-mutation create operations on DAB's generated GraphQL schema. Default: true (boolean).")]
+        public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

@@ -12,7 +12,7 @@
     <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
       <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <InternalsVisibleTo Include="Azure.DataApiBuilder.Service.Tests" />
     </ItemGroup>
@@ -73,14 +73,9 @@
         <PackageReference Include="Npgsql" />
         <PackageReference Include="Polly" />
         <PackageReference Include="DotNetEnv" />
-        <PackageReference Include="StyleCop.Analyzers">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
         <PackageReference Include="System.CommandLine" />
         <PackageReference Include="System.IO.Abstractions" />
-        <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
         <PackageReference Include="ZiggyCreatures.FusionCache" />
     </ItemGroup>
     <ItemGroup>

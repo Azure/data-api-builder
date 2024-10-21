@@ -22,14 +22,13 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
     {
         _eventHandlers = new Dictionary<string, EventHandler<TEventArgs>?>
         {
+            // QueryManagerFactory will create a new set of QueryExecutors
+            // during Hot-Reload so it is not necessary to specifically reconfigure
+            // QueryExecutors as part of the Hot-Reload process.
             { QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, null },
             { METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, null },
-            { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
-            { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
-            { QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
+            { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, null },
+            { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, null },
             { DOCUMENTOR_ON_CONFIG_CHANGED, null }
         };
     }

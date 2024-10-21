@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
 
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>(), It.IsAny<string>())).Returns(true);
+            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>())).Returns(true);
 
             RuntimeConfigProvider provider = new(mockLoader.Object);
 
@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
 
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>(), It.IsAny<string>())).Returns(true);
+            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>())).Returns(true);
 
             RuntimeConfigProvider provider = new(mockLoader.Object);
 
@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                );
 
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig, It.IsAny<bool>(), It.IsAny<string>())).Returns(true);
+            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig, It.IsAny<bool>())).Returns(true);
             mockLoader.Object.RuntimeConfig = mockConfig;
 
             RuntimeConfigProvider provider = new(mockLoader.Object);

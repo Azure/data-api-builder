@@ -132,7 +132,7 @@ public class RuntimeConfigProvider
             }
             else
             {
-                _configLoader.RuntimeConfig = _configLoader.LastValidRuntimeConfig;
+                _configLoader.RestoreLkgConfig();
 
                 throw new DataApiBuilderException(
                     message: "Failed validation of configuration file.",

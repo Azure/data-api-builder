@@ -77,25 +77,24 @@ public class RuntimeConfigProvider
     public RuntimeConfig GetConfig()
     {
         // Only used in hot reload to validate the configuration file
-        if (_configLoader.isNewConfigDetected && !_configLoader.isNewConfigValidated)
+        if (_configLoader.IsNewConfigDetected && !_configLoader.IsNewConfigValidated)
         {
             IFileSystem fileSystem = new FileSystem();
             ILoggerFactory loggerFactory = new LoggerFactory();
             ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
 
-            _configLoader.isNewConfigDetected = false;
-            _configLoader.isNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
+            _configLoader.IsNewConfigDetected = false;
+            _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
 
             // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
-            if (_configLoader.isNewConfigValidated)
+            if (_configLoader.IsNewConfigValidated)
             {
-                _configLoader.lastValidRuntimeConfig = _configLoader.RuntimeConfig;
+                _configLoader.CreateNewLkgConfig();
             }
             else
             {
-                _configLoader.isNewConfigValidated = true;
-                _configLoader.RuntimeConfig = _configLoader.lastValidRuntimeConfig;
+                _configLoader.RuntimeConfig = _configLoader.LastValidRuntimeConfig;
 
                 throw new DataApiBuilderException(
                     message: "Failed validation of configuration file.",

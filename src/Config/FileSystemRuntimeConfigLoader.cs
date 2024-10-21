@@ -163,17 +163,17 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
                 config = RuntimeConfig;
 
-                if (lastValidRuntimeConfig is null)
+                if (LastValidRuntimeConfig is null)
                 {
-                    lastValidRuntimeConfig = RuntimeConfig;
+                    LastValidRuntimeConfig = RuntimeConfig;
                 }
 
                 return true;
             }
 
-            if (lastValidRuntimeConfig is not null)
+            if (LastValidRuntimeConfig is not null)
             {
-                RuntimeConfig = lastValidRuntimeConfig;
+                RuntimeConfig = LastValidRuntimeConfig;
             }
 
             config = null;
@@ -221,8 +221,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        isNewConfigDetected = true;
-        isNewConfigValidated = false;
+        IsNewConfigDetected = true;
+        IsNewConfigValidated = false;
         SendEventNotification();
     }
 

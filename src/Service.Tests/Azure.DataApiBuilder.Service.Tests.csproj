@@ -43,10 +43,6 @@
     </PackageReference>
     <PackageReference Include="HotChocolate" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
     <PackageReference Include="Verify.MSTest" />
     <PackageReference Include="Verify.DiffPlex" />

@@ -473,6 +473,42 @@ type Moon {
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
+        [DataTestMethod]
+        [DataRow(new string[] { }, true, DisplayName = "No config returns 503 - config file flag absent")]
+        [DataRow(new string[] { "--ConfigFileName=" }, true, DisplayName = "No config returns 503 - empty config file option")]
+        [DataRow(new string[] { }, false, DisplayName = "Throws Application exception")]
+        [TestMethod("Validates that queries run after hot-reloading the runtime section of the config are valid.")]
+        public async Task HotReloadConfigRuntimeSectionEndToEndTest(
+    string[] args,
+    bool isUpdateableRuntimeConfig)
+        {
+            TestServer server;
+
+            try
+            {
+                if (isUpdateableRuntimeConfig)
+                {
+                    server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(args));
+                }
+                else
+                {
+                    server = new(Program.CreateWebHostBuilder(args));
+                }
+
+                HttpClient httpClient = server.CreateClient();
+                HttpResponseMessage result = await httpClient.GetAsync("/graphql");
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, result.StatusCode);
+            }
+            catch (Exception e)
+            {
+                Assert.IsFalse(isUpdateableRuntimeConfig);
+                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                Assert.AreEqual(
+                    $"Could not initialize the engine with the runtime config file: {DEFAULT_CONFIG_FILE_NAME}",
+                    e.Message);
+            }
+        }
+
         /// <summary>
         /// When updating config during runtime is possible, then For invalid config the Application continues to
         /// accept request with status code of 503.

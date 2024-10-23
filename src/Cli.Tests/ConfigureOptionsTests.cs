@@ -306,7 +306,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update request-body-strict to be false for Rest.")]
         [DataRow(true, DisplayName = "Update request-body-strict to be true for Rest.")]
-        public void TestUpdateRequestBodyStrictForRestSettings(bool? updatedRequestBodyStrictValue)
+        public void TestUpdateRequestBodyStrictForRestSettings(bool updatedRequestBodyStrictValue)
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -322,7 +322,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.RequestBodyStrict);
-            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.RequestBodyStrict);
+            Assert.AreEqual(updatedRequestBodyStrictValue, runtimeConfig.Runtime.Rest.RequestBodyStrict);
         }
         
         /// <summary>
@@ -332,7 +332,7 @@ namespace Cli.Tests
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
         [DataRow(false, "/updatedPath", DisplayName = "Update enabled flag and path in Rest runtime settings.")]
-        public void TestUpdateRequestBodyStrictForRestSettings(bool updatedEnabledValue, string updatedPathValur)
+        public void TestUpdateRequestBodyStrictForRestSettings(bool updatedEnabledValue, string updatedPathValue)
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);

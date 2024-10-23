@@ -479,8 +479,8 @@ type Moon {
         [DataRow(new string[] { }, false, DisplayName = "Throws Application exception")]
         [TestMethod("Validates that queries run after hot-reloading the runtime section of the config are valid.")]
         public async Task HotReloadConfigRuntimeSectionEndToEndTest(
-    string[] args,
-    bool isUpdateableRuntimeConfig)
+string[] args,
+bool isUpdateableRuntimeConfig)
         {
             TestServer server;
 

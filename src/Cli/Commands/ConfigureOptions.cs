@@ -30,20 +30,29 @@ namespace Cli.Commands
             string? runtimeGraphQLPath = null,
             bool? runtimeGraphQLAllowIntrospection = null,
             bool? runtimeGraphQLMultipleMutationsCreateEnabled = null,
+            bool? runtimeRestEnabled = null,
+            string? runtimeRestPath = null,
+            bool? runtimeRestRequestBodyStrict = null,
             string? config = null)
             : base(config)
         {
+            // Data Source
             DataSourceDatabaseType = dataSourceDatabaseType;
             DataSourceConnectionString = dataSourceConnectionString;
             DataSourceOptionsDatabase = dataSourceOptionsDatabase;
             DataSourceOptionsContainer = dataSourceOptionsContainer;
             DataSourceOptionsSchema = dataSourceOptionsSchema;
             DataSourceOptionsSetSessionContext = dataSourceOptionsSetSessionContext;
+            // GraphQL
             DepthLimit = depthLimit;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
             RuntimeGraphQLPath = runtimeGraphQLPath;
             RuntimeGraphQLAllowIntrospection = runtimeGraphQLAllowIntrospection;
             RuntimeGraphQLMultipleMutationsCreateEnabled = runtimeGraphQLMultipleMutationsCreateEnabled;
+            // Rest
+            RuntimeRestEnabled = runtimeRestEnabled;
+            RuntimeRestPath = runtimeRestPath;
+            RuntimeRestRequestBodyStrict = runtimeRestRequestBodyStrict;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -78,6 +87,15 @@ namespace Cli.Commands
 
         [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Enable/Disable multiple-mutation create operations on DAB's generated GraphQL schema. Default: true (boolean).")]
         public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
+
+        [Option("runtime.rest.enabled", Required = false, HelpText = "Enable DAB's Rest endpoint. Default: true (boolean).")]
+        public bool? RuntimeRestEnabled { get; }
+
+        [Option("runtime.rest.path", Required = false, HelpText = "Customize DAB's Rest endpoint path. Allowed values: string. Conditions: Prefix with '/', no spaces and no reserved characters.")]
+        public string? RuntimeRestPath { get; }
+
+        [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Allow/Deny extraneous fields in request body of Rest Schema. Default: true (boolean).")]
+        public bool? RuntimeRestRequestBodyStrict { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

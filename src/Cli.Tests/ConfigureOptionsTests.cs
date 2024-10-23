@@ -247,6 +247,59 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.rest.enabled" on a config with various values results
+        /// in runtime. Takes in updated value for rest.enabled and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update enabled to be false for Rest.")]
+        [DataRow(true, DisplayName = "Update enabled to be true for Rest.")]
+        public void TestUpdateEnabledForRestSettings(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update enabled flag
+            ConfigureOptions options = new(
+                runtimeRestEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the Enabled Flag is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.path" on a config with various values results
+        /// in runtime config update. Takes in updated value for rest.path and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("/updatedPath", DisplayName = "Update path to /updatedPath for Rest.")]
+        [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in Rest path name.")]
+        [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in Rest path name.")]
+        public void TestUpdatePathForRestSettings(string updatedPathValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update path value
+            ConfigureOptions options = new(
+                runtimeRestPath: updatedPathValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the Path update is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
+        }
+        
+        /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
         /// When runtime.graphql.depth-limit has an initial value of 8.
         /// validates that "dab configure --runtime.graphql.depth-limit {value}" sets the expected depth limit.

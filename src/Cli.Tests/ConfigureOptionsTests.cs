@@ -298,7 +298,62 @@ namespace Cli.Tests
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
             Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
         }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.request-body-strict" on a config with various values results
+        /// in runtime config update. Takes in updated value for rest.request-body-strict and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update request-body-strict to be false for Rest.")]
+        [DataRow(true, DisplayName = "Update request-body-strict to be true for Rest.")]
+        public void TestUpdateRequestBodyStrictForRestSettings(bool? updatedRequestBodyStrictValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update request-body-strict value
+            ConfigureOptions options = new(
+                runtimeRestRequestBodyStrict: updatedRequestBodyStrictValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the RequestBodyStrict Value is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.RequestBodyStrict);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.RequestBodyStrict);
+        }
         
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.enabled {value} --runtime.rest.path {value}"
+        /// on a config with various values results in runtime config update. 
+        /// Takes in updated value for enabled and path and further 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, "/updatedPath", DisplayName = "Update enabled flag and path in Rest runtime settings.")]
+        public void TestUpdateRequestBodyStrictForRestSettings(bool updatedEnabledValue, string updatedPathValur)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update the path value and enabled flag
+            ConfigureOptions options = new(
+                runtimeRestPath: updatedPathValue,
+                runtimeRestEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the path is updated and enabled is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
+        }
+
         /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
         /// When runtime.graphql.depth-limit has an initial value of 8.

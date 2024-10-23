@@ -324,7 +324,7 @@ namespace Cli.Tests
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.RequestBodyStrict);
             Assert.AreEqual(updatedRequestBodyStrictValue, runtimeConfig.Runtime.Rest.RequestBodyStrict);
         }
-        
+
         /// <summary>
         /// Tests that running "dab configure --runtime.rest.enabled {value} --runtime.rest.path {value}"
         /// on a config with various values results in runtime config update. 

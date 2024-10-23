@@ -33,6 +33,8 @@ namespace Cli.Commands
             bool? runtimeRestEnabled = null,
             string? runtimeRestPath = null,
             bool? runtimeRestRequestBodyStrict = null,
+            bool? runtimeCacheEnabled = null,
+            int? runtimeCacheTtl = null,
             string? config = null)
             : base(config)
         {
@@ -53,6 +55,9 @@ namespace Cli.Commands
             RuntimeRestEnabled = runtimeRestEnabled;
             RuntimeRestPath = runtimeRestPath;
             RuntimeRestRequestBodyStrict = runtimeRestRequestBodyStrict;
+            // Cache
+            RuntimeCacheEnabled = runtimeCacheEnabled;
+            RuntimeCacheTTL = runtimeCacheTtl;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -96,6 +101,12 @@ namespace Cli.Commands
 
         [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Allow/Deny extraneous fields in request body of Rest Schema. Default: true (boolean).")]
         public bool? RuntimeRestRequestBodyStrict { get; }
+
+        [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's caching of responses globally. Default: false (boolean).")]
+        public bool? RuntimeCacheEnabled { get; }
+
+        [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize DAB's Time to live in seconds for DAB Cache. Default: 5 second.")]
+        public string? RuntimeCacheTTL { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

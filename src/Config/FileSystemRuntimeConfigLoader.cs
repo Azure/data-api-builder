@@ -213,7 +213,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName))
+        if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true))
         {
             throw new DataApiBuilderException(
                 message: "Deserialization of the configuration file failed.",

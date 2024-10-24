@@ -360,6 +360,72 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.rest.path {value}`
+    /// Validates that path values with permitted characters result in DAB engine starting successfully.
+    /// Ensures that invalid characters provided for path result in failed engine startup 
+    /// due to validation failure.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("/updatedPath", true, DisplayName = "Success in updated Rest Path to /updatedPath.")]
+    [DataRow("/updated-Path", true, DisplayName = "Success in updated Rest Path to /updated-Path.")]
+    [DataRow("/updated_Path", true, DisplayName = "Success in updated Rest Path to /updated_Path.")]
+    [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
+    [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
+    [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
+    [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
+    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    public void TestUpdateRestPathRuntimeSettings(string path, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Path in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.rest.path", path };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Path was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.cache.ttl-seconds {value}`
+    /// Validates that path values with permitted characters result in DAB engine starting successfully.
+    /// Ensures that invalid values provided for ttl-seconds result in failed engine startup 
+    /// due to validation failure.
+    /// Valid values are [1, INT32.MAX_VALUE] Integer values.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("2", true, DisplayName = "Success in updating Cache TTL to 2.")]
+    [DataRow("10", true, DisplayName = "Success in updating Cache TTL to 10.")]
+    [DataRow("-2", false, DisplayName = "Failure to update cache ttl as value is negative.")]
+    [DataRow("2147483647", true, DisplayName = "Successful update to cache ttl value to INT32_MAX")]
+    [DataRow("2147483648", false, DisplayName = "Failure to update cache ttl as value greater than INT32_MAX")]
+    [DataRow("0", false, DisplayName = "Failure to update cache ttl as value is zero.")]
+    [DataRow("seven", false, DisplayName = "Failure to update cache ttl as a string value.")]
+    public void TestUpdateCacheTtlRuntimeSettings(string ttl, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Cache TTL in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.cache.ttl-seconds", ttl };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Cache TTL was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
     /// Test to verify authentication options with init command containing
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.

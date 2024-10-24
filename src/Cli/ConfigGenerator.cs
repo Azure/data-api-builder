@@ -698,13 +698,30 @@ namespace Cli
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
+            // Rest: Enabled, Path, and Request.Body.Strict
+            if (options.RuntimeRestEnabled != null ||
+                options.RuntimeRestPath != null ||
+                options.RuntimeRestRequestBodyStrict != null)
+            {
+                RestRuntimeOptions? updatedRestOptions = runtimeConfig?.Runtime?.Rest ?? new();
+                bool status = TryUpdateConfigureRestValues(options, ref updatedRestOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Rest = updatedRestOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             // GraphQL: Enabled, Path, Allow-Introspection and Multiple-Mutations.Create.Enabled
-            GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL;
             if (options.RuntimeGraphQLEnabled != null ||
                 options.RuntimeGraphQLPath != null ||
                 options.RuntimeGraphQLAllowIntrospection != null ||
                 options.RuntimeGraphQLMultipleMutationsCreateEnabled != null)
             {
+                GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL ?? new();
                 bool status = TryUpdateConfigureGraphQLValues(options, ref updatedGraphQLOptions);
                 if (status)
                 {
@@ -716,7 +733,79 @@ namespace Cli
                 }
             }
 
+            // Cache: Enabled and TTL
+            if (options.RuntimeCacheEnabled != null ||
+                options.RuntimeCacheTTL != null)
+            {
+                EntityCacheOptions? updatedCacheOptions = runtimeConfig?.Runtime?.Cache ?? new();
+                bool status = TryUpdateConfigureCacheValues(options, ref updatedCacheOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Cache = updatedCacheOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             return runtimeConfig != null;
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Rest runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated Rest options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedRestOptions">updatedRestOptions.</param>
+        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        private static bool TryUpdateConfigureRestValues(ConfigureOptions options, ref RestRuntimeOptions? updatedRestOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Rest.Enabled
+                updatedValue = options?.RuntimeRestEnabled;
+                if (updatedValue != null)
+                {
+                    updatedRestOptions = updatedRestOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.Rest.Enabled as '{updatedValue}'");
+                }
+
+                // Runtime.Rest.Path
+                updatedValue = options?.RuntimeRestPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedRestOptions = updatedRestOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.Rest.Path as '{updatedValue}'");
+                    }
+                    else
+                    {
+                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.Rest.Path " +
+                            $"as '{updatedValue}' due to exception message: {exceptionMessage}");
+                        return false;
+                    }
+                }
+
+                // Runtime.Rest.Request-Body-Strict
+                updatedValue = options?.RuntimeRestRequestBodyStrict;
+                if (updatedValue != null)
+                {
+                    updatedRestOptions = updatedRestOptions! with { RequestBodyStrict = (bool)updatedValue };
+                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.Rest.Request-Body-Strict as '{updatedValue}'");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failure in updating RuntimeConfig.Rest with exception message: {ex.Message}.");
+                return false;
+            }
         }
 
         /// <summary>
@@ -781,7 +870,57 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failure in updating RuntimeConfig with exception message: {ex.Message}.");
+                _logger.LogError($"Failure in updating RuntimeConfig.GraphQL with exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Cache runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated Cache options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCacheOptions">updatedCacheOptions.</param>
+        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        private static bool TryUpdateConfigureCacheValues(
+            ConfigureOptions options,
+            ref EntityCacheOptions? updatedCacheOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Cache.Enabled
+                updatedValue = options?.RuntimeCacheEnabled;
+                if (updatedValue != null)
+                {
+                    updatedCacheOptions = updatedCacheOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.Cache.Enabled as '{updatedValue}'");
+                }
+
+                // Runtime.Cache.ttl-seconds
+                updatedValue = options?.RuntimeCacheTTL;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.IsTTLValid(ttl: (int)updatedValue);
+                    if (status)
+                    {
+                        updatedCacheOptions = updatedCacheOptions! with { TtlSeconds = (int)updatedValue, UserProvidedTtlOptions = true };
+                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedCacheOptions.TtlSeconds}'");
+                    }
+                    else
+                    {
+                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.Cache.ttl-seconds " +
+                            $"as '{updatedValue}' value in TTL is not valid.");
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failure in updating RuntimeConfig.Cache with exception message: {ex.Message}.");
                 return false;
             }
         }

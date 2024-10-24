@@ -247,6 +247,165 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.rest.enabled" on a config with various values results
+        /// in runtime. Takes in updated value for rest.enabled and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update enabled to be false for Rest.")]
+        [DataRow(true, DisplayName = "Update enabled to be true for Rest.")]
+        public void TestUpdateEnabledForRestSettings(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update enabled flag
+            ConfigureOptions options = new(
+                runtimeRestEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the Enabled Flag is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.path" on a config with various values results
+        /// in runtime config update. Takes in updated value for rest.path and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("/updatedPath", DisplayName = "Update path to /updatedPath for Rest.")]
+        [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in Rest path name.")]
+        [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in Rest path name.")]
+        public void TestUpdatePathForRestSettings(string updatedPathValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update path value
+            ConfigureOptions options = new(
+                runtimeRestPath: updatedPathValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the Path update is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.request-body-strict" on a config with various values results
+        /// in runtime config update. Takes in updated value for rest.request-body-strict and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update request-body-strict to be false for Rest.")]
+        [DataRow(true, DisplayName = "Update request-body-strict to be true for Rest.")]
+        public void TestUpdateRequestBodyStrictForRestSettings(bool updatedRequestBodyStrictValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update request-body-strict value
+            ConfigureOptions options = new(
+                runtimeRestRequestBodyStrict: updatedRequestBodyStrictValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the RequestBodyStrict Value is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.RequestBodyStrict);
+            Assert.AreEqual(updatedRequestBodyStrictValue, runtimeConfig.Runtime.Rest.RequestBodyStrict);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.enabled {value} --runtime.rest.path {value}"
+        /// on a config with various values results in runtime config update. 
+        /// Takes in updated value for enabled and path and further 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, "/updatedPath", DisplayName = "Update enabled flag and path in Rest runtime settings.")]
+        public void TestUpdateMultipleParametersRestSettings(bool updatedEnabledValue, string updatedPathValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update the path value and enabled flag
+            ConfigureOptions options = new(
+                runtimeRestPath: updatedPathValue,
+                runtimeRestEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the path is updated and enabled is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.cache.enabled" on a config with various values results
+        /// in runtime. Takes in updated value for cache.enabled and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update enabled to be false for Cache.")]
+        [DataRow(true, DisplayName = "Update enabled to be true for Cache.")]
+        public void TestUpdateEnabledForCacheSettings(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update cache enabled flag
+            ConfigureOptions options = new(
+                runtimeCacheEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the cache Enabled Flag is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Cache.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.cache.ttl-seconds" on a config with various values results
+        /// in runtime. Takes in updated value for cache.ttl-seconds and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(4, DisplayName = "Update in value of ttl for cache.")]
+        public void TestUpdateTTLForCacheSettings(int updatedTtlValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update TTL Value
+            ConfigureOptions options = new(
+                runtimeCacheTtl: updatedTtlValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the TTL Value is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.TtlSeconds);
+            Assert.AreEqual(updatedTtlValue, runtimeConfig.Runtime.Cache.TtlSeconds);
+        }
+
+        /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
         /// When runtime.graphql.depth-limit has an initial value of 8.
         /// validates that "dab configure --runtime.graphql.depth-limit {value}" sets the expected depth limit.

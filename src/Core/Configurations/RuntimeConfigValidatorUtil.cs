@@ -65,4 +65,18 @@ public static class RuntimeConfigValidatorUtil
     {
         return _reservedUriCharsRgx.IsMatch(uriComponent);
     }
+
+    /// <summary>
+    /// Method to validate if the TTL passed by the user is valid
+    /// </summary>
+    /// <param name="ttl">Time to Live</param>
+    public static bool IsTTLValid(int ttl)
+    {
+        if (ttl > 0)
+        {
+            return true;
+        }
+
+        return false;
+    }
 }

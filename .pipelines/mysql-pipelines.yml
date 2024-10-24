@@ -39,13 +39,6 @@ jobs:
       packageType: sdk
       version: 8.0.x
 
-  # Preserving .NET 6 for multi-targeting support
-  - task: UseDotNet@2
-    displayName: Setup .NET SDK v6.0.x
-    inputs:
-      packageType: sdk
-      version: 6.0.x
-
   - task: NuGetToolInstaller@1
 
   - task: NuGetCommand@2

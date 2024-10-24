@@ -332,7 +332,7 @@ namespace Cli.Tests
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
         [DataRow(false, "/updatedPath", DisplayName = "Update enabled flag and path in Rest runtime settings.")]
-        public void TestUpdateRequestBodyStrictForRestSettings(bool updatedEnabledValue, string updatedPathValue)
+        public void TestUpdateMultipleParametersRestSettings(bool updatedEnabledValue, string updatedPathValue)
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -352,6 +352,57 @@ namespace Cli.Tests
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
             Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
             Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.cache.enabled" on a config with various values results
+        /// in runtime. Takes in updated value for cache.enabled and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update enabled to be false for Cache.")]
+        [DataRow(true, DisplayName = "Update enabled to be true for Cache.")]
+        public void TestUpdateEnabledForCacheSettings(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update enabled flag
+            ConfigureOptions options = new(
+                runtimeCacheEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the Enabled Flag is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Cache.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.cache.ttl-seconds" on a config with various values results
+        /// in runtime. Takes in updated value for cache.ttl-seconds and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(4, DisplayName = "Update in value of ttl for cache.")]
+        public void TestUpdateTTLForCacheSettings(int updatedTtlValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update TTL Value
+            ConfigureOptions options = new(
+                runtimeCacheTtl: updatedTtlValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+
+            // Assert: Validate the TTL Value is updated
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.TtlSeconds);
+            Assert.AreEqual(updatedTtlValue, runtimeConfig.Runtime.Cache.TtlSeconds);
         }
 
         /// <summary>

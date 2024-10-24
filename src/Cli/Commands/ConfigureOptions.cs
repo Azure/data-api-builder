@@ -105,8 +105,8 @@ namespace Cli.Commands
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's caching of responses globally. Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }
 
-        [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize DAB's Time to live in seconds for DAB Cache. Default: 5 second.")]
-        public string? RuntimeCacheTTL { get; }
+        [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize DAB's Time to live in seconds for DAB Cache. Default: 5 seconds (Integer).")]
+        public int? RuntimeCacheTTL { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

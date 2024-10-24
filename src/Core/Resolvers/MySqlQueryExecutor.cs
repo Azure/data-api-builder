@@ -11,7 +11,6 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -67,7 +66,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor,
                   handler)
         {
-            handler?.Subscribe(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, MySqlQueryExecutorOnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
@@ -98,18 +96,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionStringBuilders.TryAdd(dataSourceName, builder);
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
-        }
-
-        /// <summary>
-        /// Function registered for callback during a hot-reload scenario.
-        /// </summary>
-        /// <param name="sender">The calling object.</param>
-        /// <param name="args">Event arguments.</param>
-        public void MySqlQueryExecutorOnConfigChanged(object? sender, HotReloadEventArgs args)
-        {
-            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
-            _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;
-            ConfigureMySqlQueryExecutor();
         }
 
         /// <summary>

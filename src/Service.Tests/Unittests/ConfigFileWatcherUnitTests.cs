@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -213,51 +215,40 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         public void HotReloadValidationFail()
         {
             //Arrange
-            string connectionString = ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
-            JsonSerializerOptions options = new()
-            {
-                PropertyNameCaseInsensitive = false,
-                PropertyNamingPolicy = new HyphenatedNamingPolicy(),
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-            JsonSerializer.Serialize(connectionString, options);
-
-            string restPath = "/api";
-            string gQLPath = "/api";
-
-            bool restEnabled = false;
-
-            bool initialGQLEnabled = false;
-            bool updatedGQLEnabled = true;
-
-            bool initialGQLIntrospection = false;
-            bool updatedGQLIntrospection = true;
-
-            HostMode mode = HostMode.Development;
-
-            string initialConfig = GenerateRuntimeSectionStringFromParams(
-                    connectionString,
-                    restPath,
-                    gQLPath,
-                    restEnabled,
-                    initialGQLEnabled,
-                    initialGQLIntrospection,
-                    mode);
-
-            string updatedConfig = GenerateRuntimeSectionStringFromParams(
-                    connectionString,
-                    restPath,
-                    gQLPath,
-                    restEnabled,
-                    updatedGQLEnabled,
-                    updatedGQLIntrospection,
-                    mode);
-
             string schemaName = "dab.draft.schema.json";
             string configName = "hotreload-config.json";
+
+            bool initialRestEnabled = true;
+            bool updatedRestEnabled = false;
+
+            bool initialGQLEnabled = true;
+            bool updatedGQLEnabled = false;
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig initialConfig = new(
+                Schema: schemaName,
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(initialRestEnabled),
+                    GraphQL: new(initialGQLEnabled),
+                    Host: new(null, null, HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfig updatedConfig = new(
+                Schema: schemaName,
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(updatedRestEnabled),
+                    GraphQL: new(updatedGQLEnabled),
+                    Host: new(null, null, HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
             if (File.Exists(configName))
             {
                 File.Delete(configName);
@@ -267,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             // Not using mocked filesystem so we pick up real file changes for hot reload
             FileSystem fileSystem = new();
-            fileSystem.File.WriteAllText(configName, initialConfig);
+            fileSystem.File.WriteAllText(configName, initialConfig.ToJson());
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
             RuntimeConfigProvider configProvider = new(configLoader);
             RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
@@ -277,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             //Act
             // Simulate a wrong change to the config file
             fileSystem.File.WriteAllText(schemaName, schemaConfig);
-            fileSystem.File.WriteAllText(configName, updatedConfig);
+            fileSystem.File.WriteAllText(configName, updatedConfig.ToJson());
 
             // Give ConfigFileWatcher enough time to hot reload the change
             System.Threading.Thread.Sleep(1000);

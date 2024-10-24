@@ -92,4 +92,14 @@
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 
+    <ItemGroup>
+        <None Remove="dab.draft.schema.json" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Content Include="..\..\schemas\dab.draft.schema.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+    
 </Project>

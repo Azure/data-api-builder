@@ -156,7 +156,18 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 }
 
                 config = RuntimeConfig;
+
+                if (LastValidRuntimeConfig is null)
+                {
+                    LastValidRuntimeConfig = RuntimeConfig;
+                }
+
                 return true;
+            }
+
+            if (LastValidRuntimeConfig is not null)
+            {
+                RuntimeConfig = LastValidRuntimeConfig;
             }
 
             config = null;
@@ -196,7 +207,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true);
+        if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true))
+        {
+            throw new DataApiBuilderException(
+                message: "Deserialization of the configuration file failed.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        IsNewConfigDetected = true;
+        IsNewConfigValidated = false;
         SignalConfigChanged();
     }
 

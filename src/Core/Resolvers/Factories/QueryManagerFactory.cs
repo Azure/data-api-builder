@@ -102,6 +102,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            //First use of GetConfig during hot reload, in order to do validation of
+            //config file before any changes are made for hot reload.
+            //In case validation fails, an exception will be thrown and hot reload will be canceled.
+            _runtimeConfigProvider.GetConfig();
+
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();
             _dbExceptionsParsers = new Dictionary<DatabaseType, DbExceptionParser>();

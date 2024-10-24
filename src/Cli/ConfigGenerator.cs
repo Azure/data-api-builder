@@ -791,7 +791,7 @@ namespace Cli
                     }
                 }
 
-                // Runtime.Rest.Request-Body-Stricts
+                // Runtime.Rest.Request-Body-Strict
                 updatedValue = options?.RuntimeRestRequestBodyStrict;
                 if (updatedValue != null)
                 {
@@ -898,7 +898,7 @@ namespace Cli
                     _logger.LogInformation($"Updated RuntimeConfig with Runtime.Cache.Enabled as '{updatedValue}'");
                 }
 
-                // Runtime.Cache.ttl-second
+                // Runtime.Cache.ttl-seconds
                 updatedValue = options?.RuntimeCacheTTL;
                 if (updatedValue != null)
                 {
@@ -906,12 +906,12 @@ namespace Cli
                     if (status)
                     {
                         updatedCacheOptions = updatedCacheOptions! with { TtlSeconds = (int)updatedValue, UserProvidedTtlOptions = true };
-                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.Cache.ttl-second as '{updatedCacheOptions.TtlSeconds}'");
+                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedCacheOptions.TtlSeconds}'");
                     }
                     else
                     {
-                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.GraphQL.Path " +
-                            $"as '{updatedValue}' as TTL is not valid.");
+                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.Cache.ttl-seconds " +
+                            $"as '{updatedValue}' value in TTL is not valid.");
                         return false;
                     }
                 }

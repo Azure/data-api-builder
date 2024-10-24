@@ -366,14 +366,14 @@ namespace Cli.Tests
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
-            // Act: Attempts to update enabled flag
+            // Act: Attempts to update cache enabled flag
             ConfigureOptions options = new(
                 runtimeCacheEnabled: updatedEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
 
-            // Assert: Validate the Enabled Flag is updated
+            // Assert: Validate the cache Enabled Flag is updated
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.Enabled);

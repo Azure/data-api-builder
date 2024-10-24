@@ -64,7 +64,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             _metadataProviders.Clear();
             ConfigureMetadataProviders();
-            InitializeAsync().Wait();
+            // Blocks the current thread until initialization is finished.
+            this.InitializeAsync().GetAwaiter().GetResult();
         }
 
         /// <inheritdoc />

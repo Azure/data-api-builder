@@ -3,7 +3,11 @@
 
 using System.IO;
 using System.IO.Abstractions;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -210,6 +214,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             //Arrange
             string connectionString = ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = false,
+                PropertyNamingPolicy = new HyphenatedNamingPolicy(),
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            JsonSerializer.Serialize(connectionString, options);
 
             string restPath = "/api";
             string gQLPath = "/api";
@@ -257,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
             RuntimeConfigProvider configProvider = new(configLoader);
             RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
-            
+
             Assert.IsNotNull(lkgRuntimeConfig);
 
             //Act
@@ -303,6 +317,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             //Arrange
             string connectionString = ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL);
+            JsonSerializerOptions options = new()
+            {
+                PropertyNameCaseInsensitive = false,
+                PropertyNamingPolicy = new HyphenatedNamingPolicy(),
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            JsonSerializer.Serialize(connectionString, options);
 
             string restPath = "/api";
             string gQLPath = "/api";

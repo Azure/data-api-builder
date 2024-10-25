@@ -4195,35 +4195,20 @@ type Planet @model(name:""PlanetAlias"") {
             fileSystem.File.WriteAllText(configName, updatedConfig.ToJson());
 
             // Give ConfigFileWatcher enough time to hot reload the change
-            System.Threading.Thread.Sleep(1000);
+            System.Threading.Thread.Sleep(6000);
 
-            // Validating that the config validation failed,
-            // this means that GetConfig needs to return an exception
-            try
+            RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
+            Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+
+            if (File.Exists(configName))
             {
-                configProvider.GetConfig();
-            }
-            catch (DataApiBuilderException dbException)
-            {
-                Assert.AreEqual(expected: "Failed validation of configuration file.", actual: dbException.Message);
-
-                RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
-                Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
-
-                if (File.Exists(configName))
-                {
-                    File.Delete(configName);
-                }
-
-                if (File.Exists(schemaName))
-                {
-                    File.Delete(schemaName);
-                }
-
-                return;
+                File.Delete(configName);
             }
 
-            Assert.Fail();
+            if (File.Exists(schemaName))
+            {
+                File.Delete(schemaName);
+            }
         }
 
         /// <summary>

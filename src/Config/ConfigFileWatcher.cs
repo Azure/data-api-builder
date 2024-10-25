@@ -42,6 +42,15 @@ public class ConfigFileWatcher
                 _configLoader.HotReloadConfig(_configLoader.RuntimeConfig.DefaultDataSourceName);
             }
         }
+        catch (AggregateException ex)
+        {
+            // Need to remove the dependencies in startup on the RuntimeConfigProvider
+            // before we can have an ILogger here.
+            foreach (Exception exception in ex.InnerExceptions)
+            {
+                Console.WriteLine("Unable to hot reload configuration file due to " + exception.Message);
+            }
+        }
         catch (Exception ex)
         {
             // Need to remove the dependencies in startup on the RuntimeConfigProvider

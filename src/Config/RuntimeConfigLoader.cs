@@ -86,14 +86,14 @@ public abstract class RuntimeConfigLoader
     /// <param name="message"></param>
     protected void SignalConfigChanged(string message = "")
     {
+        // Signal that a change has occurred to all change token listeners.
+        RaiseChanged();
+
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
-
-        // Signal that a change has occurred to all change token listeners.
-        RaiseChanged();
     }
 
     /// <summary>

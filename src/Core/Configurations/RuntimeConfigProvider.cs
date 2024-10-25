@@ -115,20 +115,19 @@ public class RuntimeConfigProvider
     public RuntimeConfig GetConfig()
     {
         // Only used in hot reload to validate the configuration file
-        if (_configLoader.IsNewConfigDetected && !_configLoader.IsNewConfigValidated)
+        if (_configLoader.DoesConfigNeedValidation())
         {
             IFileSystem fileSystem = new FileSystem();
             ILoggerFactory loggerFactory = new LoggerFactory();
             ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
 
-            _configLoader.IsNewConfigDetected = false;
             _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
 
             // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
             if (_configLoader.IsNewConfigValidated)
             {
-                _configLoader.CreateNewLkgConfig();
+                _configLoader.SetLkgConfig();
             }
             else
             {

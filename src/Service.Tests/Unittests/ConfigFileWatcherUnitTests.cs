@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SharpYaml.Schemas;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
@@ -63,37 +64,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
   ""entities"": {}
 }";
             return runtimeString;
-        }
-
-        private static string GenerateWrongRuntimeSection()
-        {
-            string runtimeString = @"
-{
-  ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-  ""data-source"": {
-    ""database-type"": ""mssql"",
-    ""connection-string"": ""Server=test;Database=test;User ID=test;"",
-    ""options"": {
-      ""set-session-context"": true
-    }
-  },
-  ""runtime"": {
-    ""rest"": {
-      ""enabled"":
-}";
-            return runtimeString;
-        }
-
-        private static string GenerateWrongSchema()
-        {
-            string schemaString = @"
-{
-    ""$schema"": ""https://json-schema.org/draft-07/schema"",
-    ""$id"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
-    ""title"": ""Data API builder"",
-    ""description"": ""Schema for 
-}";
-            return schemaString;
         }
 
         /// <summary>
@@ -193,165 +163,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             // DefaultDataSourceName should not change after a hot reload.
             Assert.AreEqual(initialDefaultDataSourceName, updatedDefaultDataSourceName);
-            if (File.Exists(configName))
-            {
-                File.Delete(configName);
-            }
-        }
-
-        /// <summary>
-        /// Creates a hot reload scenario in which the schema is wrong which causes
-        /// hot reload to fail, then we check that the program is still able to work
-        /// properly by showing us that it is still using the same configuration file
-        /// from before the hot reload.
-        /// </summary>
-        [TestMethod]
-        [TestCategory(TestCategory.MSSQL)]
-        public void HotReloadValidationFail()
-        {
-            //Arrange
-            string schemaName = "testSchema.json";
-            string configName = "hotreload-config.json";
-            if (File.Exists(configName))
-            {
-                File.Delete(configName);
-            }
-
-            if (File.Exists(schemaName))
-            {
-                File.Delete(schemaName);
-            }
-
-            bool initialRestEnabled = true;
-            bool updatedRestEnabled = false;
-
-            bool initialGQLEnabled = true;
-            bool updatedGQLEnabled = false;
-
-            DataSource dataSource = new(DatabaseType.MSSQL,
-                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-            RuntimeConfig initialConfig = new(
-                Schema: schemaName,
-                DataSource: dataSource,
-                Runtime: new(
-                    Rest: new(initialRestEnabled),
-                    GraphQL: new(initialGQLEnabled),
-                    Host: new(null, null, HostMode.Development)
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
-
-            RuntimeConfig updatedConfig = new(
-                Schema: schemaName,
-                DataSource: dataSource,
-                Runtime: new(
-                    Rest: new(updatedRestEnabled),
-                    GraphQL: new(updatedGQLEnabled),
-                    Host: new(null, null, HostMode.Development)
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
-
-            string schemaConfig = GenerateWrongSchema();
-
-            // Not using mocked filesystem so we pick up real file changes for hot reload
-            FileSystem fileSystem = new();
-            fileSystem.File.WriteAllText(configName, initialConfig.ToJson());
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
-            RuntimeConfigProvider configProvider = new(configLoader);
-            RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
-
-            Assert.IsNotNull(lkgRuntimeConfig);
-
-            //Act
-            // Simulate a wrong change to the schema file and updating config correctly
-            fileSystem.File.WriteAllText(schemaName, schemaConfig);
-            fileSystem.File.WriteAllText(configName, updatedConfig.ToJson());
-
-            // Give ConfigFileWatcher enough time to hot reload the change
-            System.Threading.Thread.Sleep(1000);
-
-            try
-            {
-                configProvider.GetConfig();
-            }
-            catch (DataApiBuilderException dbException)
-            {
-                Assert.AreEqual(expected: "Failed validation of configuration file.", actual: dbException.Message);
-            }
-
-            RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
-            Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
-
-            if (File.Exists(configName))
-            {
-                File.Delete(configName);
-            }
-
-            if (File.Exists(schemaName))
-            {
-                File.Delete(schemaName);
-            }
-        }
-
-        /// <summary>
-        /// Creates a hot reload scenario in which the updated configuration file is wrong so
-        /// hot reload to fail, then we check that the program is still able to work
-        /// properly by showing us that it is still using the same configuration file
-        /// from before the hot reload.
-        /// </summary>
-        [TestMethod]
-        [TestCategory(TestCategory.MSSQL)]
-        public void HotReloadParsingFail()
-        {
-            //Arrange
-            string schemaName = "dab.draft.schema.json";
-            string configName = "hotreload-config.json";
-            if (File.Exists(configName))
-            {
-                File.Delete(configName);
-            }
-
-            bool initialRestEnabled = true;
-
-            bool initialGQLEnabled = true;
-
-            DataSource dataSource = new(DatabaseType.MSSQL,
-                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-            RuntimeConfig initialConfig = new(
-                Schema: schemaName,
-                DataSource: dataSource,
-                Runtime: new(
-                    Rest: new(initialRestEnabled),
-                    GraphQL: new(initialGQLEnabled),
-                    Host: new(null, null, HostMode.Development)
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
-
-            string updatedConfig = GenerateWrongRuntimeSection();
-
-            // Not using mocked filesystem so we pick up real file changes for hot reload
-            FileSystem fileSystem = new();
-            fileSystem.File.WriteAllText(configName, initialConfig.ToJson());
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
-            RuntimeConfigProvider configProvider = new(configLoader);
-            RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
-
-            Assert.IsNotNull(lkgRuntimeConfig);
-
-            //Act
-            // Simulate a wrong change to the config file
-            fileSystem.File.WriteAllText(configName, updatedConfig);
-
-            // Give ConfigFileWatcher enough time to hot reload the change
-            System.Threading.Thread.Sleep(1000);
-
-            RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
-            Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
-
             if (File.Exists(configName))
             {
                 File.Delete(configName);

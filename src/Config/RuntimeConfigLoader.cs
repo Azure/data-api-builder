@@ -346,12 +346,23 @@ public abstract class RuntimeConfigLoader
         return connectionStringBuilder.ConnectionString;
     }
 
+    public bool DoesConfigNeedValidation()
+    {
+        if (IsNewConfigDetected && !IsNewConfigValidated)
+        {
+            IsNewConfigDetected = false;
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Once the validation of the new config file is confirmed to have passed,
-    /// it will save this new config file as the new last known good,
+    /// this function will save the newly resolved RuntimeConfig as the new last known good,
     /// in order to have config file DAB can go into in case hot reload fails.
     /// </summary>
-    public void CreateNewLkgConfig()
+    public void SetLkgConfig()
     {
         IsNewConfigValidated = false;
         LastValidRuntimeConfig = RuntimeConfig;

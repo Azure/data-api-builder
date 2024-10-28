@@ -770,7 +770,7 @@ namespace Cli
                 if (updatedValue != null)
                 {
                     updatedRestOptions = updatedRestOptions! with { Enabled = (bool)updatedValue };
-                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.Rest.Enabled as '{updatedValue}'");
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Enabled as '{updatedValue}'", updatedValue);
                 }
 
                 // Runtime.Rest.Path
@@ -781,7 +781,7 @@ namespace Cli
                     if (status)
                     {
                         updatedRestOptions = updatedRestOptions! with { Path = (string)updatedValue };
-                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.Rest.Path as '{updatedValue}'");
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Path as '{updatedValue}'", updatedValue);
                     }
                     else
                     {
@@ -796,14 +796,14 @@ namespace Cli
                 if (updatedValue != null)
                 {
                     updatedRestOptions = updatedRestOptions! with { RequestBodyStrict = (bool)updatedValue };
-                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.Rest.Request-Body-Strict as '{updatedValue}'");
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Request-Body-Strict as '{updatedValue}'", updatedValue);
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failure in updating RuntimeConfig.Rest with exception message: {ex.Message}.");
+                _logger.LogError("Failure in updating RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -828,7 +828,7 @@ namespace Cli
                 if (updatedValue != null)
                 {
                     updatedGraphQLOptions = updatedGraphQLOptions! with { Enabled = (bool)updatedValue };
-                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Enabled as '{updatedValue}'");
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Enabled as '{updatedValue}'", updatedValue);
                 }
 
                 // Runtime.GraphQL.Path
@@ -839,12 +839,11 @@ namespace Cli
                     if (status)
                     {
                         updatedGraphQLOptions = updatedGraphQLOptions! with { Path = (string)updatedValue };
-                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}'");
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}'", updatedValue);
                     }
                     else
                     {
-                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.GraphQL.Path " +
-                            $"as '{updatedValue}' due to exception message: {exceptionMessage}");
+                        _logger.LogError("Failure in updating RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
                         return false;
                     }
                 }
@@ -854,7 +853,7 @@ namespace Cli
                 if (updatedValue != null)
                 {
                     updatedGraphQLOptions = updatedGraphQLOptions! with { AllowIntrospection = (bool)updatedValue };
-                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as '{updatedValue}'");
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as '{updatedValue}'", updatedValue);
                 }
 
                 // Runtime.GraphQL.Multiple-mutations.Create.Enabled
@@ -863,14 +862,14 @@ namespace Cli
                 {
                     MultipleCreateOptions multipleCreateOptions = new(enabled: (bool)updatedValue);
                     updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
-                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'");
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'", updatedValue);
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failure in updating RuntimeConfig.GraphQL with exception message: {ex.Message}.");
+                _logger.LogError("Failure in updating RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -895,7 +894,7 @@ namespace Cli
                 if (updatedValue != null)
                 {
                     updatedCacheOptions = updatedCacheOptions! with { Enabled = (bool)updatedValue };
-                    _logger.LogInformation($"Updated RuntimeConfig with Runtime.Cache.Enabled as '{updatedValue}'");
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.Enabled as '{updatedValue}'", updatedValue);
                 }
 
                 // Runtime.Cache.ttl-seconds
@@ -906,12 +905,11 @@ namespace Cli
                     if (status)
                     {
                         updatedCacheOptions = updatedCacheOptions! with { TtlSeconds = (int)updatedValue, UserProvidedTtlOptions = true };
-                        _logger.LogInformation($"Updated RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedCacheOptions.TtlSeconds}'");
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedValue}'", updatedValue);
                     }
                     else
                     {
-                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.Cache.ttl-seconds " +
-                            $"as '{updatedValue}' value in TTL is not valid.");
+                        _logger.LogError("Failure in updating RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
                         return false;
                     }
                 }
@@ -920,7 +918,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failure in updating RuntimeConfig.Cache with exception message: {ex.Message}.");
+                _logger.LogError("Failure in updating RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

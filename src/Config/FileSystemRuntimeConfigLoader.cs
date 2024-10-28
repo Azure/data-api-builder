@@ -142,8 +142,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         string path,
         [NotNullWhen(true)] out RuntimeConfig? config,
         bool replaceEnvVar = false,
-        ILogger? logger = null,
-        string defaultDataSourceName = "")
+        ILogger? logger = null)
     {
         if (_fileSystem.File.Exists(path))
         {
@@ -154,11 +153,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 if (TrySetupConfigFileWatcher())
                 {
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
-                }
-
-                if (!string.IsNullOrEmpty(defaultDataSourceName))
-                {
-                    RuntimeConfig.UpdateDefaultDataSourceName(defaultDataSourceName);
                 }
 
                 config = RuntimeConfig;
@@ -190,9 +184,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string defaultDataSourceName = "")
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
-        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar, defaultDataSourceName: defaultDataSourceName);
+        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
     }
 
     /// <summary>
@@ -202,7 +196,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName);
+        TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true);
         SignalConfigChanged();
     }
 

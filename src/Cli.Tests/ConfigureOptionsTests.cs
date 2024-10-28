@@ -62,10 +62,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
-            
+
             // Assert
             Assert.IsTrue(isSuccess);
-            
+
             // Assert that INITIAL_CONFIG is same as the updated config
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             if (isDepthLimitProvidedInConfig)
@@ -104,7 +104,7 @@ namespace Cli.Tests
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Depth Limit is added
-            Assert.IsTrue(isSuccess);            
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
             Assert.IsNotNull(config.Runtime?.GraphQL?.DepthLimit);

@@ -102,7 +102,7 @@ namespace Cli.Commands
         [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Prohibit extraneous REST request body fields. Default: true (boolean).")]
         public bool? RuntimeRestRequestBodyStrict { get; }
 
-        [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's caching of responses globally. Default: false (boolean).")]
+        [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }
 
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]

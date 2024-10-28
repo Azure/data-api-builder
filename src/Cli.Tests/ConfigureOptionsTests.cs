@@ -116,8 +116,8 @@ namespace Cli.Tests
         /// in runtime. Takes in updated value for graphql.enabled and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Update enabled to be false for GraphQL.")]
-        [DataRow(true, DisplayName = "Update enabled to be true for GraphQL.")]
+        [DataRow(false, DisplayName = "Update GraphQL.Enabled to false.")]
+        [DataRow(true, DisplayName = "Validate GraphQL.Enabled to remain true.")]
         public void TestUpdateEnabledForGraphQLSettings(bool updatedEnabledValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -172,8 +172,8 @@ namespace Cli.Tests
         /// Takes in updated value for graphql.allow-introspection and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Update AllowIntrospection to be false for GraphQL.")]
-        [DataRow(true, DisplayName = "Update AllowIntrospection to be true for GraphQL.")]
+        [DataRow(false, DisplayName = "Update GraphQL.AllowIntrospection to be false.")]
+        [DataRow(true, DisplayName = "Validate GraphQL.AllowIntrospection to remain true.")]
         public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedAllowIntrospectionValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -200,8 +200,8 @@ namespace Cli.Tests
         /// Takes in updated value for multiple mutations.create.enabled and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Update MultipleMutation.Create.Enabled to be false for GraphQL.")]
-        [DataRow(true, DisplayName = "Update MultipleMutation.Create.Enabled to be true for GraphQL.")]
+        [DataRow(false, DisplayName = "Update GraphQL.MultipleMutation.Create.Enabled to be false.")]
+        [DataRow(true, DisplayName = "Validate GraphQL.MultipleMutation.Create.Enabled to remain true.")]
         public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedMultipleMutationsCreateEnabledValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -258,8 +258,8 @@ namespace Cli.Tests
         /// in runtime config update. Takes in updated value for rest.enabled and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Update Rest.Enabled from true to false.")]
-        [DataRow(true, DisplayName = "Update Rest.Enabled from false to true.")]
+        [DataRow(false, DisplayName = "Update Rest.Enabled to false.")]
+        [DataRow(true, DisplayName = "Validate if Rest.Enabled remains true.")]
         public void TestUpdateEnabledForRestSettings(bool updatedEnabledValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -313,8 +313,8 @@ namespace Cli.Tests
         /// in runtime config update. Takes in updated value for rest.request-body-strict and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Update request-body-strict to false.")]
-        [DataRow(true, DisplayName = "Update request-body-strict to true.")]
+        [DataRow(false, DisplayName = "Update Rest.Request-Body-Strict to false.")]
+        [DataRow(true, DisplayName = "Validate if Rest.Request-body-Strict remains true..")]
         public void TestUpdateRequestBodyStrictForRestSettings(bool updatedRequestBodyStrictValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -371,7 +371,7 @@ namespace Cli.Tests
         /// validates whether the runtime config reflects those updated values.
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update Cache.Enabled to false.")]
-        [DataRow(true, DisplayName = "Update Cache.Enabled to true.")]
+        [DataRow(true, DisplayName = "Validate if Cache.Enabled remains true.")]
         public void TestUpdateEnabledForCacheSettings(bool updatedEnabledValue)
         {
             // Arrange -> all the setup which includes creating options.

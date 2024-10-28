@@ -366,9 +366,9 @@ public class EndToEndTests
     /// due to validation failure.
     /// </summary>
     [DataTestMethod]
-    [DataRow("/updatedPath", true, DisplayName = "Success in updated Rest Path to /updatedPath.")]
-    [DataRow("/updated-Path", true, DisplayName = "Success in updated Rest Path to /updated-Path.")]
-    [DataRow("/updated_Path", true, DisplayName = "Success in updated Rest Path to /updated_Path.")]
+    [DataRow("/updatedPath", true, DisplayName = "Successfully updated Rest Path to /updatedPath.")]
+    [DataRow("/updated-Path", true, DisplayName = "Successfully updated Rest Path to /updated-Path.")]
+    [DataRow("/updated_Path", true, DisplayName = "Successfully updated Rest Path to /updated_Path.")]
     [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
     [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
     [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]

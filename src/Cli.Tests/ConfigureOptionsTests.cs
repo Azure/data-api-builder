@@ -251,8 +251,8 @@ namespace Cli.Tests
         /// in runtime. Takes in updated value for rest.enabled and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Update enabled to be false for Rest.")]
-        [DataRow(true, DisplayName = "Update enabled to be true for Rest.")]
+        [DataRow(false, DisplayName = "Update Rest.Enabled from true to false.")]
+        [DataRow(true, DisplayName = "Update Rest.Enabled from false to true.")]
         public void TestUpdateEnabledForRestSettings(bool updatedEnabledValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -277,9 +277,9 @@ namespace Cli.Tests
         /// in runtime config update. Takes in updated value for rest.path and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow("/updatedPath", DisplayName = "Update path to /updatedPath for Rest.")]
-        [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in Rest path name.")]
-        [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in Rest path name.")]
+        [DataRow("/updatedPath", DisplayName = "Update REST path to /updatedPath.")]
+        [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in REST path.")]
+        [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in REST path.")]
         public void TestUpdatePathForRestSettings(string updatedPathValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -304,8 +304,8 @@ namespace Cli.Tests
         /// in runtime config update. Takes in updated value for rest.request-body-strict and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Update request-body-strict to be false for Rest.")]
-        [DataRow(true, DisplayName = "Update request-body-strict to be true for Rest.")]
+        [DataRow(false, DisplayName = "Update request-body-strict from true to false.")]
+        [DataRow(true, DisplayName = "Update request-body-strict from false to true.")]
         public void TestUpdateRequestBodyStrictForRestSettings(bool updatedRequestBodyStrictValue)
         {
             // Arrange -> all the setup which includes creating options.
@@ -355,9 +355,9 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Tests that running "dab configure --runtime.cache.enabled" on a config with various values results
-        /// in runtime. Takes in updated value for cache.enabled and 
-        /// validates whether the runtime config reflects those updated values
+        /// Validates that running "dab configure --runtime.cache.enabled" on a config with various values results
+        /// in runtime config update. Takes in updated value for cache.enabled and 
+        /// validates whether the runtime config reflects those updated values.
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update enabled to be false for Cache.")]
         [DataRow(true, DisplayName = "Update enabled to be true for Cache.")]
@@ -382,10 +382,10 @@ namespace Cli.Tests
 
         /// <summary>
         /// Tests that running "dab configure --runtime.cache.ttl-seconds" on a config with various values results
-        /// in runtime. Takes in updated value for cache.ttl-seconds and 
+        /// in runtime config update. Takes in updated value for cache.ttl-seconds and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow(4, DisplayName = "Update in value of ttl for cache.")]
+        [DataRow(4, DisplayName = "Update global cache TTL from 5 to 4.")]
         public void TestUpdateTTLForCacheSettings(int updatedTtlValue)
         {
             // Arrange -> all the setup which includes creating options.

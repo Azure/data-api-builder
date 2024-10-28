@@ -754,12 +754,12 @@ namespace Cli
 
         /// <summary>
         /// Attempts to update the Config parameters in the Rest runtime settings based on the provided value.
-        /// Validates that any user-provided parameter value is valid and then returns true if the updated Rest options
-        /// needs to be overwritten on the existing config parameters
+        /// Validates user-provided values and then returns true if the updated Rest options
+        /// need to be overwritten on the existing config parameters
         /// </summary>
         /// <param name="options">options.</param>
         /// <param name="updatedRestOptions">updatedRestOptions.</param>
-        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
         private static bool TryUpdateConfigureRestValues(ConfigureOptions options, ref RestRuntimeOptions? updatedRestOptions)
         {
             object? updatedValue;
@@ -785,8 +785,8 @@ namespace Cli
                     }
                     else
                     {
-                        _logger.LogError($"Failure in updating RuntimeConfig with Runtime.Rest.Path " +
-                            $"as '{updatedValue}' due to exception message: {exceptionMessage}");
+                        _logger.LogError("Failed to update RuntimeConfig with Runtime.Rest.Path " +
+                            $"as '{updatedValue}'. Error details: {exceptionMessage}", exceptionMessage);
                         return false;
                     }
                 }
@@ -877,8 +877,8 @@ namespace Cli
 
         /// <summary>
         /// Attempts to update the Config parameters in the Cache runtime settings based on the provided value.
-        /// Validates that any user-provided parameter value is valid and then returns true if the updated Cache options
-        /// needs to be overwritten on the existing config parameters
+        /// Validates user-provided parameters and then returns true if the updated Cache options
+        /// need to be overwritten on the existing config parameters
         /// </summary>
         /// <param name="options">options.</param>
         /// <param name="updatedCacheOptions">updatedCacheOptions.</param>

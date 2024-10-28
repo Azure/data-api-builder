@@ -96,16 +96,16 @@ namespace Cli.Commands
         [Option("runtime.rest.enabled", Required = false, HelpText = "Enable DAB's Rest endpoint. Default: true (boolean).")]
         public bool? RuntimeRestEnabled { get; }
 
-        [Option("runtime.rest.path", Required = false, HelpText = "Customize DAB's Rest endpoint path. Allowed values: string. Conditions: Prefix with '/', no spaces and no reserved characters.")]
+        [Option("runtime.rest.path", Required = false, HelpText = "Customize DAB's REST endpoint path. Default: '/api' Conditions: Prefix path with '/'.")]
         public string? RuntimeRestPath { get; }
 
-        [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Allow/Deny extraneous fields in request body of Rest Schema. Default: true (boolean).")]
+        [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Prohibit extraneous REST request body fields. Default: true (boolean).")]
         public bool? RuntimeRestRequestBodyStrict { get; }
 
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's caching of responses globally. Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }
 
-        [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize DAB's Time to live in seconds for DAB Cache. Default: 5 seconds (Integer).")]
+        [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

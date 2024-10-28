@@ -55,18 +55,19 @@ namespace Cli.Tests
 
             // Arrange
             _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, initialConfig);
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
 
             // Act: Run Configure with no options
             ConfigureOptions options = new(
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
-
-            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+            
+            // Assert
+            Assert.IsTrue(isSuccess);
+            
             // Assert that INITIAL_CONFIG is same as the updated config
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             if (isDepthLimitProvidedInConfig)
             {
                 Assert.IsTrue(updatedConfig.Contains(depthLimitSection));
@@ -100,9 +101,10 @@ namespace Cli.Tests
                 depthLimit: maxDepthLimit,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Depth Limit is added
+            Assert.IsTrue(isSuccess);            
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
             Assert.IsNotNull(config.Runtime?.GraphQL?.DepthLimit);
@@ -126,9 +128,10 @@ namespace Cli.Tests
                 runtimeGraphQLEnabled: updatedEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Enabled Flag is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Enabled);
@@ -153,9 +156,10 @@ namespace Cli.Tests
                 runtimeGraphQLPath: updatedPathValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Path update is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
@@ -180,9 +184,10 @@ namespace Cli.Tests
                 runtimeGraphQLAllowIntrospection: updatedAllowIntrospectionValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Allow-Introspection value is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.AllowIntrospection);
@@ -207,9 +212,10 @@ namespace Cli.Tests
                 runtimeGraphQLMultipleMutationsCreateEnabled: updatedMultipleMutationsCreateEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Multiple-Mutation.Create.Enabled is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.MultipleMutationOptions?.MultipleCreateOptions?.Enabled);
@@ -235,9 +241,10 @@ namespace Cli.Tests
                 runtimeGraphQLAllowIntrospection: updatedAllowIntrospectionValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the path is updated and allow introspection is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
@@ -263,9 +270,10 @@ namespace Cli.Tests
                 runtimeRestEnabled: updatedEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Enabled Flag is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
@@ -290,9 +298,10 @@ namespace Cli.Tests
                 runtimeRestPath: updatedPathValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Path update is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
@@ -316,9 +325,10 @@ namespace Cli.Tests
                 runtimeRestRequestBodyStrict: updatedRequestBodyStrictValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the RequestBodyStrict Value is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.RequestBodyStrict);
@@ -343,9 +353,10 @@ namespace Cli.Tests
                 runtimeRestEnabled: updatedEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the path is updated and enabled is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
@@ -371,9 +382,10 @@ namespace Cli.Tests
                 runtimeCacheEnabled: updatedEnabledValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the cache Enabled Flag is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.Enabled);
@@ -396,9 +408,10 @@ namespace Cli.Tests
                 runtimeCacheTtl: updatedTtlValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the TTL Value is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.TtlSeconds);
@@ -438,9 +451,10 @@ namespace Cli.Tests
             );
 
             // Act: Update Depth Limit
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Depth Limit is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
 

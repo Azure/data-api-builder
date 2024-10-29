@@ -62,7 +62,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            _metadataProviders.Clear();
             ConfigureMetadataProviders();
+            // Blocks the current thread until initialization is finished.
+            this.InitializeAsync().GetAwaiter().GetResult();
         }
 
         /// <inheritdoc />

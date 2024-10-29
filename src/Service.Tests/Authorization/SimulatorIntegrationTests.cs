@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 
-            AuthenticationOptions AuthenticationOptions = new(Provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION, null);
+            AuthenticationOptions authenticationOptions = new(Provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION, null);
             RuntimeConfig configWithCustomHostMode = config
                 with
             {
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 {
                     Host = config.Runtime.Host
                 with
-                    { Authentication = AuthenticationOptions }
+                    { Authentication = authenticationOptions }
                 }
             };
 

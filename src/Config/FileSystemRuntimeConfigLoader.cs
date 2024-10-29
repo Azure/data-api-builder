@@ -146,7 +146,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         {
             if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
             {
-                HotReloadConfig(RuntimeConfig.DefaultDataSourceName);
+                HotReloadConfig();
             }
         }
         catch (Exception ex)
@@ -226,7 +226,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    private void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
+    private void HotReloadConfig(ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
         TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true);

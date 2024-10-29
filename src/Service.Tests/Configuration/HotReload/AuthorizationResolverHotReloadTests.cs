@@ -2,14 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.Net.Http;
+using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using System.IO;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.HotReload;
 
@@ -21,86 +21,17 @@ public class AuthorizationResolverHotReloadTests
     private const string AUTHZ_HR_FILENAME = "authZ-resolver-hotreload.json";
     private const string INITIAL_ENTITY_NAME = "Books";
 
-    [ClassCleanup]
-    public static void ClassCleanup()
-    {
-        _testServer.Dispose();
-        _testClient.Dispose();
-    }
-
-    [ClassInitialize]
-    public static async Task ClassInitializeAsync(TestContext context)
-    {
-        // Arrange
-        EntityActionFields initialFieldPermissions = new(
-            Include: new HashSet<string>()
-            {
-                "id",
-                "publisher_id"
-            },
-            Exclude: new HashSet<string>()
-            {
-                "title"
-            }
-        );
-
-        EntityAction actionForRole = new(
-            Action: EntityActionOperation.Read,
-            Fields: initialFieldPermissions,
-            Policy: null
-            );
-
-        EntityPermission permissions = new(
-            Role: "Role1",
-            Actions: new[] { actionForRole }
-        );
-
-        // At least one entity is required in the runtime config for the engine to start.
-        // Even though this entity is not under test, it must be supplied to the config
-        // file creation function.
-        Entity requiredEntity = new(
-            Source: new("books", EntitySourceType.Table, null, null),
-            Rest: new(Enabled: true),
-            GraphQL: new(Singular: "", Plural: "", Enabled: false),
-            Permissions: new[] { permissions },
-            Relationships: null,
-            Mappings: null);
-
-        Dictionary<string, Entity> entityMap = new()
-        {
-            { INITIAL_ENTITY_NAME, requiredEntity }
-        };
-
-       
-        CreateCustomConfigFile(fileName: AUTHZ_HR_FILENAME, entityMap);
-
-        string[] args = new[]
-        {
-            $"--ConfigFileName={AUTHZ_HR_FILENAME}"
-        };
-
-        _testServer = new(Program.CreateWebHostBuilder(args));
-        _testClient = _testServer.CreateClient();
-
-        // Setup validation - ensure initial config is honored.
-        HttpRequestMessage initialRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{INITIAL_ENTITY_NAME}?$select=id,publisher_id");
-        initialRequest.Headers.Add("X-MS-API-ROLE", "Role1");
-        HttpResponseMessage initialResponse = await _testClient.SendAsync(initialRequest);
-
-        Assert.AreEqual(
-            expected: HttpStatusCode.OK,
-            actual: initialResponse.StatusCode,
-            message: "Initial configuration bootstrap failed.");
-    }
-
     /// <summary>
     /// Validates that a hot reload operation signals the AuthorizationResolver to refresh its
     /// internal state by updating the entity permissions with a new entity and new permissions.
     /// DAB "forgets" the initial entity and its permissions and honors the new entity and permissions.
     /// Original config specifies Entity (Book) -> Role1 -> Include: id, publisher_id Exclude: title
     /// Hot Reloaded config specifies: Entity (Publisher) -> Role2 -> Include: id Exclude: name
+    /// Hot-Reload tests in this class must not be parallelized as each test overwrites the same config file
+    /// and uses the same test server instance.
     /// </summary>
     [TestMethod]
+    [DoNotParallelize]
     [TestCategory(TestCategory.MSSQL)]
     public async Task ValidateAuthorizationResolver_HotReload()
     {
@@ -204,5 +135,81 @@ public class AuthorizationResolverHotReloadTests
         File.WriteAllText(
             path: fileName,
             contents: runtimeConfig.ToJson());
+    }
+
+    /// <summary>
+    /// Create initial configuration file and start the test server.
+    /// The testserver is used in all tests to validate the hot-reload behavior
+    /// as each test will overwrite this configuration file.
+    /// </summary>
+    [ClassInitialize]
+    public static async Task ClassInitializeAsync(TestContext context)
+    {
+        // Arrange
+        EntityActionFields initialFieldPermissions = new(
+            Include: new HashSet<string>()
+            {
+                "id",
+                "publisher_id"
+            },
+            Exclude: new HashSet<string>()
+            {
+                "title"
+            }
+        );
+
+        EntityAction actionForRole = new(
+            Action: EntityActionOperation.Read,
+            Fields: initialFieldPermissions,
+            Policy: null
+            );
+
+        EntityPermission permissions = new(
+            Role: "Role1",
+            Actions: new[] { actionForRole }
+        );
+
+        // At least one entity is required in the runtime config for the engine to start.
+        // Even though this entity is not under test, it must be supplied to the config
+        // file creation function.
+        Entity requiredEntity = new(
+            Source: new("books", EntitySourceType.Table, null, null),
+            Rest: new(Enabled: true),
+            GraphQL: new(Singular: "", Plural: "", Enabled: false),
+            Permissions: new[] { permissions },
+            Relationships: null,
+            Mappings: null);
+
+        Dictionary<string, Entity> entityMap = new()
+        {
+            { INITIAL_ENTITY_NAME, requiredEntity }
+        };
+
+        CreateCustomConfigFile(fileName: AUTHZ_HR_FILENAME, entityMap);
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={AUTHZ_HR_FILENAME}"
+        };
+
+        _testServer = new(Program.CreateWebHostBuilder(args));
+        _testClient = _testServer.CreateClient();
+
+        // Setup validation - ensure initial config is honored.
+        HttpRequestMessage initialRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{INITIAL_ENTITY_NAME}?$select=id,publisher_id");
+        initialRequest.Headers.Add("X-MS-API-ROLE", "Role1");
+        HttpResponseMessage initialResponse = await _testClient.SendAsync(initialRequest);
+
+        Assert.AreEqual(
+            expected: HttpStatusCode.OK,
+            actual: initialResponse.StatusCode,
+            message: "Initial configuration bootstrap failed.");
+    }
+
+    [ClassCleanup]
+    public static void ClassCleanup()
+    {
+        _testServer.Dispose();
+        _testClient.Dispose();
     }
 }

@@ -29,7 +29,8 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             { METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, null },
             { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, null },
             { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, null },
-            { DOCUMENTOR_ON_CONFIG_CHANGED, null }
+            { DOCUMENTOR_ON_CONFIG_CHANGED, null },
+            { AUTHZ_RESOLVER_ON_CONFIG_CHANGED, null }
         };
     }
 

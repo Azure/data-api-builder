@@ -67,7 +67,7 @@ public class RuntimeConfigProvider
     {
         //First use of GetConfig during hot reload, in order to do validation of
         //config file before any changes are made for hot reload.
-        //In case validation fails, an exception will be thrown and hot reload will be canceled.
+        // In case validation fails, an exception will be thrown and hot reload will be canceled.
         GetConfig();
 
         DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());

@@ -38,6 +38,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     private string _baseConfigFilePath;
 
     /// <summary>
+    /// This field is used to determine if the loader is being used by the CLI.
+    /// CLI usage of the loader should not set up the file watcher for hot reload
+    /// because:
+    /// 1. Hot reload isn't needed for the CLI.
+    /// 2. The CLI doesn't set _baseConfigFilePath using the user supplied config file name
+    /// resulting in failed config file lookups within the file watcher.
+    /// </summary>
+    private bool _isCliLoader;
+
+    /// <summary>
     /// Watches the config file for changes and triggers hot-reload when a change is detected.
     /// </summary>
     private ConfigFileWatcher? _configFileWatcher;
@@ -69,12 +79,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         IFileSystem fileSystem,
         HotReloadEventHandler<HotReloadEventArgs>? handler = null,
         string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME,
-        string? connectionString = null)
+        string? connectionString = null,
+        bool isCliLoader = false)
         : base(handler, connectionString)
     {
         _fileSystem = fileSystem;
         _baseConfigFilePath = baseConfigFilePath;
         ConfigFilePath = GetFinalConfigFilePath();
+        _isCliLoader = isCliLoader;
     }
 
     /// <summary>
@@ -183,8 +195,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             string json = _fileSystem.File.ReadAllText(path);
             if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
-                if (TrySetupConfigFileWatcher())
+                if (!_isCliLoader && TrySetupConfigFileWatcher())
                 {
+                    Console.WriteLine("Monitoring config: {0} for hot-reloading.", ConfigFilePath);
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
 

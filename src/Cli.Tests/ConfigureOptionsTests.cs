@@ -314,7 +314,7 @@ namespace Cli.Tests
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
         [DataRow(false, DisplayName = "Update Rest.Request-Body-Strict to false.")]
-        [DataRow(true, DisplayName = "Validate if Rest.Request-body-Strict remains true..")]
+        [DataRow(true, DisplayName = "Validate if Rest.Request-body-Strict remains true.")]
         public void TestUpdateRequestBodyStrictForRestSettings(bool updatedRequestBodyStrictValue)
         {
             // Arrange -> all the setup which includes creating options.

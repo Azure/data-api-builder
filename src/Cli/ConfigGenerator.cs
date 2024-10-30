@@ -533,12 +533,12 @@ namespace Cli
                 return false;
             }
 
-            if (!TryConfigureDataSourceOptions(options, ref runtimeConfig))
+            if (!TryUpdateConfiguredDataSourceOptions(options, ref runtimeConfig))
             {
                 return false;
             }
 
-            if (!TryConfigureRuntimeOptions(options, ref runtimeConfig))
+            if (!TryUpdateConfiguredRuntimeOptions(options, ref runtimeConfig))
             {
                 return false;
             }
@@ -562,7 +562,7 @@ namespace Cli
         /// <returns>
         /// True if the data source options were successfully configured and the runtime configuration was updated; otherwise, false.
         /// </returns>
-        private static bool TryConfigureDataSourceOptions(
+        private static bool TryUpdateConfiguredDataSourceOptions(
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
@@ -694,7 +694,7 @@ namespace Cli
         /// <param name="options">Options including the graphql runtime parameters.</param>
         /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
         /// <returns>True if the update was successful, false otherwise.</returns>
-        private static bool TryConfigureRuntimeOptions(
+        private static bool TryUpdateConfiguredRuntimeOptions(
             ConfigureOptions options,
             [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
         {
@@ -704,7 +704,7 @@ namespace Cli
                 options.RuntimeRestRequestBodyStrict != null)
             {
                 RestRuntimeOptions? updatedRestOptions = runtimeConfig?.Runtime?.Rest ?? new();
-                bool status = TryUpdateConfigureRestValues(options, ref updatedRestOptions);
+                bool status = TryUpdateConfiguredRestValues(options, ref updatedRestOptions);
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Rest = updatedRestOptions } };
@@ -722,7 +722,7 @@ namespace Cli
                 options.RuntimeGraphQLMultipleMutationsCreateEnabled != null)
             {
                 GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL ?? new();
-                bool status = TryUpdateConfigureGraphQLValues(options, ref updatedGraphQLOptions);
+                bool status = TryUpdateConfiguredGraphQLValues(options, ref updatedGraphQLOptions);
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { GraphQL = updatedGraphQLOptions } };
@@ -738,7 +738,7 @@ namespace Cli
                 options.RuntimeCacheTTL != null)
             {
                 EntityCacheOptions? updatedCacheOptions = runtimeConfig?.Runtime?.Cache ?? new();
-                bool status = TryUpdateConfigureCacheValues(options, ref updatedCacheOptions);
+                bool status = TryUpdateConfiguredCacheValues(options, ref updatedCacheOptions);
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Cache = updatedCacheOptions } };
@@ -754,13 +754,13 @@ namespace Cli
 
         /// <summary>
         /// Attempts to update the Config parameters in the Rest runtime settings based on the provided value.
-        /// Validates user-provided values and then returns true if the updated Rest options
+        /// Validates that any user-provided values are valid and then returns true if the updated Rest options
         /// need to be overwritten on the existing config parameters
         /// </summary>
         /// <param name="options">options.</param>
         /// <param name="updatedRestOptions">updatedRestOptions.</param>
         /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
-        private static bool TryUpdateConfigureRestValues(ConfigureOptions options, ref RestRuntimeOptions? updatedRestOptions)
+        private static bool TryUpdateConfiguredRestValues(ConfigureOptions options, ref RestRuntimeOptions? updatedRestOptions)
         {
             object? updatedValue;
             try
@@ -816,7 +816,7 @@ namespace Cli
         /// <param name="options">options.</param>
         /// <param name="updatedGraphQLOptions">updatedGraphQLOptions.</param>
         /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
-        private static bool TryUpdateConfigureGraphQLValues(
+        private static bool TryUpdateConfiguredGraphQLValues(
             ConfigureOptions options,
             ref GraphQLRuntimeOptions? updatedGraphQLOptions)
         {
@@ -882,7 +882,7 @@ namespace Cli
         /// <param name="options">options.</param>
         /// <param name="updatedCacheOptions">updatedCacheOptions.</param>
         /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
-        private static bool TryUpdateConfigureCacheValues(
+        private static bool TryUpdateConfiguredCacheValues(
             ConfigureOptions options,
             ref EntityCacheOptions? updatedCacheOptions)
         {

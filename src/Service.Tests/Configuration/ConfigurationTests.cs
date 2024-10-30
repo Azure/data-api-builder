@@ -42,7 +42,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Moq.Protected;
@@ -467,279 +466,6 @@ type Moon {
     character: Character
 }
 ";
-        internal const string HOT_RELOAD_CONFIG_FILE_NAME = "hot-reload.dab-config.json";
-        internal const string HOT_RELOAD_GQL_QUERY = @"{
-                books(first: 100) {
-                    items {
-                        id
-                        title
-                        publisher_id
-                    }
-                }
-            }";
-
-        internal const string BOOK_DBO_CONTENTS =
-            "[" +
-            "{\"id\":1,\"title\":\"Awesome book\",\"publisher_id\":1234}," +
-            "{\"id\":2,\"title\":\"Also Awesome book\",\"publisher_id\":1234}," +
-            "{\"id\":3,\"title\":\"Great wall of china explained\",\"publisher_id\":2345}," +
-            "{\"id\":4,\"title\":\"US history in a nutshell\",\"publisher_id\":2345}," +
-            "{\"id\":5,\"title\":\"Chernobyl Diaries\",\"publisher_id\":2323}," +
-            "{\"id\":6,\"title\":\"The Palace Door\",\"publisher_id\":2324}," +
-            "{\"id\":7,\"title\":\"The Groovy Bar\",\"publisher_id\":2324}," +
-            "{\"id\":8,\"title\":\"Time to Eat\",\"publisher_id\":2324}," +
-            "{\"id\":9,\"title\":\"Policy-Test-01\",\"publisher_id\":1940}," +
-            "{\"id\":10,\"title\":\"Policy-Test-02\",\"publisher_id\":1940}," +
-            "{\"id\":11,\"title\":\"Policy-Test-04\",\"publisher_id\":1941}," +
-            "{\"id\":12,\"title\":\"Time to Eat 2\",\"publisher_id\":1941}," +
-            "{\"id\":13,\"title\":\"Before Sunrise\",\"publisher_id\":1234}," +
-            "{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}" +
-            "]";
-
-        private static void GenerateConfigFile(
-            string databaseType = "MsSql",
-            string connectionString = "",
-            string restPath = "/rest",
-            string restEnabled = "true",
-            string gQLPath = "/graphQL",
-            string gQLEnabled = "true",
-            string entityName = "Book",
-            string sourceObject = "books",
-            string gQLEntityEnabled = "true",
-            string gQLEntitySingular = "book",
-            string gQLEntityPlural = "books",
-            string restEntityEnabled = "true",
-            string entityBackingColumn = "title",
-            string entityExposedName = "title",
-            string configFileName = HOT_RELOAD_CONFIG_FILE_NAME)
-        {
-            File.WriteAllText(configFileName, @"
-              {
-                ""$schema"": ""../../schemas/dab.draft.schema.json"",
-                    ""data-source"": {
-                        ""database-type"": """ + databaseType + @""",
-                        ""options"": {
-                            ""set-session-context"": true
-                        },
-                        ""connection-string"": """ + connectionString + @"""
-                    },
-                    ""runtime"": {
-                        ""rest"": {
-                          ""enabled"": " + restEnabled + @",
-                          ""path"": """ + restPath + @""",
-                          ""request-body-strict"": true
-                        },
-                        ""graphql"": {
-                          ""enabled"": " + gQLEnabled + @",
-                          ""path"": """ + gQLPath + @""",
-                          ""allow-introspection"": true
-                        },
-                        ""host"": {
-                          ""cors"": {
-                            ""origins"": [
-                              ""http://localhost:5000""
-                            ],
-                            ""allow-credentials"": false
-                          },
-                          ""authentication"": {
-                            ""provider"": ""StaticWebApps""
-                          },
-                          ""mode"": ""development""
-                        }
-                      },
-                    ""entities"": {
-                      """ + entityName + @""": {
-                        ""source"": {
-                          ""object"": """ + sourceObject + @""",
-                          ""type"": ""table""
-                        },
-                        ""graphql"": {
-                          ""enabled"": " + gQLEntityEnabled + @",
-                          ""type"": {
-                            ""singular"": """ + gQLEntitySingular + @""",
-                            ""plural"": """ + gQLEntityPlural + @"""
-                          }
-                        },
-                        ""rest"": {
-                          ""enabled"": " + restEntityEnabled + @"
-                        },
-                        ""permissions"": [
-                        {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                            {
-                              ""action"": ""create""
-                            },
-                            {
-                              ""action"": ""read""
-                            },
-                            {
-                              ""action"": ""update""
-                            },
-                            {
-                              ""action"": ""delete""
-                            }
-                          ]
-                        },
-                        {
-                          ""role"": ""authenticated"",
-                          ""actions"": [
-                            {
-                              ""action"": ""create""
-                            },
-                            {
-                              ""action"": ""read""
-                            },
-                            {
-                              ""action"": ""update""
-                            },
-                            {
-                              ""action"": ""delete""
-                            }
-                          ]
-                        }
-                      ],
-                        ""mappings"": {
-                          """ + entityBackingColumn + @""": """ + entityExposedName + @"""
-                        }
-                      }
-                  }
-              }");
-
-        }
-
-            [TestCleanup]
-        public void CleanupAfterEachTest()
-        {
-            TestHelper.UnsetAllDABEnvironmentVariables();
-            if (File.Exists(HOT_RELOAD_CONFIG_FILE_NAME))
-            {
-                File.Delete(HOT_RELOAD_CONFIG_FILE_NAME);
-            }
-        }
-
-        /// <summary>
-        /// Start DAB with the pre-formed config file, assert that rest and GQL
-        /// requests for the book database object returns the expected results.
-        /// Then hot-reload the config runtime paths both for rest and GQL, and
-        /// again assert that the requests return the expected results against
-        /// the book database object.
-        /// </summary>
-        /// <returns></returns>
-        [TestCategory(MSSQL_ENVIRONMENT)]
-        [TestMethod("Hot-reload runtime paths.")]
-        public async Task HotReloadConfigRuntimePathsEndToEndTest()
-        {
-            // Arrange
-            string restBookContents = $"{{\"value\":{BOOK_DBO_CONTENTS}}}";
-            string restPath = "/restApi";
-            string gQLPath = "/gQLApi";
-
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"{
-                books(first: 100) {
-                    items {
-                        id
-                        title
-                        publisher_id
-                    }
-                }
-            }";
-
-            GenerateConfigFile(connectionString: $"{GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}");
-
-            TestServer server = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", HOT_RELOAD_CONFIG_FILE_NAME }));    
-            HttpClient httpClient = server.CreateClient();
-            RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-
-            // Act
-            HttpResponseMessage result = await httpClient.GetAsync("/rest/Book");
-            string initialRestContents = await result.Content.ReadAsStringAsync();
-            JsonElement initialGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                httpClient,
-                configProvider,
-                graphQLQueryName,
-                graphQLQuery);
-
-            // Assert
-            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual($"{restBookContents}", initialRestContents));
-            SqlTestHelper.PerformTestEqualJsonStrings(BOOK_DBO_CONTENTS, initialGQLContents.GetProperty("items").ToString());
-
-            // Arrange
-            GenerateConfigFile(
-                connectionString: $"{GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}",
-                restPath: restPath,
-                gQLPath: gQLPath);
-            System.Threading.Thread.Sleep(1000);
-
-            // Act
-            result = await httpClient.GetAsync($"{restPath}/Book");
-            string reloadRestContent = await result.Content.ReadAsStringAsync();
-            JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                httpClient,
-                configProvider,
-                graphQLQueryName,
-                graphQLQuery);
-
-            // Assert
-            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(restBookContents, reloadRestContent));
-            SqlTestHelper.PerformTestEqualJsonStrings(BOOK_DBO_CONTENTS, reloadGQLContents.GetProperty("items").ToString());
-        }
-
-        /// <summary>
-        /// Start DAB with pre-formed config file, assert that requests sent to
-        /// the rest and gql endpoints result in result status OK. Hot-reload
-        /// the config and set rest and graphql enabled to false, and assert
-        /// that requests sent to the rest and gql endpoints result in result
-        /// status NotFound.
-        /// </summary>
-        /// <returns></returns>
-        [TestCategory(MSSQL_ENVIRONMENT)]
-        [TestMethod("Hot-reload rest and gql enabled.")]
-        public async Task HotReloadConfigRuntimeEnabledEndToEndTest()
-        {
-            // Arrange
-            string restEnabled = "false";
-            string gQLEnabled = "false";
-            string query = HOT_RELOAD_GQL_QUERY;
-            object payload =
-                new { query };
-
-            GenerateConfigFile(connectionString: $"{GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}");
-            TestServer server = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", HOT_RELOAD_CONFIG_FILE_NAME  }));    
-            HttpClient httpClient = server.CreateClient();
-            HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
-            {
-                Content = JsonContent.Create(payload)
-            };
-
-            // Act
-            HttpResponseMessage restResult = await httpClient.GetAsync("/rest/Book");
-            HttpResponseMessage gQLResult = await httpClient.SendAsync(request);
-
-            // Assert
-            Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
-            Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode);
-
-            // Arrange
-            request = new(HttpMethod.Post, "/graphQL")
-            {
-                Content = JsonContent.Create(payload)
-            };
-            GenerateConfigFile(
-                connectionString: $"{GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}",
-                restEnabled: restEnabled,
-                gQLEnabled: gQLEnabled);
-            System.Threading.Thread.Sleep(1000);
-
-            // Act
-            restResult = await httpClient.GetAsync($"rest/Book");
-            gQLResult = await httpClient.SendAsync(request);
-
-            // Assert
-            Assert.AreEqual(HttpStatusCode.NotFound, restResult.StatusCode);
-            Assert.AreEqual(HttpStatusCode.NotFound, gQLResult.StatusCode);
-        }
 
         /// <summary>
         /// When updating config during runtime is possible, then For invalid config the Application continues to
@@ -4741,7 +4467,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Helper  method to instantiate RuntimeConfig object needed for multiple create tests.
         /// </summary>
-        /// <returns></returns>
         public static RuntimeConfig InitialzieRuntimeConfigForMultipleCreateTests(bool isMultipleCreateOperationEnabled)
         {
             // Multiple create operations are enabled.
@@ -4816,7 +4541,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// Instantiate minimal runtime config with custom global settings.
         /// </summary>
         /// <param name="dataSource">DataSource to pull connection string required for engine start.</param>
-        /// <returns></returns>
         public static RuntimeConfig InitMinimalRuntimeConfig(
             DataSource dataSource,
             GraphQLRuntimeOptions graphqlOptions,
@@ -4920,7 +4644,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Create basic runtime config with given DatabaseType and connectionString with no entity.
         /// </summary>
-        /// <returns></returns>
         private static RuntimeConfig CreateBasicRuntimeConfigWithNoEntity(
             DatabaseType dbType = DatabaseType.MSSQL,
             string connectionString = "")

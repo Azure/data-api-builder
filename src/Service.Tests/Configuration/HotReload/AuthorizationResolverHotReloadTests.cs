@@ -209,6 +209,11 @@ public class AuthorizationResolverHotReloadTests
     [ClassCleanup]
     public static void ClassCleanup()
     {
+        if (File.Exists(AUTHZ_HR_FILENAME))
+        {
+            File.Delete(AUTHZ_HR_FILENAME);
+        }
+        
         _testServer.Dispose();
         _testClient.Dispose();
     }

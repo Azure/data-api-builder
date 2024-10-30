@@ -46,8 +46,8 @@ namespace Cli.Commands
         [Option("otel-headers", Required = false, HelpText = "Headers for Open Telemetry for telemetry data")]
         public string? OpenTelemetryHeaders { get; }
 
-        // Service Name for the Open Telemetry resource to which telemetry data should be sent.
-        [Option("otel-service-name", Required = true, HelpText = "Headers for Open Telemetry for telemetry data")]
+        // Service Name for the Open Telemetry resource to which telemetry data should be sent. This flag is optional and default value is dab.
+        [Option("otel-service-name", Default = "dab", Required = false, HelpText = "Headers for Open Telemetry for telemetry data")]
         public string? OpenTelemetryServiceName { get; }
 
         // To specify whether Open Telemetry telemetry should be enabled. This flag is optional and default value is true.

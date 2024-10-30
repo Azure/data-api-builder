@@ -162,7 +162,6 @@ public class ConfigurationHotReloadTests
                       }
                   }
               }");
-
     }
 
     /// <summary>

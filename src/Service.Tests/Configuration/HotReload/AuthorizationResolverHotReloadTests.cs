@@ -213,7 +213,7 @@ public class AuthorizationResolverHotReloadTests
         {
             File.Delete(AUTHZ_HR_FILENAME);
         }
-        
+
         _testServer.Dispose();
         _testClient.Dispose();
     }

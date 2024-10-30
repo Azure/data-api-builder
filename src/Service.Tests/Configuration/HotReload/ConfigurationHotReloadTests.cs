@@ -54,7 +54,7 @@ public class ConfigurationHotReloadTests
         "]";
 
     private static void GenerateConfigFile(
-        string databaseType = "mssql",
+        DatabaseType databaseType = DatabaseType.MSSQL,
         string connectionString = "",
         string restPath = "/rest",
         string restEnabled = "true",

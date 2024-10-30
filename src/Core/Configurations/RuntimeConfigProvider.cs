@@ -68,7 +68,7 @@ public class RuntimeConfigProvider
         //First use of GetConfig during hot reload, in order to do validation of
         //config file before any changes are made for hot reload.
         //In case validation fails, an exception will be thrown and hot reload will be canceled.
-        GetConfig();
+        ValidateConfig();
 
         DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
         previousToken.SignalChange();
@@ -119,32 +119,6 @@ public class RuntimeConfigProvider
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
-        // Only used in hot reload to validate the configuration file
-        if (_configLoader.DoesConfigNeedValidation())
-        {
-            IFileSystem fileSystem = new FileSystem();
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
-            RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
-
-            _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
-
-            // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
-            if (_configLoader.IsNewConfigValidated)
-            {
-                _configLoader.SetLkgConfig();
-            }
-            else
-            {
-                _configLoader.RestoreLkgConfig();
-
-                throw new DataApiBuilderException(
-                    message: "Failed validation of configuration file.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-            }
-        }
-
         if (_configLoader.RuntimeConfig is not null)
         {
             return _configLoader.RuntimeConfig;
@@ -321,6 +295,41 @@ public class RuntimeConfigProvider
     public bool IsConfigHotReloadable()
     {
         return !IsLateConfigured || !(_configLoader.RuntimeConfig?.Runtime?.Host?.Mode == HostMode.Production);
+    }
+
+    /// <summary>
+    /// This function checks if there is a new config that needs to be validated
+    /// and validates the configuration file as well as the schema file, in the
+    /// case that it is not able to validate both then it will return an error.
+    /// </summary>
+    /// <returns></returns>
+    public void ValidateConfig()
+    {
+        // Only used in hot reload to validate the configuration file
+        if (_configLoader.DoesConfigNeedValidation())
+        {
+            IFileSystem fileSystem = new FileSystem();
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
+
+            _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
+
+            // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
+            if (_configLoader.IsNewConfigValidated)
+            {
+                _configLoader.SetLkgConfig();
+            }
+            else
+            {
+                _configLoader.RestoreLkgConfig();
+
+                throw new DataApiBuilderException(
+                    message: "Failed validation of configuration file.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+        }
     }
 
     private async Task<bool> InvokeConfigLoadedHandlersAsync()

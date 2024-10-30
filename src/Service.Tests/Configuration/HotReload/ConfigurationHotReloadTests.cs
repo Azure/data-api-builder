@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
@@ -54,7 +55,7 @@ public class ConfigurationHotReloadTests
         "]";
 
     private static void GenerateConfigFile(
-        string databaseType = "MsSql",
+        DatabaseType databaseType = DatabaseType.MSSQL,
         string connectionString = "",
         string restPath = "/rest",
         string restEnabled = "true",

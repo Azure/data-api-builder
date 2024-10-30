@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -174,7 +175,7 @@ public class ConfigurationHotReloadTests
     public static async Task ClassInitializeAsync(TestContext context)
     {
         // Arrange
-        GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}");
+        GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
         _testClient = _testServer.CreateClient();
         _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
@@ -229,7 +230,7 @@ public class ConfigurationHotReloadTests
         };
 
         GenerateConfigFile(
-            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}",
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\\\", "\\")}",
             restPath: restPath,
             gQLPath: gQLPath);
         System.Threading.Thread.Sleep(1000);
@@ -276,10 +277,10 @@ public class ConfigurationHotReloadTests
             Content = JsonContent.Create(payload)
         };
         GenerateConfigFile(
-            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}",
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: restEnabled,
             gQLEnabled: gQLEnabled);
-        System.Threading.Thread.Sleep(1000);
+        System.Threading.Thread.Sleep(14000);
 
         // Act
         HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Book");

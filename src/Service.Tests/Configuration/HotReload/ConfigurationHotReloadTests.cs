@@ -229,7 +229,7 @@ public class ConfigurationHotReloadTests
         };
 
         GenerateConfigFile(
-            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\\\", "\\")}",
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restPath: restPath,
             gQLPath: gQLPath);
         System.Threading.Thread.Sleep(1000);

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -120,10 +121,10 @@ public class AuthorizationResolverHotReloadTests
 
         // Using the Simulator provider enables us to simply add the Role header to the request.
         // HostMode must be development to enable hot-reload.
-        HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = "Simulator" }, Mode: HostMode.Development);
+        HostOptions hostOptions = new(Cors: new(Origins: Array.Empty<string>()), Authentication: new() { Provider = "Simulator" }, Mode: HostMode.Development);
 
         RuntimeConfig runtimeConfig = new(
-            Schema: string.Empty,
+            Schema: "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
             DataSource: dataSource,
             Runtime: new(
                 Rest: new(Enabled: true),

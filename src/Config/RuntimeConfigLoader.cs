@@ -32,6 +32,12 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
+    public RuntimeConfig? LastValidRuntimeConfig;
+
+    public bool IsNewConfigDetected;
+
+    public bool IsNewConfigValidated;
+
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _changeToken = new DabChangeToken();
@@ -80,14 +86,14 @@ public abstract class RuntimeConfigLoader
     /// <param name="message"></param>
     protected void SignalConfigChanged(string message = "")
     {
+        // Signal that a change has occurred to all change token listeners.
+        RaiseChanged();
+
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
-
-        // Signal that a change has occurred to all change token listeners.
-        RaiseChanged();
     }
 
     /// <summary>
@@ -338,5 +344,37 @@ public abstract class RuntimeConfigLoader
 
         // Return the updated connection string.
         return connectionStringBuilder.ConnectionString;
+    }
+
+    public bool DoesConfigNeedValidation()
+    {
+        if (IsNewConfigDetected && !IsNewConfigValidated)
+        {
+            IsNewConfigDetected = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Once the validation of the new config file is confirmed to have passed,
+    /// this function will save the newly resolved RuntimeConfig as the new last known good,
+    /// in order to have config file DAB can go into in case hot reload fails.
+    /// </summary>
+    public void SetLkgConfig()
+    {
+        IsNewConfigValidated = false;
+        LastValidRuntimeConfig = RuntimeConfig;
+    }
+
+    /// <summary>
+    /// Changes the state of the config file into the last known good iteration,
+    /// in order to allow users to still be able to make changes in DAB even if
+    /// a hot reload fails.
+    /// </summary>
+    public void RestoreLkgConfig()
+    {
+        RuntimeConfig = LastValidRuntimeConfig;
     }
 }

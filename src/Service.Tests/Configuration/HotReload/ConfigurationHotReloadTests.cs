@@ -234,8 +234,8 @@ public class ConfigurationHotReloadTests
         System.Threading.Thread.Sleep(1000);
 
         // Act
-        HttpResponseMessage notFoundRestResult = await _testClient.GetAsync($"rest/Book");
-        HttpResponseMessage notFoundGQLResult = await _testClient.SendAsync(request);
+        HttpResponseMessage badPathRestResult = await _testClient.GetAsync($"rest/Book");
+        HttpResponseMessage badPathGQLResult = await _testClient.SendAsync(request);
 
         HttpResponseMessage result = await _testClient.GetAsync($"{restPath}/Book");
         string reloadRestContent = await result.Content.ReadAsStringAsync();
@@ -247,8 +247,8 @@ public class ConfigurationHotReloadTests
 
         // Assert
         // Old paths are not found.
-        Assert.AreEqual(HttpStatusCode.NotFound, notFoundRestResult.StatusCode);
-        Assert.AreEqual(HttpStatusCode.NotFound, notFoundGQLResult.StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadRequest, badPathRestResult.StatusCode);
+        Assert.AreEqual(HttpStatusCode.NotFound, badPathGQLResult.StatusCode);
         // Hot reloaded paths return correct response.
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(restBookContents, reloadRestContent));
         SqlTestHelper.PerformTestEqualJsonStrings(BOOK_DBO_CONTENTS, reloadGQLContents.GetProperty("items").ToString());

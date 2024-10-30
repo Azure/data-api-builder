@@ -467,6 +467,12 @@ type Moon {
 }
 ";
 
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
         /// <summary>
         /// When updating config during runtime is possible, then For invalid config the Application continues to
         /// accept request with status code of 503.

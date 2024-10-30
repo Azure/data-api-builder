@@ -218,6 +218,14 @@ public class ConfigurationHotReloadTests
         string restBookContents = $"{{\"value\":{BOOK_DBO_CONTENTS}}}";
         string restPath = "/restApi";
         string gQLPath = "/gQLApi";
+        string query = GQL_QUERY;
+        object payload =
+            new { query };
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
 
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL)}",
@@ -226,6 +234,9 @@ public class ConfigurationHotReloadTests
         System.Threading.Thread.Sleep(1000);
 
         // Act
+        HttpResponseMessage notFoundRestResult = await _testClient.GetAsync($"rest/Book");
+        HttpResponseMessage notFoundGQLResult = await _testClient.SendAsync(request);
+
         HttpResponseMessage result = await _testClient.GetAsync($"{restPath}/Book");
         string reloadRestContent = await result.Content.ReadAsStringAsync();
         JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
@@ -235,6 +246,10 @@ public class ConfigurationHotReloadTests
             GQL_QUERY);
 
         // Assert
+        // Old paths are not found.
+        Assert.AreEqual(HttpStatusCode.NotFound, notFoundRestResult.StatusCode);
+        Assert.AreEqual(HttpStatusCode.NotFound, notFoundGQLResult.StatusCode);
+        // Hot reloaded paths return correct response.
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(restBookContents, reloadRestContent));
         SqlTestHelper.PerformTestEqualJsonStrings(BOOK_DBO_CONTENTS, reloadGQLContents.GetProperty("items").ToString());
     }

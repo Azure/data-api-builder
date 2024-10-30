@@ -19,6 +19,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
     <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.38.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
     <!--When updating Microsoft.Data.SqlClient, update license URL in scripts/notice-generation.ps1-->
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.ApplicationInsights" Version="2.22.0" />
@@ -69,6 +74,6 @@
     <PackageVersion Include="Npgsql" Version="7.0.7" />
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="StyleCop.Analyzers" Version="1.1.118" />
+    <GlobalPackageVersion Include="StyleCop.Analyzers" Version="1.1.118" />
   </ItemGroup>
 </Project>

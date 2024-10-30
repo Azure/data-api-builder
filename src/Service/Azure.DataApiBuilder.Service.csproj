@@ -77,6 +77,11 @@
         <PackageReference Include="System.CommandLine" />
         <PackageReference Include="System.IO.Abstractions" />
         <PackageReference Include="ZiggyCreatures.FusionCache" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Condition="'$(TargetFramework)' == 'net8.0'" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Condition="'$(TargetFramework)' == 'net8.0'" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Condition="'$(TargetFramework)' == 'net8.0'" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Condition="'$(TargetFramework)' == 'net8.0'" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Condition="'$(TargetFramework)' == 'net8.0'" />
     </ItemGroup>
     <ItemGroup>
         <ProjectCapability Include="CSharp;Managed;ClassDesigner" />

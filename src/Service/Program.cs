@@ -15,6 +15,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
 
+#if NET8_0_OR_GREATER
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+#endif
+
 namespace Azure.DataApiBuilder.Service
 {
     public class Program
@@ -148,7 +154,23 @@ namespace Azure.DataApiBuilder.Service
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
                     }
-
+#if NET8_0_OR_GREATER
+                    if(Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
+                    {
+                        builder.AddOpenTelemetry(logging =>
+                        {
+                            logging.IncludeFormattedMessage = true;
+                            logging.IncludeScopes = true;
+                            logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
+                            logging.AddOtlpExporter(configure =>
+                            {
+                                configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
+                                configure.Headers = Startup.OpenTelemetryOptions.Headers;
+                                configure.Protocol = OtlpExportProtocol.Grpc;
+                            });
+                        });
+                    }
+#endif
                     builder.AddConsole();
                 });
         }

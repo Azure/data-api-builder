@@ -357,11 +357,34 @@
               "required": [
                 "connection-string"
               ]
+            },
+            "open-telemetry": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "description": "Open Telemetry connection string"
+                },
+                "headers": {
+                  "type": "string",
+                  "description": "Open Telemetry headers"
+                },
+                "service-name": {
+                  "type": "string",
+                  "description": "Open Telemetry service name"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling Open Telemetry.",
+                  "default": true
+                }
+              },
+              "required": [
+                "connection-string"
+              ]
             }
-          },
-          "required": [
-            "application-insights"
-          ]
+          }
         }
       }
     },

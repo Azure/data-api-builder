@@ -42,6 +42,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+#if NET8_0_OR_GREATER
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+#endif
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -55,6 +61,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
+        public static OpenTelemetryOptions OpenTelemetryOptions = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
@@ -92,8 +99,10 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(configLoader);
             services.AddSingleton(configProvider);
 
-            if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
-                && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
+            bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.Telemetry?.ApplicationInsights is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
             {
                 // Add ApplicationTelemetry service and register
@@ -101,7 +110,41 @@ namespace Azure.DataApiBuilder.Service
                 services.AddApplicationInsightsTelemetry();
                 services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
             }
+#if NET8_0_OR_GREATER
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.Telemetry?.OpenTelemetry is not null
+                && runtimeConfig.Runtime.Telemetry.OpenTelemetry.Enabled)
+            {
+                services.AddOpenTelemetry()
+                .WithMetrics(metrics =>
+                {
+                    metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddOtlpExporter(configure =>
+                        {
+                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                            configure.Protocol = OtlpExportProtocol.Grpc;
+                        })
+                        .AddRuntimeInstrumentation();
+                })
+                .WithTracing(tracing =>
+                {
+                    tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                        .AddAspNetCoreInstrumentation()
+                        .AddOtlpExporter(configure =>
+                        {
+                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                            configure.Protocol = OtlpExportProtocol.Grpc;
+                        })
+                        .AddHttpClientInstrumentation();
+                });
 
+                // services.AddOpenTelemetry().UseOtlpExporter();
+            }
+#endif
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
@@ -433,7 +476,7 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// If LogLevel is NOT overridden by CLI, attempts to find the 
+        /// If LogLevel is NOT overridden by CLI, attempts to find the
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
         /// </summary>

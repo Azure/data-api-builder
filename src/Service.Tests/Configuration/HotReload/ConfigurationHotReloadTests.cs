@@ -279,7 +279,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: restEnabled,
             gQLEnabled: gQLEnabled);
-        System.Threading.Thread.Sleep(14000);
+        System.Threading.Thread.Sleep(1000);
 
         // Act
         HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Book");

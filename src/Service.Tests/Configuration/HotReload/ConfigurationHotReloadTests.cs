@@ -53,10 +53,6 @@ public class ConfigurationHotReloadTests
         "{\"id\":12,\"title\":\"Time to Eat 2\",\"publisher_id\":1941}," +
         "{\"id\":13,\"title\":\"Before Sunrise\",\"publisher_id\":1234}," +
         "{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}," +
-        "{\"id\":5003,\"title\":\"Book #1\",\"publisher_id\":1234,}," +
-        "{\"id\":5004,\"title\":\"Book #1\",\"publisher_id\":1234,}," +
-        "{\"id\":6004,\"title\":\"Book #1\",\"publisher_id\":1234}," +
-        "{\"id\":6005,\"title\":\"Book #1\",\"publisher_id\": 1234}" +
         "]";
 
     private static void GenerateConfigFile(

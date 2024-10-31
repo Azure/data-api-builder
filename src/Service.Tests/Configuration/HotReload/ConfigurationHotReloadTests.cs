@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -51,7 +52,11 @@ public class ConfigurationHotReloadTests
         "{\"id\":11,\"title\":\"Policy-Test-04\",\"publisher_id\":1941}," +
         "{\"id\":12,\"title\":\"Time to Eat 2\",\"publisher_id\":1941}," +
         "{\"id\":13,\"title\":\"Before Sunrise\",\"publisher_id\":1234}," +
-        "{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}" +
+        "{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}," +
+        "{\"id\":5003,\"title\":\"Book #1\",\"publisher_id\":1234,}," +
+        "{\"id\":5004,\"title\":\"Book #1\",\"publisher_id\":1234,}," +
+        "{\"id\":6004,\"title\":\"Book #1\",\"publisher_id\":1234}," +
+        "{\"id\":6005,\"title\":\"Book #1\",\"publisher_id\": 1234}" +
         "]";
 
     private static void GenerateConfigFile(
@@ -73,7 +78,7 @@ public class ConfigurationHotReloadTests
     {
         File.WriteAllText(configFileName, @"
               {
-                ""$schema"": ""../../schemas/dab.draft.schema.json"",
+                ""$schema"": """",
                     ""data-source"": {
                         ""database-type"": """ + databaseType + @""",
                         ""options"": {
@@ -189,6 +194,8 @@ public class ConfigurationHotReloadTests
         };
 
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        string reloadRestContent = await restResult.Content.ReadAsStringAsync();
+        Console.WriteLine(reloadRestContent);
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
 
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
@@ -232,7 +239,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restPath: restPath,
             gQLPath: gQLPath);
-        System.Threading.Thread.Sleep(1000);
+        System.Threading.Thread.Sleep(2000);
 
         // Act
         HttpResponseMessage badPathRestResult = await _testClient.GetAsync($"rest/Book");
@@ -256,16 +263,39 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
-    /// Hot reload the configuration file by saving a new file with the rest and graphQL enabled properties
+    /// Hot reload the configuration file by saving a new file with the rest enabled property
     /// set to false. Validate that the response from the server is NOT FOUND when making a request after
     /// the hot reload.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
-    [TestMethod("Hot-reload rest and gql enabled.")]
-    public async Task HotReloadConfigRuntimeEnabledEndToEndTest()
+    [TestMethod("Hot-reload rest enabled.")]
+    public async Task HotReloadConfigRuntimeRestEnabledEndToEndTest()
     {
         // Arrange
         string restEnabled = "false";
+
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            restEnabled: restEnabled);
+        System.Threading.Thread.Sleep(2000);
+
+        // Act
+        HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Book");
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.NotFound, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file by saving a new file with the graphQL enabled property
+    /// set to false. Validate that the response from the server is NOT FOUND when making a request after
+    /// the hot reload.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod("Hot-reload gql enabled.")]
+    public async Task HotReloadConfigRuntimeGQLEnabledEndToEndTest()
+    {
+        // Arrange
         string gQLEnabled = "false";
         string query = GQL_QUERY;
         object payload =
@@ -277,16 +307,13 @@ public class ConfigurationHotReloadTests
         };
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
-            restEnabled: restEnabled,
             gQLEnabled: gQLEnabled);
-        System.Threading.Thread.Sleep(1000);
+        System.Threading.Thread.Sleep(2000);
 
         // Act
-        HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Book");
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
 
         // Assert
-        Assert.AreEqual(HttpStatusCode.NotFound, restResult.StatusCode);
         Assert.AreEqual(HttpStatusCode.NotFound, gQLResult.StatusCode);
     }
 }

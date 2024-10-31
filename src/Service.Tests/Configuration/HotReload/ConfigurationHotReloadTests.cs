@@ -36,7 +36,7 @@ public class ConfigurationHotReloadTests
                 }
             }";
 
-    internal static string _bookDBOConents;
+    internal static string _bookDBOContents;
 
     private static void GenerateConfigFile(
         DatabaseType databaseType = DatabaseType.MSSQL,

@@ -50,12 +50,21 @@ public class ConfigFileWatcher
     /// </summary>
     public string WatchedFile { get; private set; }
 
+    /// <summary>
+    /// Starts watching the specified directory and file for changes.
+    /// - Explicitly enables raising events on the file watcher, otherwise, filechanges
+    /// will not be detected.
+    /// - Calculates the filehash of the config being watched so that the watcher knows
+    /// when a file change event is alerting the file watcher to new file content.
+    /// - Registers the OnConfigFileChange function to be called when a file change is detected.
+    /// </summary>
     public ConfigFileWatcher(IFileSystemWatcher fileWatcher, string directoryName, string configFileName)
     {
         WatchedDirectory = directoryName;
         WatchedFile = configFileName;
         _fileWatcher = fileWatcher;
         _fileWatcher.Path = WatchedDirectory;
+        _fileWatcher.EnableRaisingEvents = true;
         _fileWatcher.Changed += OnConfigFileChange;
         _runtimeConfigHash = FileUtilities.ComputeHash(_fileWatcher.FileSystem, filePath: Path.Combine(WatchedDirectory, WatchedFile));
     }

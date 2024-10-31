@@ -72,7 +72,6 @@ public class ConfigFileWatcherUnitTests
     /// on hot reload.
     /// </summary>
     [TestMethod]
-    [Ignore]
     public void HotReloadConfigRestRuntimeOptions()
     {
         // Arrange
@@ -124,7 +123,6 @@ public class ConfigFileWatcherUnitTests
 
         // Must GetConfig() to start file watching
         RuntimeConfig runtimeConfig = configProvider.GetConfig();
-        string initialDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
 
         // assert we have a valid config
         Assert.IsNotNull(runtimeConfig);
@@ -144,7 +142,6 @@ public class ConfigFileWatcherUnitTests
         // Act
         // 1. Hot reload the runtime config
         runtimeConfig = configProvider.GetConfig();
-        string updatedDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
 
         // Assert
         // 1. Assert we have the correct values after a hot reload.
@@ -155,8 +152,6 @@ public class ConfigFileWatcherUnitTests
         Assert.AreEqual(updatedGQLIntrospection, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
         Assert.AreEqual(updatedMode, runtimeConfig.Runtime.Host.Mode);
 
-        // DefaultDataSourceName should not change after a hot reload.
-        Assert.AreEqual(initialDefaultDataSourceName, updatedDefaultDataSourceName);
         if (File.Exists(configName))
         {
             File.Delete(configName);

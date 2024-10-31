@@ -4592,7 +4592,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Helper  method to instantiate RuntimeConfig object needed for multiple create tests.
         /// </summary>
-        /// <returns></returns>
         public static RuntimeConfig InitialzieRuntimeConfigForMultipleCreateTests(bool isMultipleCreateOperationEnabled)
         {
             // Multiple create operations are enabled.
@@ -4667,7 +4666,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// Instantiate minimal runtime config with custom global settings.
         /// </summary>
         /// <param name="dataSource">DataSource to pull connection string required for engine start.</param>
-        /// <returns></returns>
         public static RuntimeConfig InitMinimalRuntimeConfig(
             DataSource dataSource,
             GraphQLRuntimeOptions graphqlOptions,
@@ -4818,7 +4816,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Create basic runtime config with given DatabaseType and connectionString with no entity.
         /// </summary>
-        /// <returns></returns>
         private static RuntimeConfig CreateBasicRuntimeConfigWithNoEntity(
             DatabaseType dbType = DatabaseType.MSSQL,
             string connectionString = "")

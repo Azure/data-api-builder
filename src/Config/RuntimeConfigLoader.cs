@@ -94,6 +94,12 @@ public abstract class RuntimeConfigLoader
         OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+
+        // Order of event firing matters: Authorization rules can only be updated after the
+        // MetadataProviderFactory has been updated with latest database object metadata.
+        // RuntimeConfig must already be updated and is implied to have been updated by the time
+        // this function is called.
+        OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
     }
 
     /// <summary>

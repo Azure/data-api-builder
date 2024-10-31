@@ -122,6 +122,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
+        // File watching / hot-reload isn't used for the CLI.
+        if (_isCliLoader)
+        {
+            return false;
+        }
+
+        // If the file watcher is already set up, we don't need to do it again.
         if (_configFileWatcher is not null)
         {
             return false;
@@ -195,7 +202,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             string json = _fileSystem.File.ReadAllText(path);
             if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
-                if (!_isCliLoader && TrySetupConfigFileWatcher())
+                if (TrySetupConfigFileWatcher())
                 {
                     Console.WriteLine("Monitoring config: {0} for hot-reloading.", ConfigFilePath);
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);

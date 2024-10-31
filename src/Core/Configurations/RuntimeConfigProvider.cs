@@ -308,6 +308,7 @@ public class RuntimeConfigProvider
         // Only used in hot reload to validate the configuration file
         if (_configLoader.DoesConfigNeedValidation())
         {
+            Console.WriteLine("Validating hot-reloaded configuration file.");
             IFileSystem fileSystem = new FileSystem();
             ILoggerFactory loggerFactory = new LoggerFactory();
             ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
@@ -329,6 +330,8 @@ public class RuntimeConfigProvider
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
+
+            Console.WriteLine("Validated hot-reloaded configuration file.");
         }
     }
 

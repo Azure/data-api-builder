@@ -182,7 +182,7 @@ public class ConfigurationHotReloadTests
         // Save the contents from request to validate results after hot-reloads.
         string restContent = await restResult.Content.ReadAsStringAsync();
         using JsonDocument doc = JsonDocument.Parse(restContent);
-        _bookDBOConents = doc.RootElement.GetProperty("value").ToString();
+        _bookDBOContents = doc.RootElement.GetProperty("value").ToString();
     }
 
     [ClassCleanup]
@@ -206,7 +206,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
     {
         // Arrange
-        string restBookContents = $"{{\"value\":{_bookDBOConents}}}";
+        string restBookContents = $"{{\"value\":{_bookDBOContents}}}";
         string restPath = "restApi";
         string gQLPath = "/gQLApi";
         string query = GQL_QUERY;
@@ -242,7 +242,7 @@ public class ConfigurationHotReloadTests
         Assert.AreEqual(HttpStatusCode.NotFound, badPathGQLResult.StatusCode);
         // Hot reloaded paths return correct response.
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(restBookContents, reloadRestContent));
-        SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOConents, reloadGQLContents.GetProperty("items").ToString());
+        SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
     }
 
     /// <summary>

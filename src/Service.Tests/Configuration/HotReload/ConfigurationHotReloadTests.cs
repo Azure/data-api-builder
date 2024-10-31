@@ -58,7 +58,7 @@ public class ConfigurationHotReloadTests
     private static void GenerateConfigFile(
         DatabaseType databaseType = DatabaseType.MSSQL,
         string connectionString = "",
-        string restPath = "/rest",
+        string restPath = "rest",
         string restEnabled = "true",
         string gQLPath = "/graphQL",
         string gQLEnabled = "true",
@@ -85,7 +85,7 @@ public class ConfigurationHotReloadTests
                     ""runtime"": {
                         ""rest"": {
                           ""enabled"": " + restEnabled + @",
-                          ""path"": """ + restPath + @""",
+                          ""path"": ""/" + restPath + @""",
                           ""request-body-strict"": true
                         },
                         ""graphql"": {
@@ -220,7 +220,7 @@ public class ConfigurationHotReloadTests
     {
         // Arrange
         string restBookContents = $"{{\"value\":{BOOK_DBO_CONTENTS}}}";
-        string restPath = "/restApi";
+        string restPath = "restApi";
         string gQLPath = "/gQLApi";
         string query = GQL_QUERY;
         object payload =

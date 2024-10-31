@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -37,23 +36,7 @@ public class ConfigurationHotReloadTests
                 }
             }";
 
-    internal const string BOOK_DBO_CONTENTS =
-        "[" +
-        "{\"id\":1,\"title\":\"Awesome book\",\"publisher_id\":1234}," +
-        "{\"id\":2,\"title\":\"Also Awesome book\",\"publisher_id\":1234}," +
-        "{\"id\":3,\"title\":\"Great wall of china explained\",\"publisher_id\":2345}," +
-        "{\"id\":4,\"title\":\"US history in a nutshell\",\"publisher_id\":2345}," +
-        "{\"id\":5,\"title\":\"Chernobyl Diaries\",\"publisher_id\":2323}," +
-        "{\"id\":6,\"title\":\"The Palace Door\",\"publisher_id\":2324}," +
-        "{\"id\":7,\"title\":\"The Groovy Bar\",\"publisher_id\":2324}," +
-        "{\"id\":8,\"title\":\"Time to Eat\",\"publisher_id\":2324}," +
-        "{\"id\":9,\"title\":\"Policy-Test-01\",\"publisher_id\":1940}," +
-        "{\"id\":10,\"title\":\"Policy-Test-02\",\"publisher_id\":1940}," +
-        "{\"id\":11,\"title\":\"Policy-Test-04\",\"publisher_id\":1941}," +
-        "{\"id\":12,\"title\":\"Time to Eat 2\",\"publisher_id\":1941}," +
-        "{\"id\":13,\"title\":\"Before Sunrise\",\"publisher_id\":1234}," +
-        "{\"id\":14,\"title\":\"Before Sunset\",\"publisher_id\":1234}," +
-        "]";
+    internal static string _bookDBOConents;
 
     private static void GenerateConfigFile(
         DatabaseType databaseType = DatabaseType.MSSQL,
@@ -190,12 +173,16 @@ public class ConfigurationHotReloadTests
         };
 
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
-        string reloadRestContent = await restResult.Content.ReadAsStringAsync();
-        Console.WriteLine(reloadRestContent);
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
 
+        // Assert rest and graphQL requests return status OK.
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
         Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode);
+
+        // Save the contents from request to validate results after hot-reloads.
+        string restContent = await restResult.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(restContent);
+        _bookDBOConents = doc.RootElement.GetProperty("value").ToString();
     }
 
     [ClassCleanup]
@@ -219,7 +206,7 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
     {
         // Arrange
-        string restBookContents = $"{{\"value\":{BOOK_DBO_CONTENTS}}}";
+        string restBookContents = $"{{\"value\":{_bookDBOConents}}}";
         string restPath = "restApi";
         string gQLPath = "/gQLApi";
         string query = GQL_QUERY;
@@ -255,7 +242,7 @@ public class ConfigurationHotReloadTests
         Assert.AreEqual(HttpStatusCode.NotFound, badPathGQLResult.StatusCode);
         // Hot reloaded paths return correct response.
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(restBookContents, reloadRestContent));
-        SqlTestHelper.PerformTestEqualJsonStrings(BOOK_DBO_CONTENTS, reloadGQLContents.GetProperty("items").ToString());
+        SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOConents, reloadGQLContents.GetProperty("items").ToString());
     }
 
     /// <summary>

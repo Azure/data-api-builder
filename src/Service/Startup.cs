@@ -141,8 +141,6 @@ namespace Azure.DataApiBuilder.Service
                         })
                         .AddHttpClientInstrumentation();
                 });
-
-                // services.AddOpenTelemetry().UseOtlpExporter();
             }
 #endif
             services.AddSingleton(implementationFactory: (serviceProvider) =>

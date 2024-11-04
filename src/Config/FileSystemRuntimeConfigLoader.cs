@@ -144,7 +144,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         bool replaceEnvVar = false,
         ILogger? logger = null)
     {
-        path = @"C:\src\Test\dab\dab-config.json";
         if (_fileSystem.File.Exists(path))
         {
             Console.WriteLine($"Loading config file from {path}.");

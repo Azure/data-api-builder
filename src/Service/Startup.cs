@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
-                        })
+                        });
                 });
             }
 #endif

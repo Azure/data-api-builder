@@ -43,7 +43,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 #if NET8_0_OR_GREATER
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -61,7 +60,10 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
+        #if NET8_0_OR_GREATER
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
+        #endif
+
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
@@ -125,7 +127,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
+                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.OtlpExportProtocol!.Value;
                         })
                         .AddRuntimeInstrumentation();
                 })
@@ -138,7 +140,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
+                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.OtlpExportProtocol!.Value;
                         });
                 });
             }

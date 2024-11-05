@@ -375,6 +375,15 @@
                   "description": "Open Telemetry service name",
                   "default": "dab"
                 },
+                "protocol": {
+                  "type": "string",
+                  "description": "Open Telemetry protocol",
+                  "default": "grpc",
+                  "enum": [
+                    "grpc",
+                    "httpprotobuf"
+                  ]
+                },
                 "enabled": {
                   "type": "boolean",
                   "description": "Allow enabling/disabling Open Telemetry.",

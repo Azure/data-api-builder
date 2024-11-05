@@ -27,6 +27,10 @@
       <PackageReference Include="Npgsql" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"  />
+  </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\Product\Azure.DataApiBuilder.Product.csproj" />
     </ItemGroup>

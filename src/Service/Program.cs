@@ -16,7 +16,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
 
 #if NET8_0_OR_GREATER
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 #endif
@@ -166,7 +165,7 @@ namespace Azure.DataApiBuilder.Service
                             {
                                 configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
                                 configure.Headers = Startup.OpenTelemetryOptions.Headers;
-                                configure.Protocol = OtlpExportProtocol.Grpc;
+                                configure.Protocol = Startup.OpenTelemetryOptions.OtlpExportProtocol!.Value;
                             });
                         });
                     }

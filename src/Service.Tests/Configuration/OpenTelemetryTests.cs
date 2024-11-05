@@ -5,6 +5,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
@@ -29,14 +30,14 @@ public class OpenTelemetryTests
     /// <param name="configFileName">Name of the config file to be created.</param>
     /// <param name="isTelemetryEnabled">Whether telemetry is enabled or not.</param>
     /// <param name="telemetryConnectionString">Telemetry connection string.</param>
-    public static void SetUpTelemetryInConfig(string configFileName, bool isOtelEnabled, string otelEndpoint, string otelHeaders)
+    public static void SetUpTelemetryInConfig(string configFileName, bool isOtelEnabled, string otelEndpoint, string otelHeaders, OtlpExportProtocol? otlpExportProtocol)
     {
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
         _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new());
 
-        TelemetryOptions _testTelemetryOptions = new(OpenTelemetry: new OpenTelemetryOptions(isOtelEnabled, otelEndpoint, otelHeaders, "TestServiceName"));
+        TelemetryOptions _testTelemetryOptions = new(OpenTelemetry: new OpenTelemetryOptions(isOtelEnabled, otelEndpoint, otelHeaders, otlpExportProtocol, "TestServiceName"));
         _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };
 
         File.WriteAllText(configFileName, _configuration.ToJson());
@@ -60,7 +61,7 @@ public class OpenTelemetryTests
     public void TestOpenTelemetryServicesEnabled()
     {
         // Arrange
-        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "http://localhost:4317", "key=key");
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "http://localhost:4317", "key=key", OtlpExportProtocol.Grpc);
 
         string[] args = new[]
         {
@@ -84,7 +85,7 @@ public class OpenTelemetryTests
     public void TestOpenTelemetryServicesDisabled()
     {
         // Arrange
-        SetUpTelemetryInConfig(CONFIG_WITHOUT_TELEMETRY, false, null, null);
+        SetUpTelemetryInConfig(CONFIG_WITHOUT_TELEMETRY, false, null, null, null);
 
         string[] args = new[]
         {

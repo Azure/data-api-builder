@@ -1,39 +1,47 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
+#if NET8_0_OR_GREATER
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Cli;
+using Cli.Tests;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Microsoft.Extensions.Logging;
+using Moq;
+using System.IO.Abstractions.TestingHelpers;
 
 namespace Cli.Tests
 {
     /// <summary>
-    /// Tests for verifying the functionality of adding telemetry to the config file.
+    /// Tests for verifying the functionality of adding OpenTelemetry to the config file.
     /// </summary>
     [TestClass]
-    public class AddTelemetryTests
-        : VerifyBase
+    public class AddOpenTelemetryTests
     {
-        public string RUNTIME_SECTION_WITH_APP_INSIGHTS_TELEMETRY_SECTION = GenerateRuntimeSection(TELEMETRY_SECTION_WITH_APP_INSIGHTS);
+        public string RUNTIME_SECTION_WITH_OPEN_TELEMETRY_SECTION = GenerateRuntimeSection(TELEMETRY_SECTION_WITH_OPEN_TELEMETRY);
         public string RUNTIME_SECTION_WITH_EMPTY_TELEMETRY_SECTION = GenerateRuntimeSection(EMPTY_TELEMETRY_SECTION);
-
         [TestInitialize]
         public void TestInitialize()
         {
             ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
 
-            SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
-            SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());
+            ConfigGenerator.SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
+            Utils.SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());
         }
 
         /// <summary>
-        /// Testing to check telemetry options are correctly added to the config.
-        /// Verifying scenarios such as enabling/disabling telemetry and providing a valid/empty connection string.
+        /// Testing to check OpenTelemetry options are correctly added to the config.
+        /// Verifying scenarios such as enabling/disabling OpenTelemetry and providing a valid/empty endpoint.
         /// </summary>
         [DataTestMethod]
-        [DataRow(CliBool.True, "", false, DisplayName = "Fail to add telemetry with empty app-insights connection string.")]
-        [DataRow(CliBool.True, "InstrumentationKey=00000000-0000-0000-0000-000000000000", true, DisplayName = "Successfully adds telemetry with valid connection string")]
-        [DataRow(CliBool.False, "InstrumentationKey=00000000-0000-0000-0000-000000000000", true, DisplayName = "Successfully adds telemetry but disabled")]
-        public void TestAddApplicationInsightsTelemetry(CliBool isTelemetryEnabled, string appInsightsConnString, bool expectSuccess)
+        [DataRow(CliBool.True, "", false, DisplayName = "Fail to add OpenTelemetry with empty endpoint.")]
+        [DataRow(CliBool.True, "http://localhost:4317", true, DisplayName = "Successfully adds OpenTelemetry with valid endpoint")]
+        [DataRow(CliBool.False, "http://localhost:4317", true, DisplayName = "Successfully adds OpenTelemetry but disabled")]
+        public void TestAddOpenTelemetry(CliBool isTelemetryEnabled, string endpoint, bool expectSuccess)
         {
             MockFileSystem fileSystem = FileSystemUtils.ProvisionMockFileSystem();
-            string configPath = "test-app-insights-config.json";
+            string configPath = "test-opentelemetry-config.json";
             fileSystem.AddFile(configPath, new MockFileData(INITIAL_CONFIG));
 
             // Initial State
@@ -43,13 +51,13 @@ namespace Cli.Tests
             Assert.IsNotNull(config.Runtime);
             Assert.IsNull(config.Runtime.Telemetry);
 
-            // Add Telemetry
+            // Add OpenTelemetry
             bool isSuccess = ConfigGenerator.TryAddTelemetry(
-                new AddTelemetryOptions(appInsightsConnString, isTelemetryEnabled, config: configPath),
+                new AddTelemetryOptions(otelEndpoint: endpoint, otelEnabled: isTelemetryEnabled, config: configPath),
                 new FileSystemRuntimeConfigLoader(fileSystem),
                 fileSystem);
 
-            // Assert after adding telemetry
+            // Assert after adding OpenTelemetry
             Assert.AreEqual(expectSuccess, isSuccess);
             if (expectSuccess)
             {
@@ -59,25 +67,25 @@ namespace Cli.Tests
                 Assert.IsNotNull(config.Runtime);
                 Assert.IsNotNull(config.Runtime.Telemetry);
                 TelemetryOptions telemetryOptions = config.Runtime.Telemetry;
-                Assert.IsNotNull(telemetryOptions.ApplicationInsights);
-                Assert.AreEqual(isTelemetryEnabled is CliBool.True ? true : false, telemetryOptions.ApplicationInsights.Enabled);
-                Assert.AreEqual(appInsightsConnString, telemetryOptions.ApplicationInsights.ConnectionString);
+                Assert.IsNotNull(telemetryOptions.OpenTelemetry);
+                Assert.AreEqual(isTelemetryEnabled is CliBool.True ? true : false, telemetryOptions.OpenTelemetry.Enabled);
+                Assert.AreEqual(endpoint, telemetryOptions.OpenTelemetry.Endpoint);
             }
         }
 
         /// <summary>
         /// Test to verify when Telemetry section is present in the config
-        /// It should add application insights telemetry if telemetry section is empty
-        /// or overwrite the existing app insights telemetry with the given app insights telemetry options.
+        /// It should add OpenTelemetry if telemetry section is empty
+        /// or overwrite the existing OpenTelemetry with the given OpenTelemetry options.
         /// </summary>
         [DataTestMethod]
-        [DataRow(true, DisplayName = "Add AppInsights Telemetry when telemetry section is empty.")]
-        [DataRow(false, DisplayName = "Overwrite AppInsights Telemetry when telemetry section already exists.")]
-        public void TestAddAppInsightsTelemetryWhenTelemetryAlreadyExists(bool isEmptyTelemetry)
+        [DataRow(true, DisplayName = "Add OpenTelemetry when telemetry section is empty.")]
+        [DataRow(false, DisplayName = "Overwrite OpenTelemetry when telemetry section already exists.")]
+        public void TestAddOpenTelemetryWhenTelemetryAlreadyExists(bool isEmptyTelemetry)
         {
             MockFileSystem fileSystem = FileSystemUtils.ProvisionMockFileSystem();
-            string configPath = "test-app-insights-config.json";
-            string runtimeSection = isEmptyTelemetry ? RUNTIME_SECTION_WITH_EMPTY_TELEMETRY_SECTION : RUNTIME_SECTION_WITH_APP_INSIGHTS_TELEMETRY_SECTION;
+            string configPath = "test-opentelemetry-config.json";
+            string runtimeSection = isEmptyTelemetry ? RUNTIME_SECTION_WITH_EMPTY_TELEMETRY_SECTION : RUNTIME_SECTION_WITH_OPEN_TELEMETRY_SECTION;
             string configData = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{runtimeSection}}}";
             fileSystem.AddFile(configPath, new MockFileData(configData));
 
@@ -90,31 +98,31 @@ namespace Cli.Tests
 
             if (isEmptyTelemetry)
             {
-                Assert.IsNull(config.Runtime.Telemetry.ApplicationInsights);
+                Assert.IsNull(config.Runtime.Telemetry.OpenTelemetry);
             }
             else
             {
-                Assert.IsNotNull(config.Runtime.Telemetry.ApplicationInsights);
-                Assert.AreEqual(true, config.Runtime.Telemetry.ApplicationInsights.Enabled);
-                Assert.AreEqual("InstrumentationKey=00000000-0000-0000-0000-000000000000", config.Runtime.Telemetry.ApplicationInsights.ConnectionString);
+                Assert.IsNotNull(config.Runtime.Telemetry.OpenTelemetry);
+                Assert.AreEqual(true, config.Runtime.Telemetry.OpenTelemetry.Enabled);
+                Assert.AreEqual("http://localhost:4317", config.Runtime.Telemetry.OpenTelemetry.Endpoint);
             }
 
-            // Add Telemetry
+            // Add OpenTelemetry
             bool isSuccess = ConfigGenerator.TryAddTelemetry(
-                new AddTelemetryOptions("InstrumentationKey=11111-1111-111-11-1", CliBool.False, config: configPath),
+                new AddTelemetryOptions(otelEndpoint: "http://localhost:4318", otelEnabled: CliBool.False, config: configPath),
                 new FileSystemRuntimeConfigLoader(fileSystem),
                 fileSystem);
 
-            // Assert after adding telemetry
+            // Assert after adding OpenTelemetry
             Assert.IsTrue(isSuccess);
             Assert.IsTrue(fileSystem.FileExists(configPath));
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(fileSystem.File.ReadAllText(configPath), out config));
             Assert.IsNotNull(config);
             Assert.IsNotNull(config.Runtime);
             Assert.IsNotNull(config.Runtime.Telemetry);
-            Assert.IsNotNull(config.Runtime.Telemetry.ApplicationInsights);
-            Assert.IsFalse(config.Runtime.Telemetry.ApplicationInsights.Enabled);
-            Assert.AreEqual("InstrumentationKey=11111-1111-111-11-1", config.Runtime.Telemetry.ApplicationInsights.ConnectionString);
+            Assert.IsNotNull(config.Runtime.Telemetry.OpenTelemetry);
+            Assert.IsFalse(config.Runtime.Telemetry.OpenTelemetry.Enabled);
+            Assert.AreEqual("http://localhost:4318", config.Runtime.Telemetry.OpenTelemetry.Endpoint);
         }
 
         /// <summary>
@@ -151,11 +159,11 @@ namespace Cli.Tests
         /// <summary>
         /// Represents a JSON string for the telemetry section of the config, with Application Insights enabled and a specified connection string.
         /// </summary>
-        private const string TELEMETRY_SECTION_WITH_APP_INSIGHTS = @"
+        private const string TELEMETRY_SECTION_WITH_OPEN_TELEMETRY = @"
             ""telemetry"": {
-                ""application-insights"": {
+                ""open-telemetry"": {
                     ""enabled"": true,
-                    ""connection-string"": ""InstrumentationKey=00000000-0000-0000-0000-000000000000""
+                    ""endpoint"": ""http://localhost:4317""
                 }
             }";
 
@@ -165,5 +173,5 @@ namespace Cli.Tests
         private const string EMPTY_TELEMETRY_SECTION = @"
             ""telemetry"": {}";
     }
-
 }
+#endif

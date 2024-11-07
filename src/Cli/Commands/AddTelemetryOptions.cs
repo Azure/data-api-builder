@@ -22,15 +22,30 @@ namespace Cli.Commands
     public class AddTelemetryOptions : Options
     {
         #if NET8_0_OR_GREATER
-        public AddTelemetryOptions(string appInsightsConnString, CliBool appInsightsEnabled, string otelEndpoint, CliBool otelEnabled, string? otelHeaders, OtlpExportProtocol otlpExportProtocol, string serviceName, string? config) : base(config)
+        public AddTelemetryOptions(
+            string? appInsightsConnString = null,
+            CliBool? appInsightsEnabled = null,
+            string? otelEndpoint = null,
+            CliBool? otelEnabled = null,
+            string? otelHeaders = null,
+            OtlpExportProtocol? otlpExportProtocol = null,
+            string? serviceName = null,
+            string? config = null) : base(config)
         {
-            AppInsightsConnString = appInsightsConnString;
-            AppInsightsEnabled = appInsightsEnabled;
-            OpenTelemetryEndpoint = otelEndpoint;
-            OpenTelemetryHeaders = otelHeaders;
-            OpenTelemetryServiceName = serviceName;
-            OpenTelemetryEnabled = otelEnabled;
-            OpenTelemetryOtlpExportProtocol = otlpExportProtocol;
+            if(appInsightsEnabled is not null)
+            {
+                AppInsightsConnString = appInsightsConnString;
+                AppInsightsEnabled = appInsightsEnabled;
+            }
+
+            if(otelEnabled is not null)
+            {
+                OpenTelemetryEndpoint = otelEndpoint;
+                OpenTelemetryHeaders = otelHeaders;
+                OpenTelemetryServiceName = serviceName;
+                OpenTelemetryEnabled = otelEnabled;
+                OpenTelemetryOtlpExportProtocol = otlpExportProtocol;
+            }
         }
         #else
         public AddTelemetryOptions(string appInsightsConnString, CliBool appInsightsEnabled, string? config) : base(config)
@@ -43,17 +58,17 @@ namespace Cli.Commands
         // Connection string for the Application Insights resource to which telemetry data should be sent.
         // This option  is required and must be provided with a valid connection string.
         [Option("app-insights-conn-string", Required = true, HelpText = "Connection string for the Application Insights resource for telemetry data")]
-        public string AppInsightsConnString { get; }
+        public string? AppInsightsConnString { get; }
 
         // To specify whether Application Insights telemetry should be enabled. This flag is optional and default value is true.
         [Option("app-insights-enabled", Default = CliBool.True, Required = false, HelpText = "(Default: true) Enable/Disable Application Insights")]
-        public CliBool AppInsightsEnabled { get; }
+        public CliBool? AppInsightsEnabled { get; }
 
         #if NET8_0_OR_GREATER
         // Connection string for the Open Telemetry resource to which telemetry data should be sent.
         // This option  is required and must be provided with a valid connection string.
         [Option("otel-endpoint", Required = true, HelpText = "Endpoint for Open Telemetry for telemetry data")]
-        public string OpenTelemetryEndpoint { get; }
+        public string? OpenTelemetryEndpoint { get; }
 
         // Headers for the Open Telemetry resource to which telemetry data should be sent.
         [Option("otel-headers", Required = false, HelpText = "Headers for Open Telemetry for telemetry data")]
@@ -65,11 +80,11 @@ namespace Cli.Commands
 
         // To specify whether Open Telemetry telemetry should be enabled. This flag is optional and default value is true.
         [Option("otel-enabled", Default = CliBool.True, Required = false, HelpText = "(Default: true) Enable/Disable OTEL")]
-        public CliBool OpenTelemetryEnabled { get; }
+        public CliBool? OpenTelemetryEnabled { get; }
 
         // Specify the Open Telemetry protocol. This flag is optional and default value is grpc.
         [Option("otel-protocol", Default = OtlpExportProtocol.Grpc, Required = false, HelpText = "(Default: grpc) Accepted: grpc/httpprotobuf")]
-        public OtlpExportProtocol OpenTelemetryOtlpExportProtocol { get; }
+        public OtlpExportProtocol? OpenTelemetryOtlpExportProtocol { get; }
         #endif
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

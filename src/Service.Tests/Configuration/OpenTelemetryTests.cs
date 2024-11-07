@@ -74,6 +74,7 @@ public class OpenTelemetryTests
         TracerProvider tracerProvider = serviceProvider.GetService<TracerProvider>();
         MeterProvider meterProvider = serviceProvider.GetService<MeterProvider>();
 
+        // If tracerProvider and meterProvider are not null, OTEL is enabled
         Assert.IsNotNull(tracerProvider, "TracerProvider should be registered.");
         Assert.IsNotNull(meterProvider, "MeterProvider should be registered.");
     }
@@ -98,6 +99,7 @@ public class OpenTelemetryTests
         TracerProvider tracerProvider = serviceProvider.GetService<TracerProvider>();
         MeterProvider meterProvider = serviceProvider.GetService<MeterProvider>();
 
+        // If tracerProvider and meterProvider are null, OTEL is disabled
         Assert.IsNull(tracerProvider, "TracerProvider should not be registered.");
         Assert.IsNull(meterProvider, "MeterProvider should not be registered.");
     }

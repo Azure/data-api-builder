@@ -311,23 +311,28 @@ public class ConfigurationHotReloadTests
     public async Task HotReloadConfigDatasourceDatabaseTypesEndToEndTest(DatabaseType expectedDatabaseType, string expectedTestCategory)
     {
         // Arrange
+        RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
+        DatabaseType previousDatabaseType = previousRuntimeConfig.DataSource.DatabaseType;
         string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(expectedTestCategory).Replace("\\", "\\\\")}";
 
+        // Act
         GenerateConfigFile(
             databaseType: expectedDatabaseType,
             connectionString: expectedConnectionString);
         System.Threading.Thread.Sleep(3000);
 
-        // Act
-        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
-        DatabaseType actualDatabaseType = updatedRuntimeConfig.DataSource.DatabaseType;
+        // Await allows the server to hot-reload before sending the message since it has to wait
+        // until the hot-reload is finished before being able to handle any requests.
         JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
             _testClient,
             _configProvider,
             GQL_QUERY_NAME,
             GQL_QUERY);
+        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
+        DatabaseType actualDatabaseType = updatedRuntimeConfig.DataSource.DatabaseType;
 
         // Assert
+        Assert.AreNotEqual(previousDatabaseType, actualDatabaseType);
         Assert.AreEqual(expectedDatabaseType, actualDatabaseType);
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
     }

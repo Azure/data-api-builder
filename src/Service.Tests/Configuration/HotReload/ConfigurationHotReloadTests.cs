@@ -299,4 +299,127 @@ public class ConfigurationHotReloadTests
         // Assert
         Assert.AreEqual(HttpStatusCode.NotFound, gQLResult.StatusCode);
     }
+
+    /// <summary>
+    /// Creates a hot reload scenario in which the schema file is invalid which causes
+    /// hot reload to fail, then we check that the program is still able to work
+    /// properly by validating that the DAB engine is still using the same configuration file
+    /// from before the hot reload.
+    /// </summary>
+    [TestMethod]
+    [TestCategory(TestCategory.MSSQL)]
+    public void HotReloadValidationFail()
+    {
+        // Arrange
+        string schemaName = "testSchema.json";
+        string configName = "hotreload-config.json";
+        if (File.Exists(configName))
+        {
+            File.Delete(configName);
+        }
+
+        if (File.Exists(schemaName))
+        {
+            File.Delete(schemaName);
+        }
+
+        bool initialRestEnabled = true;
+        bool updatedRestEnabled = false;
+
+        bool initialGQLEnabled = true;
+        bool updatedGQLEnabled = false;
+
+        DataSource dataSource = new(DatabaseType.MSSQL,
+            ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+        RuntimeConfig initialConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, initialRestEnabled, initialGQLEnabled);
+
+        RuntimeConfig updatedConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, updatedRestEnabled, updatedGQLEnabled);
+
+        string schemaConfig = TestHelper.GenerateInvalidSchema();
+
+        // Not using mocked filesystem so we pick up real file changes for hot reload
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(configName, runtimeConfig.ToJson());
+        FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
+        RuntimeConfigProvider configProvider = new(configLoader);
+        RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
+
+        Assert.IsNotNull(lkgRuntimeConfig);
+
+        // Act
+        // Simulate an invalid change to the schema file while the config is updated to a valid state
+        fileSystem.File.WriteAllText(schemaName, schemaConfig);
+        fileSystem.File.WriteAllText(configName, updatedConfig.ToJson());
+
+        // Give ConfigFileWatcher enough time to hot reload the change
+        System.Threading.Thread.Sleep(6000);
+
+        RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
+        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+
+        if (File.Exists(configName))
+        {
+            File.Delete(configName);
+        }
+
+        if (File.Exists(schemaName))
+        {
+            File.Delete(schemaName);
+        }
+    }
+
+    /// <summary>
+    /// Creates a hot reload scenario in which the updated configuration file is invalid causing
+    /// hot reload to fail as the schema can't be used by DAB, then we check that the
+    /// program is still able to work properly by showing us that it is still using the
+    /// same configuration file from before the hot reload.
+    /// </summary>
+    [TestMethod]
+    [TestCategory(TestCategory.MSSQL)]
+    public void HotReloadParsingFail()
+    {
+        // Arrange
+        string schemaName = "dab.draft.schema.json";
+        string configName = "hotreload-config.json";
+        if (File.Exists(configName))
+        {
+            File.Delete(configName);
+        }
+
+        bool initialRestEnabled = true;
+
+        bool initialGQLEnabled = true;
+
+        DataSource dataSource = new(DatabaseType.MSSQL,
+            ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+        RuntimeConfig initialConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, initialRestEnabled, initialGQLEnabled);
+
+        string updatedConfig = TestHelper.GenerateInvalidRuntimeSection();
+
+        // Not using mocked filesystem so we pick up real file changes for hot reload
+        FileSystem fileSystem = new();
+        fileSystem.File.WriteAllText(configName, runtimeConfig.ToJson());
+        FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
+        RuntimeConfigProvider configProvider = new(configLoader);
+        RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
+
+        Assert.IsNotNull(lkgRuntimeConfig);
+
+        // Act
+        // Simulate an invalid change to the config file
+        fileSystem.File.WriteAllText(configName, updatedConfig);
+
+        // Give ConfigFileWatcher enough time to hot reload the change
+        System.Threading.Thread.Sleep(1000);
+
+        RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
+        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+
+        if (File.Exists(configName))
+        {
+            File.Delete(configName);
+        }
+    }
 }

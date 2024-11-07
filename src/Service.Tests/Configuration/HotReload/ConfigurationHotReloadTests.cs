@@ -299,4 +299,36 @@ public class ConfigurationHotReloadTests
         // Assert
         Assert.AreEqual(HttpStatusCode.NotFound, gQLResult.StatusCode);
     }
+
+    /// <summary>
+    /// Hot reload the configuration file by saving a new database type and connection string.
+    /// Validate that the response from the server is correct when making a new request after
+    /// the change in database type.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(DatabaseType.MySQL, TestCategory.MYSQL, DisplayName = "Hot-reload change to MySQL Datasource")]
+    [DataRow(DatabaseType.PostgreSQL, TestCategory.POSTGRESQL, DisplayName = "Hot-reload change to PostgreSQL Datasource")]
+    public async Task HotReloadConfigDatasourceDatabaseTypesEndToEndTest(DatabaseType expectedDatabaseType, string expectedTestCategory)
+    {
+        // Arrange
+        string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(expectedTestCategory).Replace("\\", "\\\\")}";
+
+        GenerateConfigFile(
+            databaseType: expectedDatabaseType,
+            connectionString: expectedConnectionString);
+        System.Threading.Thread.Sleep(3000);
+
+        // Act
+        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
+        DatabaseType actualDatabaseType = updatedRuntimeConfig.DataSource.DatabaseType;
+        JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+            _testClient,
+            _configProvider,
+            GQL_QUERY_NAME,
+            GQL_QUERY);
+
+        // Assert
+        Assert.AreEqual(expectedDatabaseType, actualDatabaseType);
+        SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
+    }
 }

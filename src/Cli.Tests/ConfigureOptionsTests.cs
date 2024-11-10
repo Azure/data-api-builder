@@ -474,7 +474,6 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Cors?.Origins);
-            Assert.AreEqual(2, originsValue.Count());
             CollectionAssert.AreEqual(originsValue.ToArray(), runtimeConfig.Runtime.Host.Cors.Origins);
         }
 
@@ -518,7 +517,7 @@ namespace Cli.Tests
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
-            Enum.TryParse<EasyAuthType>(authenticationProviderValue, ignoreCase: true, out EasyAuthType updatedAuthenticationProviderValue);
+            Enum.TryParse<AuthProvider>(authenticationProviderValue, ignoreCase: true, out AuthProvider updatedAuthenticationProviderValue);
 
             // Act: Attempts to update host.authentication.provider value
             ConfigureOptions options = new(

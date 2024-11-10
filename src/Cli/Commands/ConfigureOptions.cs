@@ -39,7 +39,7 @@ namespace Cli.Commands
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
             bool? runtimeHostCorsAllowCredentials = null,
-            EasyAuthType? runtimeHostAuthenticationProvider = null,
+            AuthProvider? runtimeHostAuthenticationProvider = null,
             string? runtimeHostAuthenticationJwtAudience = null,
             string? runtimeHostAuthenticationJwtIssuer = null,
             string? config = null)
@@ -132,7 +132,7 @@ namespace Cli.Commands
         public bool? RuntimeHostCorsAllowCredentials { get; }
 
         [Option("runtime.host.authentication.provider", Required = false, HelpText = "Configure the name of authentication provider. Default: StaticWebApps (AppService, AzureAd, Jwt).")]
-        public EasyAuthType? RuntimeHostAuthenticationProvider { get; }
+        public AuthProvider? RuntimeHostAuthenticationProvider { get; }
 
         [Option("runtime.host.authentication.jwt.audience", Required = false, HelpText = "Configure the intended recipient(s) of the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtAudience { get; }

@@ -122,22 +122,22 @@ namespace Cli.Commands
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
 
-        [Option("runtime.host.mode", Required = false, HelpText = "")]
+        [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
         public HostMode? RuntimeHostMode { get; }
 
-        [Option("runtime.host.cors.origins", Required = false, HelpText = "")]
+        [Option("runtime.host.cors.origins", Required = false, HelpText = "Overwrite CORS with allowed origins that are allowed to access a resource on the server. Default: [] (Array of strings).")]
         public IEnumerable<string>? RuntimeHostCorsOrigins { get; }
 
-        [Option("runtime.host.cors.allow-credentials", Required = false, HelpText = "")]
+        [Option("runtime.host.cors.allow-credentials", Required = false, HelpText = "Set value for Access-Control-Allow-Credentials header in Host.Cors. Default: false (boolean).")]
         public bool? RuntimeHostCorsAllowCredentials { get; }
 
-        [Option("runtime.host.authentication.provider", Required = false, HelpText = "")]
+        [Option("runtime.host.authentication.provider", Required = false, HelpText = "Configure the name of authentication provider. Default: StaticWebApps (AppService, AzureAd, Jwt).")]
         public EasyAuthType? RuntimeHostAuthenticationProvider { get; }
 
-        [Option("runtime.host.authentication.jwt.audience", Required = false, HelpText = "")]
+        [Option("runtime.host.authentication.jwt.audience", Required = false, HelpText = "Configure the intended recipient(s) of the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtAudience { get; }
 
-        [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "")]
+        [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtIssuer { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

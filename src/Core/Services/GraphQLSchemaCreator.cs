@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -39,7 +40,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IQueryEngineFactory _queryEngineFactory;
         private readonly IMutationEngineFactory _mutationEngineFactory;
         private readonly IMetadataProviderFactory _metadataProviderFactory;
-        private readonly RuntimeEntities _entities;
+        private RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private bool _isMultipleCreateOperationEnabled;
@@ -57,8 +58,10 @@ namespace Azure.DataApiBuilder.Core.Services
             IQueryEngineFactory queryEngineFactory,
             IMutationEngineFactory mutationEngineFactory,
             IMetadataProviderFactory metadataProviderFactory,
-            IAuthorizationResolver authorizationResolver)
+            IAuthorizationResolver authorizationResolver,
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
         {
+            handler?.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, OnConfigChanged);
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
@@ -68,6 +71,18 @@ namespace Azure.DataApiBuilder.Core.Services
             _metadataProviderFactory = metadataProviderFactory;
             _authorizationResolver = authorizationResolver;
             _runtimeConfigProvider = runtimeConfigProvider;
+        }
+
+        /// <summary>
+        /// Executed when a hot-reload event occurs. Pulls the latest
+        /// runtimeconfig object from the provider and updates authorization
+        /// rules used by the DAB engine.
+        /// </summary>
+        protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
+            _entities = runtimeConfig.Entities;
         }
 
         /// <summary>

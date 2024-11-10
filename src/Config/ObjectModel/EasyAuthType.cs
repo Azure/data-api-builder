@@ -6,5 +6,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public enum EasyAuthType
 {
     StaticWebApps,
-    AppService
+    AppService,
+    AzureAD,
+    Jwt
 }

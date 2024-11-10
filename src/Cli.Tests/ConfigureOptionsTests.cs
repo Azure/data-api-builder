@@ -419,6 +419,175 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.host.mode {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.mode and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("production", DisplayName = "Update mode to production for Host.")]
+        [DataRow("Production", DisplayName = "Update mode to Production for Host.")]
+        [DataRow("development", DisplayName = "Ensure mode is retained to development for Host.")]
+        [DataRow("Development", DisplayName = "Ensure mode is retained to Development for Host.")]
+        public void TestUpdateModeForHostSettings(string modeValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            Enum.TryParse<HostMode>(modeValue, ignoreCase: true, out HostMode updatedModeValue);
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.mode value
+            ConfigureOptions options = new(
+                runtimeHostMode: updatedModeValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Mode in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Mode);
+            Assert.AreEqual(updatedModeValue, runtimeConfig.Runtime.Host.Mode);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.cors.origins {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.cors.origins and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("https://localhost,https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with comma.")]
+        [DataRow("https://localhost https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with space.")]
+        public void TestUpdateCorsOriginsForHostSettings(string inputValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            // Convert the comma-separated string into a List<string>
+            List<string> originsValue = inputValue.Split(new char[] { ',', ' ' }).ToList();
+
+            // Act: Attempts to update host.cors.origins value
+            ConfigureOptions configureOptions = new(
+                runtimeHostCorsOrigins: originsValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(configureOptions, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Cors.Origins in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Cors?.Origins);
+            Assert.AreEqual(2, originsValue.Count());
+            CollectionAssert.AreEqual(originsValue.ToArray(), runtimeConfig.Runtime.Host.Cors.Origins);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.cors.allow-credentials {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.cors.allow-credentials and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update cors.allow-credentials to false for Host.")]
+        [DataRow(true, DisplayName = "Update cors.allow-credentials to true for Host.")]
+        public void TestUpdateCorsAllowCredentialsHostSettings(bool allowCredentialsValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.cors.allow-credentials value
+            ConfigureOptions options = new(
+                runtimeHostCorsAllowCredentials: allowCredentialsValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the cors.allow-credentials in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Cors?.AllowCredentials);
+            Assert.AreEqual(allowCredentialsValue, runtimeConfig.Runtime.Host.Cors.AllowCredentials);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.authentication.provider {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.authentication.provider and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("staticWebApps", DisplayName = "Update authentication.provider to StaticWebApps for Host.")]
+        [DataRow("Appservice", DisplayName = "Update authentication.provider to AppService for Host.")]
+        [DataRow("azuread", DisplayName = "Update authentication.provider to AzureAD for Host.")]
+        [DataRow("JwT", DisplayName = "Update authentication.provider to Jwt for Host.")]
+        public void TestUpdateAuthenticationProviderHostSettings(string authenticationProviderValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            Enum.TryParse<EasyAuthType>(authenticationProviderValue, ignoreCase: true, out EasyAuthType updatedAuthenticationProviderValue);
+
+            // Act: Attempts to update host.authentication.provider value
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationProvider: updatedAuthenticationProviderValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the authentication.provider in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Provider);
+            Assert.AreEqual(updatedAuthenticationProviderValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Provider);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.authentication.jwt.audience {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.authentication.jwt.audience and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("updatedAudience", DisplayName = "Update authentication.jwt.audience to 'updatedAudience' for Host.")]
+        public void TestUpdateAuthenticationJwtAudienceHostSettings(string updatedJwtAudienceValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.authentication.jwt.audience value
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationJwtAudience: updatedJwtAudienceValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the authentication.jwt.audience in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.Audience);
+            Assert.AreEqual(updatedJwtAudienceValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Audience);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.authentication.jwt.issuer {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.authentication.jwt.issuer and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("updatedIssuer", DisplayName = "Update authentication.jwt.issuer to 'updatedIssuer' for Host.")]
+        public void TestUpdateAuthenticationJwtIssuerHostSettings(string updatedJwtIssuerValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.authentication.jwt.issuer value
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationJwtIssuer: updatedJwtIssuerValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the authentication.jwt.issuer in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.Issuer);
+            Assert.AreEqual(updatedJwtIssuerValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer);
+        }
+
+        /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
         /// When runtime.graphql.depth-limit has an initial value of 8.
         /// validates that "dab configure --runtime.graphql.depth-limit {value}" sets the expected depth limit.

@@ -345,19 +345,6 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
-    /// 
-    /// </summary>
-    public async Task HotReloadConfigConnectionStringEndToEndTest()
-    {
-        // Arrange
-        StartTaskCompletionOperation();
-
-        // Act
-
-        // Assert
-    }
-
-    /// <summary>
     /// Helper function that sets up an empty Task property
     /// </summary>
     public static void StartTaskCompletionOperation()

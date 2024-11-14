@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.OtlpExportProtocol!.Value;
+                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol!.Value;
                         })
                         .AddRuntimeInstrumentation();
                 })
@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.OtlpExportProtocol!.Value;
+                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol!.Value;
                         });
                 });
             }

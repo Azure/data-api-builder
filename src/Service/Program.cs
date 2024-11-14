@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service
                             {
                                 configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
                                 configure.Headers = Startup.OpenTelemetryOptions.Headers;
-                                configure.Protocol = Startup.OpenTelemetryOptions.OtlpExportProtocol!.Value;
+                                configure.Protocol = Startup.OpenTelemetryOptions.ExporterProtocol!.Value;
                             });
                         });
                     }

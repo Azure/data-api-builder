@@ -40,7 +40,6 @@ public class ConfigurationHotReloadTests
 
     private static void GenerateConfigFile(
         DatabaseType databaseType = DatabaseType.MSSQL,
-        string sessionContext = "true",
         string connectionString = "",
         string restPath = "rest",
         string restEnabled = "true",
@@ -62,7 +61,7 @@ public class ConfigurationHotReloadTests
                     ""data-source"": {
                         ""database-type"": """ + databaseType + @""",
                         ""options"": {
-                            ""set-session-context"": """ + sessionContext + @"""
+                            ""set-session-context"": true
                         },
                         ""connection-string"": """ + connectionString + @"""
                     },

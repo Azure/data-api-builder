@@ -25,7 +25,7 @@ public class ConfigurationHotReloadTests
     private static RuntimeConfigProvider _configProvider;
     internal const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     internal const string GQL_QUERY_NAME = "books";
-    
+
     internal const string GQL_QUERY = @"{
                 books(first: 100) {
                     items {
@@ -40,6 +40,7 @@ public class ConfigurationHotReloadTests
 
     private static void GenerateConfigFile(
         DatabaseType databaseType = DatabaseType.MSSQL,
+        string sessionContext = "true",
         string connectionString = "",
         string restPath = "rest",
         string restEnabled = "true",
@@ -61,7 +62,7 @@ public class ConfigurationHotReloadTests
                     ""data-source"": {
                         ""database-type"": """ + databaseType + @""",
                         ""options"": {
-                            ""set-session-context"": true
+                            ""set-session-context"": " + sessionContext + @"
                         },
                         ""connection-string"": """ + connectionString + @"""
                     },
@@ -162,7 +163,7 @@ public class ConfigurationHotReloadTests
         _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
         _testClient = _testServer.CreateClient();
         _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
-        
+
         string query = GQL_QUERY;
         object payload =
             new { query };
@@ -305,34 +306,34 @@ public class ConfigurationHotReloadTests
     /// Validate that the response from the server is correct when making a new request after
     /// the change in database type.
     /// </summary>
-    [TestMethod]
-    public async Task HotReloadConfigDataSourceEndToEndTest()
-    {
-        // Arrange
-        RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
-        MsSqlOptions previousSessionContext = previousRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
-        
-        // String has additions that are not in original connection string
-        string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}" + ";Trusted_Connection=True;";
+     [TestMethod]
+     public async Task HotReloadConfigDataSourceEndToEndTest()
+     {
+         // Arrange
+         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
+         MsSqlOptions previousSessionContext = previousRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
 
-        // Act
-        GenerateConfigFile(
-            sessionContext: "false",
-            connectionString: expectedConnectionString);
-        System.Threading.Thread.Sleep(3000);
+         // String has additions that are not in original connection string
+         string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}" + ";Trusted_Connection=True;";
 
-        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
-        MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
-        JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-            _testClient,
-            _configProvider,
-            GQL_QUERY_NAME,
-            GQL_QUERY);
+         // Act
+         GenerateConfigFile(
+             sessionContext: "false",
+             connectionString: expectedConnectionString);
+         System.Threading.Thread.Sleep(3000);
 
-        // Assert
-        // If the assert succeeds it implies that the connection string is hot-reloadable
-        Assert.AreNotEqual(previousSessionContext, actualSessionContext);
-        Assert.AreEqual(false, actualSessionContext.SetSessionContext);
-        SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
-    }
+         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
+         MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
+         JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+             _testClient,
+             _configProvider,
+             GQL_QUERY_NAME,
+             GQL_QUERY);
+
+         // Assert
+         // If the assert succeeds it implies that the connection string is hot-reloadable
+         Assert.AreNotEqual(previousSessionContext, actualSessionContext);
+         Assert.AreEqual(false, actualSessionContext.SetSessionContext);
+         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
+     }
 }

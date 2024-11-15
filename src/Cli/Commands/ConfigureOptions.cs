@@ -125,7 +125,7 @@ namespace Cli.Commands
         [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
         public HostMode? RuntimeHostMode { get; }
 
-        [Option("runtime.host.cors.origins", Required = false, HelpText = "Overwrite CORS with allowed origins that are allowed to access a resource on the server. Default: [] (Array of strings).")]
+        [Option("runtime.host.cors.origins", Required = false, HelpText = "Overwrite Allowed Origins in CORS. Default: [] (Array of strings).")]
         public IEnumerable<string>? RuntimeHostCorsOrigins { get; }
 
         [Option("runtime.host.cors.allow-credentials", Required = false, HelpText = "Set value for Access-Control-Allow-Credentials header in Host.Cors. Default: false (boolean).")]

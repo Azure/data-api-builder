@@ -8,7 +8,6 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -358,7 +357,7 @@ public class ConfigurationHotReloadTests
         // Hot Reload should fail here
         GenerateConfigFile(
             connectionString: "");
-        System.Threading.Thread.Sleep(3000);
+        System.Threading.Thread.Sleep(4000);
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
@@ -366,7 +365,7 @@ public class ConfigurationHotReloadTests
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(3000);
+        System.Threading.Thread.Sleep(4000);
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
@@ -397,7 +396,7 @@ public class ConfigurationHotReloadTests
         // Hot Reload should fail here
         GenerateConfigFile(
             databaseType: DatabaseType.PostgreSQL);
-        System.Threading.Thread.Sleep(3000);
+        System.Threading.Thread.Sleep(4000);
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
@@ -405,7 +404,7 @@ public class ConfigurationHotReloadTests
         // Hot Reload should succeed here
         GenerateConfigFile(
             databaseType: DatabaseType.MSSQL);
-        System.Threading.Thread.Sleep(3000);
+        System.Threading.Thread.Sleep(4000);
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";

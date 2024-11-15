@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -23,6 +25,7 @@ public class ConfigurationHotReloadTests
     private static TestServer _testServer;
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
+    private static StringWriter _writer;
     internal const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     internal const string GQL_QUERY_NAME = "books";
 
@@ -332,9 +335,86 @@ public class ConfigurationHotReloadTests
             GQL_QUERY);
 
         // Assert
-        // If the assert succeeds it implies that the connection string is hot-reloadable
         Assert.AreNotEqual(previousSessionContext, actualSessionContext);
         Assert.AreEqual(false, actualSessionContext.SetSessionContext);
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigConnectionStringEndToEndTest()
+    {
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
+        string failedKeyWord = "Unable to hot reload configuration file due to";
+        string succeedKeyWord = "Validated hot-reloaded configuration file";
+
+        // Act
+        // Hot Reload should fail here
+        GenerateConfigFile(
+            connectionString: "");
+        System.Threading.Thread.Sleep(3000);
+
+        // Log that shows that hot-reload was not able to validate properly
+        string failedConfigLog = $"{_writer.ToString()}";
+
+        // Hot Reload should succeed here
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
+        System.Threading.Thread.Sleep(3000);
+
+        // Log that shows that hot-reload validated properly
+        string succeedConfigLog = $"{_writer.ToString()}";
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+
+        // Assert
+        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
+        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigDatabaseTypeEndToEndTest()
+    {
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
+        string failedKeyWord = "Unable to hot reload configuration file due to";
+        string succeedKeyWord = "Validated hot-reloaded configuration file";
+
+        // Act
+        // Hot Reload should fail here
+        GenerateConfigFile(
+            databaseType: DatabaseType.PostgreSQL);
+        System.Threading.Thread.Sleep(3000);
+
+        // Log that shows that hot-reload was not able to validate properly
+        string failedConfigLog = $"{_writer.ToString()}";
+
+        // Hot Reload should succeed here
+        GenerateConfigFile(
+            databaseType: DatabaseType.MSSQL);
+        System.Threading.Thread.Sleep(3000);
+
+        // Log that shows that hot-reload validated properly
+        string succeedConfigLog = $"{_writer.ToString()}";
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+
+        // Assert
+        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
+        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 }

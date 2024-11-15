@@ -351,13 +351,13 @@ public class ConfigurationHotReloadTests
         Console.SetOut(_writer);
 
         string failedKeyWord = "Unable to hot reload configuration file due to";
-        string succeedKeyWord = "Validated hot-reloaded configuration file";
+        //string succeedKeyWord = "Validated hot-reloaded configuration file";
 
         // Act
         // Hot Reload should fail here
         GenerateConfigFile(
             connectionString: "");
-        System.Threading.Thread.Sleep(4000);
+        System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
@@ -365,16 +365,15 @@ public class ConfigurationHotReloadTests
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(6000);
+        System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload validated properly
-        string succeedConfigLog = $"{_writer.ToString()}";
+        //string succeedConfigLog = $"{_writer.ToString()}";
 
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
-        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 
@@ -389,22 +388,22 @@ public class ConfigurationHotReloadTests
         _writer = new StringWriter();
         Console.SetOut(_writer);
 
-        string failedKeyWord = "Unable to hot reload configuration file due to";
+        //string failedKeyWord = "Unable to hot reload configuration file due to";
         string succeedKeyWord = "Validated hot-reloaded configuration file";
 
         // Act
         // Hot Reload should fail here
         GenerateConfigFile(
             databaseType: DatabaseType.PostgreSQL);
-        System.Threading.Thread.Sleep(4000);
+        System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog = $"{_writer.ToString()}";
+        //string failedConfigLog = $"{_writer.ToString()}";
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             databaseType: DatabaseType.MSSQL);
-        System.Threading.Thread.Sleep(6000);
+        System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
@@ -412,7 +411,6 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
-        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
         Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }

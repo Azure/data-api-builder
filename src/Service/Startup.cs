@@ -43,6 +43,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 #if NET8_0_OR_GREATER
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -127,7 +128,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol!.Value;
+                            configure.Protocol = OtlpExportProtocol.Grpc;
                         })
                         .AddRuntimeInstrumentation();
                 })
@@ -140,7 +141,7 @@ namespace Azure.DataApiBuilder.Service
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = runtimeConfig.Runtime.Telemetry.OpenTelemetry.ExporterProtocol!.Value;
+                            configure.Protocol = OtlpExportProtocol.Grpc;
                         });
                 });
             }

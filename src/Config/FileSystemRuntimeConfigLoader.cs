@@ -75,11 +75,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public string ConfigFilePath { get; internal set; }
 
-    /// <summary>
-    /// Orchestrates sending HotReloadCompleted events to all its subscribers
-    /// </summary>
-    public event EventHandler? HotReloadCompleted;
-
     public FileSystemRuntimeConfigLoader(
         IFileSystem fileSystem,
         HotReloadEventHandler<HotReloadEventArgs>? handler = null,
@@ -160,16 +155,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Raises the HotReloadCompleted event, which signals to listeners
-    /// that hot-reload has finished. It does not matter if hot-reload
-    /// succeeded or failed, the event will still be raised.
-    /// </summary>
-    protected virtual void OnHotReloadCompleted()
-    {
-        HotReloadCompleted?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
     /// When a change is detected in the Config file being watched this trigger
     /// function is called and handles the hot reload logic when appropriate,
     /// ie: in a local development scenario.
@@ -189,9 +174,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             // before we can have an ILogger here.
             Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
         }
-
-        // Event 
-        OnHotReloadCompleted();
     }
 
     /// <summary>

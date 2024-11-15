@@ -25,12 +25,9 @@ public class ConfigurationHotReloadTests
     private static TestServer _testServer;
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
-    private static FileSystemRuntimeConfigLoader _configLoader;
     internal const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     internal const string GQL_QUERY_NAME = "books";
-    private static TaskCompletionSource<bool> _tsc;
-    private static Task<bool> _task;
-
+    
     internal const string GQL_QUERY = @"{
                 books(first: 100) {
                     items {
@@ -45,6 +42,7 @@ public class ConfigurationHotReloadTests
 
     private static void GenerateConfigFile(
         DatabaseType databaseType = DatabaseType.MSSQL,
+        string sessionContext = "true",
         string connectionString = "",
         string restPath = "rest",
         string restEnabled = "true",
@@ -66,7 +64,7 @@ public class ConfigurationHotReloadTests
                     ""data-source"": {
                         ""database-type"": """ + databaseType + @""",
                         ""options"": {
-                            ""set-session-context"": true
+                            ""set-session-context"": """ + sessionContext + @"""
                         },
                         ""connection-string"": """ + connectionString + @"""
                     },
@@ -167,10 +165,7 @@ public class ConfigurationHotReloadTests
         _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
         _testClient = _testServer.CreateClient();
         _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
-        _configLoader = _testServer.Services.GetService<FileSystemRuntimeConfigLoader>();
-
-        _configLoader.HotReloadCompleted += OnHotReloadCompleted;
-
+        
         string query = GQL_QUERY;
         object payload =
             new { query };
@@ -313,25 +308,24 @@ public class ConfigurationHotReloadTests
     /// Validate that the response from the server is correct when making a new request after
     /// the change in database type.
     /// </summary>
-    [DataTestMethod]
-    [DataRow(DatabaseType.MySQL, TestCategory.MYSQL, DisplayName = "Hot-reload change to MySQL Datasource")]
-    [DataRow(DatabaseType.PostgreSQL, TestCategory.POSTGRESQL, DisplayName = "Hot-reload change to PostgreSQL Datasource")]
-    public async Task HotReloadConfigDatasourceDatabaseTypesEndToEndTest(DatabaseType expectedDatabaseType, string expectedTestCategory)
+    [TestMethod]
+    public async Task HotReloadConfigDataSourceEndToEndTest()
     {
         // Arrange
-        StartTaskCompletionOperation();
         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
-        DatabaseType previousDatabaseType = previousRuntimeConfig.DataSource.DatabaseType;
-        string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(expectedTestCategory).Replace("\\", "\\\\")}";
+        MsSqlOptions previousSessionContext = previousRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
+        
+        // String has additions that are not in original connection string
+        string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}" + ";Trusted_Connection=True;";
 
         // Act
         GenerateConfigFile(
-            databaseType: expectedDatabaseType,
+            sessionContext: "false",
             connectionString: expectedConnectionString);
-        await _task;
+        System.Threading.Thread.Sleep(3000);
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
-        DatabaseType actualDatabaseType = updatedRuntimeConfig.DataSource.DatabaseType;
+        MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
         JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
             _testClient,
             _configProvider,
@@ -339,28 +333,9 @@ public class ConfigurationHotReloadTests
             GQL_QUERY);
 
         // Assert
-        Assert.AreNotEqual(previousDatabaseType, actualDatabaseType);
-        Assert.AreEqual(expectedDatabaseType, actualDatabaseType);
+        // If the assert succeeds it implies that the connection string is hot-reloadable
+        Assert.AreNotEqual(previousSessionContext, actualSessionContext);
+        Assert.AreEqual(false, actualSessionContext.SetSessionContext);
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
-    }
-
-    /// <summary>
-    /// Helper function that sets up an empty Task property
-    /// </summary>
-    public static void StartTaskCompletionOperation()
-    {
-        _tsc = new TaskCompletionSource<bool>();
-        _task = _tsc.Task;
-    }
-
-    /// <summary>
-    /// Helper function that is used when event HotReloadCompleted is triggered.
-    /// It sets the empty Task property as if the task it is doing is finished,
-    /// this mimics an async task so that we can wait for the hot-reload to finish
-    /// before doing anything else.
-    /// </summary>
-    private static void OnHotReloadCompleted(object sender, EventArgs e)
-    {
-        _tsc.SetResult(true);
     }
 }

@@ -370,11 +370,20 @@ public class ConfigurationHotReloadTests
         // Log that shows that hot-reload validated properly
         //string succeedConfigLog = $"{_writer.ToString()}";
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        string query = GQL_QUERY;
+        object payload =
+            new { query };
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
-        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode);
     }
 
     /// <summary>
@@ -394,7 +403,8 @@ public class ConfigurationHotReloadTests
         // Act
         // Hot Reload should fail here
         GenerateConfigFile(
-            databaseType: DatabaseType.PostgreSQL);
+            databaseType: DatabaseType.PostgreSQL,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
         System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload was not able to validate properly
@@ -402,7 +412,8 @@ public class ConfigurationHotReloadTests
 
         // Hot Reload should succeed here
         GenerateConfigFile(
-            databaseType: DatabaseType.MSSQL);
+            databaseType: DatabaseType.MSSQL,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload validated properly

@@ -340,7 +340,9 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
-    /// 
+    /// Hot reload the configuration file so that it changes from one connection string
+    /// to an invalid connection string, then it hot reloads once more to the original
+    /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
@@ -379,11 +381,12 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
-    /// Hot reload the configuration file so that it changes from one database type to another,
-    /// Then it hot reloads once more to the original database type. Then we assert that the
-    /// changes from hot reload succeeded or failed based on the Console output it gives.
-    /// The first reload fails while the second one succeeds, and this only happens properly
-    /// in the pipeline due to constraints.
+    /// /// (Warning: This test only currently works in the pipeline due to constrains of not
+    /// being able to change from one database type to another, under normal circumstances
+    /// hot reload allows changes from one database type to another)
+    /// Hot reload the configuration file so that it changes from one database type to another.
+    /// Then it hot reloads once more to the original database type. We assert that the
+    /// first reload fails while the second one succeeds.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]

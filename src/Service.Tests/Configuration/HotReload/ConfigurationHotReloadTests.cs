@@ -368,7 +368,7 @@ public class ConfigurationHotReloadTests
         System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload validated properly
-        //string succeedConfigLog = $"{_writer.ToString()}";
+        string succeedConfigLog = $"{_writer.ToString()}";
 
         string query = GQL_QUERY;
         object payload =
@@ -382,12 +382,17 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
 
         // Assert
+        Assert.AreEqual(failedConfigLog, succeedConfigLog);
         Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
         Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode);
     }
 
     /// <summary>
-    /// 
+    /// Hot reload the configuration file so that it changes from one database type to another,
+    /// Then it hot reloads once more to the original database type. Then we assert that the
+    /// changes from hot reload succeeded or failed based on the Console output it gives.
+    /// The first reload fails while the second one succeeds, and this only happens properly
+    /// in the pipeline due to constraints.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
@@ -397,7 +402,7 @@ public class ConfigurationHotReloadTests
         _writer = new StringWriter();
         Console.SetOut(_writer);
 
-        //string failedKeyWord = "Unable to hot reload configuration file due to";
+        string failedKeyWord = "Unable to hot reload configuration file due to";
         string succeedKeyWord = "Validated hot-reloaded configuration file";
 
         // Act
@@ -408,7 +413,7 @@ public class ConfigurationHotReloadTests
         System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload was not able to validate properly
-        //string failedConfigLog = $"{_writer.ToString()}";
+        string failedConfigLog = $"{_writer.ToString()}";
 
         // Hot Reload should succeed here
         GenerateConfigFile(
@@ -422,6 +427,7 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
+        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
         Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }

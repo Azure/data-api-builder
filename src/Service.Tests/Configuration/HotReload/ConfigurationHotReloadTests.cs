@@ -351,7 +351,7 @@ public class ConfigurationHotReloadTests
         Console.SetOut(_writer);
 
         string failedKeyWord = "Unable to hot reload configuration file due to";
-        //string succeedKeyWord = "Validated hot-reloaded configuration file";
+        string succeedKeyWord = "Validated hot-reloaded configuration file";
 
         // Act
         // Hot Reload should fail here
@@ -365,26 +365,17 @@ public class ConfigurationHotReloadTests
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(5000);
+        System.Threading.Thread.Sleep(8000);
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
 
-        string query = GQL_QUERY;
-        object payload =
-            new { query };
-
-        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
-        {
-            Content = JsonContent.Create(payload)
-        };
-
-        HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
-        Assert.AreEqual(failedConfigLog, succeedConfigLog);
         Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
-        Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode);
+        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 
     /// <summary>

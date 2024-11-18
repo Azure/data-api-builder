@@ -427,7 +427,7 @@ namespace Cli.Tests
         [DataRow("Production", DisplayName = "Update mode to Production for Host.")]
         [DataRow("development", DisplayName = "Ensure mode is retained to development for Host.")]
         [DataRow("Development", DisplayName = "Ensure mode is retained to Development for Host.")]
-        public void TestUpdateModeForHostSettings(string modeValue)
+        public void TestCaseInsensitiveUpdateModeForHostSettings(string modeValue)
         {
             // Arrange -> all the setup which includes creating options.
             Enum.TryParse<HostMode>(modeValue, ignoreCase: true, out HostMode updatedModeValue);
@@ -453,7 +453,7 @@ namespace Cli.Tests
         /// in runtime config update. Takes in updated value for host.cors.origins and 
         /// validates whether the runtime config reflects those updated values
         [DataTestMethod]
-        [DataRow("https://localhost,https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with comma.")]
+        [DataRow("https://localhost, https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with comma.")]
         [DataRow("https://localhost https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with space.")]
         public void TestUpdateCorsOriginsForHostSettings(string inputValue)
         {

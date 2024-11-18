@@ -823,7 +823,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failure in updating RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -863,7 +863,7 @@ namespace Cli
                     }
                     else
                     {
-                        _logger.LogError("Failure in updating RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                        _logger.LogError("Failed to update Runtime.GraphQL.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
                         return false;
                     }
                 }
@@ -889,7 +889,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failure in updating RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -929,7 +929,7 @@ namespace Cli
                     }
                     else
                     {
-                        _logger.LogError("Failure in updating RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
+                        _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
                         return false;
                     }
                 }
@@ -938,7 +938,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failure in updating RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -1081,7 +1081,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failure in updating RuntimeConfig.Host with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update RuntimeConfig.Host with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

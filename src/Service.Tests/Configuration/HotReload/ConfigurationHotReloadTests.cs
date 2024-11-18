@@ -304,13 +304,15 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
-    /// Hot reload the configuration file by saving a new database type and connection string.
-    /// Validate that the response from the server is correct when making a new request after
-    /// the change in database type.
+    /// Hot reload the configuration file by saving a new session-context and connection string.
+    /// Validate that the response from the server is correct, by ensuring that the session-context
+    /// inside the DataSource parameter is different from the session-context before hot reload.
+    /// By asserting that hot reload worked properly for the session-context it also implies that
+    /// the new connection string with additional parameters is also valid.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public async Task HotReloadConfigDataSourceEndToEndTest()
+    public async Task HotReloadConfigDataSource()
     {
         // Arrange
         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
@@ -346,7 +348,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public async Task HotReloadConfigConnectionStringEndToEndTest()
+    public async Task HotReloadConfigConnectionString()
     {
         // Arrange
         _writer = new StringWriter();
@@ -390,7 +392,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public async Task HotReloadConfigDatabaseTypeEndToEndTest()
+    public async Task HotReloadConfigDatabaseType()
     {
         // Arrange
         _writer = new StringWriter();

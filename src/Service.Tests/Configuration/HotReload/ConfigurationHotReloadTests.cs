@@ -369,12 +369,12 @@ public class ConfigurationHotReloadTests
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(8000);
+        System.Threading.Thread.Sleep(5000);
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
-
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));

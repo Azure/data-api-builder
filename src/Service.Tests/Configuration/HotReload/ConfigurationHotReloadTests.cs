@@ -360,23 +360,21 @@ public class ConfigurationHotReloadTests
         // Act
         // Hot Reload should fail here
         GenerateConfigFile(
-            databaseType: DatabaseType.MSSQL,
-            connectionString: "");
-        System.Threading.Thread.Sleep(8000);
+            connectionString: $"WrongConnectionString");
+        System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
 
         // Hot Reload should succeed here
         GenerateConfigFile(
-            databaseType: DatabaseType.MSSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(8000);
-
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+        System.Threading.Thread.Sleep(5000);
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
         Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));

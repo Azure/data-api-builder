@@ -221,7 +221,7 @@ namespace Cli
 
             if (runtimeBaseRoute is not null)
             {
-                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out AuthProvider authMode) || authMode is not AuthProvider.StaticWebApps)
+                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType authMode) || authMode is not EasyAuthType.StaticWebApps)
                 {
                     _logger.LogError("Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
                     return false;
@@ -1003,10 +1003,10 @@ namespace Cli
                 }
 
                 // Runtime.Host.Authentication.Provider
-                AuthProvider? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
+                string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(AuthProvider.StaticWebApps);
+                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.StaticWebApps);
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {

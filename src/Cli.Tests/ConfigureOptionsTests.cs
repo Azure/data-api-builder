@@ -512,16 +512,14 @@ namespace Cli.Tests
         [DataRow("staticWebApps", DisplayName = "Update authentication.provider to StaticWebApps for Host.")]
         [DataRow("Appservice", DisplayName = "Update authentication.provider to AppService for Host.")]
         [DataRow("azuread", DisplayName = "Update authentication.provider to AzureAD for Host.")]
-        [DataRow("JwT", DisplayName = "Update authentication.provider to Jwt for Host.")]
         public void TestUpdateAuthenticationProviderHostSettings(string authenticationProviderValue)
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
-            Enum.TryParse<AuthProvider>(authenticationProviderValue, ignoreCase: true, out AuthProvider updatedAuthenticationProviderValue);
-
+            
             // Act: Attempts to update host.authentication.provider value
             ConfigureOptions options = new(
-                runtimeHostAuthenticationProvider: updatedAuthenticationProviderValue,
+                runtimeHostAuthenticationProvider: authenticationProviderValue,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
@@ -531,7 +529,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Provider);
-            Assert.AreEqual(updatedAuthenticationProviderValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Provider);
+            Assert.AreEqual(authenticationProviderValue, runtimeConfig.Runtime.Host.Authentication.Provider);
         }
 
         /// <summary>

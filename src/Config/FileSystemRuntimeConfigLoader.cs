@@ -163,7 +163,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         try
         {
-            if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+            // IsDevModeOnStartup will always be assigned and non null after startup in a scenario where
+            // we can detect new file contents.
+            if (RuntimeConfig is not null && (bool)IsDevModeOnStartup!)
             {
                 HotReloadConfig();
             }
@@ -202,6 +204,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             string json = _fileSystem.File.ReadAllText(path);
             if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
+                IsDevModeOnStartup = IsDevModeOnStartup is null ? RuntimeConfig.IsDevelopmentMode() : IsDevModeOnStartup;
                 if (TrySetupConfigFileWatcher())
                 {
                     Console.WriteLine("Monitoring config: {0} for hot-reloading.", ConfigFilePath);

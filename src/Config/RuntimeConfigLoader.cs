@@ -38,6 +38,8 @@ public abstract class RuntimeConfigLoader
 
     public bool IsNewConfigValidated;
 
+    protected bool? IsDevModeOnStartup;
+
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
         _changeToken = new DabChangeToken();

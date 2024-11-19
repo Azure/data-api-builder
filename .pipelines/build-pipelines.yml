@@ -66,7 +66,7 @@ jobs:
     parameters:
       # This is the path that will be used for packing nuget package.
       # We will need to sign the binaries in this location.
-      path: '$(Build.SourcesDirectory)/src/out/cli/net6.0/publish' 
+      path: '$(Build.SourcesDirectory)/src/out/cli/net8.0/publish'
 
   # Create nuget package after the binaries are signed. So that the binaries inside nuget package are signed.
   - task: DotNetCoreCLI@2

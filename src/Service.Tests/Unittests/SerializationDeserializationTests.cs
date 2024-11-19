@@ -256,7 +256,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// <summary>
         /// Validates serialization and deserilization of Dictionary containing DatabaseTable
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
-        /// Temporarily ignore test for .net6 due to npgsql issue.
         /// </summary>
         [TestMethod]
         public void TestDictionaryDatabaseObjectSerializationDeserialization()
@@ -286,8 +285,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 // - https://learn.microsoft.com/dotnet/core/compatibility/serialization/7.0/polymorphic-serialization#affected-apis
                 // Removing from converter list here does not negatively affect tests
                 // though we are still looking into whether a better solution exists.
-                // Preserving .NET6 behavior requires that Microsoft.Extensions.Configuration.Json dependency
-                // version align to .NET runtime version. eg. dependency version 6.Y.Z for .NET6 and 8.Y.Z for .NET8
                 Converters = {
                     new DatabaseObjectConverter(),
                     new TypeConverter()

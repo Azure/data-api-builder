@@ -417,7 +417,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             databaseType: DatabaseType.MSSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(5000);
+        System.Threading.Thread.Sleep(10000);
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";

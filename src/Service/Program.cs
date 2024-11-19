@@ -23,9 +23,22 @@ namespace Azure.DataApiBuilder.Service
 
         public static void Main(string[] args)
         {
+            if (!ValidateAspNetCoreUrls())
+            {
+                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format.");
+                Environment.Exit(-1);
+            }
+
             if (!StartEngine(args))
             {
                 Environment.ExitCode = -1;
+            }
+
+            static bool ValidateAspNetCoreUrls()
+            {
+                var envVar = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? string.Empty;
+                return envVar.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .All(x => Uri.TryCreate(x.Trim(), UriKind.Absolute, out _));
             }
         }
 

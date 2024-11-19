@@ -516,7 +516,7 @@ namespace Cli.Tests
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
-            
+
             // Act: Attempts to update host.authentication.provider value
             ConfigureOptions options = new(
                 runtimeHostAuthenticationProvider: authenticationProviderValue,

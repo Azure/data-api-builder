@@ -365,11 +365,12 @@ public class ConfigurationHotReloadTests
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
+        _writer.GetStringBuilder().Clear();
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(5000);
+        System.Threading.Thread.Sleep(10000);
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
@@ -410,6 +411,7 @@ public class ConfigurationHotReloadTests
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
+        _writer.GetStringBuilder().Clear();
 
         // Hot Reload should succeed here
         GenerateConfigFile(

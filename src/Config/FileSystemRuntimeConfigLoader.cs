@@ -7,7 +7,9 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Humanizer;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
@@ -199,8 +201,30 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             // and ensures the file handle is released immediately after reading.
             // Previous usage of File.Open may cause file locking issues when
             // actively using hot-reload and modifying the config file in a text editor.
-            string json = _fileSystem.File.ReadAllText(path);
-            if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
+            // Includes an exponential back-off retry mechanism to accommodate
+            // circumstances where the file may be in use by another process.
+            int runCount = 1;
+            string json = string.Empty;
+            while (runCount <= FileUtilities.RunLimit)
+            {
+                try
+                {
+                    json = _fileSystem.File.ReadAllText(path);
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"IO Exception, retrying due to {ex.Message}");
+                    if (runCount == FileUtilities.RunLimit)
+                    {
+                        throw;
+                    }
+
+                    Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(FileUtilities.ExponentialRetryBase, runCount)));
+                    runCount++;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(json) && TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
                 if (TrySetupConfigFileWatcher())
                 {

@@ -11,14 +11,14 @@ internal class FileUtilities
     /// <summary>
     /// Limit the number of retries when failures occur.
     /// </summary>
-    private static readonly int _runLimit = 3;
+    public static readonly int RunLimit = 3;
 
     /// <summary>
     /// Base of the exponential retry back-off.
     /// -> base ^ runCount
     /// e.g. 2^1 , 2^2, 2^3, etc.
     /// </summary>
-    private static readonly int _exponentialRetryBase = 2;
+    public static readonly int ExponentialRetryBase = 2;
 
     /// <summary>
     /// Computes the SHA256 hash for the input data (file contents) at the given path.
@@ -42,7 +42,7 @@ internal class FileUtilities
         int runCount = 1;
 
         // Maximum 2^_runLimit seconds of wait time due to retries.
-        while (runCount <= _runLimit)
+        while (runCount <= RunLimit)
         {
             try
             {
@@ -73,7 +73,7 @@ internal class FileUtilities
                     throw;
                 }
 
-                Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(_exponentialRetryBase, runCount)));
+                Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(ExponentialRetryBase, runCount)));
                 runCount++;
             }
         }

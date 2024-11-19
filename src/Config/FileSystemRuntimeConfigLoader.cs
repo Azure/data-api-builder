@@ -9,7 +9,6 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Humanizer;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;

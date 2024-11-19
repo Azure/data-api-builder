@@ -68,7 +68,7 @@ internal class FileUtilities
             catch (IOException ex)
             {
                 Console.WriteLine($"IO Exception, retrying due to {ex.Message}");
-                if (runCount == 3)
+                if (runCount == RunLimit)
                 {
                     throw;
                 }

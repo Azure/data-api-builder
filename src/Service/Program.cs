@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service
         {
             if (!ValidateAspNetCoreUrls())
             {
-                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. See: https://github.com/Azure/data-api-builder/issues/2237");
+                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS='http://localhost:5000;https://localhost:5001'");
                 Environment.Exit(-1);
             }
 

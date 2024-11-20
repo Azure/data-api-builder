@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -25,20 +26,13 @@ namespace Azure.DataApiBuilder.Service
         {
             if (!ValidateAspNetCoreUrls())
             {
-                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS='http://localhost:5000;https://localhost:5001'");
+                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
                 Environment.Exit(-1);
             }
 
             if (!StartEngine(args))
             {
                 Environment.ExitCode = -1;
-            }
-
-            static bool ValidateAspNetCoreUrls()
-            {
-                var envVar = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? string.Empty;
-                return envVar.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                    .All(x => Uri.TryCreate(x.Trim(), UriKind.Absolute, out _));
             }
         }
 
@@ -217,6 +211,18 @@ namespace Azure.DataApiBuilder.Service
             configurationBuilder
                 .AddEnvironmentVariables(prefix: FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX)
                 .AddCommandLine(args);
+        }
+
+        private static bool ValidateAspNetCoreUrls()
+        {
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is not string value)
+            {
+                return true; // If the environment variable is missing, then it cannot be invalid.
+            }
+
+            return value
+                .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries)
+                .All(x => Uri.TryCreate(x.Trim(), UriKind.Absolute, out _));
         }
     }
 }

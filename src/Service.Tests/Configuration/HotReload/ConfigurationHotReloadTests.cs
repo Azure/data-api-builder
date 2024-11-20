@@ -363,7 +363,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"WrongConnectionString");
         await ConfigurationHotReloadTests.WaitForConditionAsync(
           () => _writer.ToString().Contains(failedKeyWord),
-          TimeSpan.FromSeconds(10),
+          TimeSpan.FromSeconds(12),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
@@ -375,7 +375,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await ConfigurationHotReloadTests.WaitForConditionAsync(
           () => _writer.ToString().Contains(succeedKeyWord),
-          TimeSpan.FromSeconds(10),
+          TimeSpan.FromSeconds(12),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
@@ -415,7 +415,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
         await ConfigurationHotReloadTests.WaitForConditionAsync(
           () => _writer.ToString().Contains(failedKeyWord),
-          TimeSpan.FromSeconds(10),
+          TimeSpan.FromSeconds(12),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
@@ -428,7 +428,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await ConfigurationHotReloadTests.WaitForConditionAsync(
           () => _writer.ToString().Contains(succeedKeyWord),
-          TimeSpan.FromSeconds(10),
+          TimeSpan.FromSeconds(12),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly

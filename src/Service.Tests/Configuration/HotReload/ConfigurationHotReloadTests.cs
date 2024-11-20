@@ -361,7 +361,10 @@ public class ConfigurationHotReloadTests
         // Hot Reload should fail here
         GenerateConfigFile(
             connectionString: $"WrongConnectionString");
-        System.Threading.Thread.Sleep(5000);
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(failedKeyWord),
+          TimeSpan.FromSeconds(10),
+          TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
@@ -370,7 +373,10 @@ public class ConfigurationHotReloadTests
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(10000);
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(succeedKeyWord),
+          TimeSpan.FromSeconds(10),
+          TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
@@ -407,7 +413,10 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             databaseType: DatabaseType.PostgreSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(5000);
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(failedKeyWord),
+          TimeSpan.FromSeconds(10),
+          TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
         string failedConfigLog = $"{_writer.ToString()}";
@@ -417,7 +426,10 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             databaseType: DatabaseType.MSSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        System.Threading.Thread.Sleep(10000);
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(succeedKeyWord),
+          TimeSpan.FromSeconds(10),
+          TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
         string succeedConfigLog = $"{_writer.ToString()}";
@@ -428,5 +440,24 @@ public class ConfigurationHotReloadTests
         Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
         Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
+    {
+        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(pollingInterval);
+        }
+
+        throw new TimeoutException("The condition was not met within the timeout period.");
     }
 }

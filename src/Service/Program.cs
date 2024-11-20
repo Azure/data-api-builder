@@ -27,7 +27,8 @@ namespace Azure.DataApiBuilder.Service
             if (!ValidateAspNetCoreUrls())
             {
                 Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
-                Environment.Exit(-1);
+                Environment.ExitCode = -1;
+                return;
             }
 
             if (!StartEngine(args))
@@ -221,7 +222,7 @@ namespace Azure.DataApiBuilder.Service
             }
 
             return value
-                .Split([',', ';'], StringSplitOptions.RemoveEmptyEntries)
+                .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
                 .All(x => Uri.TryCreate(x.Trim(), UriKind.Absolute, out _));
         }
     }

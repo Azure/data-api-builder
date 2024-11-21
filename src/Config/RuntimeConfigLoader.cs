@@ -219,7 +219,6 @@ public abstract class RuntimeConfigLoader
         bool replaceEnvVar = false,
         EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
-
         JsonSerializerOptions options = new()
         {
             PropertyNameCaseInsensitive = false,

@@ -41,7 +41,7 @@ internal class FileUtilities
         // Exponential back-off retry mechanism.
         int runCount = 1;
 
-        // Maximum 2^_runLimit seconds of wait time due to retries.
+        // Maximum 2^RunLimit seconds of wait time due to retries.
         while (runCount <= RunLimit)
         {
             try

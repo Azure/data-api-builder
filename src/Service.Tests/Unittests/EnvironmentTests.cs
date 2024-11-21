@@ -13,6 +13,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 [TestClass]
 public class EnvironmentTests
 {
+
+    public const string ASPNETCORE_URLS_NAME = "ASPNETCORE_URLS";
+
     /// <summary>
     /// Tests the behavior of the <c>Main</c> method when the <c>ASPNETCORE_URLS</c> environment variable is set to an invalid value.
     /// </summary>
@@ -24,7 +27,6 @@ public class EnvironmentTests
     [TestMethod]
     public void Main_WhenAspNetCoreUrlsInvalid_ShouldExitWithError()
     {
-        const string ASPNETCORE_URLS_NAME = "ASPNETCORE_URLS";
         const string ASPNETCORE_URLS_INVALID_VALUE = nameof(Main_WhenAspNetCoreUrlsInvalid_ShouldExitWithError);
 
         // Arrange

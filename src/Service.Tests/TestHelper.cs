@@ -9,6 +9,7 @@ using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Service.Tests.UnitTests;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -27,6 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
+            Environment.SetEnvironmentVariable(EnvironmentTests.ASPNETCORE_URLS_NAME, null);
         }
 
         /// <summary>

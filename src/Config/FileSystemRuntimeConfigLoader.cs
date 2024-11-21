@@ -209,6 +209,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 try
                 {
                     json = _fileSystem.File.ReadAllText(path);
+                    break;
                 }
                 catch (IOException ex)
                 {

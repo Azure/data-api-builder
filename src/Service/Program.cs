@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Service
                         .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
                     }
 #if NET8_0_OR_GREATER
-                    if(Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
+                    if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
                     {
                         builder.AddOpenTelemetry(logging =>
                         {

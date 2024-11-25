@@ -60,9 +60,9 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
-        #if NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
-        #endif
+#endif
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";

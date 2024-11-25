@@ -1,15 +1,15 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Cli;
-using Cli.Tests;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Cli;
+using Cli.Tests;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System.IO.Abstractions.TestingHelpers;
 
 namespace Cli.Tests
 {

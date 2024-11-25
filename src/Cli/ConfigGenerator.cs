@@ -1780,20 +1780,20 @@ namespace Cli
                 _logger.LogError("Invalid Application Insights connection string provided.");
                 return false;
             }
-    	    #if NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
             if (options.OpenTelemetryEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.OpenTelemetryEndpoint))
             {
                 _logger.LogError("Invalid OTEL endpoint provided.");
                 return false;
             }
-            #endif
+#endif
 
             ApplicationInsightsOptions applicationInsightsOptions = new(
                 Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
                 ConnectionString: options.AppInsightsConnString
             );
 
-            #if NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
             OpenTelemetryOptions openTelemetryOptions = new(
                 Enabled: options.OpenTelemetryEnabled is CliBool.True ? true : false,
                 Endpoint: options.OpenTelemetryEndpoint,
@@ -1801,9 +1801,9 @@ namespace Cli
                 ExporterProtocol: options.OpenTelemetryOtlpExportProtocol,
                 ServiceName: options.OpenTelemetryServiceName
             );
-            #endif
+#endif
 
-            #if NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with
@@ -1813,7 +1813,7 @@ namespace Cli
                         : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions }
                 }
             };
-            #else
+#else
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with
@@ -1823,7 +1823,7 @@ namespace Cli
                         : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
                 }
             };
-            #endif
+#endif
 
             return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }

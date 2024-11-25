@@ -21,7 +21,7 @@ namespace Cli.Commands
     [Verb("add-telemetry", isDefault: false, HelpText = "Add telemetry for Data Api builder Application", Hidden = false)]
     public class AddTelemetryOptions : Options
     {
-        #if NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
         public AddTelemetryOptions(
             string? appInsightsConnString = null,
             CliBool? appInsightsEnabled = null,
@@ -32,13 +32,13 @@ namespace Cli.Commands
             string? serviceName = null,
             string? config = null) : base(config)
         {
-            if(appInsightsEnabled is not null)
+            if (appInsightsEnabled is not null)
             {
                 AppInsightsConnString = appInsightsConnString;
                 AppInsightsEnabled = appInsightsEnabled;
             }
 
-            if(otelEnabled is not null)
+            if (otelEnabled is not null)
             {
                 OpenTelemetryEndpoint = otelEndpoint;
                 OpenTelemetryHeaders = otelHeaders;
@@ -47,13 +47,13 @@ namespace Cli.Commands
                 OpenTelemetryOtlpExportProtocol = otlpExportProtocol;
             }
         }
-        #else
+#else
         public AddTelemetryOptions(string appInsightsConnString, CliBool appInsightsEnabled, string? config) : base(config)
         {
             AppInsightsConnString = appInsightsConnString;
             AppInsightsEnabled = appInsightsEnabled;
         }
-        #endif
+#endif
 
         // Connection string for the Application Insights resource to which telemetry data should be sent.
         // This option  is required and must be provided with a valid connection string.
@@ -64,7 +64,7 @@ namespace Cli.Commands
         [Option("app-insights-enabled", Default = CliBool.True, Required = false, HelpText = "(Default: true) Enable/Disable Application Insights")]
         public CliBool? AppInsightsEnabled { get; }
 
-        #if NET8_0_OR_GREATER
+#if NET8_0_OR_GREATER
         // Connection string for the Open Telemetry resource to which telemetry data should be sent.
         // This option  is required and must be provided with a valid connection string.
         [Option("otel-endpoint", Required = true, HelpText = "Endpoint for Open Telemetry for telemetry data")]
@@ -85,7 +85,7 @@ namespace Cli.Commands
         // Specify the Open Telemetry protocol. This flag is optional and default value is grpc.
         [Option("otel-protocol", Default = OtlpExportProtocol.Grpc, Required = false, HelpText = "(Default: grpc) Accepted: grpc/httpprotobuf")]
         public OtlpExportProtocol? OpenTelemetryOtlpExportProtocol { get; }
-        #endif
+#endif
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

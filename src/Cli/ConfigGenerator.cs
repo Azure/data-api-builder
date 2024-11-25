@@ -221,7 +221,7 @@ namespace Cli
 
             if (runtimeBaseRoute is not null)
             {
-                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType easyAuthMode) || easyAuthMode is not EasyAuthType.StaticWebApps)
+                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType authMode) || authMode is not EasyAuthType.StaticWebApps)
                 {
                     _logger.LogError("Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
                     return false;
@@ -749,6 +749,26 @@ namespace Cli
                 }
             }
 
+            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer
+            if (options.RuntimeHostMode != null ||
+                options.RuntimeHostCorsOrigins != null ||
+                options.RuntimeHostCorsAllowCredentials != null ||
+                options.RuntimeHostAuthenticationProvider != null ||
+                options.RuntimeHostAuthenticationJwtAudience != null ||
+                options.RuntimeHostAuthenticationJwtIssuer != null)
+            {
+                HostOptions? updatedHostOptions = runtimeConfig?.Runtime?.Host;
+                bool status = TryUpdateConfiguredHostValues(options, ref updatedHostOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Host = updatedHostOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             return runtimeConfig != null;
         }
 
@@ -803,7 +823,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failure in updating RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -843,7 +863,7 @@ namespace Cli
                     }
                     else
                     {
-                        _logger.LogError("Failure in updating RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                        _logger.LogError("Failed to update Runtime.GraphQL.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
                         return false;
                     }
                 }
@@ -869,7 +889,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failure in updating RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -909,7 +929,7 @@ namespace Cli
                     }
                     else
                     {
-                        _logger.LogError("Failure in updating RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
+                        _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
                         return false;
                     }
                 }
@@ -918,7 +938,150 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failure in updating RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Host runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated Host options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedHostOptions">updatedHostOptions.</param>
+        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredHostValues(
+            ConfigureOptions options,
+            ref HostOptions? updatedHostOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Host.Mode
+                updatedValue = options?.RuntimeHostMode;
+                if (updatedValue != null)
+                {
+                    updatedHostOptions = updatedHostOptions! with { Mode = (HostMode)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Mode as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Cors.Origins
+                IEnumerable<string>? updatedCorsOrigins = options?.RuntimeHostCorsOrigins;
+                if (updatedCorsOrigins != null && updatedCorsOrigins.Any())
+                {
+                    CorsOptions corsOptions;
+                    if (updatedHostOptions?.Cors == null)
+                    {
+                        corsOptions = new(Origins: updatedCorsOrigins.ToArray());
+                    }
+                    else
+                    {
+                        corsOptions = updatedHostOptions.Cors! with { Origins = updatedCorsOrigins.ToArray() };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Cors = corsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Cors.Origins as '{updatedValue}'", updatedCorsOrigins);
+                }
+
+                // Runtime.Host.Cors.Allow-Credentials
+                updatedValue = options?.RuntimeHostCorsAllowCredentials;
+                if (updatedValue != null)
+                {
+                    CorsOptions corsOptions;
+                    if (updatedHostOptions?.Cors == null)
+                    {
+                        corsOptions = new(new string[] { }, AllowCredentials: (bool)updatedValue);
+                    }
+                    else
+                    {
+                        corsOptions = updatedHostOptions.Cors! with { AllowCredentials = (bool)updatedValue };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Cors = corsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Cors.Allow-Credentials as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Provider
+                string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
+                if (updatedProviderValue != null)
+                {
+                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.StaticWebApps);
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Provider: (string)updatedValue);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Provider = (string)updatedValue };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Provider as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.Audience
+                updatedValue = options?.RuntimeHostAuthenticationJwtAudience;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(Audience: (string)updatedValue, null);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { Audience = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Audience as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.Issuer
+                updatedValue = options?.RuntimeHostAuthenticationJwtIssuer;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(null, Issuer: (string)updatedValue);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { Issuer = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Issuer as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Host with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

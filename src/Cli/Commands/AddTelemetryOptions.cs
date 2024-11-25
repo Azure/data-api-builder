@@ -28,7 +28,7 @@ namespace Cli.Commands
             string? otelEndpoint = null,
             CliBool? otelEnabled = null,
             string? otelHeaders = null,
-            OtlpExportProtocol? otlpExportProtocol = null,
+            OtlpExportProtocol? otelExportProtocol = null,
             string? serviceName = null,
             string? config = null) : base(config)
         {

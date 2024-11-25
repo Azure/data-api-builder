@@ -57,7 +57,7 @@ namespace Cli.Commands
 
         // Connection string for the Application Insights resource to which telemetry data should be sent.
         // This option  is required and must be provided with a valid connection string.
-        [Option("app-insights-conn-string", Required = true, HelpText = "Connection string for the Application Insights resource for telemetry data")]
+        [Option("app-insights-conn-string", Required = false, HelpText = "Connection string for the Application Insights resource for telemetry data")]
         public string? AppInsightsConnString { get; }
 
         // To specify whether Application Insights telemetry should be enabled. This flag is optional and default value is true.
@@ -67,7 +67,7 @@ namespace Cli.Commands
         #if NET8_0_OR_GREATER
         // Connection string for the Open Telemetry resource to which telemetry data should be sent.
         // This option  is required and must be provided with a valid connection string.
-        [Option("otel-endpoint", Required = true, HelpText = "Endpoint for Open Telemetry for telemetry data")]
+        [Option("otel-endpoint", Required = false, HelpText = "Endpoint for Open Telemetry for telemetry data")]
         public string? OpenTelemetryEndpoint { get; }
 
         // Headers for the Open Telemetry resource to which telemetry data should be sent.

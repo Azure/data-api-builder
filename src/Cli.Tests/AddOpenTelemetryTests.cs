@@ -1,15 +1,14 @@
 #if NET8_0_OR_GREATER
-using System;
-using System.Collections.Generic;
-using System.IO.Abstractions.TestingHelpers;
-using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Configurations;
-using Cli;
-using Cli.Tests;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
+// using System.Collections.Generic;
+// using System.IO.Abstractions.TestingHelpers;
+// using System.Threading.Tasks;
+// using Azure.DataApiBuilder.Config.ObjectModel;
+// using Azure.DataApiBuilder.Core.Configurations;
+// using Cli;
+// using Cli.Tests;
+// using Microsoft.Extensions.Logging;
+// using Microsoft.VisualStudio.TestTools.UnitTesting;
+// using Moq;
 
 namespace Cli.Tests
 {

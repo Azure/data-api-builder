@@ -44,7 +44,7 @@ namespace Cli.Commands
                 OpenTelemetryHeaders = otelHeaders;
                 OpenTelemetryServiceName = serviceName;
                 OpenTelemetryEnabled = otelEnabled;
-                OpenTelemetryOtlpExportProtocol = otlpExportProtocol;
+                OpenTelemetryExportProtocol = otelExportProtocol;
             }
         }
 #else

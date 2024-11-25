@@ -84,7 +84,7 @@ namespace Cli.Commands
 
         // Specify the Open Telemetry protocol. This flag is optional and default value is grpc.
         [Option("otel-protocol", Default = OtlpExportProtocol.Grpc, Required = false, HelpText = "(Default: grpc) Accepted: grpc/httpprotobuf")]
-        public OtlpExportProtocol? OpenTelemetryOtlpExportProtocol { get; }
+        public OtlpExportProtocol? OpenTelemetryExportProtocol { get; }
 #endif
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

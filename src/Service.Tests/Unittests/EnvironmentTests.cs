@@ -26,6 +26,7 @@ public class EnvironmentTests
     {
         const string ASPNETCORE_URLS_NAME = "ASPNETCORE_URLS";
         const string ASPNETCORE_URLS_INVALID_VALUE = nameof(Main_WhenAspNetCoreUrlsInvalid_ShouldExitWithError);
+        string originalEnvValue = Environment.GetEnvironmentVariable(ASPNETCORE_URLS_NAME);
 
         // Arrange
         Environment.SetEnvironmentVariable(ASPNETCORE_URLS_NAME, ASPNETCORE_URLS_INVALID_VALUE);
@@ -38,5 +39,8 @@ public class EnvironmentTests
         // Assert
         Assert.AreEqual(-1, Environment.ExitCode);
         StringAssert.Contains(consoleOutput.ToString(), ASPNETCORE_URLS_NAME, StringComparison.Ordinal);
+
+        // Cleanup
+        Environment.SetEnvironmentVariable(ASPNETCORE_URLS_NAME, originalEnvValue);
     }
 }

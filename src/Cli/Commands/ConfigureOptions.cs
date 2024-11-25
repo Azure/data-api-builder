@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using CommandLine;
@@ -35,6 +36,12 @@ namespace Cli.Commands
             bool? runtimeRestRequestBodyStrict = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            HostMode? runtimeHostMode = null,
+            IEnumerable<string>? runtimeHostCorsOrigins = null,
+            bool? runtimeHostCorsAllowCredentials = null,
+            string? runtimeHostAuthenticationProvider = null,
+            string? runtimeHostAuthenticationJwtAudience = null,
+            string? runtimeHostAuthenticationJwtIssuer = null,
             string? config = null)
             : base(config)
         {
@@ -58,6 +65,13 @@ namespace Cli.Commands
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            // Host
+            RuntimeHostMode = runtimeHostMode;
+            RuntimeHostCorsOrigins = runtimeHostCorsOrigins;
+            RuntimeHostCorsAllowCredentials = runtimeHostCorsAllowCredentials;
+            RuntimeHostAuthenticationProvider = runtimeHostAuthenticationProvider;
+            RuntimeHostAuthenticationJwtAudience = runtimeHostAuthenticationJwtAudience;
+            RuntimeHostAuthenticationJwtIssuer = runtimeHostAuthenticationJwtIssuer;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -107,6 +121,24 @@ namespace Cli.Commands
 
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
+
+        [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
+        public HostMode? RuntimeHostMode { get; }
+
+        [Option("runtime.host.cors.origins", Required = false, HelpText = "Overwrite Allowed Origins in CORS. Default: [] (Space separated array of strings).")]
+        public IEnumerable<string>? RuntimeHostCorsOrigins { get; }
+
+        [Option("runtime.host.cors.allow-credentials", Required = false, HelpText = "Set value for Access-Control-Allow-Credentials header in Host.Cors. Default: false (boolean).")]
+        public bool? RuntimeHostCorsAllowCredentials { get; }
+
+        [Option("runtime.host.authentication.provider", Required = false, HelpText = "Configure the name of authentication provider. Default: StaticWebApps.")]
+        public string? RuntimeHostAuthenticationProvider { get; }
+
+        [Option("runtime.host.authentication.jwt.audience", Required = false, HelpText = "Configure the intended recipient(s) of the Jwt Token.")]
+        public string? RuntimeHostAuthenticationJwtAudience { get; }
+
+        [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
+        public string? RuntimeHostAuthenticationJwtIssuer { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

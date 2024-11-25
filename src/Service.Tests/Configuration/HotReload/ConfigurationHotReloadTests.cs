@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -23,6 +24,7 @@ public class ConfigurationHotReloadTests
     private static TestServer _testServer;
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
+    private static StringWriter _writer;
     internal const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     internal const string GQL_QUERY_NAME = "books";
 
@@ -40,6 +42,7 @@ public class ConfigurationHotReloadTests
 
     private static void GenerateConfigFile(
         DatabaseType databaseType = DatabaseType.MSSQL,
+        string sessionContext = "true",
         string connectionString = "",
         string restPath = "rest",
         string restEnabled = "true",
@@ -61,7 +64,7 @@ public class ConfigurationHotReloadTests
                     ""data-source"": {
                         ""database-type"": """ + databaseType + @""",
                         ""options"": {
-                            ""set-session-context"": true
+                            ""set-session-context"": " + sessionContext + @"
                         },
                         ""connection-string"": """ + connectionString + @"""
                     },
@@ -298,5 +301,163 @@ public class ConfigurationHotReloadTests
 
         // Assert
         Assert.AreEqual(HttpStatusCode.NotFound, gQLResult.StatusCode);
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file by saving a new session-context and connection string.
+    /// Validate that the response from the server is correct, by ensuring that the session-context
+    /// inside the DataSource parameter is different from the session-context before hot reload.
+    /// By asserting that hot reload worked properly for the session-context it also implies that
+    /// the new connection string with additional parameters is also valid.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigDataSource()
+    {
+        // Arrange
+        RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
+        MsSqlOptions previousSessionContext = previousRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
+
+        // String has additions that are not in original connection string
+        string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}" + "Trusted_Connection=True;";
+
+        // Act
+        GenerateConfigFile(
+            sessionContext: "false",
+            connectionString: expectedConnectionString);
+        System.Threading.Thread.Sleep(3000);
+
+        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
+        MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
+        JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+            _testClient,
+            _configProvider,
+            GQL_QUERY_NAME,
+            GQL_QUERY);
+
+        // Assert
+        Assert.AreNotEqual(previousSessionContext, actualSessionContext);
+        Assert.AreEqual(false, actualSessionContext.SetSessionContext);
+        SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file so that it changes from one connection string
+    /// to an invalid connection string, then it hot reloads once more to the original
+    /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigConnectionString()
+    {
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
+        string failedKeyWord = "Unable to hot reload configuration file due to";
+        string succeedKeyWord = "Validated hot-reloaded configuration file";
+
+        // Act
+        // Hot Reload should fail here
+        GenerateConfigFile(
+            connectionString: $"WrongConnectionString");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(failedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload was not able to validate properly
+        string failedConfigLog = $"{_writer.ToString()}";
+        _writer.GetStringBuilder().Clear();
+
+        // Hot Reload should succeed here
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(succeedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload validated properly
+        string succeedConfigLog = $"{_writer.ToString()}";
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+
+        // Assert
+        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
+        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// /// (Warning: This test only currently works in the pipeline due to constrains of not
+    /// being able to change from one database type to another, under normal circumstances
+    /// hot reload allows changes from one database type to another)
+    /// Hot reload the configuration file so that it changes from one database type to another.
+    /// Then it hot reloads once more to the original database type. We assert that the
+    /// first reload fails while the second one succeeds.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigDatabaseType()
+    {
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
+        string failedKeyWord = "Unable to hot reload configuration file due to";
+        string succeedKeyWord = "Validated hot-reloaded configuration file";
+
+        // Act
+        // Hot Reload should fail here
+        GenerateConfigFile(
+            databaseType: DatabaseType.PostgreSQL,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(failedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload was not able to validate properly
+        string failedConfigLog = $"{_writer.ToString()}";
+        _writer.GetStringBuilder().Clear();
+
+        // Hot Reload should succeed here
+        GenerateConfigFile(
+            databaseType: DatabaseType.MSSQL,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(succeedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload validated properly
+        string succeedConfigLog = $"{_writer.ToString()}";
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+
+        // Assert
+        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
+        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
+    {
+        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(pollingInterval);
+        }
+
+        throw new TimeoutException("The condition was not met within the timeout period.");
     }
 }

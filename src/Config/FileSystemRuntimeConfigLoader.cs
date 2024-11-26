@@ -239,6 +239,19 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 // mode in the new RuntimeConfig since we do not support hot-reload of the mode.
                 if (isDevMode is not null && config.Runtime is not null && config.Runtime.Host is not null)
                 {
+                    // Log error when the mode is changed during hot-reload. 
+                    if (isDevMode.Value && HostMode.Production.Equals(config.Runtime.Host.Mode))
+                    {
+                        if (logger is null)
+                        {
+                            Console.WriteLine("Hot-reload doesn't support switching to Production mode. Please restart the service to switch the mode.");
+                        }
+                        else
+                        {
+                            logger.LogError("Hot-reload doesn't support switching to Production mode. Please restart the service to switch the mode.");
+                        }
+                    }
+
                     config.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;
                 }
 

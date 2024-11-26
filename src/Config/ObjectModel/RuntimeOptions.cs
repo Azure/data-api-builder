@@ -10,7 +10,7 @@ public record RuntimeOptions
 {
     public RestRuntimeOptions? Rest { get; init; }
     public GraphQLRuntimeOptions? GraphQL { get; init; }
-    public HostOptions? Host { get; init; }
+    public HostOptions? Host { get; set; }
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
     public EntityCacheOptions? Cache { get; init; }

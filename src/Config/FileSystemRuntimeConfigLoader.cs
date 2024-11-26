@@ -164,9 +164,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         try
         {
-            if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+            if (RuntimeConfig is not null)
             {
-                HotReloadConfig();
+                HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
             }
         }
         catch (Exception ex)
@@ -190,7 +190,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         string path,
         [NotNullWhen(true)] out RuntimeConfig? config,
         bool replaceEnvVar = false,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        bool? isDevMode = null)
     {
         if (_fileSystem.File.Exists(path))
         {
@@ -233,6 +234,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 }
 
                 config = RuntimeConfig;
+
+                // When isDevMode is not null it means we are in a hot-reload scenario, and need to save the previous
+                // mode in the new RuntimeConfig since we do not support hot-reload of the mode.
+                if (isDevMode is not null && config.Runtime is not null && config.Runtime.Host is not null)
+                {
+                    config.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;
+                }
 
                 if (LastValidRuntimeConfig is null)
                 {
@@ -281,7 +289,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    private void HotReloadConfig(ILogger? logger = null)
+    private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
         if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true))

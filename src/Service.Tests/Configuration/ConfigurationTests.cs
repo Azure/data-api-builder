@@ -470,6 +470,11 @@ type Moon {
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
+            if (File.Exists(CUSTOM_CONFIG_FILENAME))
+            {
+                File.Delete(CUSTOM_CONFIG_FILENAME);
+            }
+
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 

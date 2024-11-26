@@ -1961,7 +1961,7 @@ namespace Cli
                 Enabled: options.OpenTelemetryEnabled is CliBool.True ? true : false,
                 Endpoint: options.OpenTelemetryEndpoint,
                 Headers: options.OpenTelemetryHeaders,
-                ExporterProtocol: options.OpenTelemetryOtlpExportProtocol,
+                ExporterProtocol: options.OpenTelemetryExportProtocol,
                 ServiceName: options.OpenTelemetryServiceName
             );
 #endif

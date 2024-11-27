@@ -31,7 +31,7 @@ public record HostOptions
     public AuthenticationOptions? Authentication { get; init; }
 
     [JsonPropertyName("mode")]
-    public HostMode Mode { get; init; }
+    public HostMode Mode { get; set; }
 
     [JsonPropertyName("max-response-size-mb")]
     public int? MaxResponseSizeMB { get; init; } = null;

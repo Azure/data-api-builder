@@ -525,13 +525,13 @@ public class AuthorizationResolver : IAuthorizationResolver
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => int.Parse(claim.Value))));
                         break;
                     // Per Microsoft Docs: UInt32's CLS compliant alternative is Integer64
-                    // https://learn.microsoft.com/dotnet/api/system.uint32?view=net-6.0#remarks
+                    // https://learn.microsoft.com/dotnet/api/system.uint32#remarks
                     case ClaimValueTypes.UInteger32:
                     case ClaimValueTypes.Integer64:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => long.Parse(claim.Value))));
                         break;
                     // Per Microsoft Docs: UInt64's CLS compliant alternative is decimal
-                    // https://learn.microsoft.com/dotnet/api/system.uint64?view=net-6.0#remarks
+                    // https://learn.microsoft.com/dotnet/api/system.uint64#remarks
                     case ClaimValueTypes.UInteger64:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => decimal.Parse(claim.Value))));
                         break;

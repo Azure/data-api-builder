@@ -185,10 +185,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <param name="logger">ILogger for logging errors.</param>
+    /// <param name="isDevMode">When not null indicates we need to overwrite mode and how to do so.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,
-        [NotNullWhen(true)] out RuntimeConfig? config,
+        [NotNullWhen(true)] out RuntimeConfig? outConfig,
         bool replaceEnvVar = false,
         ILogger? logger = null,
         bool? isDevMode = null)
@@ -233,27 +234,27 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
 
-                config = RuntimeConfig;
-
                 // When isDevMode is not null it means we are in a hot-reload scenario, and need to save the previous
                 // mode in the new RuntimeConfig since we do not support hot-reload of the mode.
-                if (isDevMode is not null && config.Runtime is not null && config.Runtime.Host is not null)
+                if (isDevMode is not null && RuntimeConfig.Runtime is not null && RuntimeConfig.Runtime.Host is not null)
                 {
                     // Log error when the mode is changed during hot-reload. 
-                    if (isDevMode.Value && HostMode.Production.Equals(config.Runtime.Host.Mode))
+                    if (isDevMode != this.RuntimeConfig.IsDevelopmentMode() )
                     {
                         if (logger is null)
                         {
-                            Console.WriteLine("Hot-reload doesn't support switching to Production mode. Please restart the service to switch the mode.");
+                            Console.WriteLine("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
                         }
                         else
                         {
-                            logger.LogError("Hot-reload doesn't support switching to Production mode. Please restart the service to switch the mode.");
+                            logger.LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
                         }
                     }
 
-                    config.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;
+                    RuntimeConfig.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;
                 }
+
+                outConfig = RuntimeConfig;
 
                 if (LastValidRuntimeConfig is null)
                 {
@@ -268,7 +269,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 RuntimeConfig = LastValidRuntimeConfig;
             }
 
-            config = null;
+            outConfig = null;
             return false;
         }
 

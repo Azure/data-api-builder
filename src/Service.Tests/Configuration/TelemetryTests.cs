@@ -168,7 +168,7 @@ public class TelemetryTests
         List<ITelemetry> telemetryItems = ((CustomTelemetryChannel)telemetryChannel).GetTelemetryItems();
 
         // Assert that we are not sending any Traces/Requests/Exceptions to Telemetry
-        Assert.IsTrue(telemetryItems.IsNullOrEmpty());
+        Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(telemetryItems));
     }
 
     /// <summary>

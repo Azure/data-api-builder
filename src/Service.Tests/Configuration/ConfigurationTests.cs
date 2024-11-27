@@ -1389,7 +1389,7 @@ type Moon {
 
             configValidator.ValidateRelationshipConfigCorrectness(configProvider.GetConfig());
             await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
-            Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(configValidator.ConfigValidationExceptions));
         }
 
         /// <summary>
@@ -1574,7 +1574,7 @@ type Moon {
 
             JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
-            Assert.IsTrue(result.ValidationErrors.IsNullOrEmpty());
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             schemaValidatorLogger.Verify(
                 x => x.Log(
                     LogLevel.Information,

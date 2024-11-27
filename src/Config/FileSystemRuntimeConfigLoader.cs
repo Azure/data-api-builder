@@ -239,7 +239,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 if (isDevMode is not null && RuntimeConfig.Runtime is not null && RuntimeConfig.Runtime.Host is not null)
                 {
                     // Log error when the mode is changed during hot-reload. 
-                    if (isDevMode != this.RuntimeConfig.IsDevelopmentMode() )
+                    if (isDevMode != this.RuntimeConfig.IsDevelopmentMode())
                     {
                         if (logger is null)
                         {
@@ -283,7 +283,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             logger.LogError(message: errorMessage, path);
         }
 
-        config = null;
+        outConfig = null;
         return false;
     }
 
@@ -348,11 +348,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             index++)
         {
             if (!string.IsNullOrWhiteSpace(environmentPrecedence[index])
-               // The last index is for the default case - the last fallback option
-               // where environmentPrecedence[index] is string.Empty
-               // for that case, we still need to get the file name considering overrides
-               // so need to do an OR on the last index here
-               || index == environmentPrecedence.Length - 1)
+                // The last index is for the default case - the last fallback option
+                // where environmentPrecedence[index] is string.Empty
+                // for that case, we still need to get the file name considering overrides
+                // so need to do an OR on the last index here
+                || index == environmentPrecedence.Length - 1)
             {
                 configFileNameWithExtension = GetFileName(environmentPrecedence[index], considerOverrides);
             }

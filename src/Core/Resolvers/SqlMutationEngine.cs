@@ -1423,7 +1423,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryParameters,
                 queryExecutor.ExtractResultSetFromDbDataReader,
                 GetHttpContext(),
-                exposedColumnNames.IsNullOrEmpty() ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
+                EnumerableUtilities.IsNullOrEmpty(exposedColumnNames) ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
                 dataSourceName);
 
             dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;

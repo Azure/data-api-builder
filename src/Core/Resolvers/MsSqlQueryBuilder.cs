@@ -421,7 +421,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private string Build(LabelledColumn column, string columnPrefix)
         {
-            if (columnPrefix.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(columnPrefix))
             {
                 return $"{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
             }

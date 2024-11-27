@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
@@ -609,7 +610,7 @@ namespace Cli
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
-            dbOptions = dbOptions.IsNullOrEmpty() ? null : dbOptions;
+            dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
             DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 

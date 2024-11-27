@@ -2359,8 +2359,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="isolationLevel">Transaction isolation level</param>
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope"/>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields" />
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-8.0#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-8.0#fields" />
         /// <returns>TransactionScope object set at the specified isolation level</returns>
         private static TransactionScope ConstructTransactionScopeWithSpecifiedIsolationLevel(System.Transactions.IsolationLevel isolationLevel)
         {

@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 throw new DataApiBuilderException(
                     message: $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: " +
-                    $"https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0",
+                    $"https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-8.0",
                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }

@@ -49,7 +49,7 @@ public class SimulatorAuthenticationHandler : AuthenticationHandler<Authenticati
     /// authenticated user.
     /// </summary>
     /// <seealso cref="https://github.com/microsoft/referencesource/blob/master/mscorlib/system/security/claims/ClaimsIdentity.cs"/>
-    /// <seealso cref="https://github.com/dotnet/aspnetcore/blob/v6.0.10/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs"/>
+    /// <seealso cref="https://github.com/dotnet/aspnetcore/blob/v8.0.10/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs"/>
     /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {

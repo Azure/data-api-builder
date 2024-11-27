@@ -60,7 +60,7 @@ public class RuntimeConfigProvider
     /// </summary>
     /// <seealso cref="https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Configuration/src/ConfigurationProvider.cs">
     /// Example usage of Interlocked.Exchange(...) to refresh change token.</seealso>
-    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange?view=net-8.0">
+    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange">
     /// Sets a variable to a specified value as an atomic operation.
     /// </seealso>
     private void RaiseChanged()

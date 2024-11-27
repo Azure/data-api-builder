@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             // Create SqlError object.
             // For details on what the parameters stand for please refer:
-            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number?view=dotnet-plat-ext-6.0#examples
+            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number#examples
             SqlError sqlError = (nineParamsConstructor
                 .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, null }) as SqlError)!;
             errorList.Add(sqlError);

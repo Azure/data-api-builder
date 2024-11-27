@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                                         // Lifetime
                                         ValidateLifetime = true,
                                         // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
-                                        // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-8.0#remarks
+                                        // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
                                         RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                                     };
                                 });

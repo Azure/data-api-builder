@@ -10,13 +10,12 @@ param (
 )
 
 $BuildRoot = Split-Path $PSScriptRoot -Parent
-$dotnetTargetFrameworks = "net6.0", "net8.0"
+$dotnetTargetFrameworks = "net8.0"
 $RIDs = "win-x64", "linux-x64", "osx-x64"
 
 # Runs dotnet publish for each target framework and RID.
 # Example results:
 # \dotnetpublishout\publish\Release\net8.0\win-x64\dab
-# \dotnetpublishout\publish\Release\net6.0\win-x64\dab
 if ($Package)
 {
     foreach ($targetFramework in $dotnetTargetFrameworks)
@@ -32,7 +31,6 @@ if ($Package)
 # Zips the published output for each target framework and RID.
 # For example:
 # \dotnetpublishout\publish\Release\net8.0\win-x64\dab_net8.0_win-x64-0.14.123-rc.zip
-# \dotnetpublishout\publish\Release\net6.0\win-x64\dab_net6.0_win-x64-0.14.123-rc.zip
 if ($CreateZip)
 {
     foreach ($targetFramework in $dotnetTargetFrameworks)

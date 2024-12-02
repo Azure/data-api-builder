@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 using System;
 using System.IO;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -104,4 +103,3 @@ public class OpenTelemetryTests
         Assert.IsNull(meterProvider, "MeterProvider should not be registered.");
     }
 }
-#endif

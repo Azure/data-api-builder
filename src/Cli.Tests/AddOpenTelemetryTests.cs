@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 // using System.Collections.Generic;
 // using System.IO.Abstractions.TestingHelpers;
 // using System.Threading.Tasks;
@@ -173,4 +172,3 @@ namespace Cli.Tests
             ""telemetry"": {}";
     }
 }
-#endif

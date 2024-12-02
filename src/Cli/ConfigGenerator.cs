@@ -1944,20 +1944,17 @@ namespace Cli
                 _logger.LogError("Invalid Application Insights connection string provided.");
                 return false;
             }
-#if NET8_0_OR_GREATER
             if (options.OpenTelemetryEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.OpenTelemetryEndpoint))
             {
                 _logger.LogError("Invalid OTEL endpoint provided.");
                 return false;
             }
-#endif
 
             ApplicationInsightsOptions applicationInsightsOptions = new(
                 Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
                 ConnectionString: options.AppInsightsConnString
             );
 
-#if NET8_0_OR_GREATER
             OpenTelemetryOptions openTelemetryOptions = new(
                 Enabled: options.OpenTelemetryEnabled is CliBool.True ? true : false,
                 Endpoint: options.OpenTelemetryEndpoint,
@@ -1965,9 +1962,7 @@ namespace Cli
                 ExporterProtocol: options.OpenTelemetryExportProtocol,
                 ServiceName: options.OpenTelemetryServiceName
             );
-#endif
 
-#if NET8_0_OR_GREATER
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with
@@ -1977,7 +1972,6 @@ namespace Cli
                         : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions }
                 }
             };
-#else
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with
@@ -1987,7 +1981,6 @@ namespace Cli
                         : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
                 }
             };
-#endif
 
             return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }

@@ -42,12 +42,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-#if NET8_0_OR_GREATER
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-#endif
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -60,10 +58,7 @@ namespace Azure.DataApiBuilder.Service
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
         public static bool IsLogLevelOverriddenByCli;
-
-#if NET8_0_OR_GREATER
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
-#endif
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
@@ -113,7 +108,7 @@ namespace Azure.DataApiBuilder.Service
                 services.AddApplicationInsightsTelemetry();
                 services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
             }
-#if NET8_0_OR_GREATER
+
             if (runtimeConfigAvailable
                 && runtimeConfig?.Runtime?.Telemetry?.OpenTelemetry is not null
                 && runtimeConfig.Runtime.Telemetry.OpenTelemetry.Enabled)
@@ -145,7 +140,7 @@ namespace Azure.DataApiBuilder.Service
                         });
                 });
             }
-#endif
+
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);

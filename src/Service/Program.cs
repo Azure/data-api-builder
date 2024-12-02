@@ -14,11 +14,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
-#if NET8_0_OR_GREATER
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
-#endif
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -153,7 +151,7 @@ namespace Azure.DataApiBuilder.Service
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
                     }
-#if NET8_0_OR_GREATER
+
                     if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
                     {
                         builder.AddOpenTelemetry(logging =>
@@ -169,7 +167,7 @@ namespace Azure.DataApiBuilder.Service
                             });
                         });
                     }
-#endif
+
                     builder.AddConsole();
                 });
         }

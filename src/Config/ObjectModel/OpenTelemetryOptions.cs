@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 using OpenTelemetry.Exporter;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -8,4 +7,3 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </summary>
 public record OpenTelemetryOptions(bool Enabled = false, string? Endpoint = null, string? Headers = null, OtlpExportProtocol? ExporterProtocol = null, string? ServiceName = null)
 { }
-#endif

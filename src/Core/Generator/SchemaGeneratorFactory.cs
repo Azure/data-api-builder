@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Generator.Sampler;
@@ -55,47 +57,78 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new ArgumentException($"Config file passed is not compatible with this feature. Please make sure datasource type is configured as {DatabaseType.CosmosDB_NoSQL}");
             }
 
+            HashSet<string> dbAndContainerToProcess = new();
             string? connectionString = config.DataSource?.ConnectionString;
-            string? databaseName = config.DataSource?.Options?["database"]?.ToString();
-            string? containerName = config.DataSource?.Options?["container"]?.ToString();
+            string? globalDatabaseName = config.DataSource?.Options?["database"]?.ToString();
+            string? globalContainerName = config.DataSource?.Options?["container"]?.ToString();
 
-            if (connectionString == null || databaseName == null || containerName == null)
+            if (!string.IsNullOrEmpty(globalDatabaseName) && !string.IsNullOrEmpty(globalContainerName))
             {
-                logger.LogError("Connection String, Database and container name must be provided in the config file");
-                throw new ArgumentException("Connection String, Database and container name must be provided in the config file");
+                dbAndContainerToProcess.Add($"{globalDatabaseName}.{globalContainerName}");
             }
 
-            logger.LogInformation("Connecting to Cosmos DB Database: {0}, Container: {1}", databaseName, containerName);
-
-            // Connect to the Azure Cosmos DB container.
-            Container container = ConnectToCosmosDB(connectionString, databaseName, containerName);
-            SamplingModes samplingMode = (SamplingModes)Enum.Parse(typeof(SamplingModes), mode);
-
-            // Determine the appropriate sampler based on the sampling mode.
-            ISchemaGeneratorSampler schemaGeneratorSampler = samplingMode switch
+            foreach (KeyValuePair<string, Entity> entity in config.Entities)
             {
-                SamplingModes.TopNExtractor => new TopNExtractor(container, sampleCount, days, logger),
-                SamplingModes.EligibleDataSampler => new EligibleDataSampler(container, partitionKeyPath, sampleCount, days, logger),
-                SamplingModes.TimePartitionedSampler => new TimePartitionedSampler(container, groupCount, sampleCount, days, logger),
-                _ => throw new ArgumentException($"Invalid sampling mode: {mode}, Valid Sampling Modes are: {SamplingModes.TopNExtractor}, {SamplingModes.EligibleDataSampler}, {SamplingModes.TimePartitionedSampler}")
-            };
-
-            logger.LogInformation("Sampling Started using {0}", schemaGeneratorSampler.GetType().Name);
-
-            // Get sample data from the selected sampler.
-            List<JsonDocument> dataArray = await schemaGeneratorSampler.GetSampleAsync();
-
-            logger.LogInformation("{0} records collected as Sample", dataArray.Count);
-            if (dataArray.Count == 0)
-            {
-                logger.LogError("No data was sampled. Please try a different sampling mode or provide different sampling options.");
-                throw new ArgumentException("No data was sampled. Please try a different sampling mode or provide different sampling options.");
+                dbAndContainerToProcess.Add(entity.Value.Source.Object);
             }
 
-            logger.LogInformation("GraphQL schema generation started.");
+            if (connectionString == null)
+            {
+                logger.LogError("Connection String name must be provided in the config file");
+                throw new ArgumentException("Connection String must be provided in the config file");
+            }
+
+            List<JsonDocument> dataArray = new();
+            StringBuilder schema = new();
+            foreach (string dbAndContainer in dbAndContainerToProcess)
+            {
+                if (string.IsNullOrEmpty(dbAndContainer))
+                {
+                    continue;
+                }
+
+                string[] dbContainer = dbAndContainer.Split('.');
+                if (dbContainer.Length != 2)
+                {
+                    logger.LogError("Invalid Database and Container Name provided in the config file");
+                    throw new ArgumentException("Invalid Database and Container Name provided in the config file");
+                }
+
+                logger.LogInformation("Connecting to Cosmos DB Database: {0}, Container: {1}", dbContainer[0], dbContainer[1]);
+
+                // Connect to the Azure Cosmos DB container.
+                Container container = ConnectToCosmosDB(connectionString, dbContainer[0], dbContainer[1]);
+                SamplingModes samplingMode = (SamplingModes)Enum.Parse(typeof(SamplingModes), mode);
+
+                // Determine the appropriate sampler based on the sampling mode.
+                ISchemaGeneratorSampler schemaGeneratorSampler = samplingMode switch
+                {
+                    SamplingModes.TopNExtractor => new TopNExtractor(container, sampleCount, days, logger),
+                    SamplingModes.EligibleDataSampler => new EligibleDataSampler(container, partitionKeyPath, sampleCount, days, logger),
+                    SamplingModes.TimePartitionedSampler => new TimePartitionedSampler(container, groupCount, sampleCount, days, logger),
+                    _ => throw new ArgumentException($"Invalid sampling mode: {mode}, Valid Sampling Modes are: {SamplingModes.TopNExtractor}, {SamplingModes.EligibleDataSampler}, {SamplingModes.TimePartitionedSampler}")
+                };
+
+                logger.LogInformation("Sampling Started using {0}", schemaGeneratorSampler.GetType().Name);
+
+                // Get sample data from the selected sampler.
+                dataArray.AddRange(await schemaGeneratorSampler.GetSampleAsync());
+
+                logger.LogInformation("{0} records collected as Sample", dataArray.Count);
+                if (dataArray.Count == 0)
+                {
+                    logger.LogError("No data was sampled. Please try a different sampling mode or provide different sampling options.");
+                    throw new ArgumentException("No data was sampled. Please try a different sampling mode or provide different sampling options.");
+                }
+
+                logger.LogInformation("GraphQL schema generation started.");
+
+                string generatedSchema = SchemaGenerator.Generate(dataArray, container.Id, config);
+                schema.AppendLine(generatedSchema);
+            }
 
             // Generate and return the GraphQL schema based on the sampled data.
-            return SchemaGenerator.Generate(dataArray, container.Id, config);
+            return schema.ToString();
         }
 
         /// <summary>

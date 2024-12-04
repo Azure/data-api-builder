@@ -113,13 +113,10 @@ namespace Cli
                 schemaText = exporter.ExportGraphQLFromDabService(runtimeConfig, logger);
             }
 
-            if (!string.IsNullOrEmpty(schemaText))
-            {
-                // Write the schema content to a file
-                WriteSchemaFile(options, fileSystem, schemaText, logger);
+            // Write the schema content to a file
+            WriteSchemaFile(options, fileSystem, schemaText, logger);
 
-                logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
-            }
+            logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
         }
 
         /// <summary>

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;

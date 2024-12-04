@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <param name="gqlFilePath">Path to the directory containing the expected GraphQL schema file.</param>
         /// <param name="useConfigFilePath">Boolean flag indicating whether to use a runtime configuration file.</param>
         [TestMethod]
-       // [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema", false)]
+        [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema", false)]
         [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema", true)]
         public void TestSchemaGeneratorUsingMultipleJson(string jsonFilePath, string gqlFilePath, bool useConfigFilePath)
         {

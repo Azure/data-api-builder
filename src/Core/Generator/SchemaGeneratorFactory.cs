@@ -56,11 +56,17 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new ArgumentException($"Config file passed is not compatible with this feature. Please make sure datasource type is configured as {DatabaseType.CosmosDB_NoSQL}");
             }
 
-            HashSet<string> dbAndContainerToProcess = new();
             string? connectionString = config.DataSource?.ConnectionString;
             string? globalDatabaseName = config.DataSource?.Options?["database"]?.ToString();
             string? globalContainerName = config.DataSource?.Options?["container"]?.ToString();
 
+            if (string.IsNullOrEmpty(connectionString) || string.IsNullOrEmpty(globalDatabaseName))
+            {
+                logger.LogError("Connection String and Database name must be provided in the config file");
+                throw new ArgumentException("Connection String must be provided in the config file");
+            }
+
+            HashSet<string> dbAndContainerToProcess = new();
             if (!string.IsNullOrEmpty(globalDatabaseName) && !string.IsNullOrEmpty(globalContainerName))
             {
                 dbAndContainerToProcess.Add($"{globalDatabaseName}.{globalContainerName}");
@@ -71,17 +77,11 @@ namespace Azure.DataApiBuilder.Core.Generator
                 dbAndContainerToProcess.Add(entity.Value.Source.Object);
             }
 
-            if (connectionString == null)
-            {
-                logger.LogError("Connection String name must be provided in the config file");
-                throw new ArgumentException("Connection String must be provided in the config file");
-            }
-
             List<JsonDocument> dataArray = new();
             StringBuilder schema = new();
             foreach (string dbAndContainer in dbAndContainerToProcess)
             {
-                if (string.IsNullOrEmpty(dbAndContainer))
+                if (string.IsNullOrEmpty(dbAndContainer)) // Safety check
                 {
                     continue;
                 }
@@ -122,8 +122,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
                 logger.LogInformation("GraphQL schema generation started.");
 
-                string generatedSchema = SchemaGenerator.Generate(dataArray, container.Id, config);
-                schema.AppendLine(generatedSchema);
+                schema.AppendLine(SchemaGenerator.Generate(dataArray, container.Id, config));
             }
 
             // Generate and return the GraphQL schema based on the sampled data.

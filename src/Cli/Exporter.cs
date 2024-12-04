@@ -181,7 +181,7 @@ namespace Cli
             return node.ToString();
         }
 
-        private static async Task<string> ExportGraphQLFromCosmosDB(ExportOptions options, RuntimeConfig runtimeConfig, ILogger logger)
+        internal static async Task<string> ExportGraphQLFromCosmosDB(ExportOptions options, RuntimeConfig runtimeConfig, ILogger logger)
         {
             // Generate the schema from Azure Cosmos DB database
             logger.LogInformation("Generating schema from the Azure Cosmos DB database using {0}", options.SamplingMode);

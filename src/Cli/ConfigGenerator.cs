@@ -144,9 +144,23 @@ namespace Cli
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
-                    if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(cosmosContainer))
+
+                    if (string.IsNullOrEmpty(graphQLSchemaPath) && string.IsNullOrEmpty(cosmosDatabase) && string.IsNullOrEmpty(cosmosContainer))
                     {
-                        _logger.LogError("Missing mandatory configuration options for CosmosDB_NoSql: --cosmosdb_nosql-database and --cosmosdb_nosql-container");
+                        _logger.LogError("Missing mandatory configuration options for CosmosDB_NoSql: needs either --cosmosdb_nosql-container or --graphql-schema along with --cosmosdb_nosql-database)");
+                        return false;
+                    }
+
+                    if (!string.IsNullOrEmpty(graphQLSchemaPath) && string.IsNullOrEmpty(cosmosDatabase))
+                    {
+                        // If schema is provided, database is mandatory
+                        _logger.LogError("Missing mandatory configuration option for CosmosDB_NoSql: --cosmosdb_nosql-database");
+                        return false;
+                    }
+
+                    else if (!string.IsNullOrEmpty(graphQLSchemaPath) && !fileSystem.File.Exists(graphQLSchemaPath))
+                    {
+                        _logger.LogError("GraphQL Schema File: {graphQLSchemaPath} not found. Please either provide your schema or re-run this command without --graphql-schema, so that, you can generate the schema using the `export` command before running `dab start`. For more detail, run 'dab export --help`  ", graphQLSchemaPath);
                         return false;
                     }
 
@@ -155,11 +169,6 @@ namespace Cli
                         graphQLSchemaPath = "schema.gql"; // Default to schema.gql
 
                         _logger.LogWarning("The GraphQL schema path, i.e. --graphql-schema, is not specified. Please either provide your schema or generate the schema using the `export` command before running `dab start`. For more detail, run 'dab export --help` ");
-                    }
-                    else if (!fileSystem.File.Exists(graphQLSchemaPath))
-                    {
-                        _logger.LogError("GraphQL Schema File: {graphQLSchemaPath} not found. Please either provide your schema or re-run this command without --graphql-schema, so that, you can generate the schema using the `export` command before running `dab start`. For more detail, run 'dab export --help`  ", graphQLSchemaPath);
-                        return false;
                     }
 
                     // If the option --rest.path is specified for cosmosdb_nosql, log a warning because

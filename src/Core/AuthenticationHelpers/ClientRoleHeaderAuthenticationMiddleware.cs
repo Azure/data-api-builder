@@ -87,7 +87,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
 
         // Manually set the httpContext.User to the Principal from the AuthenticateResult
         // when we exclude setting a default authentication scheme in Startup.cs AddAuthentication().
-        // https://learn.microsoft.com/aspnet/core/security/authorization/limitingidentitybyscheme?view=aspnetcore-8.0
+        // https://learn.microsoft.com/aspnet/core/security/authorization/limitingidentitybyscheme
         if (authNResult.Succeeded)
         {
             httpContext.User = authNResult.Principal;

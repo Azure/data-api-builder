@@ -20,8 +20,8 @@ namespace Azure.DataApiBuilder.Core.Services
     /// requests still need to be directed to the /graphql endpoint as it is explicitly
     /// used to configure HotChocolate
     /// </summary>
-    /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/write?view=aspnetcore-6.0"/>
-    /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/url-rewriting?view=aspnetcore-6.0#url-redirect-and-url-rewrite"/>
+    /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/write"/>
+    /// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/url-rewriting#url-redirect-and-url-rewrite"/>
     public class PathRewriteMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;

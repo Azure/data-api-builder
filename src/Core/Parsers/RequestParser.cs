@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// </summary>
         /// <param name="context">The RestRequestContext holding the major components of the query.</param>
         /// <param name="sqlMetadataProvider">The SqlMetadataProvider holds many of the components needed to parse the query.</param>
-        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.collections.specialized.namevaluecollection?view=net-6.0#remarks"/>
+        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.collections.specialized.namevaluecollection#remarks"/>
         public static void ParseQueryString(RestRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             foreach (string key in context.ParsedQueryString!.Keys)

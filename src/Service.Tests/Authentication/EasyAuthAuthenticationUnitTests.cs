@@ -63,8 +63,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <param name="name">Expected name to be returned by Identity.Name</param>
         /// <param name="nameClaimType">Defines the ClaimType of the claim used for the return value of Identity.Name </param>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.name?view=net-6.0"/>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.name"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype"/>
         [DataTestMethod]
         [DataRow("NameShortClaimType", "unique_name", DisplayName = "Identity.Name from custom claim name type")]
         [DataRow("NameUriClaimType", ClaimTypes.Name, DisplayName = "Identity.Name from URI claim name type")]
@@ -94,8 +94,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="isInRole">User expected to be in role.</param>
         /// <param name="roleName">Name of role to check in role membership query. </param>
         /// <param name="roleClaimType">Defines the ClaimType of the claim used for the return value of ClaimsPrincpal.IsInRole(roleName)</param>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole"/>
         [DataTestMethod]
         [DataRow(true, "RoleShortClaimType", "roles")]
         [DataRow(false, "RoleUriClaimType", "roles")]
@@ -225,8 +225,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <param name="claimType">string representation of claim type</param>
         /// <param name="claimValue">string representation of claim value</param>
-        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.type?view=net-6.0"/>
-        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.value?view=net-6.0"/>
+        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.type"/>
+        /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.value"/>
         [DataTestMethod]
         [DataRow(null, null, false, DisplayName = "Claim type/value null - not processed")]
         [DataRow("tid", null, false, DisplayName = "Claim value null -  not processed")]

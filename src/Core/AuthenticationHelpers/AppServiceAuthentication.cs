@@ -31,12 +31,12 @@ public static class AppServiceAuthentication
         /// <summary>
         /// The Claim.Type used when obtaining the value of <see cref="ClaimsIdentity.Name"/>.
         /// </summary>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype"/>
         public string? Name_typ { get; set; }
         /// <summary>
         /// The Claim.Type used when performing logic for <see cref="ClaimsPrincipal.IsInRole"/>.
         /// </summary>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype"/>
         public string? Role_typ { get; set; }
         /// <summary>
         /// Collection of claims optionally present.
@@ -82,7 +82,7 @@ public static class AppServiceAuthentication
                 {
                     // When Name_typ and Role_type are null, ClaimsIdentity contructor uses default values.
                     // Auth_typ must not be null or empty for ClaimsIdentity.IsAuthenticated() to be true.
-                    // Whitespace is not a requirement per: https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.isauthenticated?view=net-6.0#remarks
+                    // Whitespace is not a requirement per: https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.isauthenticated#remarks
                     identity = new(principal.Auth_typ, principal.Name_typ, principal.Role_typ);
 
                     if (principal.Claims is not null && principal.Claims.Any())

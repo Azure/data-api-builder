@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// to simulate JWTs with kid claim, which is optional per https://www.rfc-editor.org/rfc/rfc7515.html#section-4.1.4
         /// - Usage of RSA.Create() https://stackoverflow.com/a/42006084/18174950
         /// - Usage of SHA256: Recommended for JWTs per https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
-        /// - Usage of RSASignaturePadding.Pss: https://docs.microsoft.com/dotnet/api/system.security.cryptography.rsasignaturepaddingmode?view=net-6.0#system-security-cryptography-rsasignaturepaddingmode-pss
+        /// - Usage of RSASignaturePadding.Pss: https://docs.microsoft.com/dotnet/api/system.security.cryptography.rsasignaturepaddingmode#system-security-cryptography-rsasignaturepaddingmode-pss
         /// </summary>
         /// <param name="hostName"></param>
         /// <returns></returns>

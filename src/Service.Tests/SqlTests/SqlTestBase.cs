@@ -474,7 +474,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // \u0022 rather than \". And single quote(') will be encoded as \u0027 rather
             // than being left unescaped.
             // More details can be found here:
-            // https://docs.microsoft.com/en-us/dotnet/api/system.text.encodings.web.javascriptencoder.unsaferelaxedjsonescaping?view=net-6.0
+            // https://docs.microsoft.com/en-us/dotnet/api/system.text.encodings.web.javascriptencoder.unsaferelaxedjsonescaping
             JsonSerializerOptions options = new()
             {
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping

@@ -150,7 +150,8 @@ public class ConfigFileWatcherUnitTests
         Assert.AreEqual(updatedGQLEnabled, runtimeConfig.Runtime.GraphQL.Enabled);
         Assert.AreEqual(updatedGQLPath, runtimeConfig.Runtime.GraphQL.Path);
         Assert.AreEqual(updatedGQLIntrospection, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
-        Assert.AreEqual(updatedMode, runtimeConfig.Runtime.Host.Mode);
+        // Mode can not be hot-reloaded.
+        Assert.AreNotEqual(updatedMode, runtimeConfig.Runtime.Host.Mode);
 
         if (File.Exists(configName))
         {

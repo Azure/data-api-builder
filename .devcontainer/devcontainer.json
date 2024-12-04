@@ -1,13 +1,13 @@
 {
-  "name": ".NET 8 with .NET 6",
+  "name": ".NET 8",
   "image": "mcr.microsoft.com/dotnet/sdk:8.0",
   "features": {
     // https://github.com/devcontainers/features/tree/main/src/dotnet
     "ghcr.io/devcontainers/features/dotnet:2": {
       "version": "latest",
-      "dotnetRuntimeVersions": "6.0",
-      "aspNetCoreRuntimeVersions": "6.0",
-      "additionalVersions": "6.0"
+      "dotnetRuntimeVersions": "8.0",
+      "aspNetCoreRuntimeVersions": "8.0",
+      "additionalVersions": "8.0"
     }
   },
   "customizations": {

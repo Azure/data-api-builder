@@ -14,8 +14,7 @@ public record HostOptions
     /// Dab engine can at maximum handle 158 MB of data in a single response from a source.
     /// Json deserialization of a response into a string has a limit of 166,666,666 bytes which when converted to MB is 158 MB.
     /// ref: enforcing code:
-    /// .net8: https://github.com/dotnet/runtime/blob/v6.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Writer/JsonWriterHelper.cs#L80
-    /// .net6: https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Writer/JsonWriterHelper.cs#75
+    /// .net8: https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Writer/JsonWriterHelper.cs#75
     /// ref: Json constant: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Text.Json/src/System/Text/Json/JsonConstants.cs#L80
     /// </summary>
     public const int MAX_RESPONSE_LENGTH_DAB_ENGINE_MB = 158;
@@ -32,7 +31,7 @@ public record HostOptions
     public AuthenticationOptions? Authentication { get; init; }
 
     [JsonPropertyName("mode")]
-    public HostMode Mode { get; init; }
+    public HostMode Mode { get; set; }
 
     [JsonPropertyName("max-response-size-mb")]
     public int? MaxResponseSizeMB { get; init; } = null;

@@ -10,7 +10,7 @@ namespace Azure.DataApiBuilder.Core.Authorization;
 ///    - The client role header maps to a role claim on the authenticated user.
 ///
 /// Implements IAuthorizationRequirement, which is an empty marker interface.
-/// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
+/// https://docs.microsoft.com/aspnet/core/security/authorization/policies#requirements
 /// </summary>
 public class RoleContextPermissionsRequirement : IAuthorizationRequirement { }
 
@@ -20,7 +20,7 @@ public class RoleContextPermissionsRequirement : IAuthorizationRequirement { }
 ///     - The discovered role entry has an entry for the operationtype of the request.
 /// 
 /// Implements IAuthorizationRequirement, which is an empty marker interface.
-/// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
+/// https://docs.microsoft.com/aspnet/core/security/authorization/policies#requirements
 /// </summary>
 public class EntityRoleOperationPermissionsRequirement : IAuthorizationRequirement { }
 
@@ -31,7 +31,7 @@ public class EntityRoleOperationPermissionsRequirement : IAuthorizationRequireme
 /// accessed by the authenticated user.
 ///
 /// Implements IAuthorizationRequirement, which is an empty marker interface.
-/// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
+/// https://docs.microsoft.com/aspnet/core/security/authorization/policies#requirements
 /// </summary>
 public class ColumnsPermissionsRequirement : IAuthorizationRequirement { }
 
@@ -40,6 +40,6 @@ public class ColumnsPermissionsRequirement : IAuthorizationRequirement { }
 ///     - The stored procedure that has been requested to execute is allowed to be accessed by the authenticated user.
 ///
 /// Implements IAuthorizationRequirement, which is an empty marker interface.
-/// https://docs.microsoft.com/aspnet/core/security/authorization/policies?view=aspnetcore-6.0#requirements
+/// https://docs.microsoft.com/aspnet/core/security/authorization/policies#requirements
 /// </summary>
 public class StoredProcedurePermissionsRequirement : IAuthorizationRequirement { }

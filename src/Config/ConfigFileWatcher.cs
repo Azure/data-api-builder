@@ -17,9 +17,9 @@ namespace Azure.DataApiBuilder.Config;
 /// - The file hashing mechanism is a solution suggested by .NET documentation
 /// to handle duplicate events evented for the same file change event.
 /// </summary>
-/// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.onchanged?view=net-8.0#remarks"/>
-/// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.notifyfilter?view=net-8.0"/>
-/// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/change-tokens?view=aspnetcore-8.0#:~:text=exponential%20back%2Doff.-,Utilities/Utilities.cs%3A,-C%23"/>
+/// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.onchanged#remarks"/>
+/// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher.notifyfilter"/>
+/// <seealso cref="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/change-tokens#:~:text=exponential%20back%2Doff.-,Utilities/Utilities.cs%3A,-C%23"/>
 public class ConfigFileWatcher
 {
     /// <summary>

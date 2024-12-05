@@ -53,8 +53,16 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                     string content = await sr.ReadToEndAsync();
 
                     using JsonDocument jsonDocument = JsonDocument.Parse(content);
-                    JsonElement root = jsonDocument.RootElement.GetProperty("Documents");
 
+                    JsonElement root = jsonDocument.RootElement;
+                    if (jsonDocument.RootElement.ValueKind != JsonValueKind.Array)
+                    {
+                        if (!jsonDocument.RootElement.TryGetProperty("Documents", out root))
+                        {
+                            root = jsonDocument.RootElement;
+                        }
+                    }
+                   
                     if (root.ValueKind == JsonValueKind.Array)
                     {
                         foreach (JsonElement element in root.EnumerateArray())

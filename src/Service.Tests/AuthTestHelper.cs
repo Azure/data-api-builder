@@ -20,8 +20,8 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <param name="nameClaimType">Defines the ClaimType of the claim used for the return value of Identity.Name </param>
         /// <param name="roleClaimType">Defines the ClaimType of the claim used for the return value of ClaimsPrincpal.IsInRole(roleName)</param>
         /// <returns>A Base64 encoded string of a serialized EasyAuthClientPrincipal object</returns>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype?view=net-6.0"/>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype?view=net-6.0"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype"/>
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype"/>
         public static string CreateAppServiceEasyAuthToken(
             string? nameClaimType = ClaimTypes.Name,
             string? roleClaimType = ClaimTypes.Role,

@@ -2,18 +2,18 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
+using Azure.Core.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Generator;
-using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Cosmos;
-using System.Net;
-using System.IO;
-using System.Threading;
-using Azure.Core.Serialization;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Mock<ILogger> mockLogger = new();
 
             Mock<Container> mockContainer = new();
-            Mock<FeedIterator> mockIterator = new ();
+            Mock<FeedIterator> mockIterator = new();
             mockContainer
                 .SetupSequence(c => c.GetItemQueryStreamIterator(It.IsAny<QueryDefinition>(), It.IsAny<string>(), It.IsAny<QueryRequestOptions>()))
                 .Returns(mockIterator.Object)
@@ -102,13 +102,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         private static ResponseMessage GetResponse()
         {
-            ResponseMessage message = new (HttpStatusCode.OK);
+            ResponseMessage message = new(HttpStatusCode.OK);
             List<JsonDocument> jsonDocuments = new()
             {
                 JsonDocument.Parse("{\"id\": \"1\", \"name\": \"Test\"}")
             };
 
-            MemoryStream streamPayload = new ();
+            MemoryStream streamPayload = new();
             JsonObjectSerializer systemTextJsonSerializer = new();
             systemTextJsonSerializer.Serialize(streamPayload, jsonDocuments, jsonDocuments.GetType(), default);
             streamPayload.Position = 0;

@@ -1944,6 +1944,7 @@ namespace Cli
                 _logger.LogError("Invalid Application Insights connection string provided.");
                 return false;
             }
+
             if (options.OpenTelemetryEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.OpenTelemetryEndpoint))
             {
                 _logger.LogError("Invalid OTEL endpoint provided.");

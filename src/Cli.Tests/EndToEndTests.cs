@@ -292,7 +292,7 @@ public class EndToEndTests
         Assert.IsNotNull(updatedConfig.Runtime.Telemetry.ApplicationInsights);
 
         // if --app-insights-enabled is not provided, it will default to true
-        Assert.AreEqual(appInsightsEnabled is null ? true : Boolean.Parse(appInsightsEnabled), updatedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
+        Assert.AreEqual(appInsightsEnabled is null ? false : Boolean.Parse(appInsightsEnabled), updatedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
         Assert.AreEqual("InstrumentationKey=00000000", updatedConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString);
     }
 

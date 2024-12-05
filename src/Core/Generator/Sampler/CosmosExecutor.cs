@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                             root = jsonDocument.RootElement;
                         }
                     }
-                   
+
                     if (root.ValueKind == JsonValueKind.Array)
                     {
                         foreach (JsonElement element in root.EnumerateArray())

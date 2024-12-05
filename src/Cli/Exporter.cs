@@ -113,6 +113,12 @@ namespace Cli
                 schemaText = exporter.ExportGraphQLFromDabService(runtimeConfig, logger);
             }
 
+            if (string.IsNullOrEmpty(schemaText))
+            {
+                logger.LogError("Failed to export the GraphQL schema.");
+                return;
+            }
+
             // Write the schema content to a file
             WriteSchemaFile(options, fileSystem, schemaText, logger);
 
@@ -181,7 +187,7 @@ namespace Cli
             return node.ToString();
         }
 
-        internal static async Task<string> ExportGraphQLFromCosmosDB(ExportOptions options, RuntimeConfig runtimeConfig, ILogger logger)
+        private static async Task<string> ExportGraphQLFromCosmosDB(ExportOptions options, RuntimeConfig runtimeConfig, ILogger logger)
         {
             // Generate the schema from Azure Cosmos DB database
             logger.LogInformation("Generating schema from the Azure Cosmos DB database using {0}", options.SamplingMode);

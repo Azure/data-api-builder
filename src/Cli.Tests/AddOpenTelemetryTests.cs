@@ -51,7 +51,7 @@ namespace Cli.Tests
 
             // Add OpenTelemetry
             bool isSuccess = ConfigGenerator.TryAddTelemetry(
-                new AddTelemetryOptions(otelEndpoint: endpoint, otelEnabled: isTelemetryEnabled, config: configPath),
+                new AddTelemetryOptions(openTelemetryEndpoint: endpoint, openTelemetryEnabled: isTelemetryEnabled, config: configPath),
                 new FileSystemRuntimeConfigLoader(fileSystem),
                 fileSystem);
 
@@ -107,7 +107,7 @@ namespace Cli.Tests
 
             // Add OpenTelemetry
             bool isSuccess = ConfigGenerator.TryAddTelemetry(
-                new AddTelemetryOptions(otelEndpoint: "http://localhost:4318", otelEnabled: CliBool.False, config: configPath),
+                new AddTelemetryOptions(openTelemetryEndpoint: "http://localhost:4318", openTelemetryEnabled: CliBool.False, config: configPath),
                 new FileSystemRuntimeConfigLoader(fileSystem),
                 fileSystem);
 

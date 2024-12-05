@@ -391,7 +391,7 @@
                 }
               },
               "required": [
-                "connection-string"
+                "endpoint"
               ]
             }
           }

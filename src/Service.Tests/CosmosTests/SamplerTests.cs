@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [DataRow("/name", 2, 1, 2, DisplayName = "Retrieve 2 records per partition, filtering for 1 day old records.It will return 2 records from 2 partitions")]
         [DataRow("/name", 0, 1, 2, DisplayName = "Retrieve records from 1 day old records per partition with no count limit.It will return 2 records from 2 partitions")]
         [DataRow("/name", null, null, 15, DisplayName = "Retrieve default value of 5 records per partition if count limit is not set. It will return all the records available")]
-        [DataRow(null, 1, 0, 9, DisplayName = "Retrieve 1 record per partition, ignoring day-based filtering when partition key path is not specified. It will identofy the partition and return the correct result")]
+        [DataRow(null, 1, 0, 9, DisplayName = "Retrieve 1 record per partition, ignoring day-based filtering when partition key path is not specified. It will identify the partition and return the correct result")]
         public async Task TestEligibleDataSampler(string partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, int expectedResultCount)
         {
             Mock<EligibleDataSampler> eligibleDataSampler

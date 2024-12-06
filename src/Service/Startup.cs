@@ -515,7 +515,7 @@ namespace Azure.DataApiBuilder.Service
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
                             // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
-                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
+                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
                             RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                         };
                     });

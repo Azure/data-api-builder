@@ -40,7 +40,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -82,7 +81,6 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            // HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
             services.AddSingleton(_hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
@@ -209,11 +207,9 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
-            // Register the factory method for IRequestExecutorResolver
-            services.AddSingleton<Func<IRequestExecutorResolver>>(sp => () => sp.GetRequiredService<IRequestExecutorResolver>());
+
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
             _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
-            // _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(_serviceProvider!));
             
             services.AddFusionCache()
                 .WithOptions(options =>
@@ -300,21 +296,15 @@ namespace Azure.DataApiBuilder.Service
                 .UseDefaultPipeline();
         }
 
+        /// <summary>
+        /// Refreshes the GraphQL schema when the runtime config updates during hot-reload scenario.
+        /// </summary>
         private void RefreshGraphQLSchema(IServiceCollection services)
         {
-            // Clear any previous schema configurations or cached schema
-            services.RemoveAll<IRequestExecutorBuilder>();
-
-            // Re-add GraphQL services with updated configuration
+            // Re-add GraphQL services with updated config.
             RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
+            Console.WriteLine("Updating GraphQL service.");
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
-        }
-
-        private static void EvictGraphQLSchema(IRequestExecutorResolver requestExecutorResolver)
-        {
-            Console.WriteLine("Evicting GraphQL schema." + requestExecutorResolver.ToString());
-            requestExecutorResolver.EvictRequestExecutor();
-            // requestExecutorResolver.GetRequestExecutorAsync();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -461,6 +451,15 @@ namespace Azure.DataApiBuilder.Service
                     ResponseWriter = app.ApplicationServices.GetRequiredService<HealthReportResponseWriter>().WriteResponse
                 });
             });
+        }
+
+        /// <summary>
+        /// Evicts the GraphQL schema from the request executor resolver.
+        /// </summary>
+        private static void EvictGraphQLSchema(IRequestExecutorResolver requestExecutorResolver)
+        {
+            Console.WriteLine("Evicting old GraphQL schema.");
+            requestExecutorResolver.EvictRequestExecutor();
         }
 
         /// <summary>

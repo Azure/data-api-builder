@@ -75,8 +75,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Executed when a hot-reload event occurs. Pulls the latest
-        /// runtimeconfig object from the provider and updates authorization
-        /// rules used by the DAB engine.
+        /// runtimeconfig object from the provider and updates the flag indicating
+        /// whether multiple create operations are enabled, and the entities based on the new config.
         /// </summary>
         protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {

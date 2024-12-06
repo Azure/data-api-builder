@@ -100,9 +100,11 @@ public abstract class RuntimeConfigLoader
         // RuntimeConfig must already be updated and is implied to have been updated by the time
         // this function is called.
         OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
+
+        // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
+        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
     }
 
     /// <summary>

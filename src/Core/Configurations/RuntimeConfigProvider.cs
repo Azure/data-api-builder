@@ -3,12 +3,15 @@
 
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -41,15 +44,70 @@ public class RuntimeConfigProvider
     /// </summary>
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
-    public RuntimeConfigLoader ConfigLoader { get; private set; }
-
-    private ConfigFileWatcher? _configFileWatcher;
-
-    private RuntimeConfig? _runtimeConfig;
+    private RuntimeConfigLoader _configLoader;
+    private DabChangeToken _changeToken = new();
+    private readonly IDisposable _changeTokenRegistration;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
-        ConfigLoader = runtimeConfigLoader;
+        _configLoader = runtimeConfigLoader;
+        _changeTokenRegistration = ChangeToken.OnChange(_configLoader.GetChangeToken, RaiseChanged);
+    }
+
+    /// <summary>
+    /// Swaps out the old change token with a new change token and
+    /// signals that a change has occurred.
+    /// </summary>
+    /// <seealso cref="https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Configuration/src/ConfigurationProvider.cs">
+    /// Example usage of Interlocked.Exchange(...) to refresh change token.</seealso>
+    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange">
+    /// Sets a variable to a specified value as an atomic operation.
+    /// </seealso>
+    private void RaiseChanged()
+    {
+        //First use of GetConfig during hot reload, in order to do validation of
+        //config file before any changes are made for hot reload.
+        //In case validation fails, an exception will be thrown and hot reload will be canceled.
+        ValidateConfig();
+
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
+    }
+
+    /// <summary>
+    /// Change token producer which returns an uncancelled/unsignalled change token.
+    /// </summary>
+    /// <returns>DabChangeToken</returns>
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
+    }
+
+    /// <summary>
+    /// Removes all change registration subscriptions.
+    /// </summary>
+    public void Dispose()
+    {
+        _changeTokenRegistration.Dispose();
+    }
+
+    /// <summary>
+    /// Accessor for the ConfigFilePath to avoid exposing the loader. If we are not
+    /// loading from the file system, we return empty string.
+    /// </summary>
+    public string ConfigFilePath
+    {
+        get
+        {
+            if (_configLoader is FileSystemRuntimeConfigLoader)
+            {
+                return ((FileSystemRuntimeConfigLoader)_configLoader).ConfigFilePath;
+            }
+
+            return string.Empty;
+        }
     }
 
     /// <summary>
@@ -61,19 +119,13 @@ public class RuntimeConfigProvider
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
-        if (_runtimeConfig is not null)
+        if (_configLoader.RuntimeConfig is not null)
         {
-            return _runtimeConfig;
+            return _configLoader.RuntimeConfig;
         }
 
         // While loading the config file, replace all the environment variables with their values.
-        if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
-        {
-            _runtimeConfig = config;
-            TrySetupConfigFileWatcher();
-        }
-
-        if (_runtimeConfig is null)
+        if (!_configLoader.TryLoadKnownConfig(out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
         {
             throw new DataApiBuilderException(
                 message: "Runtime config isn't setup.",
@@ -81,36 +133,7 @@ public class RuntimeConfigProvider
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        return _runtimeConfig;
-    }
-
-    /// <summary>
-    /// Checks if we have already attempted to configure the file watcher, if not
-    /// instantiate the file watcher if we are in the correct scenario. If we
-    /// are not in the correct scenario, do not setup a file watcher but remember
-    /// that we have attempted to do so to avoid repeat checks in future calls.
-    /// Returns true if we instantiate a file watcher.
-    /// </summary>
-    private bool TrySetupConfigFileWatcher()
-    {
-        if (!IsLateConfigured && _runtimeConfig is not null && RuntimeConfig.IsHotReloadable())
-        {
-            try
-            {
-                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
-                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
-            }
-            catch (Exception ex)
-            {
-                // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
-            }
-
-            return _configFileWatcher is not null;
-        }
-
-        return false;
+        return runtimeConfig;
     }
 
     /// <summary>
@@ -120,17 +143,14 @@ public class RuntimeConfigProvider
     /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
-        if (_runtimeConfig is null)
+        RuntimeConfig? config = _configLoader.RuntimeConfig;
+        if (config is null)
         {
-            if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
-            {
-                _runtimeConfig = config;
-                TrySetupConfigFileWatcher();
-            }
+            _configLoader.TryLoadKnownConfig(out config, replaceEnvVar: true);
         }
 
-        runtimeConfig = _runtimeConfig;
-        return _runtimeConfig is not null;
+        runtimeConfig = config;
+        return config is not null;
     }
 
     /// <summary>
@@ -141,18 +161,8 @@ public class RuntimeConfigProvider
     /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetLoadedConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
-        runtimeConfig = _runtimeConfig;
-        return _runtimeConfig is not null;
-    }
-
-    /// <summary>
-    /// Hot Reloads the runtime config when the file watcher
-    /// is active and detects a change to the underlying config file.
-    /// </summary>
-    public void HotReloadConfig()
-    {
-        // _runtimeconfig can not be null in a hot reload scenario
-        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true, _runtimeConfig!.DefaultDataSourceName);
+        runtimeConfig = _configLoader.RuntimeConfig;
+        return _configLoader.RuntimeConfig is not null;
     }
 
     /// <summary>
@@ -182,19 +192,19 @@ public class RuntimeConfigProvider
                 replaceEnvVar: false,
                 replacementFailureMode: EnvironmentVariableReplacementFailureMode.Ignore))
         {
-            _runtimeConfig = runtimeConfig;
+            _configLoader.RuntimeConfig = runtimeConfig;
 
             if (string.IsNullOrEmpty(runtimeConfig.DataSource.ConnectionString))
             {
                 throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
             }
 
-            if (_runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
+            if (runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
             {
-                _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
+                _configLoader.RuntimeConfig = HandleCosmosNoSqlConfiguration(schema, runtimeConfig, runtimeConfig.DataSource.ConnectionString);
             }
 
-            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
+            ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
         }
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
@@ -216,14 +226,14 @@ public class RuntimeConfigProvider
         string? accessToken,
         string dataSourceName)
     {
-        if (_runtimeConfig is null)
+        if (_configLoader.RuntimeConfig is null)
         {
             // if runtimeConfig is not set up, throw as cannot initialize.
             throw new DataApiBuilderException($"{nameof(RuntimeConfig)} has not been loaded.", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
         // Validate that the datasource exists in the runtimeConfig and then add or update access token.
-        if (_runtimeConfig.CheckDataSourceExists(dataSourceName))
+        if (_configLoader.RuntimeConfig.CheckDataSourceExists(dataSourceName))
         {
             ManagedIdentityAccessToken[dataSourceName] = accessToken;
             return true;
@@ -264,13 +274,13 @@ public class RuntimeConfigProvider
 
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: replaceEnvVar, replacementFailureMode: replacementFailureMode))
         {
-            _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
+            _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
-            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
-            _runtimeConfig.UpdateDataSourceNameToDataSource(_runtimeConfig.DefaultDataSourceName, _runtimeConfig.DataSource);
+            ManagedIdentityAccessToken[_configLoader.RuntimeConfig.DefaultDataSourceName] = accessToken;
+            _configLoader.RuntimeConfig.UpdateDataSourceNameToDataSource(_configLoader.RuntimeConfig.DefaultDataSourceName, _configLoader.RuntimeConfig.DataSource);
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -278,14 +288,61 @@ public class RuntimeConfigProvider
         return false;
     }
 
+    /// <summary>
+    /// Runtimeconfig is hot-reloadable when the configuration is not in production mode and not late configured.
+    /// </summary>
+    /// <returns>True when config is hot-reloadable.</returns>
+    public bool IsConfigHotReloadable()
+    {
+        return !IsLateConfigured || !(_configLoader.RuntimeConfig?.Runtime?.Host?.Mode == HostMode.Production);
+    }
+
+    /// <summary>
+    /// This function checks if there is a new config that needs to be validated
+    /// and validates the configuration file as well as the schema file, in the
+    /// case that it is not able to validate both then it will return an error.
+    /// </summary>
+    /// <returns></returns>
+    public void ValidateConfig()
+    {
+        // Only used in hot reload to validate the configuration file
+        if (_configLoader.DoesConfigNeedValidation())
+        {
+            Console.WriteLine("Validating hot-reloaded configuration file.");
+            IFileSystem fileSystem = new FileSystem();
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
+
+            _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
+
+            // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
+            if (_configLoader.IsNewConfigValidated)
+            {
+                _configLoader.SetLkgConfig();
+            }
+            else
+            {
+                _configLoader.RestoreLkgConfig();
+
+                throw new DataApiBuilderException(
+                    message: "Failed validation of configuration file.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            Console.WriteLine("Validated hot-reloaded configuration file.");
+        }
+    }
+
     private async Task<bool> InvokeConfigLoadedHandlersAsync()
     {
         List<Task<bool>> configLoadedTasks = new();
-        if (_runtimeConfig is not null)
+        if (_configLoader.RuntimeConfig is not null)
         {
             foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
             {
-                configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
+                configLoadedTasks.Add(configLoadedHandler(this, _configLoader.RuntimeConfig));
             }
         }
 

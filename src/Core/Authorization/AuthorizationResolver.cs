@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Azure.DataApiBuilder.Core.Authorization;
 
@@ -39,10 +40,13 @@ public class AuthorizationResolver : IAuthorizationResolver
 
     public AuthorizationResolver(
         RuntimeConfigProvider runtimeConfigProvider,
-        IMetadataProviderFactory metadataProviderFactory
-        )
+        IMetadataProviderFactory metadataProviderFactory,
+        HotReloadEventHandler<HotReloadEventArgs>? handler = null)
     {
         _metadataProviderFactory = metadataProviderFactory;
+        _runtimeConfigProvider = runtimeConfigProvider;
+        handler?.Subscribe(DabConfigEvents.AUTHZ_RESOLVER_ON_CONFIG_CHANGED, OnConfigChanged);
+
         if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
         {
             // Datastructure constructor will pull required properties from metadataprovider.
@@ -56,8 +60,16 @@ public class AuthorizationResolver : IAuthorizationResolver
                 return Task.FromResult(true);
             });
         }
+    }
 
-        _runtimeConfigProvider = runtimeConfigProvider;
+    /// <summary>
+    /// Executed when a hot-reload event occurs. Pulls the latest
+    /// runtimeconfig object from the provider and updates authorization
+    /// rules used by the DAB engine.
+    /// </summary>
+    protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
+    {
+        SetEntityPermissionMap(_runtimeConfigProvider.GetConfig());
     }
 
     /// <summary>
@@ -245,7 +257,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// during runtime.
     /// </summary>
     /// <param name="runtimeConfig"></param>
-    public void SetEntityPermissionMap(RuntimeConfig runtimeConfig)
+    private void SetEntityPermissionMap(RuntimeConfig runtimeConfig)
     {
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
@@ -441,7 +453,8 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
     /// <param name="entityName">Entity from request</param>
     /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
-    private static void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
+    private static void PopulateAllowedExposedColumns(
+        HashSet<string> allowedExposedColumns,
         string entityName,
         HashSet<string> allowedDBColumns,
         ISqlMetadataProvider metadataProvider)
@@ -512,13 +525,13 @@ public class AuthorizationResolver : IAuthorizationResolver
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => int.Parse(claim.Value))));
                         break;
                     // Per Microsoft Docs: UInt32's CLS compliant alternative is Integer64
-                    // https://learn.microsoft.com/dotnet/api/system.uint32?view=net-6.0#remarks
+                    // https://learn.microsoft.com/dotnet/api/system.uint32#remarks
                     case ClaimValueTypes.UInteger32:
                     case ClaimValueTypes.Integer64:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => long.Parse(claim.Value))));
                         break;
                     // Per Microsoft Docs: UInt64's CLS compliant alternative is decimal
-                    // https://learn.microsoft.com/dotnet/api/system.uint64?view=net-6.0#remarks
+                    // https://learn.microsoft.com/dotnet/api/system.uint64#remarks
                     case ClaimValueTypes.UInteger64:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => decimal.Parse(claim.Value))));
                         break;
@@ -696,7 +709,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <seealso cref="https://www.iana.org/assignments/jwt/jwt.xhtml#claims"/>
     /// <seealso cref="https://www.rfc-editor.org/rfc/rfc7519.html#section-4"/>
     /// <seealso cref="https://github.com/microsoft/referencesource/blob/dae14279dd0672adead5de00ac8f117dcf74c184/mscorlib/system/security/claims/Claim.cs#L107"/>
-    public static string GetClaimValue(Claim claim)
+    private static string GetClaimValue(Claim claim)
     {
         /* An example Claim object:
          * claim.Type: "user_email"
@@ -737,23 +750,6 @@ public class AuthorizationResolver : IAuthorizationResolver
     public IEnumerable<string> GetRolesForEntity(string entityName)
     {
         return EntityPermissionsMap[entityName].RoleToOperationMap.Keys;
-    }
-
-    /// <summary>
-    /// Returns a list of roles which define permissions for the provided operation.
-    /// i.e. list of roles which allow the operation 'Read' on entityName.
-    /// </summary>
-    /// <param name="entityName">Entity to lookup permissions</param>
-    /// <param name="operation">Operation to lookup applicable roles</param>
-    /// <returns>Collection of roles.</returns>
-    public IEnumerable<string> GetRolesForOperation(string entityName, EntityActionOperation operation)
-    {
-        if (EntityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) && roleList is not null)
-        {
-            return roleList;
-        }
-
-        return new List<string>();
     }
 
     /// <summary>

@@ -139,6 +139,29 @@
       "description": "Runtime configuration settings",
       "additionalProperties": false,
       "properties": {
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "max-page-size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Defines the maximum number of records that can be returned in a single page of results. If set to null, the default value is 100,000.",
+              "default": 100000,
+              "minimum": 1
+            },
+            "default-page-size": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
+              "default": 100,
+              "minimum": 1
+            }
+          }
+        },
         "rest": {
           "type": "object",
           "description": "Global REST endpoint configuration",
@@ -177,7 +200,10 @@
               "description": "Allow enabling/disabling GraphQL requests for all entities."
             },
             "depth-limit": {
-              "type": [ "integer", "null" ],
+              "type": [
+                "integer",
+                "null"
+              ],
               "description": "Maximum allowed depth of a GraphQL query.",
               "default": null
             },
@@ -186,7 +212,7 @@
               "description": "Configuration properties for multiple mutation operations",
               "additionalProperties": false,
               "properties": {
-                "create":{
+                "create": {
                   "type": "object",
                   "description": "Options for multiple create operations",
                   "additionalProperties": false,
@@ -207,6 +233,16 @@
           "description": "Global hosting configuration",
           "additionalProperties": false,
           "properties": {
+            "max-response-size-mb": {
+             "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Specifies the maximum size, in megabytes, of the database response allowed in a single result. If set to null, the default value is 158 MB.",
+              "default": 158,
+              "minimum": 1,
+              "maximum": 158
+            },
             "mode": {
               "description": "Set if running in Development or Production mode",
               "type": "string",
@@ -258,6 +294,28 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "log-level": {
+          "type": "object",
+          "description": "Global configuration of log level",
+          "additionalProperties": false,
+          "properties": {
+            "level": {
+              "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
+              "type": "string",
+              "default": null,
+              "enum": [
+                "trace",
+                "debug",
+                "information",
+                "warning",
+                "error",
+                "critical",
+                "none",
+                null
+              ]
             }
           }
         },

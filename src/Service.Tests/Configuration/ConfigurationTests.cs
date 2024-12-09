@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -469,6 +470,11 @@ type Moon {
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
+            if (File.Exists(CUSTOM_CONFIG_FILENAME))
+            {
+                File.Delete(CUSTOM_CONFIG_FILENAME);
+            }
+
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
@@ -941,7 +947,7 @@ type Moon {
             string swaTokenPayload = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
                 addAuthenticated: true,
                 specificRole: POST_STARTUP_CONFIG_ROLE);
-            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
+            message.Headers.Add(Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, POST_STARTUP_CONFIG_ROLE);
             HttpResponseMessage authorizedResponse = await httpClient.SendAsync(message);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
@@ -1388,7 +1394,7 @@ type Moon {
 
             configValidator.ValidateRelationshipConfigCorrectness(configProvider.GetConfig());
             await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
-            Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(configValidator.ConfigValidationExceptions));
         }
 
         /// <summary>
@@ -1573,7 +1579,7 @@ type Moon {
 
             JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
-            Assert.IsTrue(result.ValidationErrors.IsNullOrEmpty());
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             schemaValidatorLogger.Verify(
                 x => x.Log(
                     LogLevel.Information,
@@ -1827,7 +1833,10 @@ type Moon {
 
         /// <summary>
         /// Test different graphql endpoints in different host modes
-        /// when accessed interactively via browser.
+        /// when accessed interactively via browser. Note that the
+        /// branding for "Banana Cake Pop" has changed to "Nitro", and
+        /// we have updated the graphql endpoint test for dev mode to reflect
+        /// this change, but it may need to be updated again in the future.
         /// </summary>
         /// <param name="endpoint">The endpoint route</param>
         /// <param name="hostMode">The mode in which the service is executing.</param>
@@ -1835,7 +1844,7 @@ type Moon {
         /// <param name="expectedContent">The expected phrase in the response body.</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Banana Cake Pop",
+        [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Nitro",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
         [DataRow("/graphql", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "GraphQL endpoint with no query in production mode.")]
@@ -2260,7 +2269,7 @@ type Moon {
             string[] args = new[]
             {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
-        };
+            };
 
             // Non-Hosted Scenario
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
@@ -2892,8 +2901,8 @@ type Moon {
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
-            AuthenticationOptions AuthenticationOptions = new(Provider: EasyAuthType.StaticWebApps.ToString(), null);
-            HostOptions staticWebAppsHostOptions = new(null, AuthenticationOptions);
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: EasyAuthType.StaticWebApps.ToString(), null);
+            HostOptions staticWebAppsHostOptions = new(null, authenticationOptions);
 
             RuntimeOptions runtimeOptions = configuration.Runtime;
             RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, staticWebAppsHostOptions, "/data-api");
@@ -3219,11 +3228,11 @@ type Planet @model(name:""PlanetAlias"") {
             RuntimeConfig config = configProvider.GetConfig();
 
             // Setup configuration
-            AuthenticationOptions AuthenticationOptions = new(Provider: authType.ToString(), null);
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: authType.ToString(), Jwt: null);
             RuntimeOptions runtimeOptions = new(
                 Rest: new(),
                 GraphQL: new(),
-                Host: new(null, AuthenticationOptions, hostMode)
+                Host: new(Cors: null, authenticationOptions, hostMode)
             );
             RuntimeConfig configWithCustomHostMode = config with { Runtime = runtimeOptions };
 
@@ -3448,6 +3457,114 @@ type Planet @model(name:""PlanetAlias"") {
                     Assert.AreEqual(true, actualBody.Contains(expectedOpenApiTargetContent));
                 }
             }
+        }
+
+        /// <summary>
+        /// Test different loglevel values that are avaliable by deserializing RuntimeConfig with specified LogLevel
+        /// and checks if value exists properly inside the deserialized RuntimeConfig.
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(LogLevel.Trace, DisplayName = "Validates that log level Trace deserialized correctly")]
+        [DataRow(LogLevel.Debug, DisplayName = "Validates log level Debug deserialized correctly")]
+        [DataRow(LogLevel.Information, DisplayName = "Validates log level Information deserialized correctly")]
+        [DataRow(LogLevel.Warning, DisplayName = "Validates log level Warning deserialized correctly")]
+        [DataRow(LogLevel.Error, DisplayName = "Validates log level Error deserialized correctly")]
+        [DataRow(LogLevel.Critical, DisplayName = "Validates log level Critical deserialized correctly")]
+        [DataRow(LogLevel.None, DisplayName = "Validates log level None deserialized correctly")]
+        [DataRow(null, DisplayName = "Validates log level Null deserialized correctly")]
+        public void TestExistingLogLevels(LogLevel expectedLevel)
+        {
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
+
+            string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
+
+            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.LoggerLevel.Value);
+        }
+
+        /// <summary>
+        /// Test different loglevel values that do not exist to ensure that the build fails when they are trying to be set up
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(-1, DisplayName = "Validates that a negative log level value, fails to build")]
+        [DataRow(7, DisplayName = "Validates that a positive log level value that does not exist, fails to build")]
+        [DataRow(12, DisplayName = "Validates that a bigger positive log level value that does not exist, fails to build")]
+        public void TestNonExistingLogLevels(LogLevel expectedLevel)
+        {
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
+
+            // Try should fail and go to catch exception
+            try
+            {
+                string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+                Assert.Fail();
+            }
+            // Catch verifies that the exception is due to LogLevel having a value that does not exist
+            catch (Exception ex)
+            {
+                Assert.AreEqual(typeof(KeyNotFoundException), ex.GetType());
+            }
+        }
+
+        /// <summary>
+        /// Tests different loglevel values to see if they are serialized correctly to the Json config
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(LogLevel.Debug)]
+        [DataRow(LogLevel.Warning)]
+        [DataRow(LogLevel.None)]
+        [DataRow(null)]
+        public void LogLevelSerialization(LogLevel expectedLevel)
+        {
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
+            string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
+
+            string serializedConfig = deserializedRuntimeConfig.ToJson();
+
+            using (JsonDocument parsedDocument = JsonDocument.Parse(serializedConfig))
+            {
+                JsonElement root = parsedDocument.RootElement;
+
+                //Validate log-level property exists in runtime
+                JsonElement runtimeElement = root.GetProperty("runtime");
+                bool logLevelPropertyExists = runtimeElement.TryGetProperty("log-level", out JsonElement logLevelElement);
+                Assert.AreEqual(expected: true, actual: logLevelPropertyExists);
+
+                //Validate level property inside log-level is of expected value
+                bool levelPropertyExists = logLevelElement.TryGetProperty("level", out JsonElement levelElement);
+                Assert.AreEqual(expected: true, actual: levelPropertyExists);
+                Assert.AreEqual(expectedLevel.ToString().ToLower(), levelElement.GetString());
+            }
+        }
+
+        /// <summary>
+        /// Helper method to create RuntimeConfig with specificed LogLevel value
+        /// </summary>
+        private static RuntimeConfig InitializeRuntimeWithLogLevel(LogLevel? expectedLevel)
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig);
+
+            LogLevelOptions logLevelOptions = new(Value: expectedLevel);
+            RuntimeConfig config = new(
+                Schema: baseConfig.Schema,
+                DataSource: baseConfig.DataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null),
+                    LoggerLevel: logLevelOptions
+                ),
+                Entities: baseConfig.Entities
+            );
+
+            return config;
         }
 
         /// <summary>
@@ -4033,6 +4150,125 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Creates a hot reload scenario in which the schema file is invalid which causes
+        /// hot reload to fail, then we check that the program is still able to work
+        /// properly by validating that the DAB engine is still using the same configuration file
+        /// from before the hot reload.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public void HotReloadValidationFail()
+        {
+            // Arrange
+            string schemaName = "testSchema.json";
+            string configName = "hotreload-config.json";
+            if (File.Exists(configName))
+            {
+                File.Delete(configName);
+            }
+
+            if (File.Exists(schemaName))
+            {
+                File.Delete(schemaName);
+            }
+
+            bool initialRestEnabled = true;
+            bool updatedRestEnabled = false;
+
+            bool initialGQLEnabled = true;
+            bool updatedGQLEnabled = false;
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig initialConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, initialRestEnabled, initialGQLEnabled);
+
+            RuntimeConfig updatedConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, updatedRestEnabled, updatedGQLEnabled);
+
+            string schemaConfig = TestHelper.GenerateInvalidSchema();
+
+            // Not using mocked filesystem so we pick up real file changes for hot reload
+            FileSystem fileSystem = new();
+            RuntimeConfigProvider configProvider = GenerateConfigFileAndConfigProvider(fileSystem, configName, initialConfig);
+            RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
+
+            Assert.IsNotNull(lkgRuntimeConfig);
+
+            // Act
+            // Simulate an invalid change to the schema file while the config is updated to a valid state
+            fileSystem.File.WriteAllText(schemaName, schemaConfig);
+            fileSystem.File.WriteAllText(configName, updatedConfig.ToJson());
+
+            // Give ConfigFileWatcher enough time to hot reload the change
+            System.Threading.Thread.Sleep(6000);
+
+            RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
+            Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+
+            if (File.Exists(configName))
+            {
+                File.Delete(configName);
+            }
+
+            if (File.Exists(schemaName))
+            {
+                File.Delete(schemaName);
+            }
+        }
+
+        /// <summary>
+        /// Creates a hot reload scenario in which the updated configuration file is invalid causing
+        /// hot reload to fail as the schema can't be used by DAB, then we check that the
+        /// program is still able to work properly by showing us that it is still using the
+        /// same configuration file from before the hot reload.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public void HotReloadParsingFail()
+        {
+            // Arrange
+            string schemaName = "dab.draft.schema.json";
+            string configName = "hotreload-config.json";
+            if (File.Exists(configName))
+            {
+                File.Delete(configName);
+            }
+
+            bool initialRestEnabled = true;
+
+            bool initialGQLEnabled = true;
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig initialConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, initialRestEnabled, initialGQLEnabled);
+
+            string updatedConfig = TestHelper.GenerateInvalidRuntimeSection();
+
+            // Not using mocked filesystem so we pick up real file changes for hot reload
+            FileSystem fileSystem = new();
+            RuntimeConfigProvider configProvider = GenerateConfigFileAndConfigProvider(fileSystem, configName, initialConfig);
+            RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
+
+            Assert.IsNotNull(lkgRuntimeConfig);
+
+            // Act
+            // Simulate an invalid change to the config file
+            fileSystem.File.WriteAllText(configName, updatedConfig);
+
+            // Give ConfigFileWatcher enough time to hot reload the change
+            System.Threading.Thread.Sleep(1000);
+
+            RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
+            Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+
+            if (File.Exists(configName))
+            {
+                File.Delete(configName);
+            }
+        }
+
+        /// <summary>
         /// Helper function to write custom configuration file. with minimal REST/GraphQL global settings
         /// using the supplied entities.
         /// </summary>
@@ -4041,6 +4277,7 @@ type Planet @model(name:""PlanetAlias"") {
         private static void CreateCustomConfigFile(bool globalRestEnabled, Dictionary<string, Entity> entityMap)
         {
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
@@ -4048,7 +4285,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(Enabled: globalRestEnabled),
                     GraphQL: new(),
-                    Host: new(null, null)
+                    Host: hostOptions
                 ),
                 Entities: new(entityMap));
 
@@ -4360,7 +4597,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Helper  method to instantiate RuntimeConfig object needed for multiple create tests.
         /// </summary>
-        /// <returns></returns>
         public static RuntimeConfig InitialzieRuntimeConfigForMultipleCreateTests(bool isMultipleCreateOperationEnabled)
         {
             // Multiple create operations are enabled.
@@ -4422,9 +4658,11 @@ type Planet @model(name:""PlanetAlias"") {
 
             entityMap.Add("Publisher", publisherEntity);
 
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
+
             RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
                                               DataSource: dataSource,
-                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: null),
                                               Entities: new(entityMap));
             return runtimeConfig;
         }
@@ -4433,7 +4671,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// Instantiate minimal runtime config with custom global settings.
         /// </summary>
         /// <param name="dataSource">DataSource to pull connection string required for engine start.</param>
-        /// <returns></returns>
         public static RuntimeConfig InitMinimalRuntimeConfig(
             DataSource dataSource,
             GraphQLRuntimeOptions graphqlOptions,
@@ -4470,13 +4707,62 @@ type Planet @model(name:""PlanetAlias"") {
                 );
             entityMap.Add("Publisher", anotherEntity);
 
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
+
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
                 Runtime: new(restOptions, graphqlOptions,
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: cacheOptions),
+                    Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: cacheOptions),
                 Entities: new(entityMap)
             );
+        }
+
+        /// <summary>
+        /// Helper function that initializes a RuntimeConfig with the following
+        /// variables in order to prepare a file for hot reload
+        /// </summary>
+        /// <param name="schema"></param>
+        /// <param name="dataSource"></param>
+        /// <param name="restEnabled"></param>
+        /// <param name="graphQLEnabled"></param>
+        /// <returns></returns>
+        public static RuntimeConfig InitRuntimeConfigForHotReload(
+            string schema,
+            DataSource dataSource,
+            bool restEnabled,
+            bool graphQLEnabled)
+        {
+            RuntimeConfig runtimeConfig = new(
+                Schema: schema,
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(restEnabled),
+                    GraphQL: new(graphQLEnabled),
+                    Host: new(null, null, HostMode.Development)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
+
+            return runtimeConfig;
+        }
+
+        /// <summary>
+        /// Helper function that generates a config file that is going to be observed
+        /// for hot reload and initialize a ConfigProvider which will be used to check
+        /// if the hot reload was validated or not.
+        /// </summary>
+        /// <param name="fileSystem"></param>
+        /// <param name="configName"></param>
+        /// <param name="runtimeConfig"></param>
+        /// <returns></returns>
+        public static RuntimeConfigProvider GenerateConfigFileAndConfigProvider(FileSystem fileSystem, string configName, RuntimeConfig runtimeConfig)
+        {
+            fileSystem.File.WriteAllText(configName, runtimeConfig.ToJson());
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
+            RuntimeConfigProvider configProvider = new(configLoader);
+
+            return configProvider;
         }
 
         /// <summary>
@@ -4535,7 +4821,6 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Create basic runtime config with given DatabaseType and connectionString with no entity.
         /// </summary>
-        /// <returns></returns>
         private static RuntimeConfig CreateBasicRuntimeConfigWithNoEntity(
             DatabaseType dbType = DatabaseType.MSSQL,
             string connectionString = "")

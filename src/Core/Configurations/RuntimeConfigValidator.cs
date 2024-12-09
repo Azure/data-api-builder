@@ -38,21 +38,12 @@ public class RuntimeConfigValidator : IConfigValidator
     // The claimType is invalid if there is a match found.
     private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
-    // Reserved characters as defined in RFC3986 are not allowed to be present in the
-    // REST/GraphQL custom path because they are not acceptable to be present in URIs.
-    // Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
-    private static readonly string _reservedUriChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
-
-    //  Regex to validate rest/graphql custom path prefix.
-    public static readonly Regex _reservedUriCharsRgx = new(_reservedUriChars, RegexOptions.Compiled);
-
     // Regex used to extract all claimTypes in policy. It finds all the substrings which are
     // of the form @claims.*** delimited by space character,end of the line or end of the string.
     private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
-    public const string URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG = "contains one or more reserved characters.";
 
     public RuntimeConfigValidator(
         RuntimeConfigProvider runtimeConfigProvider,
@@ -318,18 +309,22 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
     {
+        // Only used for validation so we don't need the handler which is for hot reload scenarios.
         QueryManagerFactory queryManagerFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
             logger: loggerFactory.CreateLogger<IQueryExecutor>(),
-            contextAccessor: null!);
+            contextAccessor: null!,
+            handler: null);
 
         // create metadata provider factory to validate metadata against the database
+        // Only used for validation so we don't need the handler which is for hot reload scenarios.
         MetadataProviderFactory metadataProviderFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
             queryManagerFactory: queryManagerFactory,
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,
-            isValidateOnly: _isValidateOnly);
+            isValidateOnly: _isValidateOnly,
+            handler: null);
         await metadataProviderFactory.InitializeAsync();
 
         ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());
@@ -573,7 +568,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 );
         }
 
-        if (_reservedUriCharsRgx.IsMatch(pathForEntity))
+        if (RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(pathForEntity))
         {
             throw new DataApiBuilderException(
                 message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
@@ -625,7 +620,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
-            if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
+            if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
             {
                 HandleOrRecordException(new DataApiBuilderException(
                     message: $"Runtime base-route {exceptionMsgSuffix}",
@@ -669,7 +664,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         // validate the rest path.
         string restPath = runtimeConfig.RestPath;
-        if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
+        if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"{ApiType.REST} path {exceptionMsgSuffix}",
@@ -686,55 +681,13 @@ public class RuntimeConfigValidator : IConfigValidator
     public void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
     {
         string graphqlPath = runtimeConfig.GraphQLPath;
-        if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
+        if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
-    }
-
-    /// <summary>
-    /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
-    /// any reserved characters. In case the URI component is not well formed the exception message containing
-    /// the reason for ill-formed URI component is returned. Else we return an empty string.
-    /// </summary>
-    /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>
-    /// <returns>false when the URI component is not well formed.</returns>
-    private static bool TryValidateUriComponent(string? uriComponent, out string exceptionMessageSuffix)
-    {
-        exceptionMessageSuffix = string.Empty;
-        if (string.IsNullOrEmpty(uriComponent))
-        {
-            exceptionMessageSuffix = "cannot be null or empty.";
-        }
-        // A valid URI component should start with a forward slash '/'.
-        else if (!uriComponent.StartsWith("/"))
-        {
-            exceptionMessageSuffix = "should start with a '/'.";
-        }
-        else
-        {
-            uriComponent = uriComponent.Substring(1);
-            // URI component should not contain any reserved characters.
-            if (DoesUriComponentContainReservedChars(uriComponent))
-            {
-                exceptionMessageSuffix = URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG;
-            }
-        }
-
-        return string.IsNullOrEmpty(exceptionMessageSuffix);
-    }
-
-    /// <summary>
-    /// Method to validate that the REST/GraphQL API's URI component does not contain
-    /// any reserved characters.
-    /// </summary>
-    /// <param name="uriComponent">path prefix for rest/graphql apis</param>
-    public static bool DoesUriComponentContainReservedChars(string uriComponent)
-    {
-        return _reservedUriCharsRgx.IsMatch(uriComponent);
     }
 
     private void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)

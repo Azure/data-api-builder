@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -16,6 +16,7 @@
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
     <PackageReference Include="HotChocolate.Types.NodaTime" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.IdentityModel.Validators" />
     <PackageReference Include="NJsonSchema" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
@@ -24,10 +25,6 @@
     <PackageReference Include="Microsoft.OData.Core" />
     <PackageReference Include="Microsoft.OData.Edm" />
     <PackageReference Include="Microsoft.OpenApi" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="MSTest.TestFramework" />
     <PackageReference Include="MySqlConnector" />
     <PackageReference Include="Newtonsoft.Json" />
@@ -41,7 +38,7 @@
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
-    
+
   <ItemGroup>
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />

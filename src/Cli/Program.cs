@@ -36,7 +36,7 @@ namespace Cli
 
             // Sets up the filesystem used for reading and writing runtime configuration files.
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null, isCliLoader: true);
 
             return Execute(args, cliLogger, fileSystem, loader);
         }
@@ -67,7 +67,7 @@ namespace Cli
                     (ValidateOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (AddTelemetryOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (ConfigureOptions options) => options.Handler(cliLogger, loader, fileSystem),
-                    (ExportOptions options) => Exporter.Export(options, cliLogger, loader, fileSystem),
+                    (ExportOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     errors => DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(errors));
 
             return result;

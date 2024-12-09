@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// - byte[] example referenced from Microsoft Docs example of Convert.FromBase64String(String) because
         /// a byte array would be represented in a JSON payload as a string.
         /// </summary>
-        /// <seealso cref="https://learn.microsoft.com/dotnet/api/system.convert.frombase64string?view=net-6.0#examples"/>
+        /// <seealso cref="https://learn.microsoft.com/dotnet/api/system.convert.frombase64string#examples"/>
         /// <seealso cref="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types"/>
         /// <param name="systemType">Denotes system value type of stored procedure parameter.</param>
         /// <param name="expectedGraphQLType">Target GraphQL type of parameter.</param>
@@ -172,7 +172,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 Assert.AreEqual(expected: HttpStatusCode.InternalServerError, actual: ex.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.GraphQLMapping, actual: ex.SubStatusCode);
             }
-
         }
 
         /// <summary>

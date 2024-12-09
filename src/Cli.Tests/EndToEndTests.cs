@@ -327,6 +327,134 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.graphql.path {value}`
+    /// Validates that path values with permitted characters result in DAB engine starting successfully.
+    /// Ensures that invalid characters provided for path result in failed engine startup 
+    /// due to validation failure.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]
+    [DataRow("/updated-Path", true, DisplayName = "Success in updated GraphQL Path to /updated-Path.")]
+    [DataRow("/updated_Path", true, DisplayName = "Success in updated GraphQL Path to /updated_Path.")]
+    [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
+    [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
+    [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
+    [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
+    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    public void TestUpdateGraphQLPathRuntimeSettings(string path, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Path in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.graphql.path", path };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Path was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.host.cors.origins {value}`
+    /// Validates that links provided for cors.origins result in DAB engine starting successfully.
+    /// Ensures that invalid links provided for Cors.Origins result in failed engine startup 
+    /// due to validation failure.
+    /// </summary>
+    [Ignore]
+    [DataTestMethod]
+    [DataRow("http://locahost1 https://localhost2", true, DisplayName = "Success in updating Host.Cors.Origins.")]
+    public void TestUpdateHostCorsOriginsRuntimeSettings(string path, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Path in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.host.cors.origins", path };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Path was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig));
+        Assert.AreEqual(2, updatedRuntimeConfig.Runtime?.Host?.Cors?.Origins.Count());
+    }
+
+    /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.rest.path {value}`
+    /// Validates that path values with permitted characters result in DAB engine starting successfully.
+    /// Ensures that invalid characters provided for path result in failed engine startup 
+    /// due to validation failure.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("/updatedPath", true, DisplayName = "Successfully updated Rest Path to /updatedPath.")]
+    [DataRow("/updated-Path", true, DisplayName = "Successfully updated Rest Path to /updated-Path.")]
+    [DataRow("/updated_Path", true, DisplayName = "Successfully updated Rest Path to /updated_Path.")]
+    [DataRow("updatedPath", false, DisplayName = "Failure due to '/' missing.")]
+    [DataRow("/updated Path", false, DisplayName = "Failure due to white spaces.")]
+    [DataRow("/updated.Path", false, DisplayName = "Failure due to reserved char '.'.")]
+    [DataRow("/updated@Path", false, DisplayName = "Failure due reserved chars '@'.")]
+    [DataRow("/updated/Path", false, DisplayName = "Failure due reserved chars '/'.")]
+    public void TestUpdateRestPathRuntimeSettings(string path, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Path in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.rest.path", path };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Path was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.cache.ttl-seconds {value}`
+    /// Validates that path values with permitted characters result in DAB engine starting successfully.
+    /// Ensures that invalid values provided for ttl-seconds result in failed engine startup 
+    /// due to validation failure.
+    /// Valid values are [1, INT32.MAX_VALUE] Integer values.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("2", true, DisplayName = "Success in updating Cache TTL to 2.")]
+    [DataRow("10", true, DisplayName = "Success in updating Cache TTL to 10.")]
+    [DataRow("-2", false, DisplayName = "Failure to update cache ttl as value is negative.")]
+    [DataRow("2147483647", true, DisplayName = "Successful update to cache ttl value to INT32_MAX")]
+    [DataRow("2147483648", false, DisplayName = "Failure to update cache ttl as value greater than INT32_MAX")]
+    [DataRow("0", false, DisplayName = "Failure to update cache ttl as value is zero.")]
+    [DataRow("seven", false, DisplayName = "Failure to update cache ttl as a string value.")]
+    public void TestUpdateCacheTtlRuntimeSettings(string ttl, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Cache TTL in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.cache.ttl-seconds", ttl };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Cache TTL was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
     /// Test to verify authentication options with init command containing
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.
@@ -1106,5 +1234,34 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.Rest);
         Assert.AreEqual(isRequestBodyStrict, runtimeConfig.Runtime.Rest.RequestBodyStrict);
+    }
+
+    /// <summary>
+    /// Tests that the CLI can update the database type in the configuration file and is case insensitive.
+    /// Command: dab configure --data-source.database-type {dbType}
+    /// </summary>
+    /// <param name="dbType">The database type to be set in the configuration.</param>
+    /// <param name="isSuccess">Expected success or failure of the operation.</param>
+    [DataTestMethod]
+    [DataRow("mysql", true, DisplayName = "Successful update with a valid value for database type")]
+    [DataRow("msql", false, DisplayName = "Failure as invalid value for database type")]
+    [DataRow("postgres", false, DisplayName = "Failure as invalid value for database type for PostgreSQL")]
+    [DataRow("POSTgreSQL", true, DisplayName = "Successful update with a valid value for database type for PostgreSQL with varying case")]
+    public void TestUpdateDatabaseType(string dbType, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--data-source.database-type", dbType };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert
+        Assert.AreEqual(isSuccess, isError == 0);
     }
 }

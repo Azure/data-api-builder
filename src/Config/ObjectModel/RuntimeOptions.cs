@@ -10,11 +10,14 @@ public record RuntimeOptions
 {
     public RestRuntimeOptions? Rest { get; init; }
     public GraphQLRuntimeOptions? GraphQL { get; init; }
-    public HostOptions? Host { get; init; }
+    public HostOptions? Host { get; set; }
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
     public EntityCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
+
+    [JsonPropertyName("log-level")]
+    public LogLevelOptions? LoggerLevel { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -24,7 +27,8 @@ public record RuntimeOptions
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
         EntityCacheOptions? Cache = null,
-        PaginationOptions? Pagination = null)
+        PaginationOptions? Pagination = null,
+        LogLevelOptions? LoggerLevel = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -33,6 +37,7 @@ public record RuntimeOptions
         this.Telemetry = Telemetry;
         this.Cache = Cache;
         this.Pagination = Pagination;
+        this.LoggerLevel = LoggerLevel;
     }
 
     /// <summary>

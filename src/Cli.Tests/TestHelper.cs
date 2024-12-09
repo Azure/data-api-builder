@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Microsoft.IdentityModel.Tokens;
-
 namespace Cli.Tests
 {
     public static class TestHelper
@@ -81,6 +79,18 @@ namespace Cli.Tests
             ""data-source"": {
               ""database-type"": ""mssql"",
               ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
+            }
+        ";
+
+        public const string SAMPLE_SCHEMA_DATA_SOURCE_COSMOSDB_NOSQL = SCHEMA_PROPERTY + "," + @"
+            ""data-source"": {
+              ""database-type"": ""cosmosdb_nosql"",
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+              ""options"": {
+                ""database"": ""testldb"",
+                ""container"": ""testcontainer"",
+                ""schema"": ""testschema.gql""
+              }
             }
         ";
 
@@ -228,6 +238,7 @@ namespace Cli.Tests
         /// A minimal valid config json without any entities. This config string is used in unit tests.
         /// </summary>
         public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
+        public const string INITIAL_COSMOSDB_NOSQL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_COSMOSDB_NOSQL},{RUNTIME_SECTION}}}";
 
         /// <summary>
         /// A minimal config json without any entities. This config is invalid as it contains an empty connection
@@ -1236,7 +1247,7 @@ namespace Cli.Tests
         /// <returns></returns>
         public static string GenerateConfigWithGivenDepthLimit(string? depthLimitJson = null)
         {
-            string depthLimitSection = depthLimitJson.IsNullOrEmpty() ? string.Empty : ("," + depthLimitJson);
+            string depthLimitSection = string.IsNullOrEmpty(depthLimitJson) ? string.Empty : ("," + depthLimitJson);
 
             string runtimeSection = $@"
             ""runtime"": {{

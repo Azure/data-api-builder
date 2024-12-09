@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
@@ -143,13 +144,19 @@ namespace Cli
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
                     string? graphQLSchemaPath = options.GraphQLSchemaPath;
-                    if (string.IsNullOrEmpty(cosmosDatabase) || string.IsNullOrEmpty(graphQLSchemaPath))
+                    if (string.IsNullOrEmpty(cosmosDatabase))
                     {
-                        _logger.LogError("Missing mandatory configuration option for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
+                        _logger.LogError("Missing mandatory configuration options for CosmosDB_NoSql: --cosmosdb_nosql-database, and --graphql-schema");
                         return false;
                     }
 
-                    if (!fileSystem.File.Exists(graphQLSchemaPath))
+                    if (string.IsNullOrEmpty(graphQLSchemaPath))
+                    {
+                        graphQLSchemaPath = "schema.gql"; // Default to schema.gql
+
+                        _logger.LogWarning("The GraphQL schema path, i.e. --graphql-schema, is not specified. Please either provide your schema or generate the schema using the `export` command before running `dab start`. For more detail, run 'dab export --help` ");
+                    }
+                    else if (!fileSystem.File.Exists(graphQLSchemaPath))
                     {
                         _logger.LogError("GraphQL Schema File: {graphQLSchemaPath} not found.", graphQLSchemaPath);
                         return false;
@@ -197,25 +204,25 @@ namespace Cli
 
             if (!IsURIComponentValid(restPath))
             {
-                _logger.LogError("{apiType} path {message}", ApiType.REST, RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                _logger.LogError("{apiType} path {message}", ApiType.REST, RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
             if (!IsURIComponentValid(options.GraphQLPath))
             {
-                _logger.LogError("{apiType} path {message}", ApiType.GraphQL, RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                _logger.LogError("{apiType} path {message}", ApiType.GraphQL, RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
             if (!IsURIComponentValid(runtimeBaseRoute))
             {
-                _logger.LogError("Runtime base-route {message}", RuntimeConfigValidator.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
+                _logger.LogError("Runtime base-route {message}", RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG);
                 return false;
             }
 
             if (runtimeBaseRoute is not null)
             {
-                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType easyAuthMode) || easyAuthMode is not EasyAuthType.StaticWebApps)
+                if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType authMode) || authMode is not EasyAuthType.StaticWebApps)
                 {
                     _logger.LogError("Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
                     return false;
@@ -527,12 +534,114 @@ namespace Cli
                 return false;
             }
 
+            if (!TryUpdateConfiguredDataSourceOptions(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
+            if (!TryUpdateConfiguredRuntimeOptions(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
             if (options.DepthLimit is not null && !TryUpdateDepthLimit(options, ref runtimeConfig))
             {
                 return false;
             }
 
             return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Configures the data source options for the runtimeconfig based on the provided options.
+        /// This method updates the database type, connection string, and other database-specific options in the config file.
+        /// It validates the provided database type and ensures that options specific to certain database types are correctly applied.
+        /// When validation fails, this function logs the validation errors and returns false.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="runtimeConfig">The runtime configuration to be updated. This parameter is passed by reference and must not be null if the method returns true.</param>
+        /// <returns>
+        /// True if the data source options were successfully configured and the runtime configuration was updated; otherwise, false.
+        /// </returns>
+        private static bool TryUpdateConfiguredDataSourceOptions(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
+            string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
+
+            if (options.DataSourceDatabaseType is not null)
+            {
+                if (!Enum.TryParse(options.DataSourceDatabaseType, ignoreCase: true, out dbType))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<DatabaseType>(options.DataSourceDatabaseType));
+                    return false;
+                }
+            }
+
+            if (options.DataSourceConnectionString is not null)
+            {
+                dataSourceConnectionString = options.DataSourceConnectionString;
+            }
+
+            Dictionary<string, object?>? dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            if (DatabaseType.CosmosDB_NoSQL.Equals(dbType))
+            {
+                AddCosmosDbOptions(dbOptions, options, namingPolicy);
+            }
+            else if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase)
+                    || !string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer)
+                    || !string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
+            {
+                _logger.LogError("Database, Container, and Schema options are only applicable for CosmosDB_NoSQL database type.");
+                return false;
+            }
+
+            if (options.DataSourceOptionsSetSessionContext is not null)
+            {
+                if (!(DatabaseType.MSSQL.Equals(dbType) || DatabaseType.DWSQL.Equals(dbType)))
+                {
+                    _logger.LogError("SetSessionContext option is only applicable for MSSQL/DWSQL database type.");
+                    return false;
+                }
+
+                dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
+            }
+
+            dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions);
+            runtimeConfig = runtimeConfig with { DataSource = dataSource };
+
+            return runtimeConfig != null;
+        }
+
+        /// <summary>
+        /// Adds CosmosDB-specific options to the provided database options dictionary.
+        /// This method checks if the CosmosDB-specific options (database, container, and schema) are provided in the 
+        /// configuration options. If they are, it converts their names using the provided naming policy and adds them 
+        /// to the database options dictionary.
+        /// </summary>
+        /// <param name="dbOptions">The dictionary to which the CosmosDB-specific options will be added.</param>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="namingPolicy">The naming policy used to convert option names to the desired format.</param>
+        private static void AddCosmosDbOptions(Dictionary<string, object?> dbOptions, ConfigureOptions options, HyphenatedNamingPolicy namingPolicy)
+        {
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsDatabase))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), options.DataSourceOptionsDatabase);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsContainer))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), options.DataSourceOptionsContainer);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.DataSourceOptionsSchema))
+            {
+                dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), options.DataSourceOptionsSchema);
+            }
         }
 
         /// <summary>
@@ -575,6 +684,407 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the runtime settings based on the provided value.
+        /// Performs the update on the runtimeConfig which is passed as reference
+        /// Returns true if the update has been performed, else false
+        /// Currently, used to update only GraphQL settings
+        /// </summary>
+        /// <param name="options">Options including the graphql runtime parameters.</param>
+        /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        private static bool TryUpdateConfiguredRuntimeOptions(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            // Rest: Enabled, Path, and Request.Body.Strict
+            if (options.RuntimeRestEnabled != null ||
+                options.RuntimeRestPath != null ||
+                options.RuntimeRestRequestBodyStrict != null)
+            {
+                RestRuntimeOptions? updatedRestOptions = runtimeConfig?.Runtime?.Rest ?? new();
+                bool status = TryUpdateConfiguredRestValues(options, ref updatedRestOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Rest = updatedRestOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // GraphQL: Enabled, Path, Allow-Introspection and Multiple-Mutations.Create.Enabled
+            if (options.RuntimeGraphQLEnabled != null ||
+                options.RuntimeGraphQLPath != null ||
+                options.RuntimeGraphQLAllowIntrospection != null ||
+                options.RuntimeGraphQLMultipleMutationsCreateEnabled != null)
+            {
+                GraphQLRuntimeOptions? updatedGraphQLOptions = runtimeConfig?.Runtime?.GraphQL ?? new();
+                bool status = TryUpdateConfiguredGraphQLValues(options, ref updatedGraphQLOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { GraphQL = updatedGraphQLOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Cache: Enabled and TTL
+            if (options.RuntimeCacheEnabled != null ||
+                options.RuntimeCacheTTL != null)
+            {
+                EntityCacheOptions? updatedCacheOptions = runtimeConfig?.Runtime?.Cache ?? new();
+                bool status = TryUpdateConfiguredCacheValues(options, ref updatedCacheOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Cache = updatedCacheOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer
+            if (options.RuntimeHostMode != null ||
+                options.RuntimeHostCorsOrigins != null ||
+                options.RuntimeHostCorsAllowCredentials != null ||
+                options.RuntimeHostAuthenticationProvider != null ||
+                options.RuntimeHostAuthenticationJwtAudience != null ||
+                options.RuntimeHostAuthenticationJwtIssuer != null)
+            {
+                HostOptions? updatedHostOptions = runtimeConfig?.Runtime?.Host;
+                bool status = TryUpdateConfiguredHostValues(options, ref updatedHostOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Host = updatedHostOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            return runtimeConfig != null;
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Rest runtime settings based on the provided value.
+        /// Validates that any user-provided values are valid and then returns true if the updated Rest options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedRestOptions">updatedRestOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredRestValues(ConfigureOptions options, ref RestRuntimeOptions? updatedRestOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Rest.Enabled
+                updatedValue = options?.RuntimeRestEnabled;
+                if (updatedValue != null)
+                {
+                    updatedRestOptions = updatedRestOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Rest.Path
+                updatedValue = options?.RuntimeRestPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedRestOptions = updatedRestOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Path as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update RuntimeConfig with Runtime.Rest.Path " +
+                            $"as '{updatedValue}'. Error details: {exceptionMessage}", exceptionMessage);
+                        return false;
+                    }
+                }
+
+                // Runtime.Rest.Request-Body-Strict
+                updatedValue = options?.RuntimeRestRequestBodyStrict;
+                if (updatedValue != null)
+                {
+                    updatedRestOptions = updatedRestOptions! with { RequestBodyStrict = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Rest.Request-Body-Strict as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Rest with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the GraphQL runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated GraphQL options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedGraphQLOptions">updatedGraphQLOptions.</param>
+        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredGraphQLValues(
+            ConfigureOptions options,
+            ref GraphQLRuntimeOptions? updatedGraphQLOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.GraphQL.Enabled
+                updatedValue = options?.RuntimeGraphQLEnabled;
+                if (updatedValue != null)
+                {
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.GraphQL.Path
+                updatedValue = options?.RuntimeGraphQLPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedGraphQLOptions = updatedGraphQLOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Path as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update Runtime.GraphQL.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                        return false;
+                    }
+                }
+
+                // Runtime.GraphQL.Allow-Introspection
+                updatedValue = options?.RuntimeGraphQLAllowIntrospection;
+                if (updatedValue != null)
+                {
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { AllowIntrospection = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.AllowIntrospection as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.GraphQL.Multiple-mutations.Create.Enabled
+                updatedValue = options?.RuntimeGraphQLMultipleMutationsCreateEnabled;
+                if (updatedValue != null)
+                {
+                    MultipleCreateOptions multipleCreateOptions = new(enabled: (bool)updatedValue);
+                    updatedGraphQLOptions = updatedGraphQLOptions! with { MultipleMutationOptions = new(multipleCreateOptions) };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.GraphQL.Multiple-Mutations.Create.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Cache runtime settings based on the provided value.
+        /// Validates user-provided parameters and then returns true if the updated Cache options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCacheOptions">updatedCacheOptions.</param>
+        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredCacheValues(
+            ConfigureOptions options,
+            ref EntityCacheOptions? updatedCacheOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Cache.Enabled
+                updatedValue = options?.RuntimeCacheEnabled;
+                if (updatedValue != null)
+                {
+                    updatedCacheOptions = updatedCacheOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Cache.ttl-seconds
+                updatedValue = options?.RuntimeCacheTTL;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.IsTTLValid(ttl: (int)updatedValue);
+                    if (status)
+                    {
+                        updatedCacheOptions = updatedCacheOptions! with { TtlSeconds = (int)updatedValue, UserProvidedTtlOptions = true };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Cache.ttl-seconds as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", updatedValue);
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Host runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated Host options
+        /// needs to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedHostOptions">updatedHostOptions.</param>
+        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredHostValues(
+            ConfigureOptions options,
+            ref HostOptions? updatedHostOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Host.Mode
+                updatedValue = options?.RuntimeHostMode;
+                if (updatedValue != null)
+                {
+                    updatedHostOptions = updatedHostOptions! with { Mode = (HostMode)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Mode as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Cors.Origins
+                IEnumerable<string>? updatedCorsOrigins = options?.RuntimeHostCorsOrigins;
+                if (updatedCorsOrigins != null && updatedCorsOrigins.Any())
+                {
+                    CorsOptions corsOptions;
+                    if (updatedHostOptions?.Cors == null)
+                    {
+                        corsOptions = new(Origins: updatedCorsOrigins.ToArray());
+                    }
+                    else
+                    {
+                        corsOptions = updatedHostOptions.Cors! with { Origins = updatedCorsOrigins.ToArray() };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Cors = corsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Cors.Origins as '{updatedValue}'", updatedCorsOrigins);
+                }
+
+                // Runtime.Host.Cors.Allow-Credentials
+                updatedValue = options?.RuntimeHostCorsAllowCredentials;
+                if (updatedValue != null)
+                {
+                    CorsOptions corsOptions;
+                    if (updatedHostOptions?.Cors == null)
+                    {
+                        corsOptions = new(new string[] { }, AllowCredentials: (bool)updatedValue);
+                    }
+                    else
+                    {
+                        corsOptions = updatedHostOptions.Cors! with { AllowCredentials = (bool)updatedValue };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Cors = corsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Cors.Allow-Credentials as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Provider
+                string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
+                if (updatedProviderValue != null)
+                {
+                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.StaticWebApps);
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Provider: (string)updatedValue);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Provider = (string)updatedValue };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Provider as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.Audience
+                updatedValue = options?.RuntimeHostAuthenticationJwtAudience;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(Audience: (string)updatedValue, null);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { Audience = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Audience as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Host.Authentication.Jwt.Issuer
+                updatedValue = options?.RuntimeHostAuthenticationJwtIssuer;
+                if (updatedValue != null)
+                {
+                    JwtOptions jwtOptions;
+                    AuthenticationOptions AuthOptions;
+                    if (updatedHostOptions?.Authentication == null || updatedHostOptions.Authentication?.Jwt == null)
+                    {
+                        jwtOptions = new(null, Issuer: (string)updatedValue);
+                    }
+                    else
+                    {
+                        jwtOptions = updatedHostOptions.Authentication.Jwt with { Issuer = (string)updatedValue };
+                    }
+
+                    if (updatedHostOptions?.Authentication == null)
+                    {
+                        AuthOptions = new(Jwt: jwtOptions);
+                    }
+                    else
+                    {
+                        AuthOptions = updatedHostOptions.Authentication with { Jwt = jwtOptions };
+                    }
+
+                    updatedHostOptions = updatedHostOptions! with { Authentication = AuthOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Host.Authentication.Jwt.Issuer as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Host with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
         }
 
         /// <summary>
@@ -1151,7 +1661,7 @@ namespace Cli
                 if (options.LogLevel is < LogLevel.Trace or > LogLevel.None)
                 {
                     _logger.LogError(
-                        "LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0",
+                        "LogLevel's valid range is 0 to 6, your value: {logLevel}, see: https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel",
                         options.LogLevel);
                     return false;
                 }
@@ -1161,7 +1671,7 @@ namespace Cli
             }
             else
             {
-                minimumLogLevel = Startup.GetLogLevelBasedOnMode(deserializedRuntimeConfig);
+                minimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(deserializedRuntimeConfig);
                 HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
 
                 _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostMode} mode.", minimumLogLevel, hostModeType);

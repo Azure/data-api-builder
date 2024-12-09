@@ -27,7 +27,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -1424,7 +1423,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryParameters,
                 queryExecutor.ExtractResultSetFromDbDataReader,
                 GetHttpContext(),
-                exposedColumnNames.IsNullOrEmpty() ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
+                EnumerableUtilities.IsNullOrEmpty(exposedColumnNames) ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
                 dataSourceName);
 
             dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
@@ -2360,8 +2359,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="isolationLevel">Transaction isolation level</param>
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope"/>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields" />
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption#fields" />
         /// <returns>TransactionScope object set at the specified isolation level</returns>
         private static TransactionScope ConstructTransactionScopeWithSpecifiedIsolationLevel(System.Transactions.IsolationLevel isolationLevel)
         {

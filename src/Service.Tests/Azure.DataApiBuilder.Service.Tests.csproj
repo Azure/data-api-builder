@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <Nullable>disable</Nullable>
     <OutputPath>$(BaseOutputPath)\tests</OutputPath>
@@ -9,6 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="CosmosTests\TestData\CosmosData\EmulatorData.json" />
+    <None Remove="CosmosTests\TestData\CosmosData\MultiItems\1.json" />
+    <None Remove="CosmosTests\TestData\CosmosData\MultiItems\2.json" />
+    <None Remove="CosmosTests\TestData\CosmosData\MultiItems\3.json" />
+    <None Remove="CosmosTests\TestData\CosmosData\MultiItems\4.json" />
+    <None Remove="CosmosTests\TestData\CosmosData\MultiItems\5.json" />
+    <None Remove="CosmosTests\TestData\GeneratedGqlSchema\MultiItemsWithConfig.gql" />
     <None Remove="dab-config.CosmosDb_NoSql.json" />
     <None Remove="dab-config.json" />
     <None Remove="dab-config.MsSql.json" />
@@ -36,16 +43,15 @@
     </PackageReference>
     <PackageReference Include="HotChocolate" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
     <PackageReference Include="Verify.MSTest" />
     <PackageReference Include="Verify.DiffPlex" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="CosmosTests\TestData\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="**/*.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

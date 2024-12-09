@@ -178,6 +178,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string testCategory = TestCategory.MSSQL)
         {
             DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "IntegrationTestMinimalSchema",
@@ -185,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
-                    Host: new(null, null)
+                    Host: new(Cors: null, Authentication: authenticationOptions)
                 ),
                 Entities: new(new Dictionary<string, Entity>())
             );
@@ -353,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             // Create SqlError object.
             // For details on what the parameters stand for please refer:
-            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number?view=dotnet-plat-ext-6.0#examples
+            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number#examples
             SqlError sqlError = (nineParamsConstructor
                 .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, null }) as SqlError)!;
             errorList.Add(sqlError);

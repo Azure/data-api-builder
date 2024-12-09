@@ -3,10 +3,12 @@
 
 using System.Security.Claims;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -23,11 +25,11 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers;
 /// </summary>
 public class ClientRoleHeaderAuthenticationMiddleware
 {
+    private const string ANONYOUMOUS_ROLE = "Anonymous";
+    private const string AUTHENTICATED_ROLE = "Authenticated";
     private readonly RequestDelegate _nextMiddleware;
-
     private ILogger<ClientRoleHeaderAuthenticationMiddleware> _logger;
-
-    private bool _isLateConfigured;
+    private RuntimeConfigProvider _runtimeConfigProvider;
 
     // Identity provider used for identities added to the ClaimsPrincipal object for the current user by DAB.
     private const string INTERNAL_DAB_IDENTITY_PROVIDER = "DAB-VERIFIED";
@@ -38,7 +40,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
     {
         _nextMiddleware = next;
         _logger = logger;
-        _isLateConfigured = runtimeConfigProvider.IsLateConfigured;
+        _runtimeConfigProvider = runtimeConfigProvider;
     }
 
     /// <summary>
@@ -57,11 +59,21 @@ public class ClientRoleHeaderAuthenticationMiddleware
     /// <param name="httpContext">Request metadata</param>
     public async Task InvokeAsync(HttpContext httpContext)
     {
+        // Determine the authentication scheme to use based on dab-config.json.
+        // Compatible with both ConfigureAuthentication and ConfigureAuthenticationV2 in startup.cs.
+        // This means that this code is resilient to whether or not the default authentication scheme is set in startup.
+        string scheme = EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+        if (!_runtimeConfigProvider.IsLateConfigured)
+        {
+            AuthenticationOptions? dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
+            scheme = ResolveConfiguredAuthNScheme(dabAuthNOptions?.Provider);
+        }
+
         // authNResult will be one of:
         // 1. Succeeded - Authenticated
         // 2. Failure - Token issue
         // 3. None - No token provided, no auth result.
-        AuthenticateResult authNResult = await httpContext.AuthenticateAsync();
+        AuthenticateResult authNResult = await httpContext.AuthenticateAsync(scheme);
 
         // Reject and terminate the request when an invalid token is provided
         // Write challenge response metadata (HTTP 401 Unauthorized response code
@@ -69,11 +81,19 @@ public class ClientRoleHeaderAuthenticationMiddleware
         // https://github.com/dotnet/aspnetcore/blob/3fe12b935c03138f76364dc877a7e069e254b5b2/src/Security/Authentication/JwtBearer/src/JwtBearerHandler.cs#L217
         if (authNResult.Failure is not null)
         {
-            await httpContext.ChallengeAsync();
+            await httpContext.ChallengeAsync(scheme);
             return;
         }
 
-        string clientDefinedRole = AuthorizationType.Anonymous.ToString();
+        // Manually set the httpContext.User to the Principal from the AuthenticateResult
+        // when we exclude setting a default authentication scheme in Startup.cs AddAuthentication().
+        // https://learn.microsoft.com/aspnet/core/security/authorization/limitingidentitybyscheme
+        if (authNResult.Succeeded)
+        {
+            httpContext.User = authNResult.Principal;
+        }
+
+        string clientDefinedRole = ANONYOUMOUS_ROLE;
 
         // A request can be authenticated in 2 cases:
         // 1. When the request has a valid jwt/easyauth token,
@@ -82,7 +102,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
 
         if (isAuthenticatedRequest)
         {
-            clientDefinedRole = AuthorizationType.Authenticated.ToString();
+            clientDefinedRole = AUTHENTICATED_ROLE;
         }
 
         // Attempt to inject CLIENT_ROLE_HEADER:clientDefinedRole into the httpContext
@@ -106,17 +126,16 @@ public class ClientRoleHeaderAuthenticationMiddleware
 
         // Log the request's authenticated status (anonymous/authenticated) and user role,
         // only in the non-hosted scenario.
-        if (!_isLateConfigured)
+        if (!_runtimeConfigProvider.IsLateConfigured)
         {
             string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
             string requestAuthStatus = isAuthenticatedRequest ? AuthorizationType.Authenticated.ToString() : AuthorizationType.Anonymous.ToString();
             _logger.LogDebug(
-                message: "{correlationId} Request authentication state: {requestAuthStatus}.",
+                message: "{correlationId} AuthN state: {requestAuthStatus}. Role: {clientDefinedRole}. Scheme: {scheme}",
                 correlationId,
-                requestAuthStatus);
-            _logger.LogDebug("{correlationId} The request will be executed in the context of the role: {clientDefinedRole}",
-                correlationId,
-                clientDefinedRole);
+                requestAuthStatus,
+                clientDefinedRole,
+                scheme);
         }
 
         // When the user is not in the clientDefinedRole and the client role header
@@ -150,6 +169,40 @@ public class ClientRoleHeaderAuthenticationMiddleware
     {
         return roleName.Equals(AuthorizationType.Authenticated.ToString(), StringComparison.OrdinalIgnoreCase) ||
                 roleName.Equals(AuthorizationType.Anonymous.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Uses the dab-config.json's Authentication provider name to resolve the
+    /// authentication scheme to use with httpContext.AuthenticateAsync(scheme).
+    /// </summary>
+    /// <param name="configuredProviderName">Dab config defined authentication provider name.</param>
+    /// <returns>Authentication Scheme</returns>
+    private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
+    {
+        if (string.Equals(configuredProviderName, SupportedAuthNProviders.APP_SERVICE, StringComparison.OrdinalIgnoreCase))
+        {
+            return EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
+        {
+            return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.SIMULATOR, StringComparison.OrdinalIgnoreCase))
+        {
+            return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.AZURE_AD, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase))
+        {
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+        else
+        {
+            // Changing this value is a breaking change because non-out of box
+            // authentication provider names supplied in dab-config.json indicate
+            // that JWT bearer authentication should be used.
+            return GenericOAuthDefaults.AUTHENTICATIONSCHEME;
+        }
     }
 }
 

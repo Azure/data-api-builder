@@ -14,19 +14,92 @@ using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
+using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
+    private DabChangeToken _changeToken;
+    private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
-    public RuntimeConfigLoader(string? connectionString = null)
+    // Public to allow the RuntimeProvider and other users of class to set via out param.
+    // May be candidate to refactor by changing all of the Parse/Load functions to save
+    // state in place of using out params.
+    public RuntimeConfig? RuntimeConfig;
+
+    public RuntimeConfig? LastValidRuntimeConfig;
+
+    public bool IsNewConfigDetected;
+
+    public bool IsNewConfigValidated;
+
+    public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
+        _changeToken = new DabChangeToken();
+        _handler = handler;
         _connectionString = connectionString;
+    }
+
+    /// <summary>
+    /// Change token producer which returns an uncancelled/unsignalled change token.
+    /// </summary>
+    /// <returns>DabChangeToken</returns>
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
+    }
+
+    /// <summary>
+    /// Swaps out the old change token with a new change token and
+    /// signals that a change has occurred.
+    /// </summary>
+    /// <seealso cref="https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Configuration/src/ConfigurationProvider.cs">
+    /// Example usage of Interlocked.Exchange(...) to refresh change token.</seealso>
+    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange">
+    /// Sets a variable to a specified value as an atomic operation.
+    /// </seealso>
+    private void RaiseChanged()
+    {
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
+    }
+
+    protected virtual void OnConfigChangedEvent(HotReloadEventArgs args)
+    {
+        _handler?.OnConfigChangedEvent(this, args);
+    }
+
+    /// <summary>
+    /// Notifies event handler and change token subscribers that a hot-reload has occurred.
+    /// Order here matters because some dependencies must be updated before others.
+    /// When modifying this function:
+    /// - Ensure that you add new event trigger(s) after any required dependencies have
+    /// been refreshed by previously called event triggers.
+    /// </summary>
+    /// <param name="message"></param>
+    protected void SignalConfigChanged(string message = "")
+    {
+        // Signal that a change has occurred to all change token listeners.
+        RaiseChanged();
+
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+
+        // Order of event firing matters: Authorization rules can only be updated after the
+        // MetadataProviderFactory has been updated with latest database object metadata.
+        // RuntimeConfig must already be updated and is implied to have been updated by the time
+        // this function is called.
+        OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
     }
 
     /// <summary>
@@ -35,9 +108,8 @@ public abstract class RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    /// <param name="dataSourceName">The data source name to be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "");
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -55,15 +127,12 @@ public abstract class RuntimeConfigLoader
     /// <param name="connectionString">connectionString to add to config if specified</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing. By default, no replacement happens.</param>
-    /// <param name="dataSourceName"> datasource name for which to add connection string</param>
-    /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
+    /// <param name="replacementFailureMode">Determines failure mode for env variable replacement.</param>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         ILogger? logger = null,
         string? connectionString = null,
         bool replaceEnvVar = false,
-        string dataSourceName = "",
-        Dictionary<string, string>? datasourceNameToConnectionString = null,
         EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
         JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar, replacementFailureMode);
@@ -80,25 +149,16 @@ public abstract class RuntimeConfigLoader
             // retreive current connection string from config
             string updatedConnectionString = config.DataSource.ConnectionString;
 
-            // set dataSourceName to default if not provided
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = config.DefaultDataSourceName;
-            }
-
             if (!string.IsNullOrEmpty(connectionString))
             {
                 // update connection string if provided.
                 updatedConnectionString = connectionString;
             }
 
-            if (datasourceNameToConnectionString is null)
-            {
-                datasourceNameToConnectionString = new Dictionary<string, string>();
-            }
+            Dictionary<string, string> datasourceNameToConnectionString = new();
 
-            // add to dictionary if datasourceName is present (will either be the default or the one provided)
-            datasourceNameToConnectionString.TryAdd(dataSourceName, updatedConnectionString);
+            // add to dictionary if datasourceName is present
+            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
 
             // iterate over dictionary and update runtime config with connection strings.
             foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
@@ -118,7 +178,7 @@ public abstract class RuntimeConfigLoader
                 }
 
                 ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(dataSourceName, ds);
+                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
 
                 if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -159,7 +219,6 @@ public abstract class RuntimeConfigLoader
         bool replaceEnvVar = false,
         EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
-
         JsonSerializerOptions options = new()
         {
             PropertyNameCaseInsensitive = false,
@@ -182,6 +241,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new HostOptionsConvertorFactory());
+        options.Converters.Add(new LogLevelOptionsConverterFactory());
 
         if (replaceEnvVar)
         {
@@ -277,7 +337,7 @@ public abstract class RuntimeConfigLoader
 
         // If the connection string does not contain the `Application Name` property, add it.
         // or if the connection string contains the `Application Name` property, replace it with the DataApiBuilder Application Name.
-        if (connectionStringBuilder.ApplicationName.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(connectionStringBuilder.ApplicationName))
         {
             connectionStringBuilder.ApplicationName = applicationName;
         }
@@ -289,5 +349,37 @@ public abstract class RuntimeConfigLoader
 
         // Return the updated connection string.
         return connectionStringBuilder.ConnectionString;
+    }
+
+    public bool DoesConfigNeedValidation()
+    {
+        if (IsNewConfigDetected && !IsNewConfigValidated)
+        {
+            IsNewConfigDetected = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Once the validation of the new config file is confirmed to have passed,
+    /// this function will save the newly resolved RuntimeConfig as the new last known good,
+    /// in order to have config file DAB can go into in case hot reload fails.
+    /// </summary>
+    public void SetLkgConfig()
+    {
+        IsNewConfigValidated = false;
+        LastValidRuntimeConfig = RuntimeConfig;
+    }
+
+    /// <summary>
+    /// Changes the state of the config file into the last known good iteration,
+    /// in order to allow users to still be able to make changes in DAB even if
+    /// a hot reload fails.
+    /// </summary>
+    public void RestoreLkgConfig()
+    {
+        RuntimeConfig = LastValidRuntimeConfig;
     }
 }

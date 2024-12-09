@@ -7,7 +7,6 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -422,7 +421,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private string Build(LabelledColumn column, string columnPrefix)
         {
-            if (columnPrefix.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(columnPrefix))
             {
                 return $"{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
             }

@@ -41,6 +41,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -77,17 +78,19 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
+            services.AddSingleton(hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, hotReloadEventHandler, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);
-            services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
+            services.AddSingleton(configProvider);
 
             if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
                 && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
@@ -172,7 +175,17 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthentication(services, configProvider);
+            if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
+            {
+                // Development mode implies support for "Hot Reload". The V2 authentication function
+                // wires up all DAB supported authentication providers (schemes) so that at request time,
+                // the runtime config defined authenitication provider is used to authenticate requests.
+                ConfigureAuthenticationV2(services, configProvider);
+            }
+            else
+            {
+                ConfigureAuthentication(services, configProvider);
+            }
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
@@ -238,6 +251,11 @@ namespace Azure.DataApiBuilder.Service
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
 
+            // Allows DAB to override the HTTP error code set by HotChocolate.
+            // This is used to ensure HTTP code 4XX is set when the datatbase
+            // returns a "bad request" error such as stored procedure params missing.
+            services.AddHttpResultSerializer<DabGraphQLResultSerializer>();
+
             server.AddErrorFilter(error =>
                 {
                     if (error.Exception is not null)
@@ -275,7 +293,6 @@ namespace Azure.DataApiBuilder.Service
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
-            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
@@ -292,7 +309,7 @@ namespace Azure.DataApiBuilder.Service
                     {
                         _logger.LogError(
                             message: "Could not initialize the engine with the runtime config file: {configFilePath}",
-                            fileSystemRuntimeConfigLoader.ConfigFilePath);
+                            runtimeConfigProvider.ConfigFilePath);
                     }
 
                     hostLifetime.StopApplication();
@@ -301,6 +318,7 @@ namespace Azure.DataApiBuilder.Service
             else
             {
                 // Config provided during runtime.
+                runtimeConfigProvider.IsLateConfigured = true;
                 runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (sender, newConfig) =>
                 {
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
@@ -415,21 +433,6 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Takes in the RuntimeConfig object and checks the host mode.
-        /// If host mode is Development, return `LogLevel.Debug`, else
-        /// for production returns `LogLevel.Error`.
-        /// </summary>
-        public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
-        {
-            if (runtimeConfig.IsDevelopmentMode())
-            {
-                return LogLevel.Debug;
-            }
-
-            return LogLevel.Error;
-        }
-
-        /// <summary>
         /// If LogLevel is NOT overridden by CLI, attempts to find the 
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
@@ -445,7 +448,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
+                    MinimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig);
                 }
             }
 
@@ -481,7 +484,7 @@ namespace Azure.DataApiBuilder.Service
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
                             // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
-                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
+                            // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
                             RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                         };
                     });
@@ -531,6 +534,27 @@ namespace Azure.DataApiBuilder.Service
                 // is not present.
                 SetStaticWebAppsAuthentication(services);
             }
+        }
+
+        /// <summary>
+        /// Registers all DAB supported authentication providers (schemes) so that at request time,
+        /// DAB can use the runtime config's defined provider to authenticate requests.
+        /// The function includes JWT specific configuration handling:
+        /// - IOptionsChangeTokenSource<JwtBearerOptions> : Registers a change token source for dynamic config updates which
+        /// is used internally by JwtBearerHandler's OptionsMonitor to listen for changes in JwtBearerOptions.
+        /// - IConfigureOptions<JwtBearerOptions> : Registers named JwtBearerOptions whose "Configure(...)" function is
+        /// called by OptionsFactory internally by .NET to fetch the latest configuration from the RuntimeConfigProvider.
+        /// </summary>
+        /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/49586#issuecomment-1671838595">Guidance for registering IOptionsChangeTokenSource</seealso>
+        /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/21491#issuecomment-624240160">Guidance for registering named options.</seealso>
+        private static void ConfigureAuthenticationV2(IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
+        {
+            services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(new JwtBearerOptionsChangeTokenSource(runtimeConfigProvider));
+            services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
+            services.AddAuthentication()
+                    .AddEnvDetectedEasyAuth()
+                    .AddJwtBearer()
+                    .AddSimulatorAuthentication();
         }
 
         /// <summary>
@@ -660,7 +684,7 @@ namespace Azure.DataApiBuilder.Service
                     try
                     {
                         IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-                        openApiDocumentor.CreateDocument();
+                        openApiDocumentor.CreateDocument(isHotReloadScenario: false);
                     }
                     catch (DataApiBuilderException dabException)
                     {

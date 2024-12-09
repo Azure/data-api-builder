@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>
         /// Returns the runtime field value.
         /// </returns>
-        public static object? ExecuteLeafField(IPureResolverContext context)
+        public static object? ExecuteLeafField(IResolverContext context)
         {
             // This means this field is a scalar, so we don't need to do
             // anything for it.
@@ -190,7 +190,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>
         /// Returns a new json object.
         /// </returns>
-        public object? ExecuteObjectField(IPureResolverContext context)
+        public object? ExecuteObjectField(IResolverContext context)
         {
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
@@ -226,7 +226,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>The resolved list, a JSON array, returned as type 'object?'.</returns>
         /// <remarks>Return type is 'object?' instead of a 'List of JsonElements' because when this function returns JsonElement,
         /// the HC12 engine doesn't know how to handle the JsonElement and results in requests failing at runtime.</remarks>
-        public object? ExecuteListField(IPureResolverContext context)
+        public object? ExecuteListField(IResolverContext context)
         {
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
@@ -266,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         private static bool TryGetPropertyFromParent(
-            IPureResolverContext context,
+            IResolverContext context,
             out JsonElement propertyValue)
         {
             JsonElement parent = context.Parent<JsonElement>();
@@ -443,7 +443,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// CosmosDB does not utilize pagination metadata. So this function will return null
         /// when executing GraphQl queries against CosmosDB.
         /// </summary>
-        private static IMetadata? GetMetadata(IPureResolverContext context)
+        private static IMetadata? GetMetadata(IResolverContext context)
         {
             if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent is not null)
             {
@@ -492,7 +492,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="context">Pure resolver context</param>
         /// <returns>Pagination metadata</returns>
-        private static IMetadata GetMetadataObjectField(IPureResolverContext context)
+        private static IMetadata GetMetadataObjectField(IResolverContext context)
         {
             // Depth Levels:  / 0   /  1  /   2    /   3
             // Example Path: /books/items/items[0]/publishers
@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // This check handles when the current selection is a relationship field because in that case,
                 // there will be no context data entry.
-                // e.g. metadata for index 4 will not exist. only 3. 
+                // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
                 string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Depth;
@@ -561,7 +561,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// context.Path -> /books depth(0)
         /// context.Selection -> books { items {id, title}}
         /// </summary>
-        private static void SetNewMetadata(IPureResolverContext context, IMetadata? metadata)
+        private static void SetNewMetadata(IResolverContext context, IMetadata? metadata)
         {
             string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Depth;
             context.ContextData.Add(metadataKey, metadata);
@@ -573,7 +573,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="context">Pure resolver context</param>
         /// <param name="metadata">Pagination metadata</param>
-        private static void SetNewMetadataChildren(IPureResolverContext context, IMetadata? metadata)
+        private static void SetNewMetadataChildren(IResolverContext context, IMetadata? metadata)
         {
             // When context.Path is /entity/items the metadata key is "entity"
             // The context key will use the depth of "items" so that the provided

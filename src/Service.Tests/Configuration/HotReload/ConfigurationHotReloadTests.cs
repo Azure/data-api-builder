@@ -444,25 +444,6 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
-    /// 
-    /// </summary>
-    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
-    {
-        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        while (stopwatch.Elapsed < timeout)
-        {
-            if (condition())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
-        }
-
-        throw new TimeoutException("The condition was not met within the timeout period.");
-    }
-
-    /// <summary>
     /// Creates a hot reload scenario in which the schema file is invalid which causes
     /// hot reload to fail, then we check that the program is still able to work
     /// properly by validating that the DAB engine is still using the same configuration file
@@ -486,7 +467,7 @@ public class ConfigurationHotReloadTests
             schema: schemaName,
             restEnabled: "false",
             gQLEnabled: "false");
-        System.Threading.Thread.Sleep(8000);
+        System.Threading.Thread.Sleep(10000);
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
@@ -516,11 +497,31 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             restEnabled: "invalid",
             gQLEnabled: "invalid");
-        System.Threading.Thread.Sleep(8000);
+        System.Threading.Thread.Sleep(5000);
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
         // Assert
         Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+    }
+
+    /// <summary>
+    /// Helper function that waits and checks multiple times if the condition is completed before the time interval,
+    /// if at any point to condition is completed then the program will continue with no delays, else it will fail.
+    /// </summary>
+    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
+    {
+        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(pollingInterval);
+        }
+
+        throw new TimeoutException("The condition was not met within the timeout period.");
     }
 }

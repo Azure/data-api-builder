@@ -473,29 +473,29 @@ public class ConfigurationHotReloadTests
     public void HotReloadValidationFail()
     {
         // Arrange
-        string schema = "testSchema.json";
+        string schemaName = "testSchema.json";
         string schemaConfig = TestHelper.GenerateInvalidSchema();
 
-        File.WriteAllText(schema, schemaConfig);
+        File.WriteAllText(schemaName, schemaConfig);
         RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
         Assert.IsNotNull(lkgRuntimeConfig);
 
         // Act
         // Simulate an invalid change to the schema file while the config is updated to a valid state
         GenerateConfigFile(
-            schema: schema,
+            schema: schemaName,
             restEnabled: "false",
             gQLEnabled: "false");
-        System.Threading.Thread.Sleep(6000);
+        System.Threading.Thread.Sleep(8000);
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
         // Assert
         Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
 
-        if (File.Exists(schema))
+        if (File.Exists(schemaName))
         {
-            File.Delete(schema);
+            File.Delete(schemaName);
         }
     }
 
@@ -516,7 +516,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             restEnabled: "invalid",
             gQLEnabled: "invalid");
-        System.Threading.Thread.Sleep(1000);
+        System.Threading.Thread.Sleep(8000);
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 

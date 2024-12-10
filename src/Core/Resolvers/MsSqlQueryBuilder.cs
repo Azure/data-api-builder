@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
+        private const string MSSQL_ESCAPE_CHAR = "\\";
 
         // Name of the column which stores the number of records with given PK. Used in Upsert queries.
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
@@ -60,9 +61,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     Build(structure.PaginationMetadata.PaginationPredicate));
             }
 
+            string escapeClause = predicates.Contains("LIKE", StringComparison.OrdinalIgnoreCase)
+                ? $" ESCAPE '{MSSQL_ESCAPE_CHAR}'"
+                : string.Empty;
+
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
+                + escapeClause
                 + $" ORDER BY {Build(structure.OrderByColumns)}";
 
             query += FOR_JSON_SUFFIX;

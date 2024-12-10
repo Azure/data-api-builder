@@ -220,6 +220,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests various StringFilterInput cases that uses LIKE clause with special characters.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersWithSpecialCharacters(string dynamicFilter, string dbQuery)
+        {
+            // Arrange
+            string graphQLQueryName = "books";
+
+            // Construct the GraphQL query by injecting the dynamic filter
+            string gqlQuery = @$"{{ 
+                books(filter: {dynamicFilter}, orderBy: {{title: ASC}}) {{ 
+                    items {{
+                        title
+                    }} 
+                }} 
+            }}";
+
+            // Act
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            // // Assert
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Tests endsWith of StringFilterInput
         /// </summary>
         [TestMethod]

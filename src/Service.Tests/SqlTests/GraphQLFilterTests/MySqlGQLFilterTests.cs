@@ -89,6 +89,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestStringFiltersEqWithMappings(mySqlQuery);
         }
 
+        [DataTestMethod]
+        [DataRow(
+            "{ title: { endsWith: \"_CONN\" } }",
+            "%\\_CONN",
+            DisplayName = "EndsWith: '_CONN'"
+        )]
+        [DataRow(
+            "{ title: { contains: \"%_\" } }",
+            "%\\%\\_%",
+            DisplayName = "Contains: '%_'"
+        )]
+        [DataRow(
+            "{ title: { endsWith: \"%_CONN\" } }",
+            "%\\%\\_CONN",
+            DisplayName = "endsWith: '%CONN'"
+        )]
+        [DataRow(
+            "{ title: { startsWith: \"CONN%\" } }",
+            "CONN\\%%",
+            DisplayName = "startsWith: 'CONN%'"
+        )]
+        public new async Task TestStringFiltersWithSpecialCharacters(string dynamicFilter, string dbFilterInput)
+        {
+            string mySqlQuery = @$"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                (SELECT `table0`.`title` AS `title`
+                FROM `books` AS `table0`
+                WHERE `table0`.`title` LIKE '{dbFilterInput}'
+                ORDER BY `table0`.`title` ASC
+                LIMIT 100) AS `subq1`";
+            
+            await base.TestStringFiltersWithSpecialCharacters(dynamicFilter, mySqlQuery);
+        }
+
         /// <summary>
         /// Gets the default schema for
         /// MySql.

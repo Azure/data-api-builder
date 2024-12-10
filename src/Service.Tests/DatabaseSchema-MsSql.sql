@@ -517,7 +517,8 @@ VALUES (1, 'Awesome book', 1234),
 (14, 'Before Sunset', 1234),
 (15, 'MSSQL_CONN', 1234),
 (16, 'SOME%CONN', 1234),
-(27, 'CONN%_CONN', 1234);
+(17, 'CONN%_CONN', 1234),
+(18, '[Special Book]', 1234);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT books_mm ON
@@ -538,7 +539,8 @@ VALUES (1, 'Awesome book', 1234),
 (14, 'Before Sunset', 1234),
 (15, 'MSSQL_CONN', 1234),
 (16, 'SOME%CONN', 1234),
-(27, 'CONN%_CONN', 1234);
+(17, 'CONN%_CONN', 1234),
+(18, '[Special Book]', 1234);
 SET IDENTITY_INSERT books_mm OFF
 
 SET IDENTITY_INSERT players ON

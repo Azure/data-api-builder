@@ -110,6 +110,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             "CONN\\%%",
             DisplayName = "startsWith: 'CONN%'"
         )]
+        [DataRow(
+            "{ title: { startsWith: \"[\" } }",
+            "\\[%",
+            DisplayName = "startsWith: '['"
+        )]
+        [DataRow(
+            "{ title: { endsWith: \"]\" } }",
+            "%\\]",
+            DisplayName = "endsWith: ']'"
+        )]
         public new async Task TestStringFiltersWithSpecialCharacters(string dynamicFilter, string dbFilterInput)
         {
             string mySqlQuery = @$"

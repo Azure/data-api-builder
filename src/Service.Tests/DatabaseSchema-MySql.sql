@@ -379,7 +379,8 @@ INSERT INTO books(id, title, publisher_id)
         (14, 'Before Sunset', 1234),
         (15, 'MYSQL_CONN', 1234),
         (16, 'SOME%CONN', 1234),
-        (17, 'CONN%_CONN', 1234);
+        (17, 'CONN%_CONN', 1234),
+        (18, '[Special Book]', 1234);
 INSERT INTO book_website_placements(book_id, price) VALUES (1, 100), (2, 50), (3, 23), (5, 33);
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);

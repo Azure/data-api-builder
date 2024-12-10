@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -23,6 +24,7 @@ public class ConfigurationHotReloadTests
     private static TestServer _testServer;
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
+    private static StringWriter _writer;
     internal const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     internal const string GQL_QUERY_NAME = "books";
 
@@ -39,7 +41,9 @@ public class ConfigurationHotReloadTests
     internal static string _bookDBOContents;
 
     private static void GenerateConfigFile(
+        string schema = "",
         DatabaseType databaseType = DatabaseType.MSSQL,
+        string sessionContext = "true",
         string connectionString = "",
         string restPath = "rest",
         string restEnabled = "true",
@@ -57,11 +61,11 @@ public class ConfigurationHotReloadTests
     {
         File.WriteAllText(configFileName, @"
               {
-                ""$schema"": """",
+                ""$schema"": """ + schema + @""",
                     ""data-source"": {
                         ""database-type"": """ + databaseType + @""",
                         ""options"": {
-                            ""set-session-context"": true
+                            ""set-session-context"": " + sessionContext + @"
                         },
                         ""connection-string"": """ + connectionString + @"""
                     },
@@ -301,125 +305,222 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
+    /// Hot reload the configuration file by saving a new session-context and connection string.
+    /// Validate that the response from the server is correct, by ensuring that the session-context
+    /// inside the DataSource parameter is different from the session-context before hot reload.
+    /// By asserting that hot reload worked properly for the session-context it also implies that
+    /// the new connection string with additional parameters is also valid.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigDataSource()
+    {
+        // Arrange
+        RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
+        MsSqlOptions previousSessionContext = previousRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
+
+        // String has additions that are not in original connection string
+        string expectedConnectionString = $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}" + "Trusted_Connection=True;";
+
+        // Act
+        GenerateConfigFile(
+            sessionContext: "false",
+            connectionString: expectedConnectionString);
+        System.Threading.Thread.Sleep(3000);
+
+        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
+        MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
+        JsonElement reloadGQLContents = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+            _testClient,
+            _configProvider,
+            GQL_QUERY_NAME,
+            GQL_QUERY);
+
+        // Assert
+        Assert.AreNotEqual(previousSessionContext, actualSessionContext);
+        Assert.AreEqual(false, actualSessionContext.SetSessionContext);
+        SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file so that it changes from one connection string
+    /// to an invalid connection string, then it hot reloads once more to the original
+    /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigConnectionString()
+    {
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
+        string failedKeyWord = "Unable to hot reload configuration file due to";
+        string succeedKeyWord = "Validated hot-reloaded configuration file";
+
+        // Act
+        // Hot Reload should fail here
+        GenerateConfigFile(
+            connectionString: $"WrongConnectionString");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(failedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload was not able to validate properly
+        string failedConfigLog = $"{_writer.ToString()}";
+        _writer.GetStringBuilder().Clear();
+
+        // Hot Reload should succeed here
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(succeedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload validated properly
+        string succeedConfigLog = $"{_writer.ToString()}";
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+
+        // Assert
+        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
+        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// /// (Warning: This test only currently works in the pipeline due to constrains of not
+    /// being able to change from one database type to another, under normal circumstances
+    /// hot reload allows changes from one database type to another)
+    /// Hot reload the configuration file so that it changes from one database type to another.
+    /// Then it hot reloads once more to the original database type. We assert that the
+    /// first reload fails while the second one succeeds.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigDatabaseType()
+    {
+        // Arrange
+        _writer = new StringWriter();
+        Console.SetOut(_writer);
+
+        string failedKeyWord = "Unable to hot reload configuration file due to";
+        string succeedKeyWord = "Validated hot-reloaded configuration file";
+
+        // Act
+        // Hot Reload should fail here
+        GenerateConfigFile(
+            databaseType: DatabaseType.PostgreSQL,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(failedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload was not able to validate properly
+        string failedConfigLog = $"{_writer.ToString()}";
+        _writer.GetStringBuilder().Clear();
+
+        // Hot Reload should succeed here
+        GenerateConfigFile(
+            databaseType: DatabaseType.MSSQL,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
+        await ConfigurationHotReloadTests.WaitForConditionAsync(
+          () => _writer.ToString().Contains(succeedKeyWord),
+          TimeSpan.FromSeconds(12),
+          TimeSpan.FromMilliseconds(500));
+
+        // Log that shows that hot-reload validated properly
+        string succeedConfigLog = $"{_writer.ToString()}";
+
+        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+
+        // Assert
+        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
+        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
+    {
+        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(pollingInterval);
+        }
+
+        throw new TimeoutException("The condition was not met within the timeout period.");
+    }
+
+    /// <summary>
     /// Creates a hot reload scenario in which the schema file is invalid which causes
     /// hot reload to fail, then we check that the program is still able to work
     /// properly by validating that the DAB engine is still using the same configuration file
     /// from before the hot reload.
     /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [TestCategory(TestCategory.MSSQL)]
     public void HotReloadValidationFail()
     {
         // Arrange
-        string schemaName = "testSchema.json";
-        string configName = "hotreload-config.json";
-        if (File.Exists(configName))
-        {
-            File.Delete(configName);
-        }
-
-        if (File.Exists(schemaName))
-        {
-            File.Delete(schemaName);
-        }
-
-        bool initialRestEnabled = true;
-        bool updatedRestEnabled = false;
-
-        bool initialGQLEnabled = true;
-        bool updatedGQLEnabled = false;
-
-        DataSource dataSource = new(DatabaseType.MSSQL,
-            ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-        RuntimeConfig initialConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, initialRestEnabled, initialGQLEnabled);
-
-        RuntimeConfig updatedConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, updatedRestEnabled, updatedGQLEnabled);
-
+        string schema = "testSchema.json";
         string schemaConfig = TestHelper.GenerateInvalidSchema();
 
-        // Not using mocked filesystem so we pick up real file changes for hot reload
-        FileSystem fileSystem = new();
-        fileSystem.File.WriteAllText(configName, runtimeConfig.ToJson());
-        FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
-        RuntimeConfigProvider configProvider = new(configLoader);
-        RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
-
+        File.WriteAllText(schema, schemaConfig);
+        RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
         Assert.IsNotNull(lkgRuntimeConfig);
 
         // Act
         // Simulate an invalid change to the schema file while the config is updated to a valid state
-        fileSystem.File.WriteAllText(schemaName, schemaConfig);
-        fileSystem.File.WriteAllText(configName, updatedConfig.ToJson());
-
-        // Give ConfigFileWatcher enough time to hot reload the change
+        GenerateConfigFile(
+            schema: schema,
+            restEnabled: "false",
+            gQLEnabled: "false");
         System.Threading.Thread.Sleep(6000);
 
-        RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
+        RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
+
+        // Assert
         Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
 
-        if (File.Exists(configName))
+        if (File.Exists(schema))
         {
-            File.Delete(configName);
-        }
-
-        if (File.Exists(schemaName))
-        {
-            File.Delete(schemaName);
+            File.Delete(schema);
         }
     }
 
     /// <summary>
     /// Creates a hot reload scenario in which the updated configuration file is invalid causing
-    /// hot reload to fail as the schema can't be used by DAB, then we check that the
-    /// program is still able to work properly by showing us that it is still using the
-    /// same configuration file from before the hot reload.
+    /// hot reload to fail, then we check that the program is still able to work properly by
+    /// showing us that it is still using the same configuration file from before the hot reload.
     /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [TestCategory(TestCategory.MSSQL)]
     public void HotReloadParsingFail()
     {
         // Arrange
-        string schemaName = "dab.draft.schema.json";
-        string configName = "hotreload-config.json";
-        if (File.Exists(configName))
-        {
-            File.Delete(configName);
-        }
-
-        bool initialRestEnabled = true;
-
-        bool initialGQLEnabled = true;
-
-        DataSource dataSource = new(DatabaseType.MSSQL,
-            ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-        RuntimeConfig initialConfig = InitRuntimeConfigForHotReload(schemaName, dataSource, initialRestEnabled, initialGQLEnabled);
-
-        string updatedConfig = TestHelper.GenerateInvalidRuntimeSection();
-
-        // Not using mocked filesystem so we pick up real file changes for hot reload
-        FileSystem fileSystem = new();
-        fileSystem.File.WriteAllText(configName, runtimeConfig.ToJson());
-        FileSystemRuntimeConfigLoader configLoader = new(fileSystem, handler: null, configName, string.Empty);
-        RuntimeConfigProvider configProvider = new(configLoader);
-        RuntimeConfig lkgRuntimeConfig = configProvider.GetConfig();
-
+        RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
         Assert.IsNotNull(lkgRuntimeConfig);
 
         // Act
-        // Simulate an invalid change to the config file
-        fileSystem.File.WriteAllText(configName, updatedConfig);
-
-        // Give ConfigFileWatcher enough time to hot reload the change
+        GenerateConfigFile(
+            restEnabled: "invalid",
+            gQLEnabled: "invalid");
         System.Threading.Thread.Sleep(1000);
 
-        RuntimeConfig newRuntimeConfig = configProvider.GetConfig();
-        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+        RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
-        if (File.Exists(configName))
-        {
-            File.Delete(configName);
-        }
+        // Assert
+        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
     }
 }

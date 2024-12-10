@@ -449,13 +449,18 @@ public class ConfigurationHotReloadTests
     /// properly by validating that the DAB engine is still using the same configuration file
     /// from before the hot reload.
     /// </summary>
-   /* [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public void HotReloadValidationFail()
     {
         // Arrange
-        string schemaName = "testSchema.json";
+        string schemaName = "hot-reload.draft.schema.json";
         string schemaConfig = TestHelper.GenerateInvalidSchema();
+
+        if (File.Exists(schemaName))
+        {
+            File.Delete(schemaName);
+        }
 
         File.WriteAllText(schemaName, schemaConfig);
         RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
@@ -478,7 +483,7 @@ public class ConfigurationHotReloadTests
         {
             File.Delete(schemaName);
         }
-    }*/
+    }
 
     /// <summary>
     /// Creates a hot reload scenario in which the updated configuration file is invalid causing

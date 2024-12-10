@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using OpenTelemetry.Exporter;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;

@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 WHERE [title] LIKE '{dbFilterInput}' ESCAPE '\'
                 ORDER BY [title] asc
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
-            
+
             await base.TestStringFiltersWithSpecialCharacters(dynamicFilter, msSqlQuery);
         }
 

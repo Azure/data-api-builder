@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 WHERE `table0`.`title` LIKE '{dbFilterInput}'
                 ORDER BY `table0`.`title` ASC
                 LIMIT 100) AS `subq1`";
-            
+
             await base.TestStringFiltersWithSpecialCharacters(dynamicFilter, mySqlQuery);
         }
 

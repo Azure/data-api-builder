@@ -209,7 +209,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                     WHERE title LIKE '{dbFilterInput}'
                     ORDER BY title ASC
                 ) as table0";
-            
+
             await base.TestStringFiltersWithSpecialCharacters(dynamicFilter, postgresQuery);
         }
 

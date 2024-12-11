@@ -448,6 +448,9 @@ public class ConfigurationHotReloadTests
     /// hot reload to fail, then we check that the program is still able to work
     /// properly by validating that the DAB engine is still using the same configuration file
     /// from before the hot reload.
+    /// 
+    /// Invalid change that was added is a schema file that is not complete, which should be
+    /// catched by the validator.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
@@ -490,6 +493,9 @@ public class ConfigurationHotReloadTests
     /// Creates a hot reload scenario in which the updated configuration file is invalid causing
     /// hot reload to fail, then we check that the program is still able to work properly by
     /// showing us that it is still using the same configuration file from before the hot reload.
+    /// 
+    /// Invalid change that was added is the word "invalid" in the config file where the only
+    /// valid options are "true" or "false".
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]

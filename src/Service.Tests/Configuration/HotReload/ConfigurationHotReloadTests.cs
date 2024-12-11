@@ -470,6 +470,7 @@ public class ConfigurationHotReloadTests
         // Simulate an invalid change to the schema file while the config is updated to a valid state
         GenerateConfigFile(
             schema: schemaName,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "false",
             gQLEnabled: "false");
         System.Threading.Thread.Sleep(10000);
@@ -500,6 +501,7 @@ public class ConfigurationHotReloadTests
 
         // Act
         GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "invalid",
             gQLEnabled: "invalid");
         System.Threading.Thread.Sleep(5000);

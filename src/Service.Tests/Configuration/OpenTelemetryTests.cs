@@ -51,8 +51,16 @@ public class OpenTelemetryTests
     [TestCleanup]
     public void CleanUpTelemetryConfig()
     {
-        File.Delete(CONFIG_WITH_TELEMETRY);
-        File.Delete(CONFIG_WITHOUT_TELEMETRY);
+        if (File.Exists(CONFIG_WITH_TELEMETRY))
+        {
+            File.Delete(CONFIG_WITH_TELEMETRY);
+        }
+
+        if (File.Exists(CONFIG_WITHOUT_TELEMETRY))
+        {
+            File.Delete(CONFIG_WITHOUT_TELEMETRY);
+        }
+
         Startup.OpenTelemetryOptions = new();
     }
 

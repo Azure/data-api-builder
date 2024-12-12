@@ -27,7 +27,7 @@ public class OpenTelemetryTests
     private static RuntimeConfig _configuration;
 
     /// <summary>
-    /// Creates runtime config file with specified telemetry options.
+    /// This is a helper function that creates runtime config file with specified telemetry options.
     /// </summary>
     /// <param name="configFileName">Name of the config file to be created.</param>
     /// <param name="isTelemetryEnabled">Whether telemetry is enabled or not.</param>

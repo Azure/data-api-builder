@@ -89,6 +89,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             "%\\]",
             DisplayName = "endsWith: ']'"
         )]
+        [DataRow(
+            "{ title: { contains: \"\\\\\" } }",
+            "%\\\\%",
+            DisplayName = "Contains single backslash: '\\' "
+        )]
+        [DataRow(
+            "{ title: { contains: \"\\\\\\\\\" } }",
+            "%\\\\\\\\%",
+            DisplayName = "Contains double backslash: '\\\\'"
+        )]
         public new async Task TestStringFiltersWithSpecialCharacters(string dynamicFilter, string dbFilterInput)
         {
             string msSqlQuery = @$"

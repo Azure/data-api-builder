@@ -41,6 +41,7 @@ public class ConfigurationHotReloadTests
     internal static string _bookDBOContents;
 
     private static void GenerateConfigFile(
+        string schema = "",
         DatabaseType databaseType = DatabaseType.MSSQL,
         string sessionContext = "true",
         string connectionString = "",
@@ -60,7 +61,7 @@ public class ConfigurationHotReloadTests
     {
         File.WriteAllText(configFileName, @"
               {
-                ""$schema"": """",
+                ""$schema"": """ + schema + @""",
                     ""data-source"": {
                         ""database-type"": """ + databaseType + @""",
                         ""options"": {
@@ -443,7 +444,83 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
+    /// Creates a hot reload scenario in which the schema file is invalid which causes
+    /// hot reload to fail, then we check that the program is still able to work
+    /// properly by validating that the DAB engine is still using the same configuration file
+    /// from before the hot reload.
     /// 
+    /// Invalid change that was added is a schema file that is not complete, which should be
+    /// catched by the validator.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public void HotReloadValidationFail()
+    {
+        // Arrange
+        string schemaName = "hot-reload.draft.schema.json";
+        string schemaConfig = TestHelper.GenerateInvalidSchema();
+
+        if (File.Exists(schemaName))
+        {
+            File.Delete(schemaName);
+        }
+
+        File.WriteAllText(schemaName, schemaConfig);
+        RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
+        Assert.IsNotNull(lkgRuntimeConfig);
+
+        // Act
+        // Simulate an invalid change to the schema file while the config is updated to a valid state
+        GenerateConfigFile(
+            schema: schemaName,
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            restEnabled: "false",
+            gQLEnabled: "false");
+        System.Threading.Thread.Sleep(10000);
+
+        RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
+
+        // Assert
+        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+
+        if (File.Exists(schemaName))
+        {
+            File.Delete(schemaName);
+        }
+    }
+
+    /// <summary>
+    /// Creates a hot reload scenario in which the updated configuration file is invalid causing
+    /// hot reload to fail, then we check that the program is still able to work properly by
+    /// showing us that it is still using the same configuration file from before the hot reload.
+    /// 
+    /// Invalid change that was added is the word "invalid" in the config file where the only
+    /// valid options are "true" or "false".
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public void HotReloadParsingFail()
+    {
+        // Arrange
+        RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
+        Assert.IsNotNull(lkgRuntimeConfig);
+
+        // Act
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            restEnabled: "invalid",
+            gQLEnabled: "invalid");
+        System.Threading.Thread.Sleep(5000);
+
+        RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
+
+        // Assert
+        Assert.AreEqual(expected: lkgRuntimeConfig, actual: newRuntimeConfig);
+    }
+
+    /// <summary>
+    /// Helper function that waits and checks multiple times if the condition is completed before the time interval,
+    /// if at any point to condition is completed then the program will continue with no delays, else it will fail.
     /// </summary>
     private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
     {

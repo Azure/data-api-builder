@@ -113,6 +113,12 @@ namespace Cli
                 schemaText = exporter.ExportGraphQLFromDabService(runtimeConfig, logger);
             }
 
+            if (string.IsNullOrEmpty(schemaText))
+            {
+                logger.LogError("Failed to export the GraphQL schema.");
+                return;
+            }
+
             // Write the schema content to a file
             WriteSchemaFile(options, fileSystem, schemaText, logger);
 

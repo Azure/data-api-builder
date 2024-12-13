@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 // Populate entity and singular name mapping if configuration is provided.
                 foreach (KeyValuePair<string, Entity> item in config.Entities)
                 {
-                    _entityAndSingularNameMapping.Add(item.Value.GraphQL.Singular, item.Key);
+                    _entityAndSingularNameMapping.Add(item.Value.GraphQL.Singular.Pascalize(), item.Key);
                 }
             }
 
@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                     continue;
                 }
 
-                // Check if the parent type is in the entity mapping.
+                // Check if the parent type is not in the entity mapping.
                 if (_entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(parentType.Pascalize()))
                 {
                     continue;
@@ -276,6 +276,11 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <exception cref="InvalidOperationException">Thrown if the array contains elements of multiple types.</exception>
         private string? ProcessJsonArray(JsonElement jsonArray, string fieldName, string parentType)
         {
+            if (jsonArray.GetArrayLength() == 0)
+            {
+                return null;
+            }
+
             HashSet<string?> gqlFieldType = new();
             ArrayEnumerator arrayEnumerator = jsonArray.EnumerateArray();
 

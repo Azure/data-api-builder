@@ -17,13 +17,21 @@ using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
+    /// <summary>
+    /// Contains unit tests for SchemaGeneratorFactory related to Cosmos DB NoSQL.
+    /// </summary>
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class SchemaGeneratorFactoryTests
     {
+        /// <summary>
+        /// Tests the ExportGraphQLFromCosmosDB method to ensure it generates a GraphQL schema successfully from Cosmos DB.
+        /// </summary>
         [TestMethod]
         public async Task ExportGraphQLFromCosmosDB_GeneratesSchemaSuccessfully()
         {
-            // Arrange
+            // Arrange: Set up test configuration, mocks, and test data.
+
+            // Runtime configuration for the schema generation.
             RuntimeConfig runtimeConfig = new(
                Schema: "schema",
                DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "dummy-connection-string", new()
@@ -82,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 .ReturnsAsync(GetResponse())
                 .ReturnsAsync(GetResponse());
 
-            // Act
+            // Act: Generate the schema using the SchemaGeneratorFactory.
             string schema = await SchemaGeneratorFactory.Create(config: runtimeConfig,
                                                                 mode: SamplingModes.TopNExtractor.ToString(),
                                                                 sampleCount: null,
@@ -92,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                                                                 logger: mockLogger.Object,
                                                                 container: mockContainer.Object);
 
-            // Assert
+            // Assert: Verify the schema generation is successful and contains the expected types.
             Assert.IsNotNull(schema);
 
             Assert.IsTrue(schema.Contains("type Container0"));
@@ -100,6 +108,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsTrue(schema.Contains("type Container2"));
         }
 
+        /// <summary>
+        /// Creates a mock response message containing JSON documents.
+        /// </summary>
+        /// <returns>A mock response message with sample JSON content.</returns>
         private static ResponseMessage GetResponse()
         {
             ResponseMessage message = new(HttpStatusCode.OK);

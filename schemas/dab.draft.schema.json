@@ -357,11 +357,44 @@
               "required": [
                 "connection-string"
               ]
+            },
+            "open-telemetry": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "description": "Open Telemetry connection string"
+                },
+                "headers": {
+                  "type": "string",
+                  "description": "Open Telemetry headers"
+                },
+                "service-name": {
+                  "type": "string",
+                  "description": "Open Telemetry service name",
+                  "default": "dab"
+                },
+                "exporter-protocol": {
+                  "type": "string",
+                  "description": "Open Telemetry protocol",
+                  "default": "grpc",
+                  "enum": [
+                    "grpc",
+                    "httpprotobuf"
+                  ]
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling Open Telemetry.",
+                  "default": true
+                }
+              },
+              "required": [
+                "endpoint"
+              ]
             }
-          },
-          "required": [
-            "application-insights"
-          ]
+          }
         }
       }
     },

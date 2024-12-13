@@ -25,6 +25,7 @@
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
       <PackageReference Include="Humanizer" />
       <PackageReference Include="Npgsql" />
+      <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"  />
   </ItemGroup>
 
     <ItemGroup>

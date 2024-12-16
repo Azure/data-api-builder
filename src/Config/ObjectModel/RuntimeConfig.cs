@@ -194,7 +194,7 @@ public record RuntimeConfig
         if (this.DataSource is null)
         {
             throw new DataApiBuilderException(
-                message: "DataSource is a mandatory field in DAB Config",
+                message: "DataSource is a mandatory property in DAB Config",
                 statusCode: HttpStatusCode.UnprocessableEntity,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
@@ -209,7 +209,7 @@ public record RuntimeConfig
         if (Entities is null)
         {
             throw new DataApiBuilderException(
-                message: "Entities is a mandatory field in DAB Config",
+                message: "Entities is a mandatory property in DAB Config",
                 statusCode: HttpStatusCode.UnprocessableEntity,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }

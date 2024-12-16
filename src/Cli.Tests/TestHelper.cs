@@ -119,30 +119,7 @@ namespace Cli.Tests
             }
         ";
 
-        public const string RUNTIME_SECTION = @"
-          ""runtime"": {
-              ""rest"": {
-                  ""path"": ""/api"",
-                  ""enabled"": true,
-                  ""request-body-strict"": true
-              },
-              ""graphql"": {
-                  ""path"": ""/graphql"",
-                  ""enabled"": true,
-                  ""allow-introspection"": true
-              },
-              ""host"": {
-                  ""mode"": ""development"",
-                  ""cors"": {
-                      ""origins"": [],
-                      ""allow-credentials"": false
-                  },
-                  ""authentication"": {
-                      ""provider"": ""StaticWebApps""
-                  }
-              }
-          },
-          ""entities"": {}";
+        public const string RUNTIME_SECTION_WITH_EMPTY_ENTITIES = RUNTIME_SECTION + "," + @"""entities"": {}";
 
         /// <summary>
         /// Runtime section containing both rest and graphql disabled.
@@ -171,6 +148,32 @@ namespace Cli.Tests
               }
           },
           ""entities"": {}";
+
+        /// <summary>
+        /// Only Runtime section containing both rest and graphql enabled.
+        /// </summary>
+        public const string RUNTIME_SECTION = @"
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": true
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
+              }
+          }";
 
         /// <summary>
         /// Configuration with unresolved environment variable references on
@@ -237,16 +240,16 @@ namespace Cli.Tests
         /// <summary>
         /// A minimal valid config json without any entities. This config string is used in unit tests.
         /// </summary>
-        public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
-        public const string INITIAL_COSMOSDB_NOSQL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_COSMOSDB_NOSQL},{RUNTIME_SECTION}}}";
+        public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION_WITH_EMPTY_ENTITIES}}}";
+        public const string INITIAL_COSMOSDB_NOSQL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_COSMOSDB_NOSQL},{RUNTIME_SECTION_WITH_EMPTY_ENTITIES}}}";
 
         /// <summary>
         /// A minimal config json without any entities. This config is invalid as it contains an empty connection
         /// string. This config is used in tests to verify validation failures.
         /// </summary>
-        public const string INVALID_INTIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING},{RUNTIME_SECTION}}}";
+        public const string INVALID_INTIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING},{RUNTIME_SECTION_WITH_EMPTY_ENTITIES}}}";
 
-        public const string CONFIG_WITH_CUSTOM_PROPERTIES = $"{{{SAMPLE_DATA_SOURCE_WITH_CUSTOM_PROPERTIES},{RUNTIME_SECTION}}}";
+        public const string CONFIG_WITH_CUSTOM_PROPERTIES = $"{{{SAMPLE_DATA_SOURCE_WITH_CUSTOM_PROPERTIES},{RUNTIME_SECTION_WITH_EMPTY_ENTITIES}}}";
 
         public const string CONFIG_WITH_DISABLED_GLOBAL_REST_GRAPHQL = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION_WITH_DISABLED_REST_GRAPHQL}}}";
 

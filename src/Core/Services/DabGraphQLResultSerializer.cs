@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Services;
 /// - DatabaseInputError. This indicates that the client can make a change to request contents to influence
 /// a change in the response.
 /// </summary>
-public class DabGraphQLResultSerializer : DefaultHttpResultSerializer
+public class DabGraphQLResultSerializer : DefaultHttpResponseFormatter
 {
     public override HttpStatusCode GetStatusCode(IExecutionResult result)
     {

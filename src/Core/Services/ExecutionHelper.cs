@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Execution;
+using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types.NodaTime;
@@ -69,6 +70,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         {
                             document.Dispose();
                         }
+
+                        return ValueTask.CompletedTask;
                     });
 
                 context.Result = result.Item1.Select(t => t.RootElement).ToArray();
@@ -112,6 +115,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         {
                             document.Dispose();
                         }
+
+                        return ValueTask.CompletedTask;
                     });
 
                 context.Result = result.Item1.Select(t => t.RootElement).ToArray();
@@ -254,7 +259,11 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (result is not null)
             {
-                context.RegisterForCleanup(() => result.Dispose());
+                context.RegisterForCleanup(() =>
+                {
+                    result.Dispose();
+                    return ValueTask.CompletedTask;
+                });
                 // The disposal could occur before we were finished using the value from the jsondocument,
                 // thus needing to ensure copying the root element. Hence, we clone the root element.
                 context.Result = result.RootElement.Clone();
@@ -277,7 +286,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 return false;
             }
 
-            return parent.TryGetProperty(context.Selection.Field.Name.Value, out propertyValue);
+            return parent.TryGetProperty(context.Selection.Field.Name, out propertyValue);
         }
 
         /// <summary>
@@ -311,7 +320,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 return null;
             }
 
-            return argumentSchema.Type.TypeName().Value switch
+            return argumentSchema.Type.TypeName() switch
             {
                 SupportedHotChocolateTypes.BYTE_TYPE => ((IntValueNode)value).ToByte(),
                 SupportedHotChocolateTypes.SHORT_TYPE => ((IntValueNode)value).ToInt16(),
@@ -362,7 +371,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (argument.DefaultValue != null)
                 {
                     collectedParameters.Add(
-                        argument.Name.Value,
+                        argument.Name,
                         ExtractValueFromIValueNode(
                             value: argument.DefaultValue,
                             argumentSchema: argument,
@@ -548,7 +557,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="rootSelection">Root object field of query.</param>
         /// <returns>"rootObjectName_PURE_RESOLVER_CTX"</returns>
-        private static string GetMetadataKey(IFieldSelection rootSelection)
+        private static string GetMetadataKey(ISelection rootSelection)
         {
             return rootSelection.ResponseName + PURE_RESOLVER_CONTEXT_SUFFIX;
         }

@@ -288,7 +288,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
                     // Stored procedure call is semantically identical for all methods except Find.
-                    // So, we can effectively treat it as Insert operation - throws error if query string is non empty.
+                    // So, we can effectively treat it as Insert operation - throws error if query string is non-empty.
                     RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(EntityActionOperation.Insert, queryString);
                     JsonElement requestPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                     context = new StoredProcedureRequestContext(
@@ -375,7 +375,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Input route: {pathBase}/{entity}/{pkName}/{pkValue}
         /// Validates that the {pathBase} value matches the configured REST path.
         /// Returns {entity}/{pkName}/{pkValue} after stripping {pathBase}
-        /// and the proceding slash /.
+        /// and the preceding slash /.
         /// </summary>
         /// <param name="route">{pathBase}/{entity}/{pkName}/{pkValue} with no starting '/'.</param>
         /// <returns>Route without pathBase and without a forward slash.</returns>
@@ -428,7 +428,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// returns the entity name via a lookup using the string which includes
         /// characters up until the first '/', and then resolves the primary key
         /// as the substring following the '/'.
-        /// For example, a request route shoud be of the form
+        /// For example, a request route should be of the form
         /// {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
         /// <param name="routeAfterPathBase">The request route (no '/' prefix) containing the entity path
@@ -441,11 +441,11 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
-            // this means we have a non empty primary key route which we save. Otherwise, save
+            // this means we have a non-empty primary key route which we save. Otherwise, save
             // primary key route as empty string. Entity Path will always be the element at index 0.
             // ie: {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
             // splits into [{EntityPath}] when there is an empty primary key route and into
-            // [{EntityPath}, {Primarykeyroute}] when there is a non empty primary key route.
+            // [{EntityPath}, {Primarykeyroute}] when there is a non-empty primary key route.
             int maxNumberOfElementsFromSplit = 2;
             string[] entityPathAndPKRoute = routeAfterPathBase.Split(new[] { '/' }, maxNumberOfElementsFromSplit);
             string entityPath = entityPathAndPKRoute[0];
@@ -505,11 +505,10 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Converts httpverb type of a RestRequestContext object to the
+        /// Converts http verb type of RestRequestContext object to the
         /// matching CRUD operation, to facilitate authorization checks.
         /// </summary>
-        /// <param name="httpVerb"></param>
-        /// <returns>The CRUD operation for the given httpverb.</returns>
+        /// <returns>The CRUD operation for the given http verb.</returns>
         public static EntityActionOperation HttpVerbToOperations(string httpVerbName)
         {
             switch (httpVerbName)

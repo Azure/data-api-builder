@@ -683,6 +683,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// takes place which is required to fetch nested data.
         /// </summary>
         /// <param name="selections">Fields selection in the GraphQL Query.</param>
+        // TODO : This is inefficient and could lead to errors. we should rewrite this to use the ISelection API.
         private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections, RuntimeConfigProvider runtimeConfigProvider)
         {
             foreach (ISelectionNode node in selections)
@@ -698,7 +699,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     FragmentSpreadNode fragmentSpread = (FragmentSpreadNode)node;
-                    DocumentNode document = _ctx.Document;
+                    DocumentNode document = _ctx.Operation.Document;
                     FragmentDefinitionNode fragmentDocumentNode = document.GetNodes()
                         .Where(n => n.Kind == SyntaxKind.FragmentDefinition)
                         .Cast<FragmentDefinitionNode>()

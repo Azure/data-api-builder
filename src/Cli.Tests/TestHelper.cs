@@ -119,7 +119,7 @@ namespace Cli.Tests
             }
         ";
 
-        public const string RUNTIME_SECTION_WITH_EMPTY_ENTITIES = RUNTIME_SECTION + ","+ @"""entities"": {}";
+        public const string RUNTIME_SECTION_WITH_EMPTY_ENTITIES = RUNTIME_SECTION + "," + @"""entities"": {}";
 
         /// <summary>
         /// Runtime section containing both rest and graphql disabled.

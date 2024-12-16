@@ -153,7 +153,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public ISchemaBuilder InitializeSchemaAndResolvers(ISchemaBuilder schemaBuilder)
         {
             (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = GenerateGraphQLObjects();
-
             return Parse(schemaBuilder, root, inputTypes);
         }
 

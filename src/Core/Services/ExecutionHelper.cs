@@ -454,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static IMetadata? GetMetadata(IResolverContext context)
         {
-            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent is not null)
+            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent.IsRoot)
             {
                 // entering this block means that:
                 // context.Selection.ResponseName: items
@@ -468,7 +468,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // The nuance here is that HC counts the depth when the path is expanded as
                 // /books/items/items[idx]/authors -> Depth: 3 (0-indexed) which maps to the
                 // pagination metadata for the "authors/items" subquery.
-                string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth;
+                string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Length;
                 return (IMetadata?)context.ContextData[paginationObjectParentName];
             }
 
@@ -476,7 +476,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // { planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) { tags } }
             // where nested entities like the entity 'tags' are not nested within an "items" field
             // like for SQL databases.
-            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Length;
 
             if (context.ContextData.TryGetValue(key: metadataKey, out object? paginationMetadata) && paginationMetadata is not null)
             {
@@ -516,38 +516,37 @@ namespace Azure.DataApiBuilder.Service.Services
                 // Parent -> "/books/items" -> Depth of this path is used to create the key to get
                 // paginationmetadata from context.ContextData
                 // The PaginationMetadata fetched has subquery metadata for "authors" from path "/books/items/authors"
-                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Parent!.Depth;
+                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Parent.Length;
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
-            else if (context.Path.Parent is not null && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
+
+            if (context.Path.Parent.IsRoot && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
             {
                 // This check handles when the current selection is a relationship field because in that case,
                 // there will be no context data entry.
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
-                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Depth;
+                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Length;
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
-            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Length;
             return (IMetadata)context.ContextData[metadataKey]!;
         }
 
         private static string GetMetadataKey(HotChocolate.Path path)
         {
-            HotChocolate.Path currentPath = path;
-
-            if (currentPath.Parent is RootPathSegment or null)
+            if (path.Parent.IsRoot)
             {
                 // current: "/entity/items -> "items"
-                return ((NamePathSegment)currentPath).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
+                return ((NamePathSegment)path).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
             }
 
             // If execution reaches this point, the state of currentPath looks something
             // like the following where there exists a Parent path element:
             // "/entity/items -> current.Parent: "entity"
-            return GetMetadataKey(path: currentPath.Parent);
+            return GetMetadataKey(path: path.Parent);
         }
 
         /// <summary>
@@ -572,7 +571,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static void SetNewMetadata(IResolverContext context, IMetadata? metadata)
         {
-            string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Depth;
+            string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Length;
             context.ContextData.Add(metadataKey, metadata);
         }
 
@@ -591,7 +590,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.
-            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Length;
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.

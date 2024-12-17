@@ -88,7 +88,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             return sb
                 .AddDocument(root)
-                .AddAuthorizeDirectiveType()
                 // Add our custom directives
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()

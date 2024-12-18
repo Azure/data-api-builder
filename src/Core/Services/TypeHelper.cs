@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.TinyInt] = typeof(byte),
             [SqlDbType.UniqueIdentifier] = typeof(Guid),
             [SqlDbType.VarBinary] = typeof(byte[]),
-            [SqlDbType.VarChar] = typeof(string)
+            [SqlDbType.VarChar] = typeof(string),
         };
 
         private static Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()
@@ -276,6 +276,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     return value;
                 }
+            }
+            else if (baseType.Equals("numeric", StringComparison.OrdinalIgnoreCase))
+            {
+                return typeof(decimal);
             }
 
             throw new DataApiBuilderException(

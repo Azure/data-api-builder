@@ -377,7 +377,7 @@ INSERT INTO books(id, title, publisher_id)
         (12, 'Time to Eat 2', 1941),
         (13, 'Before Sunrise', 1234),
         (14, 'Before Sunset', 1234),
-        (15, 'MYSQL_CONN', 1234),
+        (15, 'SQL_CONN', 1234),
         (16, 'SOME%CONN', 1234),
         (17, 'CONN%_CONN', 1234),
         (18, '[Special Book]', 1234),

@@ -61,6 +61,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     Build(structure.PaginationMetadata.PaginationPredicate));
             }
 
+            // we add '\' carachter to escape the special characters in the string, but if special characters are needed to be searched
+            // as literal characters we need to escape the '\' character itself. Since we add `\` only for LIKE, so we search if the query
+            // contains LIKE and add the ESCAPE clause accordingly.
             string escapeClause = predicates.Contains("LIKE", StringComparison.OrdinalIgnoreCase)
                 ? $" ESCAPE '{MSSQL_ESCAPE_CHAR}'"
                 : string.Empty;

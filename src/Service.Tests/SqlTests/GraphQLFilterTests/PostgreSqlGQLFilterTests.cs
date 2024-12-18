@@ -168,6 +168,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestStringFiltersEqWithMappings(postgresQuery);
         }
 
+        /// <summary>
+        /// Tests various string filters with special characters in SQL queries.
+        /// </summary>
         [DataTestMethod]
         [DataRow(
             "{ title: { endsWith: \"_CONN\" } }",

@@ -619,8 +619,8 @@ namespace Cli
 
         /// <summary>
         /// Adds CosmosDB-specific options to the provided database options dictionary.
-        /// This method checks if the CosmosDB-specific options (database, container, and schema) are provided in the 
-        /// configuration options. If they are, it converts their names using the provided naming policy and adds them 
+        /// This method checks if the CosmosDB-specific options (database, container, and schema) are provided in the
+        /// configuration options. If they are, it converts their names using the provided naming policy and adds them
         /// to the database options dictionary.
         /// </summary>
         /// <param name="dbOptions">The dictionary to which the CosmosDB-specific options will be added.</param>
@@ -1939,9 +1939,15 @@ namespace Cli
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(options.AppInsightsConnString))
+            if (options.AppInsightsEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.AppInsightsConnString))
             {
                 _logger.LogError("Invalid Application Insights connection string provided.");
+                return false;
+            }
+
+            if (options.OpenTelemetryEnabled is CliBool.True && string.IsNullOrWhiteSpace(options.OpenTelemetryEndpoint))
+            {
+                _logger.LogError("Invalid OTEL endpoint provided.");
                 return false;
             }
 
@@ -1950,6 +1956,23 @@ namespace Cli
                 ConnectionString: options.AppInsightsConnString
             );
 
+            OpenTelemetryOptions openTelemetryOptions = new(
+                Enabled: options.OpenTelemetryEnabled is CliBool.True ? true : false,
+                Endpoint: options.OpenTelemetryEndpoint,
+                Headers: options.OpenTelemetryHeaders,
+                ExporterProtocol: options.OpenTelemetryExportProtocol,
+                ServiceName: options.OpenTelemetryServiceName
+            );
+
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = runtimeConfig.Runtime with
+                {
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions }
+                }
+            };
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with

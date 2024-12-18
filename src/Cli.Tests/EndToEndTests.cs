@@ -291,8 +291,8 @@ public class EndToEndTests
         Assert.IsNotNull(updatedConfig.Runtime.Telemetry);
         Assert.IsNotNull(updatedConfig.Runtime.Telemetry.ApplicationInsights);
 
-        // if --app-insights-enabled is not provided, it will default to true
-        Assert.AreEqual(appInsightsEnabled is null ? true : Boolean.Parse(appInsightsEnabled), updatedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
+        // if --app-insights-enabled is not provided, it will default to false
+        Assert.AreEqual(appInsightsEnabled is null ? false : Boolean.Parse(appInsightsEnabled), updatedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
         Assert.AreEqual("InstrumentationKey=00000000", updatedConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString);
     }
 
@@ -357,6 +357,35 @@ public class EndToEndTests
 
         // Assert: Check if the Path was updated successfully.
         Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.host.cors.origins {value}`
+    /// Validates that links provided for cors.origins result in DAB engine starting successfully.
+    /// Ensures that invalid links provided for Cors.Origins result in failed engine startup 
+    /// due to validation failure.
+    /// </summary>
+    [Ignore]
+    [DataTestMethod]
+    [DataRow("http://locahost1 https://localhost2", true, DisplayName = "Success in updating Host.Cors.Origins.")]
+    public void TestUpdateHostCorsOriginsRuntimeSettings(string path, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the Path in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.host.cors.origins", path };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the Path was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedRuntimeConfig));
+        Assert.AreEqual(2, updatedRuntimeConfig.Runtime?.Host?.Cors?.Origins.Count());
     }
 
     /// <summary>

@@ -7,6 +7,7 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -163,9 +164,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     {
         try
         {
-            if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+            if (RuntimeConfig is not null)
             {
-                HotReloadConfig();
+                HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
             }
         }
         catch (Exception ex)
@@ -184,12 +185,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <param name="logger">ILogger for logging errors.</param>
+    /// <param name="isDevMode">When not null indicates we need to overwrite mode and how to do so.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,
-        [NotNullWhen(true)] out RuntimeConfig? config,
+        [NotNullWhen(true)] out RuntimeConfig? outConfig,
         bool replaceEnvVar = false,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        bool? isDevMode = null)
     {
         if (_fileSystem.File.Exists(path))
         {
@@ -199,8 +202,31 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             // and ensures the file handle is released immediately after reading.
             // Previous usage of File.Open may cause file locking issues when
             // actively using hot-reload and modifying the config file in a text editor.
-            string json = _fileSystem.File.ReadAllText(path);
-            if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
+            // Includes an exponential back-off retry mechanism to accommodate
+            // circumstances where the file may be in use by another process.
+            int runCount = 1;
+            string json = string.Empty;
+            while (runCount <= FileUtilities.RunLimit)
+            {
+                try
+                {
+                    json = _fileSystem.File.ReadAllText(path);
+                    break;
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"IO Exception, retrying due to {ex.Message}");
+                    if (runCount == FileUtilities.RunLimit)
+                    {
+                        throw;
+                    }
+
+                    Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(FileUtilities.ExponentialRetryBase, runCount)));
+                    runCount++;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(json) && TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
             {
                 if (TrySetupConfigFileWatcher())
                 {
@@ -208,7 +234,27 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
 
-                config = RuntimeConfig;
+                // When isDevMode is not null it means we are in a hot-reload scenario, and need to save the previous
+                // mode in the new RuntimeConfig since we do not support hot-reload of the mode.
+                if (isDevMode is not null && RuntimeConfig.Runtime is not null && RuntimeConfig.Runtime.Host is not null)
+                {
+                    // Log error when the mode is changed during hot-reload. 
+                    if (isDevMode != this.RuntimeConfig.IsDevelopmentMode())
+                    {
+                        if (logger is null)
+                        {
+                            Console.WriteLine("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
+                        }
+                        else
+                        {
+                            logger.LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
+                        }
+                    }
+
+                    RuntimeConfig.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;
+                }
+
+                outConfig = RuntimeConfig;
 
                 if (LastValidRuntimeConfig is null)
                 {
@@ -223,7 +269,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 RuntimeConfig = LastValidRuntimeConfig;
             }
 
-            config = null;
+            outConfig = null;
             return false;
         }
 
@@ -237,7 +283,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             logger.LogError(message: errorMessage, path);
         }
 
-        config = null;
+        outConfig = null;
         return false;
     }
 
@@ -257,10 +303,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    private void HotReloadConfig(ILogger? logger = null)
+    private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true))
+        if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, isDevMode: isDevMode))
         {
             throw new DataApiBuilderException(
                 message: "Deserialization of the configuration file failed.",
@@ -302,11 +348,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             index++)
         {
             if (!string.IsNullOrWhiteSpace(environmentPrecedence[index])
-               // The last index is for the default case - the last fallback option
-               // where environmentPrecedence[index] is string.Empty
-               // for that case, we still need to get the file name considering overrides
-               // so need to do an OR on the last index here
-               || index == environmentPrecedence.Length - 1)
+                // The last index is for the default case - the last fallback option
+                // where environmentPrecedence[index] is string.Empty
+                // for that case, we still need to get the file name considering overrides
+                // so need to do an OR on the last index here
+                || index == environmentPrecedence.Length - 1)
             {
                 configFileNameWithExtension = GetFileName(environmentPrecedence[index], considerOverrides);
             }

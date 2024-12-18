@@ -21,10 +21,10 @@ jobs:
     clean: true  # if true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching
 
   - task: UseDotNet@2
-    displayName: Setup .NET SDK v6.0.x
+    displayName: Setup .NET SDK v8.0.x
     inputs:
       packageType: sdk
-      version: 6.0.x
+      version: 8.0.x
 
   # Analyze source and build output text files for credentials
   - task: CredScan@3

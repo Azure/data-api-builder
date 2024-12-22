@@ -1020,7 +1020,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
         {
             string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}," +
-                            $"{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"Awesome Book\",\"Direction\":0}}]";
+                            $"{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"Awesome book\",\"Direction\":0}}]";
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,

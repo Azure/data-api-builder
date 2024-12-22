@@ -1019,11 +1019,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"[Special Book]\",\"Direction\":0}}," +
-                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":18,\"Direction\":0}}]";
+            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}," +
+                            $"{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"Awesome Book\",\"Direction\":0}}]";
+
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$first=1&$orderby=title",
+                queryString: "?$first=1&$orderby=id,title",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
                 expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",

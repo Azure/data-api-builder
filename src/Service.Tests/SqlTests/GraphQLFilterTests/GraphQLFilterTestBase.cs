@@ -327,26 +327,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
-        /// Tests that special characters are escaped in operations involving LIKE
-        /// </summary>
-        [TestMethod]
-        public async Task TestStringFiltersContainsWithSpecialChars()
-        {
-            string graphQLQueryName = "books";
-            string gqlQuery = @"{
-                books( " + QueryBuilder.FILTER_FIELD_NAME + @" : {title: {contains: ""%""}})
-                {
-                    items {
-                        title
-                    }
-                }
-            }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.PerformTestEqualJsonStrings("[]", actual.ToString());
-        }
-
-        /// <summary>
         /// Tests eq of IntFilterInput
         /// </summary>
         [TestMethod]

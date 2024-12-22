@@ -329,7 +329,13 @@ VALUES (1, 'Awesome book', 1234),
 (11, 'Policy-Test-04', 1941),
 (12, 'Time to Eat 2', 1941),
 (13, 'Before Sunrise', 1234),
-(14, 'Before Sunset', 1234);
+(14, 'Before Sunset', 1234),
+(15, 'SQL_CONN', 1234),
+(16, 'SOME%CONN', 1234),
+(17, 'CONN%_CONN', 1234),
+(18, '[Special Book]', 1234),
+(19, 'ME\YOU', 1234),
+(20, 'C:\\LIFE', 1234);
 
 INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);
 

@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
+        private const string MSSQL_ESCAPE_CHAR = "\\";
 
         // Name of the column which stores the number of records with given PK. Used in Upsert queries.
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
@@ -60,9 +61,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     Build(structure.PaginationMetadata.PaginationPredicate));
             }
 
+            // we add '\' carachter to escape the special characters in the string, but if special characters are needed to be searched
+            // as literal characters we need to escape the '\' character itself. Since we add `\` only for LIKE, so we search if the query
+            // contains LIKE and add the ESCAPE clause accordingly.
+            string escapeClause = (predicates.Contains("LIKE", StringComparison.OrdinalIgnoreCase) && predicates.Contains("\\"))
+                ? $" ESCAPE '{MSSQL_ESCAPE_CHAR}'"
+                : string.Empty;
+
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
+                + escapeClause
                 + $" ORDER BY {Build(structure.OrderByColumns)}";
 
             query += FOR_JSON_SUFFIX;

@@ -335,7 +335,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithFirstSingleKeyPaginationAndOrderBy",
                 $"SELECT TOP 1 * FROM { _integrationTableName } " +
-                $"ORDER BY title asc, id asc " +
+                $"ORDER BY id asc, title asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

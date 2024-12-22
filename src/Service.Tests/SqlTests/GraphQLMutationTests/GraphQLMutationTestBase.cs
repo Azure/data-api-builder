@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
-            Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), 14);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), 20);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
             // Stored Procedure didn't return anything
@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             // check to verify new element is inserted
             string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
-            Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 13);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 19);
         }
 
         public async Task InsertMutationOnTableWithTriggerWithNonAutoGenPK(string dbQuery)

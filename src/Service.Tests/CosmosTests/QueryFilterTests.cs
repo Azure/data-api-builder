@@ -408,28 +408,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that special characters are escaped in operations involving LIKE
-        /// Special chars not working so ignoring for now!
-        /// </summary>
-        [Ignore]
-        [TestMethod]
-        public async Task TestStringFiltersContainsWithSpecialChars()
-        {
-            string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name: {contains: ""%""}})
-                {
-                    items {
-                        name
-                    }
-                }
-            }";
-
-            string dbQuery = "select c.name from c where c.name LIKE \"%\"";
-
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
-        }
-
-        /// <summary>
         /// Tests eq of IntFilterInput
         /// </summary>
         [TestMethod]

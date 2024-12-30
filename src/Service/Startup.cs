@@ -277,7 +277,6 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
                 .AddAuthorization()
-                .AllowIntrospection(false)
                 .AddAuthorizationHandler<GraphQLAuthorizationHandler>();
 
             // Conditionally adds a maximum depth rule to the GraphQL queries/mutation selection set.
@@ -289,11 +288,6 @@ namespace Azure.DataApiBuilder.Service
             {
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
-
-            // Allows DAB to override the HTTP error code set by HotChocolate.
-            // This is used to ensure HTTP code 4XX is set when the datatbase
-            // returns a "bad request" error such as stored procedure params missing.
-            services.AddHttpResultSerializer<DabGraphQLResultSerializer>();
 
             server.AddErrorFilter(error =>
                 {
@@ -324,6 +318,10 @@ namespace Azure.DataApiBuilder.Service
 
                     return error;
                 })
+                // Allows DAB to override the HTTP error code set by HotChocolate.
+                // This is used to ensure HTTP code 4XX is set when the datatbase
+                // returns a "bad request" error such as stored procedure params missing.
+                .UseRequest<DetermineStatusCodeMiddleware>()
                 .UseRequest<BuildRequestStateMiddleware>()
                 .UseDefaultPipeline();
         }
@@ -447,22 +445,24 @@ namespace Azure.DataApiBuilder.Service
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL(GraphQLRuntimeOptions.DEFAULT_PATH).WithOptions(new GraphQLServerOptions
-                {
-                    Tool = {
-                        // Determines if accessing the endpoint from a browser
-                        // will load the GraphQL Banana Cake Pop IDE.
-                        Enable = IsUIEnabled(runtimeConfig, env)
-                    }
-                });
+                endpoints.MapGraphQL(GraphQLRuntimeOptions.DEFAULT_PATH)
+                    .WithOptions(new GraphQLServerOptions
+                    {
+                        Tool = {
+                            // Determines if accessing the endpoint from a browser
+                            // will load the GraphQL Banana Cake Pop IDE.
+                            Enable = IsUIEnabled(runtimeConfig, env)
+                        }
+                    });
 
-                // In development mode, BCP is enabled at /graphql endpoint by default.
-                // Need to disable mapping BCP explicitly as well to avoid ability to query
+                // In development mode, Nitro is enabled at /graphql endpoint by default.
+                // Need to disable mapping Nitro explicitly as well to avoid ability to query
                 // at an additional endpoint: /graphql/ui.
-                endpoints.MapBananaCakePop().WithOptions(new GraphQLToolOptions
-                {
-                    Enable = false
-                });
+                endpoints.MapNitroApp()
+                    .WithOptions(new GraphQLToolOptions
+                    {
+                        Enable = false
+                    });
 
                 endpoints.MapHealthChecks("/", new HealthCheckOptions
                 {

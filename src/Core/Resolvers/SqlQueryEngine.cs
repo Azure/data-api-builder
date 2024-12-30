@@ -136,7 +136,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName)
         {
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
+            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name, out string? entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -218,7 +218,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 parentMetadata = paginationObjectMetadata;
             }
 
-            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
             metadata = currentMetadata;
 
             if (currentMetadata.IsPaginated)
@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (metadata is not null)
             {
                 PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
                 metadata = currentMetadata;
             }
 
@@ -349,7 +349,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
-        // As such, this could feasibly be moved to the mutation engine. 
+        // As such, this could feasibly be moved to the mutation engine.
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName)
         {

@@ -25,7 +25,6 @@ using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.Identity;
 using HotChocolate;
 using HotChocolate.Execution;
-using HotChocolate.Execution.Processing;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -34,7 +33,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using ObjectResult = HotChocolate.Execution.Processing.ObjectResult;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {

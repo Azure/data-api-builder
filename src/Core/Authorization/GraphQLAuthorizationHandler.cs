@@ -3,7 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
-using HotChocolate.AspNetCore.Authorization;
 using HotChocolate.Authorization;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;

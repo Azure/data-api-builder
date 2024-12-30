@@ -14,24 +14,17 @@ using HotChocolate.Execution;
 /// - DatabaseInputError. This indicates that the client can make a change to request contents to influence
 /// a change in the response.
 /// </summary>
-public sealed class DetermineStatusCodeMiddleware
+public sealed class DetermineStatusCodeMiddleware(RequestDelegate next)
 {
-    private const string _errorCode = nameof(DataApiBuilderException.SubStatusCodes.DatabaseInputError);
-    private readonly RequestDelegate _next;
-
-    public DetermineStatusCodeMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
+    private const string ERROR_CODE = nameof(DataApiBuilderException.SubStatusCodes.DatabaseInputError);
 
     public async ValueTask InvokeAsync(IRequestContext context)
     {
-        await _next(context).ConfigureAwait(false);
+        await next(context).ConfigureAwait(false);
 
         if (context.Result is OperationResult { Errors.Count: > 0 } singleResult)
         {
-            if (singleResult.Errors.Any(static error => error.Code == _errorCode))
+            if (singleResult.Errors.Any(static error => error.Code == ERROR_CODE))
             {
                 ImmutableDictionary<string, object?>.Builder contextData =
                     ImmutableDictionary.CreateBuilder<string, object?>();

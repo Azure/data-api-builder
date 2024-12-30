@@ -19,7 +19,6 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
     private ObjectType? _mutationType;
     private ObjectType? _subscriptionType;
 
-
     public ResolverTypeInterceptor(ExecutionHelper executionHelper)
     {
         _queryMiddleware =

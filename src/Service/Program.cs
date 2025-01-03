@@ -15,6 +15,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -102,7 +105,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 throw new DataApiBuilderException(
                     message: $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: " +
-                    $"https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0",
+                    $"https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel",
                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -155,6 +158,22 @@ namespace Azure.DataApiBuilder.Service
                             configureApplicationInsightsLoggerOptions: (options) => { }
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
+                    }
+
+                    if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
+                    {
+                        builder.AddOpenTelemetry(logging =>
+                        {
+                            logging.IncludeFormattedMessage = true;
+                            logging.IncludeScopes = true;
+                            logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
+                            logging.AddOtlpExporter(configure =>
+                            {
+                                configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
+                                configure.Headers = Startup.OpenTelemetryOptions.Headers;
+                                configure.Protocol = OtlpExportProtocol.Grpc;
+                            });
+                        });
                     }
 
                     builder.AddConsole();

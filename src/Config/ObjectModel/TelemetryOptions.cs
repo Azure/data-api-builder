@@ -6,5 +6,5 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <summary>
 /// Represents the options for telemetry.
 /// </summary>
-public record TelemetryOptions(ApplicationInsightsOptions? ApplicationInsights)
+public record TelemetryOptions(ApplicationInsightsOptions? ApplicationInsights = null, OpenTelemetryOptions? OpenTelemetry = null)
 { }

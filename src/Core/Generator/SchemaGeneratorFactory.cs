@@ -79,7 +79,18 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             foreach (KeyValuePair<string, Entity> entity in config.Entities)
             {
-                dbAndContainerToProcess.Add(entity.Value.Source.Object);
+                string entitySourceObject = entity.Value.Source.Object;
+
+                string[]? databaseContainerInfo = entitySourceObject?.Split('.');
+                string result = databaseContainerInfo switch
+                {
+                    null or { Length: 0 } when globalDatabaseName != null && globalContainerName != null => $"{globalDatabaseName}.{globalContainerName}",
+                    { Length: 2 } => entity.Value.Source.Object,
+                    { Length: 1 } when globalDatabaseName != null => $"{globalDatabaseName}.{entity.Value.Source.Object}",
+                    _ => throw new InvalidOperationException("Unexpected Source format")
+                };
+
+                dbAndContainerToProcess.Add(result);
             }
 
             StringBuilder schema = new();

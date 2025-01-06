@@ -238,7 +238,7 @@ type PhoneNumber {
 
         /// <summary>
         /// Tests the <see cref="SchemaGenerator.Generate"/> method with an empty JSON array.
-        /// Ensures that the method correctly handles an empty input by throwing an appropriate exception.
+        /// Ensures that the method correctly handles an empty input.
         /// </summary>
         [TestMethod]
         public void TestEmptyJsonArrayInPayload()

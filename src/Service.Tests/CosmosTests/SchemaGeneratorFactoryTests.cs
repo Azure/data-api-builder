@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -27,23 +28,31 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Tests the ExportGraphQLFromCosmosDB method to ensure it generates a GraphQL schema successfully from Cosmos DB.
         /// </summary>
         [TestMethod]
-        public async Task ExportGraphQLFromCosmosDB_GeneratesSchemaSuccessfully()
+        [DataRow("noop-database", "Container0", "mydb1", "container1", null, "Container0,Container1,Container2", DisplayName = "Test with global and entity level database and container names")]
+        [DataRow(null, "Container0", "mydb1", "container1", "Connection String and Database name must be provided in the config file", null, DisplayName = "Test with missing global database name")]
+        [DataRow("noop-database", null, "mydb1", "container1", "Unexpected Source format", null, DisplayName = "Test with missing global container name")]
+        [DataRow("noop-database", "Container0", null, "container1", null, "Container0,Container1,Container2", DisplayName = "Test with missing entity level database name")]
+        [DataRow("noop-database", "Container0", "mydb1", null, null, "Container0,Container2", DisplayName = "Test with missing entity level container name")]
+        public async Task ExportGraphQLFromCosmosDB_GeneratesSchemaSuccessfully(string globalDatabase, string globalContainer, string entityLevelDatabase, string entityLevelContainer, string exceptionMessage, string generatedContainerNames)
         {
-            // Arrange: Set up test configuration, mocks, and test data.
+            try
+            {
+                // Arrange: Set up test configuration, mocks, and test data.
+                string entitySource = entityLevelContainer != null ? (entityLevelDatabase != null ? $"{entityLevelDatabase}.{entityLevelContainer}" : entityLevelContainer) : null;
 
-            // Runtime configuration for the schema generation.
-            RuntimeConfig runtimeConfig = new(
-               Schema: "schema",
-               DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "dummy-connection-string", new()
-               {
-                   {"database", "dummy-database" },
-                   {"container", "Container0" }
-               }),
-               Runtime: new(Rest: null, GraphQL: new(), Host: new(null, null)),
-               Entities: new(new Dictionary<string, Entity>()
-               {
+                // Runtime configuration for the schema generation.
+                RuntimeConfig runtimeConfig = new(
+                   Schema: "schema",
+                   DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "noop-connection-string", new()
+                   {
+                   {"database", globalDatabase},
+                   {"container", globalContainer}
+                   }),
+                   Runtime: new(Rest: null, GraphQL: new(), Host: new(null, null)),
+                   Entities: new(new Dictionary<string, Entity>()
+                   {
                        {"Container1", new Entity(
-                            Source: new("mydb1.container1", EntitySourceType.Table, null, null),
+                            Source: new(entitySource, EntitySourceType.Table, null, null),
                             Rest: new(Enabled: false),
                             GraphQL: new("Container1", "Container1s"),
                             Permissions: new EntityPermission[] {},
@@ -63,49 +72,62 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                             Permissions: new EntityPermission[] {},
                             Relationships: null,
                             Mappings: null) }
-               })
-           );
+                   })
+               );
 
-            Mock<ILogger> mockLogger = new();
+                Mock<ILogger> mockLogger = new();
 
-            Mock<Container> mockContainer = new();
-            Mock<FeedIterator> mockIterator = new();
-            mockContainer
-                .SetupSequence(c => c.GetItemQueryStreamIterator(It.IsAny<QueryDefinition>(), It.IsAny<string>(), It.IsAny<QueryRequestOptions>()))
-                .Returns(mockIterator.Object)
-                .Returns(mockIterator.Object)
-                .Returns(mockIterator.Object);
+                Mock<Container> mockContainer = new();
+                Mock<FeedIterator> mockIterator = new();
+                mockContainer
+                    .SetupSequence(c => c.GetItemQueryStreamIterator(It.IsAny<QueryDefinition>(), It.IsAny<string>(), It.IsAny<QueryRequestOptions>()))
+                    .Returns(mockIterator.Object)
+                    .Returns(mockIterator.Object)
+                    .Returns(mockIterator.Object);
 
-            mockIterator.SetupSequence(i => i.HasMoreResults)
-                .Returns(true)
-                .Returns(false)
-                .Returns(true)
-                .Returns(false)
-                .Returns(true)
-                .Returns(false);
+                mockIterator.SetupSequence(i => i.HasMoreResults)
+                    .Returns(true)
+                    .Returns(false)
+                    .Returns(true)
+                    .Returns(false)
+                    .Returns(true)
+                    .Returns(false);
 
-            mockIterator
-                .SetupSequence(i => i.ReadNextAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(GetResponse())
-                .ReturnsAsync(GetResponse())
-                .ReturnsAsync(GetResponse());
+                mockIterator
+                    .SetupSequence(i => i.ReadNextAsync(It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(GetResponse())
+                    .ReturnsAsync(GetResponse())
+                    .ReturnsAsync(GetResponse());
 
-            // Act: Generate the schema using the SchemaGeneratorFactory.
-            string schema = await SchemaGeneratorFactory.Create(config: runtimeConfig,
-                                                                mode: SamplingModes.TopNExtractor.ToString(),
-                                                                sampleCount: null,
-                                                                partitionKeyPath: null,
-                                                                days: null,
-                                                                groupCount: null,
-                                                                logger: mockLogger.Object,
-                                                                container: mockContainer.Object);
+                // Act: Generate the schema using the SchemaGeneratorFactory.
+                string schema = await SchemaGeneratorFactory.Create(config: runtimeConfig,
+                                                                    mode: SamplingModes.TopNExtractor.ToString(),
+                                                                    sampleCount: null,
+                                                                    partitionKeyPath: null,
+                                                                    days: null,
+                                                                    groupCount: null,
+                                                                    logger: mockLogger.Object,
+                                                                    container: mockContainer.Object);
 
-            // Assert: Verify the schema generation is successful and contains the expected types.
-            Assert.IsNotNull(schema);
+                // Assert: Verify the schema generation is successful and contains the expected types.
+                Assert.IsNotNull(schema);
 
-            Assert.IsTrue(schema.Contains("type Container0"));
-            Assert.IsTrue(schema.Contains("type Container1"));
-            Assert.IsTrue(schema.Contains("type Container2"));
+                generatedContainerNames.Split(",")
+                    .ToList()
+                    .ForEach(containerName => Assert.IsTrue(schema.Contains($"type {containerName.Trim()}")));
+
+            }
+            catch (System.Exception ex)
+            {
+                if (exceptionMessage != null)
+                {
+                    Assert.IsTrue(ex.Message.Contains(exceptionMessage));
+                    return;
+                }
+
+                throw;
+            }
+
         }
 
         /// <summary>

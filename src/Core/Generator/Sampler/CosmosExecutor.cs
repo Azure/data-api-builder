@@ -55,12 +55,9 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                     using JsonDocument jsonDocument = JsonDocument.Parse(content);
 
                     JsonElement root = jsonDocument.RootElement;
-                    if (jsonDocument.RootElement.ValueKind != JsonValueKind.Array)
+                    if (root.ValueKind != JsonValueKind.Array && root.TryGetProperty("Documents", out JsonElement documentRootProperty))
                     {
-                        if (!jsonDocument.RootElement.TryGetProperty("Documents", out root))
-                        {
-                            root = jsonDocument.RootElement;
-                        }
+                        root = documentRootProperty;
                     }
 
                     if (root.ValueKind == JsonValueKind.Array)

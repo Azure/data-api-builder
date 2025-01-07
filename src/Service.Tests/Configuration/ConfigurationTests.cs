@@ -3480,7 +3480,7 @@ type Planet @model(name:""PlanetAlias"") {
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
-            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.LoggerLevel.Value);
+            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel.Value);
         }
 
         /// <summary>
@@ -3559,7 +3559,7 @@ type Planet @model(name:""PlanetAlias"") {
                     Rest: new(),
                     GraphQL: new(),
                     Host: new(null, null),
-                    LoggerLevel: logLevelOptions
+                    Telemetry: new(LoggerLevel: logLevelOptions)
                 ),
                 Entities: baseConfig.Entities
             );

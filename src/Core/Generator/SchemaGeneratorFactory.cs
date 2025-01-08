@@ -102,12 +102,6 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
 
                 string[] dbContainer = dbAndContainer.Split('.');
-                if (dbContainer.Length != 2)
-                {
-                    logger.LogError("Invalid Database and Container Name provided in the config file");
-                    throw new ArgumentException("Invalid Database and Container Name provided in the config file");
-                }
-
                 logger.LogInformation("Connecting to Cosmos DB Database: {0}, Container: {1}", dbContainer[0], dbContainer[1]);
 
                 // Connect to the Azure Cosmos DB container.

@@ -25,8 +25,38 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     public class SchemaGeneratorFactoryTests
     {
         /// <summary>
-        /// Tests the ExportGraphQLFromCosmosDB method to ensure it generates a GraphQL schema successfully from Cosmos DB.
+        /// Validates the schema generation process for a GraphQL API from Cosmos DB using various configurations.
+        /// This test ensures the schema is generated successfully or throws expected exceptions in different scenarios.
         /// </summary>
+        /// <param name="globalDatabase">
+        /// The global database name configured in the runtime. If null or invalid, an exception may occur.
+        /// </param>
+        /// <param name="globalContainer">
+        /// The global container name configured in the runtime. If null or invalid, an exception may occur.
+        /// </param>
+        /// <param name="entityLevelDatabase">
+        /// The database name at the entity level (overrides global database if specified). If null, the global database is used.
+        /// </param>
+        /// <param name="entityLevelContainer">
+        /// The container name at the entity level (overrides global container if specified). If null, the global container is used.
+        /// </param>
+        /// <param name="exceptionMessage">
+        /// The expected exception message if the test is designed to fail. Null for tests expecting successful schema generation.
+        /// </param>
+        /// <param name="generatedContainerNames">
+        /// A comma-separated list of container names expected to appear in the generated GraphQL schema.
+        /// </param>
+        /// <remarks>
+        /// This test uses mocked dependencies to simulate interactions with Cosmos DB. 
+        /// It validates scenarios involving global and entity-level database and container configurations.
+        ///
+        /// Entity Constants:
+        /// - <c>Container0</c>: Represents an entity without a specific source database or container configured.
+        /// - <c>Container1</c>: Represents an entity with a source defined at the entity level, overriding the global configuration.
+        /// - <c>Container2</c>: Represents an entity with a hardcoded database and container (`mydb2.container2`).
+        ///
+        /// These constants are used to validate schema generation and ensure correct mapping between entities and their GraphQL types.
+        /// </remarks>
         [TestMethod]
         [DataRow("noop-database", "Container0", "mydb1", "container1", null, "Container0,Container1,Container2", DisplayName = "Test with global and entity level database and container names")]
         [DataRow(null, "Container0", "mydb1", "container1", "Connection String and Database name must be provided in the config file", null, DisplayName = "Test with missing global database name")]

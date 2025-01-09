@@ -24,6 +24,7 @@
         <PackageReference Include="MSTest.TestFramework" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
+        <PackageReference Include="System.Text.Json" Version="8.0.4" />
         <PackageReference Include="Verify.MSTest" />
         <PackageReference Include="Verify.DiffPlex" />
     </ItemGroup>

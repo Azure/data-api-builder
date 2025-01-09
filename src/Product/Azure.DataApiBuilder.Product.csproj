@@ -9,6 +9,10 @@
     <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+      <PackageReference Include="System.Text.Json" Version="8.0.4" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>

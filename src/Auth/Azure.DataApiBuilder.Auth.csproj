@@ -17,6 +17,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
     <PackageReference Include="Microsoft.AspNetCore.Http" />
     <PackageReference Include="System.Drawing.Common" />
+    <PackageReference Include="System.Text.Json" Version="8.0.4" />
+
   </ItemGroup>
 
   <ItemGroup>

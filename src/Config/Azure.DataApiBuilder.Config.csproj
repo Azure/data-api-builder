@@ -23,6 +23,7 @@
       <PackageReference Include="Microsoft.Data.SqlClient" />
       <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+      <PackageReference Include="System.Text.Json" Version="8.0.4" />
       <PackageReference Include="Humanizer" />
       <PackageReference Include="Npgsql" />
       <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"  />

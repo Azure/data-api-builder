@@ -221,26 +221,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// UnderlyingGraphQLEntityType is the main GraphQL type that is described by
-        /// this type. This strips all modifiers, such as List and Non-Null.
-        /// So the following GraphQL types would all have the underlyingType Book:
-        /// - Book
-        /// - [Book]
-        /// - Book!
-        /// - [Book]!
-        /// - [Book!]!
-        /// </summary>
-        public static ObjectType UnderlyingGraphQLEntityType(IType type)
-        {
-            if (type is ObjectType underlyingType)
-            {
-                return underlyingType;
-            }
-
-            return UnderlyingGraphQLEntityType(type.InnerType());
-        }
-
-        /// <summary>
         /// Generates the datasource name from the GraphQL context.
         /// </summary>
         /// <param name="context">Middleware context.</param>
@@ -302,15 +282,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             else
             {
                 // for rest of scenarios get entity name from output object type.
-                ObjectType underlyingFieldType;
-                underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                ObjectType underlyingFieldType = type.NamedType<ObjectType>();
+
                 // Example: CustomersConnectionObject - for get all scenarios.
                 if (QueryBuilder.IsPaginationType(underlyingFieldType))
                 {
-                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type)
+                    IObjectField subField = context.Selection.Type.NamedType<ObjectType>()
                         .Fields[QueryBuilder.PAGINATION_FIELD_NAME];
                     type = subField.Type;
-                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                    underlyingFieldType = type.NamedType<ObjectType>();
                     entityName = underlyingFieldType.Name;
                 }
 

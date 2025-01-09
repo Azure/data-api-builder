@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private void Init(IDictionary<string, object?> queryParams)
         {
             ISelection selection = _context.Selection;
-            ObjectType underlyingType = GraphQLUtils.UnderlyingGraphQLEntityType(selection.Field.Type);
+            ObjectType underlyingType = selection.Field.Type.NamedType<ObjectType>();
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     Columns.AddRange(GenerateQueryColumns(fieldNode.SelectionSet!, _context.Operation.Document, SourceAlias));
                 }
 
-                ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
+                ObjectType realType = underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type.NamedType<ObjectType>();
                 string entityName = MetadataProvider.GetEntityName(realType.Name);
                 EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);

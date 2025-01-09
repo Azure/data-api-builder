@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return true;
             }
 
-            ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+            ObjectType underlyingFieldType = outputType.NamedType<ObjectType>();
             bool isPointMutation;
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? _))
             {

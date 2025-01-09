@@ -76,7 +76,7 @@
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
         <PackageReference Include="System.CommandLine" />
         <PackageReference Include="System.IO.Abstractions" />
-        <PackageReference Include="System.Text.Json" Version="8.0.4" />
+        <PackageReference Include="System.Text.Json" />
         <PackageReference Include="ZiggyCreatures.FusionCache" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"  />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />

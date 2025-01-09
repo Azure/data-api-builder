@@ -57,6 +57,7 @@
         <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.1.2" />
         <PackageVersion Include="System.IO.Abstractions" Version="21.0.2" />
         <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="21.0.2" />
+        <PackageVersion Include="System.Text.Json" Version="8.0.4" />
         <PackageVersion Include="Verify.MsTest" Version="23.6.0" />
         <PackageVersion Include="Verify.DiffPlex" Version="2.3.0" />
         <PackageVersion Include="ZiggyCreatures.FusionCache" Version="1.0.0" />

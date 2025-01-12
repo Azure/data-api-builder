@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     /// Creates a JSON response for the health check endpoint using the provided health report.
     /// If the response has already been created, it will be reused.
     /// </summary>
-    public class HealthReportResponseWriter
+    public class OriginalHealthReportResponseWriter
     {
         // Dependencies
         private ILogger? _logger;
@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Constants
         private const string JSON_CONTENT_TYPE = "application/json; charset=utf-8";
 
-        public HealthReportResponseWriter(ILogger<HealthReportResponseWriter>? logger)
+        public OriginalHealthReportResponseWriter(ILogger<OriginalHealthReportResponseWriter>? logger)
         {
             _logger = logger;
         }

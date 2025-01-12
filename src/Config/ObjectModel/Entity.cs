@@ -19,6 +19,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Mappings">Defines mappings between database fields and GraphQL and REST fields.</param>
 /// <param name="Cache">Defines whether to allow caching for a read operation's response and
 /// how long that response should be valid in the cache.</param>
+/// <param name="Health">Defines the health check configuration for the entity.</param>
 public record Entity
 {
     public const string PROPERTY_PATH = "path";
@@ -31,6 +32,7 @@ public record Entity
     public Dictionary<string, string>? Mappings { get; init; }
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
+    public DabHealthCheckConfig? Health { get; init; }
 
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
@@ -44,6 +46,7 @@ public record Entity
         Dictionary<string, string>? Mappings,
         Dictionary<string, EntityRelationship>? Relationships,
         EntityCacheOptions? Cache = null,
+        DabHealthCheckConfig? Health = null,
         bool IsLinkingEntity = false)
     {
         this.Source = Source;
@@ -53,6 +56,7 @@ public record Entity
         this.Mappings = Mappings;
         this.Relationships = Relationships;
         this.Cache = Cache;
+        this.Health = Health;
         this.IsLinkingEntity = IsLinkingEntity;
     }
 

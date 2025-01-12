@@ -47,7 +47,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
         public override DataSource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null);
+            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null, null);
             if (reader.TokenType is JsonTokenType.StartObject)
             {
 
@@ -114,6 +114,18 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                     dataSource = dataSource with { Options = optionsDict };
                                     break;
                                 }
+                            case "health":
+                                if (reader.TokenType == JsonTokenType.Null)
+                                {
+                                    dataSource = dataSource with { Health = null };
+                                }
+                                else
+                                {
+                                    DabHealthCheckConfig health = JsonSerializer.Deserialize<DabHealthCheckConfig>(ref reader, options) ?? new();
+                                    dataSource = dataSource with { Health = health };
+                                }
+                                
+                                break;
                             default:
                                 throw new JsonException($"Unexpected property {propertyName} while deserializing DataSource.");
                         }

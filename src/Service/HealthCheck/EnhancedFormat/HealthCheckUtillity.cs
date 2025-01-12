@@ -67,11 +67,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     DataSourceHealthCheckResults = new List<HealthCheckResultEntry>(),
                     EntityHealthCheckResults = new List<HealthCheckResultEntry>(),
                 };
-                
+
                 if (runtimeConfig != null)
                 {
                     UpdateDataSourceHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);
-                    UpdateEntityHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);                    
+                    UpdateEntityHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);
                 }
             }
         }
@@ -113,8 +113,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                                 },
                                 HealthStatus = Config.ObjectModel.HealthStatus.Unhealthy
                             });
-                        }  
-                    }                    
+                        }
+                    }
                 }
             }
         }
@@ -153,10 +153,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             },
                             HealthStatus = Config.ObjectModel.HealthStatus.Unhealthy
                         });
-                    }  
+                    }
                 }
             }
-            
+
         }
 
         private int ExecuteSqlQuery(string query)

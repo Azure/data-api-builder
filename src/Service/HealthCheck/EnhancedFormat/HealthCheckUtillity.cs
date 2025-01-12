@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -59,7 +60,110 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         private void UpdateHealthCheckDetails(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
         {
-            LogTrace($"Updating the health check details. {dabHealthCheckReport.HealthStatus} {runtimeConfig?.Runtime?.Health?.Enabled}");
+            if (dabHealthCheckReport != null)
+            {
+                dabHealthCheckReport.HealthCheckResults = new DabHealthCheckResults()
+                {
+                    DataSourceHealthCheckResults = new List<HealthCheckResultEntry>(),
+                    EntityHealthCheckResults = new List<HealthCheckResultEntry>(),
+                };
+                
+                if (runtimeConfig != null)
+                {
+                    UpdateDataSourceHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);
+                    UpdateEntityHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);                    
+                }
+            }
+        }
+
+        private void UpdateEntityHealthCheckResults(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig?.Entities != null && dabHealthCheckReport?.HealthCheckResults?.EntityHealthCheckResults != null)
+            {
+                foreach (KeyValuePair<string, Entity> Entity in runtimeConfig.Entities.Entities)
+                {
+                    DabHealthCheckConfig? healthConfig = Entity.Value?.Health;
+                    if (healthConfig != null && healthConfig.Enabled)
+                    {
+                        string query = healthConfig.Query ?? string.Empty;
+                        int responseTime = ExecuteSqlQuery(query);
+                        if (responseTime <= healthConfig.ThresholdMs)
+                        {
+                            dabHealthCheckReport.HealthCheckResults.EntityHealthCheckResults.Add(new HealthCheckResultEntry
+                            {
+                                Name = Entity.Key,
+                                ResponseTimeData = new ResponseTimeData
+                                {
+                                    ResponseTimeMs = responseTime,
+                                    MaxAllowedResponseTimeMs = healthConfig.ThresholdMs
+                                },
+                                HealthStatus = Config.ObjectModel.HealthStatus.Healthy
+                            });
+                        }
+                        else
+                        {
+                            dabHealthCheckReport.HealthCheckResults.EntityHealthCheckResults.Add(new HealthCheckResultEntry
+                            {
+                                Name = Entity.Key,
+                                Exception = "The response time exceeded the threshold.",
+                                ResponseTimeData = new ResponseTimeData
+                                {
+                                    ResponseTimeMs = responseTime,
+                                    MaxAllowedResponseTimeMs = healthConfig.ThresholdMs
+                                },
+                                HealthStatus = Config.ObjectModel.HealthStatus.Unhealthy
+                            });
+                        }  
+                    }                    
+                }
+            }
+        }
+
+        private void UpdateDataSourceHealthCheckResults(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig?.DataSource != null && runtimeConfig.DataSource?.Health != null && runtimeConfig.DataSource.Health.Enabled)
+            {
+                string query = runtimeConfig.DataSource?.Health.Query ?? string.Empty;
+                int responseTime = ExecuteSqlQuery(query);
+                if (dabHealthCheckReport?.HealthCheckResults?.DataSourceHealthCheckResults != null)
+                {
+                    if (responseTime <= runtimeConfig?.DataSource?.Health.ThresholdMs)
+                    {
+                        dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults.Add(new HealthCheckResultEntry
+                        {
+                            Name = runtimeConfig?.DataSource?.Health.Moniker,
+                            ResponseTimeData = new ResponseTimeData
+                            {
+                                ResponseTimeMs = responseTime,
+                                MaxAllowedResponseTimeMs = runtimeConfig?.DataSource?.Health.ThresholdMs
+                            },
+                            HealthStatus = Config.ObjectModel.HealthStatus.Healthy
+                        });
+                    }
+                    else
+                    {
+                        dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults.Add(new HealthCheckResultEntry
+                        {
+                            Name = runtimeConfig?.DataSource?.Health.Moniker,
+                            Exception = "The response time exceeded the threshold.",
+                            ResponseTimeData = new ResponseTimeData
+                            {
+                                ResponseTimeMs = responseTime,
+                                MaxAllowedResponseTimeMs = runtimeConfig?.DataSource?.Health.ThresholdMs
+                            },
+                            HealthStatus = Config.ObjectModel.HealthStatus.Unhealthy
+                        });
+                    }  
+                }
+            }
+            
+        }
+
+        private int ExecuteSqlQuery(string query)
+        {
+            // TODO: Update this function to execute the respected query wit the DB
+            LogTrace($"Executing SQL query: {query}");
+            return 5;
         }
 
         private void UpdateVersionAndAppName(ref DabHealthCheckReport response, HealthReport healthReport)

@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             context.Response.ContentType = JSON_CONTENT_TYPE;
             LogTrace("Writing health report response.");
             DabHealthCheckReport dabHealthCheckReport = _healthCheckUtlity.GetHealthCheckResponse(healthReport, config);
-            return context.Response.WriteAsync(JsonSerializer.Serialize(dabHealthCheckReport));
+            return context.Response.WriteAsync(JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }));
         }
 
         /// <summary>

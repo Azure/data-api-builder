@@ -1,8 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum HealthStatus
     {
         Healthy,
@@ -33,5 +36,10 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// The configuration details of the dab service.
         /// </summary>
         public DabConfigurationDetails? DabConfigurationDetails { get; set; }
+
+        /// <summary>
+        /// The health check results of the dab service.
+        /// </summary>
+        public DabHealthCheckResults? HealthCheckResults { get; set; }
     }
 }

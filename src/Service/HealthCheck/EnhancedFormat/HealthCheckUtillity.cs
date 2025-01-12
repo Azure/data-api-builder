@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             _logger = logger;
         }
-        
+
         public DabHealthCheckReport GetHealthCheckResponse(HealthReport healthReport, RuntimeConfig runtimeConfig)
         {
             // Create a JSON response for the health check endpoint using the provided health report.
@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 LogTrace("Enhanced Health check is enabled in the runtime configuration.");
                 DabHealthCheckReport dabHealthCheckReport = new()
                 {
-                    HealthStatus = Config.ObjectModel.HealthStatus.Healthy                    
+                    HealthStatus = Config.ObjectModel.HealthStatus.Healthy
                 };
                 UpdateVersionAndAppName(ref dabHealthCheckReport, healthReport);
                 UpdateDabConfigurationDetails(ref dabHealthCheckReport, runtimeConfig);

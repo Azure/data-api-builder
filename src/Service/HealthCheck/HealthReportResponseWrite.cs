@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             this._originalHealthReportResponseWriter = originalHealthReportResponseWriter;
             this._enhancedHealthReportResponseWriter = enhancedHealthReportResponseWriter;
         }
-        
+
         /// <summary>
         /// Function provided to the health check middleware to write the response.
         /// </summary>

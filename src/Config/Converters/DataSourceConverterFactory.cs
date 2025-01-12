@@ -124,7 +124,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                     DabHealthCheckConfig health = JsonSerializer.Deserialize<DabHealthCheckConfig>(ref reader, options) ?? new();
                                     dataSource = dataSource with { Health = health };
                                 }
-                                
+
                                 break;
                             default:
                                 throw new JsonException($"Unexpected property {propertyName} while deserializing DataSource.");

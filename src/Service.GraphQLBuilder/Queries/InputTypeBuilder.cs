@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
@@ -15,6 +16,36 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             GenerateOrderByInputTypeForObjectType(node, inputTypes);
             GenerateFilterInputTypeForObjectType(node, inputTypes);
+            GenerateAggregationNumericInputForObjectType(node, inputTypes);
+        }
+
+        private static void GenerateAggregationNumericInputForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        {
+            List<FieldDefinitionNode> numericFields = node.Fields.Where(f => SchemaConverter.IsNumericField(f.Type)).ToList();
+
+            if (numericFields.Any())
+            {
+                string inputTypeName = $"{node.Name.Value}NumericFields";
+
+                InputObjectTypeDefinitionNode inputType = new(
+                    location: null,
+                    name: new NameNode(inputTypeName),
+                    description: new StringValueNode($"Fields available for aggregation in {node.Name.Value}"),
+                    directives: new List<DirectiveNode>(),
+                    fields: numericFields
+                        .Select(f => new InputValueDefinitionNode(
+                            location: null,
+                            name: f.Name,
+                            description: null,
+                            type: f.Type,
+                            defaultValue: null,
+                            directives: new List<DirectiveNode>()
+                        )).ToList()
+                );
+
+                // Add the input type to the schema's input objects
+                inputTypes.Add(inputTypeName, inputType);
+            }
         }
 
         public static void GenerateFilterInputTypeForObjectType(

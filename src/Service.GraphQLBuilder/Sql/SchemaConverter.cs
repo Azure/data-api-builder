@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -214,6 +215,79 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
                 new List<NamedTypeNode>(),
                 fieldDefinitionNodes.Values.ToImmutableList());
+        }
+
+        public static bool IsNumericField(ITypeNode type)
+        {
+            string typeName = type.NamedType().Name.Value;
+            return AggregateTypes.NumericAggregateTypes.Contains(typeName);
+        }
+
+        public static ObjectTypeDefinitionNode GenerateAggregationTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
+        {
+            string aggregationTypeName = $"{entityName}Aggregations";
+
+            List<string> numericFields = entityNode.Fields
+                .Where(f => IsNumericField(f.Type))
+                .Select(f => f.Name.Value)
+                .ToList();
+
+            List<FieldDefinitionNode> aggregationFields = new();
+
+            // Add numeric aggregation fields
+            if (numericFields.Any())
+            {
+                aggregationFields.AddRange(new[]
+                {
+                    CreateNumericAggregationField("max", FLOAT_TYPE, "Maximum value for numeric fields", entityNode),
+                    CreateNumericAggregationField("min", FLOAT_TYPE, "Minimum value for numeric fields", entityNode),
+                    CreateNumericAggregationField("avg", FLOAT_TYPE, "Average value", entityNode),
+                    CreateNumericAggregationField("sum", FLOAT_TYPE, "Sum of values", entityNode),
+                    CreateNumericAggregationField("count", INT_TYPE, "Count of numeric values", entityNode)
+                });
+            }
+
+            return new ObjectTypeDefinitionNode(
+                location: null,
+                name: new NameNode(aggregationTypeName),
+                description: new StringValueNode($"Aggregation type for {entityName}"),
+                directives: new List<DirectiveNode>(),
+                interfaces: new List<NamedTypeNode>(),
+                fields: aggregationFields);
+        }
+
+        private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode)
+        {
+            // Create an input type specific to this entity's numeric fields
+            string inputTypeName = $"{entityNode.Name.Value}NumericFields";
+
+            return new FieldDefinitionNode(
+                location: null,
+                name: new NameNode(operationName),
+                description: new StringValueNode(description),
+                arguments: new List<InputValueDefinitionNode>
+                {
+            new(null,
+                new NameNode("field"),
+                new StringValueNode("Field to aggregate on"),
+                new NonNullTypeNode(new NamedTypeNode(new NameNode(inputTypeName))),
+                null,
+                new List<DirectiveNode>()),
+            new(null,
+                new NameNode("having"),
+                new StringValueNode("Filter criteria for aggregation"),
+                new NamedTypeNode(new NameNode("FloatFilterInput")),
+                null,
+                new List<DirectiveNode>()),
+            new(null,
+                new NameNode("distinct"),
+                new StringValueNode("Whether to aggregate on distinct values"),
+                new BooleanType().ToTypeNode(),
+                new BooleanValueNode(false),
+                new List<DirectiveNode>())
+                },
+                type: new NamedTypeNode(new NameNode(returnType)),
+                directives: new List<DirectiveNode>());
         }
 
         /// <summary>

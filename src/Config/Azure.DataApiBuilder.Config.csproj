@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
@@ -25,6 +25,7 @@
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
       <PackageReference Include="Humanizer" />
       <PackageReference Include="Npgsql" />
+      <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"  />
   </ItemGroup>
 
     <ItemGroup>

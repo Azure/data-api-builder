@@ -297,28 +297,6 @@
             }
           }
         },
-        "log-level": {
-          "type": "object",
-          "description": "Global configuration of log level",
-          "additionalProperties": false,
-          "properties": {
-            "level": {
-              "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
-              "type": "string",
-              "default": null,
-              "enum": [
-                "trace",
-                "debug",
-                "information",
-                "warning",
-                "error",
-                "critical",
-                "none",
-                null
-              ]
-            }
-          }
-        },
         "cache": {
           "type": "object",
           "additionalProperties": false,
@@ -357,11 +335,66 @@
               "required": [
                 "connection-string"
               ]
+            },
+            "open-telemetry": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "description": "Open Telemetry connection string"
+                },
+                "headers": {
+                  "type": "string",
+                  "description": "Open Telemetry headers"
+                },
+                "service-name": {
+                  "type": "string",
+                  "description": "Open Telemetry service name",
+                  "default": "dab"
+                },
+                "exporter-protocol": {
+                  "type": "string",
+                  "description": "Open Telemetry protocol",
+                  "default": "grpc",
+                  "enum": [
+                    "grpc",
+                    "httpprotobuf"
+                  ]
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling Open Telemetry.",
+                  "default": true
+                }
+              },
+              "required": [
+                "endpoint"
+              ]
+            },
+            "log-level": {
+              "type": "object",
+              "description": "Global configuration of log level",
+              "additionalProperties": false,
+              "properties": {
+                "level": {
+                  "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
+                  "type": "string",
+                  "default": null,
+                  "enum": [
+                    "trace",
+                    "debug",
+                    "information",
+                    "warning",
+                    "error",
+                    "critical",
+                    "none",
+                    null
+                  ]
+                }
+              }
             }
-          },
-          "required": [
-            "application-insights"
-          ]
+          }
         }
       }
     },

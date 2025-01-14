@@ -1250,7 +1250,7 @@ namespace Cli.Tests
         /// <returns></returns>
         public static string GenerateConfigWithGivenDepthLimit(string? depthLimitJson = null)
         {
-            string depthLimitSection = depthLimitJson.IsNullOrEmpty() ? string.Empty : ("," + depthLimitJson);
+            string depthLimitSection = string.IsNullOrEmpty(depthLimitJson) ? string.Empty : ("," + depthLimitJson);
 
             string runtimeSection = $@"
             ""runtime"": {{

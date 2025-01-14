@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -14,6 +15,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -23,6 +27,13 @@ namespace Azure.DataApiBuilder.Service
 
         public static void Main(string[] args)
         {
+            if (!ValidateAspNetCoreUrls())
+            {
+                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
+                Environment.ExitCode = -1;
+                return;
+            }
+
             if (!StartEngine(args))
             {
                 Environment.ExitCode = -1;
@@ -94,7 +105,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 throw new DataApiBuilderException(
                     message: $"LogLevel's valid range is 0 to 6, your value: {logLevel}, see: " +
-                    $"https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-6.0",
+                    $"https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.loglevel",
                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -147,6 +158,22 @@ namespace Azure.DataApiBuilder.Service
                             configureApplicationInsightsLoggerOptions: (options) => { }
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
+                    }
+
+                    if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
+                    {
+                        builder.AddOpenTelemetry(logging =>
+                        {
+                            logging.IncludeFormattedMessage = true;
+                            logging.IncludeScopes = true;
+                            logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
+                            logging.AddOtlpExporter(configure =>
+                            {
+                                configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
+                                configure.Headers = Startup.OpenTelemetryOptions.Headers;
+                                configure.Protocol = OtlpExportProtocol.Grpc;
+                            });
+                        });
                     }
 
                     builder.AddConsole();
@@ -204,6 +231,18 @@ namespace Azure.DataApiBuilder.Service
             configurationBuilder
                 .AddEnvironmentVariables(prefix: FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX)
                 .AddCommandLine(args);
+        }
+
+        private static bool ValidateAspNetCoreUrls()
+        {
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is not string value)
+            {
+                return true; // If the environment variable is missing, then it cannot be invalid.
+            }
+
+            return value
+                .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .All(x => Uri.TryCreate(x.Trim(), UriKind.Absolute, out _));
         }
     }
 }

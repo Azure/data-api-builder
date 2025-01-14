@@ -297,28 +297,6 @@
             }
           }
         },
-        "log-level": {
-          "type": "object",
-          "description": "Global configuration of log level",
-          "additionalProperties": false,
-          "properties": {
-            "level": {
-              "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
-              "type": "string",
-              "default": null,
-              "enum": [
-                "trace",
-                "debug",
-                "information",
-                "warning",
-                "error",
-                "critical",
-                "none",
-                null
-              ]
-            }
-          }
-        },
         "cache": {
           "type": "object",
           "additionalProperties": false,
@@ -393,6 +371,28 @@
               "required": [
                 "endpoint"
               ]
+            },
+            "log-level": {
+              "type": "object",
+              "description": "Global configuration of log level",
+              "additionalProperties": false,
+              "properties": {
+                "level": {
+                  "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
+                  "type": "string",
+                  "default": null,
+                  "enum": [
+                    "trace",
+                    "debug",
+                    "information",
+                    "warning",
+                    "error",
+                    "critical",
+                    "none",
+                    null
+                  ]
+                }
+              }
             }
           }
         }

@@ -22,6 +22,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 {
     public static class SchemaConverter
     {
+        private static readonly string _aggregationTypeSuffix = "Aggregations";
+
         /// <summary>
         /// Generate a GraphQL object type from a SQL table/view/stored-procedure definition, combined with the runtime config entity information
         /// </summary>
@@ -223,9 +225,23 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             return AggregateTypes.NumericAggregateTypes.Contains(typeName);
         }
 
+        /// <summary>
+        /// Generates aggregation type for a given entity name.
+        /// Example:
+        /// type BookAggregations {
+        /// max(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean) : Float
+        /// min(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// avg(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// sum(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// count(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Int
+        /// }
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="entityNode"></param>
+        /// <returns></returns>
         public static ObjectTypeDefinitionNode GenerateAggregationTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
         {
-            string aggregationTypeName = $"{entityName}Aggregations";
+            string aggregationTypeName = GenerateObjectAggregationNodeName(entityName);
 
             List<string> numericFields = entityNode.Fields
                 .Where(f => IsNumericField(f.Type))
@@ -259,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode)
         {
             // Create an input type specific to this entity's numeric fields
-            string inputTypeName = $"{entityNode.Name.Value}NumericFields";
+            string inputTypeName = InputTypeBuilder.GenerateNumericAggregateFieldsInputName(entityNode.Name.Value);
 
             return new FieldDefinitionNode(
                 location: null,
@@ -549,6 +565,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             return isNullableRelationship;
+        }
+
+        /// <summary>
+        /// Returns the aggregation node name for the given entity name.
+        /// </summary>
+        /// <param name="entityName">input entity name.</param>
+        /// <returns>{entityName}Aggregations</returns>
+        public static string GenerateObjectAggregationNodeName(string entityName)
+        {
+            return $"{entityName}{_aggregationTypeSuffix}";
         }
     }
 }

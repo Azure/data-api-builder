@@ -12,6 +12,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 {
     public static class InputTypeBuilder
     {
+        private static readonly string _numericAggregateFieldsSuffix = "NumericAggregateFields";
+
         public static void GenerateInputTypesForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             GenerateOrderByInputTypeForObjectType(node, inputTypes);
@@ -25,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
             if (numericFields.Any())
             {
-                string inputTypeName = $"{node.Name.Value}NumericFields";
+                string inputTypeName = GenerateNumericAggregateFieldsInputName(node.Name.Value);
 
                 InputObjectTypeDefinitionNode inputType = new(
                     location: null,
@@ -211,6 +213,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public static string GenerateObjectInputFilterName(string name)
         {
             return $"{name}FilterInput";
+        }
+
+        public static string GenerateNumericAggregateFieldsInputName(string name)
+        {
+            return $"{name}{_numericAggregateFieldsSuffix}";
         }
     }
 }

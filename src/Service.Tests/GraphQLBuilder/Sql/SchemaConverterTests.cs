@@ -826,5 +826,87 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             return table;
         }
+
+        [TestMethod]
+        [TestCategory("Schema Converter - Aggregation Type")]
+        public void GenerateAggregationTypeForEntity_WithNumericFields_CreatesAllOperations()
+        {
+            string gql = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    price: Float!
+    rating: Float
+    pages: Int!
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
+            
+            ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
+            
+            Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
+            Assert.AreEqual(5, aggregationType.Fields.Count, "Should have max, min, avg, sum, and count operations");
+
+            // Verify all operations exist with correct return types
+            Dictionary<string, string> operations = aggregationType.Fields.ToDictionary(f => f.Name.Value, f => f.Type.NamedType().Name.Value);
+            Assert.AreEqual("Float", operations["max"]);
+            Assert.AreEqual("Float", operations["min"]);
+            Assert.AreEqual("Float", operations["avg"]);
+            Assert.AreEqual("Float", operations["sum"]);
+            Assert.AreEqual("Int", operations["count"]);
+
+            // Verify field arguments
+            FieldDefinitionNode firstField = aggregationType.Fields.First();
+            Assert.AreEqual(3, firstField.Arguments.Count, "Each operation should have field, having, and distinct arguments");
+            Assert.AreEqual("BookNumericAggregateFields", firstField.Arguments[0].Type.NamedType().Name.Value);
+            Assert.AreEqual("FloatFilterInput", firstField.Arguments[1].Type.NamedType().Name.Value);
+            Assert.AreEqual("Boolean", firstField.Arguments[2].Type.NamedType().Name.Value);
+        }
+
+        [TestMethod]
+        [TestCategory("Schema Converter - Aggregation Type")]
+        public void GenerateAggregationTypeForEntity_WithNoNumericFields_CreatesEmptyType()
+        {
+            string gql = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    title: String!
+    isPublished: Boolean
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
+            
+            ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
+            
+            Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
+            Assert.AreEqual(0, aggregationType.Fields.Count, "Should have no aggregation operations");
+        }
+
+        [TestMethod]
+        [TestCategory("Schema Converter - Aggregation Type")]
+        public void GenerateAggregationTypeForEntity_WithMixedFields_OnlyIncludesNumericOperations()
+        {
+            string gql = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    title: String
+    price: Float!
+    isPublished: Boolean
+    rating: Int
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
+            
+            ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
+            
+            Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
+            Assert.AreEqual(5, aggregationType.Fields.Count, "Should have all operations for numeric fields only");
+
+            // Verify the field argument only includes numeric fields
+            InputValueDefinitionNode fieldArg = aggregationType.Fields.First().Arguments[0];
+            Assert.AreEqual("BookNumericAggregateFields", fieldArg.Type.NamedType().Name.Value);
+        }
     }
 }

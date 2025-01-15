@@ -12,6 +12,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
     [TestClass]
     public class InputTypeBuilderTests
     {
+        private static readonly string _numericAggregateFieldsSuffix = "NumericAggregateFields";
+
         [DataTestMethod]
         [DataRow("ID", "IdFilterInput")]
         [DataRow("Int", "IntFilterInput")]
@@ -66,6 +68,88 @@ type Publisher @model(name:""Publisher"") {
             CollectionAssert.AreEquivalent(new[] { "Int", "BookFilterInput", "PublisherFilterInput" }, inputTypes.Keys);
             Assert.AreEqual(4, publisherFilterInput.Fields.Count);
             Assert.IsTrue(publisherFilterInput.Fields.Any(f => f.Type.NamedType().Name.Value == "BookFilterInput"), "No field found for BookFilterInput");
+        }
+
+        [TestMethod]
+        [TestCategory("Input Type Builder - Numeric Aggregation")]
+        public void GenerateAggregationNumericInput_WithNumericFields_CreatesInputType()
+        {
+            string gql = @"
+type Foo @model(name:""Foo"") {
+    id: ID!
+    count: Int!
+    price: Float!
+    rating: Float
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
+            ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
+            
+            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
+
+            string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
+            Assert.IsTrue(inputTypes.ContainsKey(expectedInputName), "Numeric aggregation input type should be created");
+            
+            InputObjectTypeDefinitionNode numericInput = inputTypes[expectedInputName];
+            Assert.AreEqual(3, numericInput.Fields.Count, "Should have fields for count, price, and rating");
+            
+            // Verify field names are present
+            HashSet<string> fieldNames = new(numericInput.Fields.Select(f => f.Name.Value));
+            Assert.IsTrue(fieldNames.Contains("count"));
+            Assert.IsTrue(fieldNames.Contains("price"));
+            Assert.IsTrue(fieldNames.Contains("rating"));
+        }
+
+        [TestMethod]
+        [TestCategory("Input Type Builder - Numeric Aggregation")]
+        public void GenerateAggregationNumericInput_WithNoNumericFields_DoesNotCreateInputType()
+        {
+            string gql = @"
+type Foo @model(name:""Foo"") {
+    id: ID!
+    name: String!
+    isActive: Boolean
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
+            ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
+            
+            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
+
+            string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
+            Assert.IsFalse(inputTypes.ContainsKey(expectedInputName), "No numeric aggregation input type should be created");
+        }
+
+        [TestMethod]
+        [TestCategory("Input Type Builder - Numeric Aggregation")]
+        public void GenerateAggregationNumericInput_PreservesFieldTypes()
+        {
+            string gql = @"
+type Foo @model(name:""Foo"") {
+    intField: Int!
+    floatField: Float
+    decimalField: Decimal!
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
+            ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
+            
+            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
+
+            string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
+            InputObjectTypeDefinitionNode numericInput = inputTypes[expectedInputName];
+
+            // Verify field types are preserved
+            InputValueDefinitionNode intField = numericInput.Fields.First(f => f.Name.Value == "intField");
+            InputValueDefinitionNode floatField = numericInput.Fields.First(f => f.Name.Value == "floatField");
+            InputValueDefinitionNode decimalField = numericInput.Fields.First(f => f.Name.Value == "decimalField");
+
+            Assert.AreEqual("Int!", intField.Type.ToString());
+            Assert.AreEqual("Float", floatField.Type.ToString());
+            Assert.AreEqual("Decimal!", decimalField.Type.ToString());
         }
     }
 }

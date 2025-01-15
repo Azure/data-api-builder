@@ -245,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
             List<string> numericFields = entityNode.Fields
                 .Where(f => IsNumericField(f.Type))
-                .Select(f => f.Name.Value)
+                .Select(f => f.Type.NamedType().Name.Value)
                 .ToList();
 
             List<FieldDefinitionNode> aggregationFields = new();
@@ -253,13 +253,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             // Add numeric aggregation fields
             if (numericFields.Any())
             {
+                string filterInputType = numericFields.Count == 1 ? $"{numericFields[0]}FilterInput" : GetCommonFilterInputType(numericFields);
                 aggregationFields.AddRange(new[]
                 {
-                    CreateNumericAggregationField("max", FLOAT_TYPE, "Maximum value for numeric fields", entityNode),
-                    CreateNumericAggregationField("min", FLOAT_TYPE, "Minimum value for numeric fields", entityNode),
-                    CreateNumericAggregationField("avg", FLOAT_TYPE, "Average value", entityNode),
-                    CreateNumericAggregationField("sum", FLOAT_TYPE, "Sum of values", entityNode),
-                    CreateNumericAggregationField("count", INT_TYPE, "Count of numeric values", entityNode)
+                    CreateNumericAggregationField("max", FLOAT_TYPE, "Maximum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField("min", FLOAT_TYPE, "Minimum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField("avg", FLOAT_TYPE, "Average value", entityNode, filterInputType),
+                    CreateNumericAggregationField("sum", FLOAT_TYPE, "Sum of values", entityNode, filterInputType),
+                    CreateNumericAggregationField("count", INT_TYPE, "Count of numeric values", entityNode, filterInputType)
                 });
             }
 
@@ -272,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 fields: aggregationFields);
         }
 
-        private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode)
+        private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode, string filterInputType)
         {
             // Create an input type specific to this entity's numeric fields
             string inputTypeName = InputTypeBuilder.GenerateNumericAggregateFieldsInputName(entityNode.Name.Value);
@@ -292,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             new(null,
                 new NameNode("having"),
                 new StringValueNode("Filter criteria for aggregation"),
-                new NamedTypeNode(new NameNode("FloatFilterInput")),
+                new NamedTypeNode(new NameNode(filterInputType)),
                 null,
                 new List<DirectiveNode>()),
             new(null,
@@ -306,6 +307,29 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 directives: new List<DirectiveNode>());
         }
 
+        /// <summary>
+        /// Determines the most appropriate common filter input type for a collection of numeric types
+        /// </summary>
+        private static string GetCommonFilterInputType(List<string> numericTypes)
+        {
+            Dictionary<string, int> typeHierarchy = new()
+            {
+                { DECIMAL_TYPE, 1 },
+                { FLOAT_TYPE, 2 },
+                { SINGLE_TYPE, 3 },
+                { LONG_TYPE, 4 },
+                { INT_TYPE, 5 },
+                { SHORT_TYPE, 6 },
+                { BYTE_TYPE, 7 }
+            };
+
+            // Find the highest precision type among the numeric types
+            string highestPrecisionType = numericTypes
+                .OrderBy(t => typeHierarchy.GetValueOrDefault(t, 0))
+                .First();
+
+            return $"{highestPrecisionType}FilterInput";
+        }
         /// <summary>
         /// Helper method to generate the FieldDefinitionNode for a column in a table/view or a result set field in a stored-procedure.
         /// </summary>

@@ -835,7 +835,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 type Book @model(name:""Book"") {
     id: ID!
     price: Float!
-    rating: Float
+    rating: Int
     pages: Int!
 }";
 
@@ -855,12 +855,33 @@ type Book @model(name:""Book"") {
             Assert.AreEqual("Float", operations["sum"]);
             Assert.AreEqual("Int", operations["count"]);
 
-            // Verify field arguments
-            FieldDefinitionNode firstField = aggregationType.Fields.First();
-            Assert.AreEqual(3, firstField.Arguments.Count, "Each operation should have field, having, and distinct arguments");
-            Assert.AreEqual("BookNumericAggregateFields", firstField.Arguments[0].Type.NamedType().Name.Value);
-            Assert.AreEqual("FloatFilterInput", firstField.Arguments[1].Type.NamedType().Name.Value);
-            Assert.AreEqual("Boolean", firstField.Arguments[2].Type.NamedType().Name.Value);
+            // Verify field arguments and their specific filter input types
+            FieldDefinitionNode maxField = aggregationType.Fields.First(f => f.Name.Value == "max");
+            Assert.AreEqual(3, maxField.Arguments.Count, "Each operation should have field, having, and distinct arguments");
+            Assert.AreEqual("BookNumericAggregateFields", maxField.Arguments[0].Type.NamedType().Name.Value);
+            Assert.AreEqual("FloatFilterInput", maxField.Arguments[1].Type.NamedType().Name.Value, "Should use FloatFilterInput for mixed Float/Int fields");
+            Assert.AreEqual("Boolean", maxField.Arguments[2].Type.NamedType().Name.Value);
+        }
+
+        [TestMethod]
+        [TestCategory("Schema Converter - Aggregation Type")]
+        public void GenerateAggregationTypeForEntity_WithSingleNumericType_UsesSpecificFilterInput()
+        {
+            string gql = @"
+type Book @model(name:""Book"") {
+    id: ID!
+    pages: Int!
+    chapter_count: Int
+}";
+
+            DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
+
+            ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
+
+            // Verify that operations use IntFilterInput since all numeric fields are Int
+            FieldDefinitionNode maxField = aggregationType.Fields.First(f => f.Name.Value == "max");
+            Assert.AreEqual("IntFilterInput", maxField.Arguments[1].Type.NamedType().Name.Value, "Should use IntFilterInput when all numeric fields are Int");
         }
 
         [TestMethod]

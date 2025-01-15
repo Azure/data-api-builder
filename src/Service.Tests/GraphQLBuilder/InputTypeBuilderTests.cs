@@ -85,15 +85,15 @@ type Foo @model(name:""Foo"") {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
-            
+
             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
 
             string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
             Assert.IsTrue(inputTypes.ContainsKey(expectedInputName), "Numeric aggregation input type should be created");
-            
+
             InputObjectTypeDefinitionNode numericInput = inputTypes[expectedInputName];
             Assert.AreEqual(3, numericInput.Fields.Count, "Should have fields for count, price, and rating");
-            
+
             // Verify field names are present
             HashSet<string> fieldNames = new(numericInput.Fields.Select(f => f.Name.Value));
             Assert.IsTrue(fieldNames.Contains("count"));
@@ -115,7 +115,7 @@ type Foo @model(name:""Foo"") {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
-            
+
             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
 
             string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
@@ -136,7 +136,7 @@ type Foo @model(name:""Foo"") {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
-            
+
             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
 
             string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";

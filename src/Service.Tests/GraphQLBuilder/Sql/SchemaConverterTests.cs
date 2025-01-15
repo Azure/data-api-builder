@@ -841,9 +841,9 @@ type Book @model(name:""Book"") {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
-            
+
             ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
-            
+
             Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
             Assert.AreEqual(5, aggregationType.Fields.Count, "Should have max, min, avg, sum, and count operations");
 
@@ -876,9 +876,9 @@ type Book @model(name:""Book"") {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
-            
+
             ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
-            
+
             Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
             Assert.AreEqual(0, aggregationType.Fields.Count, "Should have no aggregation operations");
         }
@@ -898,9 +898,9 @@ type Book @model(name:""Book"") {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
-            
+
             ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
-            
+
             Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
             Assert.AreEqual(5, aggregationType.Fields.Count, "Should have all operations for numeric fields only");
 

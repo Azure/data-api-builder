@@ -416,6 +416,71 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
+    /// Here, we updated the old mappings of the entity book field "title" to "bookTitle".
+    /// Validate that the response from the server is correct, by ensuring that the old mappings when used in the query
+    /// results in bad request, while the new mappings results in a correct response as "title" field is no longer valid.
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigUpdateMappings()
+    {
+        // Arrange
+        string newMappingFieldName = "bookTitle";
+        // Update the configuration with new mappings
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            entityBackingColumn: "title",
+            entityExposedName: newMappingFieldName);
+        System.Threading.Thread.Sleep(2000);
+
+        // Act
+        string queryWithOldMapping = @"{
+            books(filter: { id: { eq: 1 } }) {
+                items {
+                    title
+                }
+            }
+        }";
+        object payload = new { query = queryWithOldMapping };
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        HttpResponseMessage gQLResultWithOldMapping = await _testClient.SendAsync(request);
+
+        string queryWithNewMapping = @"{
+            books(filter: { id: { eq: 1 } }) {
+                items {
+                    bookTitle
+                }
+            }
+        }";
+
+        payload = new { query = queryWithNewMapping };
+        request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        HttpResponseMessage gQLResultWithNewMapping = await _testClient.SendAsync(request);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.BadRequest, gQLResultWithOldMapping.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewMapping.StatusCode);
+
+        string responseContent = await gQLResultWithNewMapping.Content.ReadAsStringAsync();
+        JsonDocument jsonResponse = JsonDocument.Parse(responseContent);
+        JsonElement items = jsonResponse.RootElement.GetProperty("data").GetProperty("books").GetProperty("items");
+        string expectedResponse = @"[
+            {
+                ""bookTitle"": ""Awesome book""
+            }
+        ]";
+        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
+
+        Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson.RootElement.ToString(), items.ToString()));
+    }
+
+    /// <summary>
     /// Hot reload the configuration file by saving a new session-context and connection string.
     /// Validate that the response from the server is correct, by ensuring that the session-context
     /// inside the DataSource parameter is different from the session-context before hot reload.

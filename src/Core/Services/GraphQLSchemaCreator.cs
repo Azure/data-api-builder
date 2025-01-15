@@ -53,6 +53,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="mutationEngineFactory">MutationEngineFactory to retreive mutation engine to be used by resolvers.</param>
         /// <param name="metadataProviderFactory">MetadataProviderFactory to get metadata provider used when generating the SQL-based GraphQL schema. Ignored if the runtime is Cosmos.</param>
         /// <param name="authorizationResolver">Authorization information for the runtime, to be applied to the GraphQL schema.</param>
+        /// <param name="handler">Optional hot-reload event handler to subscribe to the config change event.</param>
         public GraphQLSchemaCreator(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryEngineFactory queryEngineFactory,

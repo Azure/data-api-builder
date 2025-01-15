@@ -58,7 +58,7 @@ The runtime configuration would include details like cache-ttl in case we need t
 | **Property**   | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |----------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
 | `enabled`     | Boolean       | No           | `true`      | Enables or disables health checks at the runtime level.                                             |
-| `cache-ttl`   | Integer       | No           | `5`         | Time-to-live (in seconds) for caching health check results.                                          |
+| `cache-ttl-sec`   | Integer       | No           | `5`         | Time-to-live (in seconds) for caching health check results.                                          |
 | `max-dop`     | Integer       | No           | `1`         | Maximum Degree of Parallelism for running health checks.                                             |
 | `roles`       | Array         | No           | `*`         | Roles allowed to access the health endpoint (e.g., `anonymous`, `authenticated`).                   |
 
@@ -124,8 +124,7 @@ The idea of using this updates configuration is to allow the developer to influe
 ### Output Sample
 ```
 {
-  "status": "Unhealthy",
-  "status": "Healthy",
+  "status": "Unhealthy",/"status": "Healthy",
   "version": "1.2.10",
   "app-name": "dab_oss_1.2.10",
   "dab-configuration": {

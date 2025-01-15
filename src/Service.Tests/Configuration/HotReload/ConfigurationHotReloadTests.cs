@@ -110,47 +110,63 @@ public class ConfigurationHotReloadTests
                           ""enabled"": " + restEntityEnabled + @"
                         },
                         ""permissions"": [
-                        {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                            {
-                              ""action"": ""create""
-                            },
-                            {
-                              ""action"": ""read""
-                            },
-                            {
-                              ""action"": ""update""
-                            },
-                            {
-                              ""action"": ""delete""
-                            }
-                          ]
-                        },
-                        {
-                          ""role"": ""authenticated"",
-                          ""actions"": [
-                            {
-                              ""action"": ""create""
-                            },
-                            {
-                              ""action"": ""read""
-                            },
-                            {
-                              ""action"": ""update""
-                            },
-                            {
-                              ""action"": ""delete""
-                            }
-                          ]
-                        }
-                      ],
+                          {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          },
+                          {
+                            ""role"": ""authenticated"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          }
+                        ],
                         ""mappings"": {
                           """ + entityBackingColumn + @""": """ + entityExposedName + @"""
                         }
+                      },
+                      ""Publisher"": {
+                        ""source"": {
+                          ""object"": ""publishers"",
+                          ""type"": ""table""
+                        },
+                        ""graphql"": {
+                          ""enabled"": true,
+                          ""type"": {
+                            ""singular"": ""Publisher"",
+                            ""plural"": ""Publishers""
+                          }
+                        },
+                        ""rest"": {
+                          ""enabled"": true
+                        },
+                        ""permissions"": [
+                          {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          },
+                          {
+                            ""role"": ""authenticated"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          }
+                        ]
                       }
-                  }
-              }");
+                    }
+                }");
     }
 
     /// <summary>
@@ -302,6 +318,101 @@ public class ConfigurationHotReloadTests
 
         // Assert
         Assert.AreEqual(HttpStatusCode.NotFound, gQLResult.StatusCode);
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file by saving a new file with the graphQL enabled property
+    /// set to false at the entity level. Validate that the response from the server is INTERNAL SERVER ERROR when making a request after
+    /// the hot reload since no such entity exist in the query.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod("Hot-reload gql disabled at entity level.")]
+    public async Task HotReloadEntityGQLEnabledFlag()
+    {
+        // Arrange
+        string gQLEntityEnabled = "false";
+        string query = GQL_QUERY;
+        object payload =
+            new { query };
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            gQLEntityEnabled: gQLEntityEnabled);
+        System.Threading.Thread.Sleep(2000);
+
+        // Act
+        HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.InternalServerError, gQLResult.StatusCode);
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file by replacing an old entity book with a new entity author.
+    /// Validate that the new entity is accessible via GraphQL after the hot reload and the old one isn't.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigAddEntity()
+    {
+        // Arrange
+        string newEntityName = "Author";
+        string newEntitySource = "authors";
+        string newEntityGQLSingular = "author";
+        string newEntityGQLPlural = "authors";
+
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            entityName: newEntityName,
+            sourceObject: newEntitySource,
+            gQLEntitySingular: newEntityGQLSingular,
+            gQLEntityPlural: newEntityGQLPlural);
+        System.Threading.Thread.Sleep(2000);
+
+        // Act
+        string queryWithOldEntity = GQL_QUERY;
+        object payload =
+            new { query = queryWithOldEntity };
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        HttpResponseMessage gQLResultWithOldEntity = await _testClient.SendAsync(request);
+
+        string queryWithNewEntity = @"{
+            authors(filter: {id: {eq: 123}}) {
+                items {
+                    name
+                }
+            }
+        }";
+        payload = new { query = queryWithNewEntity };
+        request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        HttpResponseMessage gQLResultWithNewEntity = await _testClient.SendAsync(request);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.InternalServerError, gQLResultWithOldEntity.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewEntity.StatusCode);
+        string responseContent = await gQLResultWithNewEntity.Content.ReadAsStringAsync();
+        JsonDocument jsonResponse = JsonDocument.Parse(responseContent);
+        JsonElement items = jsonResponse.RootElement.GetProperty("data").GetProperty("authors").GetProperty("items");
+        string expectedResponse = @"[
+            {
+                ""name"": ""Jelte""
+            }
+        ]";
+        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
+
+        Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson.RootElement.ToString(), items.ToString()));
     }
 
     /// <summary>

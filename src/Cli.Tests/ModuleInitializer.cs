@@ -49,6 +49,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.GraphQLPath);
         // Ignore the AllowIntrospection as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
+        // Ignore the isAggregationEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsAggregationEnabled);
         // Ignore the JSON schema path as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the message as that's not serialized in our config file anyway.

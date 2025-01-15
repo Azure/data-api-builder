@@ -575,4 +575,13 @@ public record RuntimeConfig
 
         return LogLevel.Error;
     }
+
+    /// <summary>
+    /// Retrieves the value of runtime.graphql.aggregation.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsAggregationEnabled =>
+        Runtime is not null &&
+        Runtime.GraphQL is not null &&
+        Runtime.GraphQL.EnableAggregation;
 }

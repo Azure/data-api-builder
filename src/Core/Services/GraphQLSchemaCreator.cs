@@ -223,11 +223,15 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
 
-                            // Generate aggregation type for the entity
-                            ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(entityName, node);
-                            if (aggregationType.Fields.Any())
+                            if (_runtimeConfigProvider.GetConfig().IsAggregationEnabled)
                             {
-                                objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
+                                InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputObjects);
+                                // Generate aggregation type for the entity
+                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(entityName, node);
+                                if (aggregationType.Fields.Any())
+                                {
+                                    objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
+                                }
                             }
                         }
 

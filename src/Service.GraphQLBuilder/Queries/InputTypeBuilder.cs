@@ -18,10 +18,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             GenerateOrderByInputTypeForObjectType(node, inputTypes);
             GenerateFilterInputTypeForObjectType(node, inputTypes);
-            GenerateAggregationNumericInputForObjectType(node, inputTypes);
         }
 
-        private static void GenerateAggregationNumericInputForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        public static void GenerateAggregationNumericInputForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             List<FieldDefinitionNode> numericFields = node.Fields.Where(f => SchemaConverter.IsNumericField(f.Type)).ToList();
 

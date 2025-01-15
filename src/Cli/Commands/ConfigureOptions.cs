@@ -104,6 +104,9 @@ namespace Cli.Commands
         [Option("runtime.graphql.allow-introspection", Required = false, HelpText = "Allow/Deny GraphQL introspection requests in GraphQL Schema. Default: true (boolean).")]
         public bool? RuntimeGraphQLAllowIntrospection { get; }
 
+        [Option("runtime.graphql.enable-aggregation", Required = false, HelpText = "Enable aggregation support in GraphQL schema. Default: true (boolean).")]
+        public bool? RuntimeGraphQLEnableAggregation { get; }
+
         [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Enable/Disable multiple-mutation create operations on DAB's generated GraphQL schema. Default: true (boolean).")]
         public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
 

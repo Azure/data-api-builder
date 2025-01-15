@@ -1,6 +1,6 @@
 # Design Document: DAB Health Endpoint
 ## Objective:
-The objective of this task is to enhance the "Health Endpoint" for DAB. Currently we only show whether the DAB Engine is healthy or not and which version of DAB is running. However, the objective under this task item is to enhance this to support delatiled description of each supported (enabled) endpoint with all different kinds of parameters that would be defined below.
+The objective of this task is to enhance the "Health Endpoint" for DAB. Currently we only show whether the DAB Engine is healthy or not and which version of DAB is running. However, the objective under this task item is to enhance this to support detailed description of each supported (enabled) endpoint with all different kinds of parameters that would be defined below.
 
 ## Need for DAB Health Check Endpoint
 Azure App Service & Azure Kubernetes Service (AKS) support health probes to monitor the health of your application. If a service fails health checks, Azure can automatically restart it or redirect traffic to healthy instances.
@@ -53,7 +53,7 @@ We need to update the dab config file to include details of the health check for
 
 #### `runtime.health` Configuration
 
-The runtime configuration would include details like cache-ttl in case we need to cache the response of health checks, the max-drop value which tells you the degree of parallelism i.e. how many queries that DAB shoud run at once to get health results and roles i.e. which role is allowed to view the health information of DAB.
+The runtime configuration would include details like cache-ttl in case we need to cache the response of health checks, the max-dop value which tells you the degree of parallelism i.e. how many queries that DAB shoud run at once to get health results and roles i.e. which role is allowed to view the health information of DAB.
 
 | **Property**   | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |----------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
@@ -64,7 +64,7 @@ The runtime configuration would include details like cache-ttl in case we need t
 
 #### `data-source.health` Configuration
 
-The data source config parameters specify the query that we should run on the data source and the threshold of ms if should come under to qualify as a healthy data source for DAB.
+The data source config parameters specify the query that we should run on the data source and the threshold of ms it should come under to qualify as a healthy data source for DAB.
 
 | **Property**      | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |-------------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
@@ -75,7 +75,7 @@ The data source config parameters specify the query that we should run on the da
 
 #### `<entity-name>.health` Configuration
 
-The Entity config parameters contain information about the GET filter or query which needs to be carried out on the data source entiy and under what threshold should the response be received for it to qualify as a healthy entity.
+The Entity config parameters contain information about the GET filter or query which needs to be carried out on the data source entity and under what threshold should the response be received for it to qualify as a healthy entity.
 | **Property**     | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |------------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
 | `enabled`        | Boolean       | No           | `true`      | Enables or disables health checks for the specific entity.                                          |
@@ -118,7 +118,7 @@ The Entity config parameters contain information about the GET filter or query w
   }
 }
 ```
-The idea of using this updates configuration is to allow the developer to influence how the checks work against the datasource/entity. This would provide him with a more detailed process for checking if DAB engine is healthy and would give him an enhanced user experience. 
+The idea of using this updates configuration is to allow the developer to influence how the checks work against the datasource/entity. This would provide them with a more detailed process for checking if DAB engine is healthy and would give them an enhanced user experience. 
 
 
 ### Output Sample

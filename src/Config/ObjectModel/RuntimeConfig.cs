@@ -194,7 +194,7 @@ public record RuntimeConfig
         if (this.DataSource is null)
         {
             throw new DataApiBuilderException(
-                message: "DataSource is a mandatory property in DAB Config",
+                message: "data-source is a mandatory property in DAB Config",
                 statusCode: HttpStatusCode.UnprocessableEntity,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }

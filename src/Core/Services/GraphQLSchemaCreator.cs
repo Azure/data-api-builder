@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
 
-                            if (_runtimeConfigProvider.GetConfig().IsAggregationEnabled)
+                            if (_runtimeConfigProvider.GetConfig().EnableAggregation)
                             {
                                 InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputObjects);
                                 // Generate aggregation type for the entity

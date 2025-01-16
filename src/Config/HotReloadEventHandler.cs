@@ -32,7 +32,7 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             { DOCUMENTOR_ON_CONFIG_CHANGED, null },
             { AUTHZ_RESOLVER_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, null },
-            { GRAPHQL_SCHEMA_ON_CONFIG_CHANGED, null },
+            { GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, null }
         };
     }

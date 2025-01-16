@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
 
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
-            _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
+            _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
 
             services.AddFusionCache()
                 .WithOptions(options =>

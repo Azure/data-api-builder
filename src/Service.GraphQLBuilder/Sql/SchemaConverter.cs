@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         public static bool IsNumericField(ITypeNode type)
         {
             string typeName = type.NamedType().Name.Value;
-            return AggregateTypes.NumericAggregateTypes.Contains(typeName);
+            return SupportedAggregateTypes.NumericAggregateTypes.Contains(typeName);
         }
 
         /// <summary>
@@ -273,6 +273,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 fields: aggregationFields);
         }
 
+        /// <summary>
+        /// Creates a numeric aggregation field for a graphql entity.
+        /// for example in the aggregations node for books it would create min/max/avg operations.
+        /// </summary>
+        /// <param name="operationName">The name of the aggregation operation (e.g., "sum", "avg").</param>
+        /// <param name="returnType">The return type of the aggregation operation (e.g., "Float", "Int").</param>
+        /// <param name="description">A description of the aggregation operation.</param>
+        /// <param name="entityNode">The GraphQL entity node that contains the numeric fields to be aggregated.</param>
+        /// <param name="filterInputType">The input type used for filtering criteria in the aggregation operation.</param>
+        /// <returns>A <see cref="FieldDefinitionNode"/> representing the numeric aggregation field in the GraphQL schema.</returns>
         private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode, string filterInputType)
         {
             // Create an input type specific to this entity's numeric fields

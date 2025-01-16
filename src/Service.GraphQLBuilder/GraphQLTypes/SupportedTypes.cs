@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     /// <summary>
     /// class representing mapping between hotchocolate types and return type for aggregate.
     /// </summary>
-    public static class AggregateTypes
+    public static class SupportedAggregateTypes
     {
         public static HashSet<string> NumericAggregateTypes = new(StringComparer.OrdinalIgnoreCase)
         {

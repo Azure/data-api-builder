@@ -86,7 +86,7 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
 
-            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
+            InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputTypes);
 
             string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
             Assert.IsTrue(inputTypes.ContainsKey(expectedInputName), "Numeric aggregation input type should be created");
@@ -116,7 +116,7 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
 
-            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
+            InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputTypes);
 
             string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
             Assert.IsFalse(inputTypes.ContainsKey(expectedInputName), "No numeric aggregation input type should be created");
@@ -137,7 +137,7 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes = new();
             ObjectTypeDefinitionNode node = root.Definitions[0] as ObjectTypeDefinitionNode;
 
-            InputTypeBuilder.GenerateInputTypesForObjectType(node, inputTypes);
+            InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputTypes);
 
             string expectedInputName = $"Foo{_numericAggregateFieldsSuffix}";
             InputObjectTypeDefinitionNode numericInput = inputTypes[expectedInputName];

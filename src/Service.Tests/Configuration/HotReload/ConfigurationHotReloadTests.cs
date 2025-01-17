@@ -25,10 +25,10 @@ public class ConfigurationHotReloadTests
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
     private static StringWriter _writer;
-    internal const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
-    internal const string GQL_QUERY_NAME = "books";
+    private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
+    private const string GQL_QUERY_NAME = "books";
 
-    internal const string GQL_QUERY = @"{
+    private const string GQL_QUERY = @"{
                 books(first: 100) {
                     items {
                         id
@@ -38,7 +38,7 @@ public class ConfigurationHotReloadTests
                 }
             }";
 
-    internal static string _bookDBOContents;
+    private static string _bookDBOContents;
 
     private static void GenerateConfigFile(
         string schema = "",
@@ -331,7 +331,12 @@ public class ConfigurationHotReloadTests
     {
         // Arrange
         string gQLEntityEnabled = "false";
-        string query = GQL_QUERY;
+        string query = @"{
+            book_by_pk(id: 1) {
+                title
+            }
+        }";
+
         object payload =
             new { query };
 
@@ -339,6 +344,7 @@ public class ConfigurationHotReloadTests
         {
             Content = JsonContent.Create(payload)
         };
+
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEntityEnabled: gQLEntityEnabled);
@@ -348,7 +354,9 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
 
         // Assert
-        Assert.AreEqual(HttpStatusCode.InternalServerError, gQLResult.StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadRequest, gQLResult.StatusCode);
+        string errorContent = await gQLResult.Content.ReadAsStringAsync();
+        Assert.IsTrue(errorContent.Contains("The field `book_by_pk` does not exist on the type `Query`."));
     }
 
     /// <summary>
@@ -374,7 +382,14 @@ public class ConfigurationHotReloadTests
         System.Threading.Thread.Sleep(2000);
 
         // Act
-        string queryWithOldEntity = GQL_QUERY;
+        string queryWithOldEntity = @"{
+            books(filter: {id: {eq: 1}}) {
+                items {
+                    title
+                }
+            }
+        }";
+
         object payload =
             new { query = queryWithOldEntity };
 
@@ -392,15 +407,20 @@ public class ConfigurationHotReloadTests
                 }
             }
         }";
+
         payload = new { query = queryWithNewEntity };
         request = new(HttpMethod.Post, "/graphQL")
         {
             Content = JsonContent.Create(payload)
         };
+
         HttpResponseMessage gQLResultWithNewEntity = await _testClient.SendAsync(request);
 
         // Assert
-        Assert.AreEqual(HttpStatusCode.InternalServerError, gQLResultWithOldEntity.StatusCode);
+        Assert.AreEqual(HttpStatusCode.BadRequest, gQLResultWithOldEntity.StatusCode);
+        string errorContent = await gQLResultWithOldEntity.Content.ReadAsStringAsync();
+        Assert.IsTrue(errorContent.Contains("The field `books` does not exist on the type `Query`."));
+
         Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewEntity.StatusCode);
         string responseContent = await gQLResultWithNewEntity.Content.ReadAsStringAsync();
         JsonDocument jsonResponse = JsonDocument.Parse(responseContent);
@@ -410,8 +430,8 @@ public class ConfigurationHotReloadTests
                 ""name"": ""Jelte""
             }
         ]";
-        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
 
+        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson.RootElement.ToString(), items.ToString()));
     }
 
@@ -440,6 +460,7 @@ public class ConfigurationHotReloadTests
                 }
             }
         }";
+
         object payload = new { query = queryWithOldMapping };
         HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
         {
@@ -461,12 +482,15 @@ public class ConfigurationHotReloadTests
         {
             Content = JsonContent.Create(payload)
         };
+
         HttpResponseMessage gQLResultWithNewMapping = await _testClient.SendAsync(request);
 
         // Assert
         Assert.AreEqual(HttpStatusCode.BadRequest, gQLResultWithOldMapping.StatusCode);
-        Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewMapping.StatusCode);
+        string errorContent = await gQLResultWithOldMapping.Content.ReadAsStringAsync();
+        Assert.IsTrue(errorContent.Contains("The field `title` does not exist on the type `book`."));
 
+        Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewMapping.StatusCode);
         string responseContent = await gQLResultWithNewMapping.Content.ReadAsStringAsync();
         JsonDocument jsonResponse = JsonDocument.Parse(responseContent);
         JsonElement items = jsonResponse.RootElement.GetProperty("data").GetProperty("books").GetProperty("items");
@@ -475,8 +499,8 @@ public class ConfigurationHotReloadTests
                 ""bookTitle"": ""Awesome book""
             }
         ]";
-        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
 
+        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
         Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson.RootElement.ToString(), items.ToString()));
     }
 

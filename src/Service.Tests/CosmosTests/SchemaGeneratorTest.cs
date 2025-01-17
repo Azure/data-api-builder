@@ -237,6 +237,26 @@ type PhoneNumber {
         }
 
         /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with an empty JSON array.
+        /// Ensures that the method correctly handles an empty input.
+        /// </summary>
+        [TestMethod]
+        public void TestEmptyJsonArrayInPayload()
+        {
+            List<JsonDocument> jsonArray = new() {
+                JsonDocument.Parse(@"{ ""name"": ""John"", ""product"": [], ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" }")};
+            string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
+
+            string expectedSchema = @"type ContainerName @model(name: ""ContainerName"") {
+  name: String!,
+  isStudent: Boolean!,
+  birthDate: Date!
+}
+";
+            Assert.AreEqual(expectedSchema, actualSchema);
+        }
+
+        /// <summary>
         /// Tests the <see cref="SchemaGenerator.Generate"/> method with a JSON array containing a null object.
         /// Ensures that the method handles null objects gracefully and throws an appropriate exception.
         /// </summary>

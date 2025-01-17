@@ -16,9 +16,6 @@ public record RuntimeOptions
     public EntityCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
 
-    [JsonPropertyName("log-level")]
-    public LogLevelOptions? LoggerLevel { get; init; }
-
     [JsonConstructor]
     public RuntimeOptions(
         RestRuntimeOptions? Rest,
@@ -27,8 +24,7 @@ public record RuntimeOptions
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
         EntityCacheOptions? Cache = null,
-        PaginationOptions? Pagination = null,
-        LogLevelOptions? LoggerLevel = null)
+        PaginationOptions? Pagination = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -37,7 +33,6 @@ public record RuntimeOptions
         this.Telemetry = Telemetry;
         this.Cache = Cache;
         this.Pagination = Pagination;
-        this.LoggerLevel = LoggerLevel;
     }
 
     /// <summary>

@@ -146,6 +146,52 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// This Test is used to verify that the validate command is able to catch when data source field or entities field is missing.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigFailsWithNoEntities()
+    {
+        string ConfigWithoutEntities = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithoutEntities);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// This Test is used to verify that the validate command is able to catch when data source field is missing.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigFailsWithNoDataSource()
+    {
+        string ConfigWithoutDataSource = $"{{{SCHEMA_PROPERTY},{RUNTIME_SECTION_WITH_EMPTY_ENTITIES}}}";
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithoutDataSource);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// This method implicitly validates that RuntimeConfigValidator::ValidateConfigSchema(...) successfully
     /// executes against a config file referencing environment variables.
     /// [CLI] ConfigGenerator::IsConfigValid(...)

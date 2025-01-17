@@ -191,6 +191,14 @@ public record RuntimeConfig
         this.Entities = Entities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
+        if (this.DataSource is null)
+        {
+            throw new DataApiBuilderException(
+                message: "data-source is a mandatory property in DAB Config",
+                statusCode: HttpStatusCode.UnprocessableEntity,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+        }
+
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>
         {
@@ -198,6 +206,14 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
+        if (Entities is null)
+        {
+            throw new DataApiBuilderException(
+                message: "entities is a mandatory property in DAB Config",
+                statusCode: HttpStatusCode.UnprocessableEntity,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+        }
+
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);

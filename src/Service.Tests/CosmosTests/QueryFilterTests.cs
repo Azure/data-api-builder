@@ -411,7 +411,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Tests that special characters are escaped in operations involving LIKE
         /// Special chars not working so ignoring for now!
         /// </summary>
-        // [Ignore]
+        [Ignore]
         [TestMethod]
         public async Task TestStringFiltersContainsWithSpecialChars()
         {

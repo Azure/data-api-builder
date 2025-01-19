@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Text;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
@@ -64,14 +65,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // we add '\' carachter to escape the special characters in the string, but if special characters are needed to be searched
             // as literal characters we need to escape the '\' character itself. Since we add `\` only for LIKE, so we search if the query
             // contains LIKE and add the ESCAPE clause accordingly.
-            string escapeClause = predicates.Contains("LIKE", StringComparison.OrdinalIgnoreCase)
-                ? $" ESCAPE '{MSSQL_ESCAPE_CHAR}'"
-                : string.Empty;
+            predicates = AddEscapeToLikeClauses(predicates);
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}"
-                + escapeClause
                 + $" ORDER BY {Build(structure.OrderByColumns)}";
 
             query += FOR_JSON_SUFFIX;
@@ -81,6 +79,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return query;
+        }
+
+        /// <summary>
+        /// Helper method to add ESCAPE clause to the LIKE clauses in the query.
+        /// </summary>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        private static string AddEscapeToLikeClauses(string predicate)
+        {
+            const string escapeClause = $" ESCAPE '{MSSQL_ESCAPE_CHAR}'";
+            // Regex to find LIKE clauses and append ESCAPE
+            return Regex.Replace(predicate, @"(LIKE\s+@[\w\d]+)", $"$1{escapeClause}", RegexOptions.IgnoreCase);
         }
 
         /// <inheritdoc />

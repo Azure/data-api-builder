@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Test with empty sub properties of runtime
             minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
-                            ""base-route"" : """", ""log-level"" : { },");
+                            ""base-route"" : """",");
             StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
             StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
 
@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TryParseAndAssertOnDefaults("{" + emptyHostSubProps, out _);
 
             // Test with empty telemetry sub-properties
-            minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { } } }");
+            minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { }, ""log-level"": { } } }");
 
             string emptyTelemetrySubProps = minJsonWithTelemetrySubProps + "}";
             TryParseAndAssertOnDefaults("{" + emptyTelemetrySubProps, out _);

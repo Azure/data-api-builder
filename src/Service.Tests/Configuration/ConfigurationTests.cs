@@ -3480,7 +3480,7 @@ type Planet @model(name:""PlanetAlias"") {
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
-            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.LoggerLevel.Value);
+            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel.Value);
         }
 
         /// <summary>
@@ -3528,10 +3528,11 @@ type Planet @model(name:""PlanetAlias"") {
             using (JsonDocument parsedDocument = JsonDocument.Parse(serializedConfig))
             {
                 JsonElement root = parsedDocument.RootElement;
+                JsonElement runtimeElement = root.GetProperty("runtime");
 
                 //Validate log-level property exists in runtime
-                JsonElement runtimeElement = root.GetProperty("runtime");
-                bool logLevelPropertyExists = runtimeElement.TryGetProperty("log-level", out JsonElement logLevelElement);
+                JsonElement telemetryElement = runtimeElement.GetProperty("telemetry");
+                bool logLevelPropertyExists = telemetryElement.TryGetProperty("log-level", out JsonElement logLevelElement);
                 Assert.AreEqual(expected: true, actual: logLevelPropertyExists);
 
                 //Validate level property inside log-level is of expected value
@@ -3559,7 +3560,7 @@ type Planet @model(name:""PlanetAlias"") {
                     Rest: new(),
                     GraphQL: new(),
                     Host: new(null, null),
-                    LoggerLevel: logLevelOptions
+                    Telemetry: new(LoggerLevel: logLevelOptions)
                 ),
                 Entities: baseConfig.Entities
             );

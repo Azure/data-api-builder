@@ -827,6 +827,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             return table;
         }
 
+        /// <summary>
+        /// Tests generation of aggregation type for an entity with numeric fields.
+        /// Verifies that all numeric operations (max, min, avg, sum, count) are created
+        /// with correct return types and arguments.
+        /// </summary>
         [TestMethod]
         [TestCategory("Schema Converter - Aggregation Type")]
         public void GenerateAggregationTypeForEntity_WithNumericFields_CreatesAllOperations()
@@ -863,6 +868,11 @@ type Book @model(name:""Book"") {
             Assert.AreEqual("Boolean", maxField.Arguments[2].Type.NamedType().Name.Value);
         }
 
+        /// <summary>
+        /// Tests generation of aggregation type for an entity with only integer fields.
+        /// Verifies that the filter input type is specifically IntFilterInput when all
+        /// numeric fields are integers.
+        /// </summary>
         [TestMethod]
         [TestCategory("Schema Converter - Aggregation Type")]
         public void GenerateAggregationTypeForEntity_WithSingleNumericType_UsesSpecificFilterInput()
@@ -884,6 +894,11 @@ type Book @model(name:""Book"") {
             Assert.AreEqual("IntFilterInput", maxField.Arguments[1].Type.NamedType().Name.Value, "Should use IntFilterInput when all numeric fields are Int");
         }
 
+        /// <summary>
+        /// Tests generation of aggregation type for an entity with no numeric fields.
+        /// Verifies that an empty type is created when there are no fields eligible
+        /// for numeric aggregation.
+        /// </summary>
         [TestMethod]
         [TestCategory("Schema Converter - Aggregation Type")]
         public void GenerateAggregationTypeForEntity_WithNoNumericFields_CreatesEmptyType()
@@ -904,6 +919,11 @@ type Book @model(name:""Book"") {
             Assert.AreEqual(0, aggregationType.Fields.Count, "Should have no aggregation operations");
         }
 
+        /// <summary>
+        /// Tests generation of aggregation type for an entity with mixed field types.
+        /// Verifies that only numeric fields are included in the aggregation operations
+        /// while other types (string, boolean, etc.) are excluded.
+        /// </summary>
         [TestMethod]
         [TestCategory("Schema Converter - Aggregation Type")]
         public void GenerateAggregationTypeForEntity_WithMixedFields_OnlyIncludesNumericOperations()

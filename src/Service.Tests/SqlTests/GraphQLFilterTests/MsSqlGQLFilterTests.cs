@@ -59,6 +59,62 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests various string filters with special characters in SQL queries.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(
+            "{ title: { endsWith: \"_CONN\" } }",
+            "%\\_CONN",
+            DisplayName = "EndsWith: '_CONN'"
+        )]
+        [DataRow(
+            "{ title: { contains: \"%_\" } }",
+            "%\\%\\_%",
+            DisplayName = "Contains: '%_'"
+        )]
+        [DataRow(
+            "{ title: { endsWith: \"%_CONN\" } }",
+            "%\\%\\_CONN",
+            DisplayName = "endsWith: '%CONN'"
+        )]
+        [DataRow(
+            "{ title: { startsWith: \"CONN%\" } }",
+            "CONN\\%%",
+            DisplayName = "startsWith: 'CONN%'"
+        )]
+        [DataRow(
+            "{ title: { startsWith: \"[\" } }",
+            "\\[%",
+            DisplayName = "startsWith: '['"
+        )]
+        [DataRow(
+            "{ title: { endsWith: \"]\" } }",
+            "%\\]",
+            DisplayName = "endsWith: ']'"
+        )]
+        [DataRow(
+            "{ title: { contains: \"\\\\\" } }",
+            "%\\\\%",
+            DisplayName = "Contains single backslash: '\\' "
+        )]
+        [DataRow(
+            "{ title: { contains: \"\\\\\\\\\" } }",
+            "%\\\\\\\\%",
+            DisplayName = "Contains double backslash: '\\\\'"
+        )]
+        public new async Task TestStringFiltersWithSpecialCharacters(string dynamicFilter, string dbFilterInput)
+        {
+            string msSqlQuery = @$"
+                SELECT [title]
+                FROM [dbo].[books]
+                WHERE [title] LIKE '{dbFilterInput}' ESCAPE '\'
+                ORDER BY [title] asc
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await base.TestStringFiltersWithSpecialCharacters(dynamicFilter, msSqlQuery);
+        }
+
+        /// <summary>
         /// Test Nested Filter for One-Many relationship
         /// </summary>
         [DataTestMethod]

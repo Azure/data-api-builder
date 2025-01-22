@@ -5,9 +5,18 @@
     "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;",
     "options": {
       "set-session-context": true
+    },
+    "health": {
+      "moniker": "sqlserver",
+      "enabled": true,
+      "query": "SELECT TOP 1 10",
+      "threshold-ms": 1000
     }
   },
   "runtime": {
+    "health": {
+      "enabled": true
+    },
     "rest": {
       "enabled": true,
       "path": "/api",
@@ -38,6 +47,11 @@
   },
   "entities": {
     "Publisher": {
+      "health": {
+        "enabled": true,
+        "first": 4,
+        "threshold-ms": 1000
+      },
       "source": {
         "object": "publishers",
         "type": "table"
@@ -342,6 +356,11 @@
       }
     },
     "Stock": {
+      "health": {
+        "enabled": true,
+        "first": 4,
+        "threshold-ms": 1000
+      },
       "source": {
         "object": "stocks",
         "type": "table"
@@ -524,6 +543,11 @@
       }
     },
     "Book": {
+      "health": {
+        "enabled": true,
+        "first": 10,
+        "threshold-ms": 100
+      },
       "source": {
         "object": "books",
         "type": "table"
@@ -1117,6 +1141,11 @@
       }
     },
     "Author": {
+      "health": {
+        "enabled": true,
+        "first": 2,
+        "threshold-ms": 10
+      },
       "source": {
         "object": "authors",
         "type": "table"

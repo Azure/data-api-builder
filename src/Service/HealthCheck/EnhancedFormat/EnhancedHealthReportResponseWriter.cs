@@ -68,6 +68,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             LogTrace("Writing health report response.");
             DabHealthCheckReport dabHealthCheckReport = await _healthCheckUtility.GetHealthCheckResponse(healthReport, config).ConfigureAwait(false);
             FormatDabHealthCheckReport(ref dabHealthCheckReport);
+            dabHealthCheckReport.HealthCheckResults = null;
+            
             string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
             return context.Response.WriteAsync(response);
         }
@@ -100,8 +102,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     }
                 }
             }
-
-            dabHealthCheckReport.HealthCheckResults = null;
         }
 
         /// <summary>

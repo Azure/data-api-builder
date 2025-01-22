@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     }
 
     /// <summary>
-    /// The health report of the DAB Enigne.
+    /// The health report of the DAB Engine.
     /// </summary>
     public record DabHealthCheckReport
     {

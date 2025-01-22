@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 string restSuffixPath = (entity.Value.Rest?.Path ?? entity.Key).TrimStart('/');
                 int responseTime = ExecuteSqlEntityQuery(runtimeConfig.Runtime.Rest.Path, restSuffixPath, entity.Value?.Health?.First);
-                if (responseTime >=0 && responseTime <= entity.Value?.Health?.ThresholdMs)
+                if (responseTime >= 0 && responseTime <= entity.Value?.Health?.ThresholdMs)
                 {
                     entityHealthCheckResults.Add("Rest", new HealthCheckDetailsResultEntry
                     {
@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (runtimeConfig?.Runtime?.GraphQL?.Enabled ?? false)
             {
                 int responseTime = await ExecuteSqlGraphQLEntityQuery(runtimeConfig.Runtime.GraphQL.Path, entity.Key, entity.Value?.Source.Object, entity.Value?.Health?.First).ConfigureAwait(false);
-                if (responseTime >=0 && responseTime <= entity.Value?.Health?.ThresholdMs)
+                if (responseTime >= 0 && responseTime <= entity.Value?.Health?.ThresholdMs)
                 {
                     entityHealthCheckResults.Add("GraphQL", new HealthCheckDetailsResultEntry
                     {

@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             _logger = logger;
         }
-        
+
         public bool ExecuteDbQuery(string query, string connectionString)
         {
             bool isSuccess = false;
@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             LogTrace("The HealthEndpoint query executed successfully.");
                             isSuccess = true;
                         }
-                    }                    
+                    }
                 }
 
                 return isSuccess;
@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     ApiRoute = $"{ApiRoute}{Utilities.CreateHttpRestQuery(EntityName, First)}";
                     Console.WriteLine($"------------------------{ApiRoute}");
                     HttpResponseMessage response = client.GetAsync(ApiRoute).Result;
-                        
+
                     if (response.IsSuccessStatusCode)
                     {
                         LogTrace("The HealthEndpoint query executed successfully.");
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 Timeout = TimeSpan.FromSeconds(200),
             };
         }
-        
+
         // <summary>
         /// Logs a trace message if a logger is present and the logger is enabled for trace events.
         /// </summary>

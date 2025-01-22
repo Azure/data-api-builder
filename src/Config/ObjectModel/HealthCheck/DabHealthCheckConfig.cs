@@ -8,7 +8,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record DabHealthCheckConfig
 {
     public bool Enabled { get; set; } // Default value: false
-    
+
     // The moniker or simple name of the data source to be checked.
     // Required when there is a multiple data source scenario.
     // TODO: Add validity support for when multiple data sources
@@ -20,8 +20,8 @@ public record DabHealthCheckConfig
 
     // This provides the ability to specify the 'x' first rows to be returned by the query.
     // Default is 1
-    public int? First { get; set; } = 1; 
-    
+    public int? First { get; set; } = 1;
+
     // The expected milliseconds the query took to be considered healthy.
     // (Default: 10000ms)
     [JsonPropertyName("threshold-ms")]

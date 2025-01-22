@@ -52,6 +52,6 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     {
         public Dictionary<string, HealthCheckDetailsResultEntry>? DataSourceHealthCheckResults { get; set; }
 
-        public Dictionary<string, Dictionary<string, HealthCheckDetailsResultEntry>>? EntityHealthCheckResults { get; set; }        
+        public Dictionary<string, Dictionary<string, HealthCheckDetailsResultEntry>>? EntityHealthCheckResults { get; set; }
     }
 }

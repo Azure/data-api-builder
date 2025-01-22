@@ -7,46 +7,46 @@ namespace Azure.DataApiBuilder.Config.ObjectModel.GraphQL;
 
 public class GraphQLSchemaMode
 {
-	[JsonPropertyName("data")]
+    [JsonPropertyName("data")]
     public required Data Data { get; set; }
 }
 
 public class Data
 {
-	[JsonPropertyName("__schema")]
+    [JsonPropertyName("__schema")]
     public required Schema Schema { get; set; }
 }
 
 public class Schema
 {
-	[JsonPropertyName("types")]
+    [JsonPropertyName("types")]
     public required Types[] Types { get; set; }
 }
 
 public class Types
 {
-	[JsonPropertyName("kind")]
+    [JsonPropertyName("kind")]
     public required string Kind { get; set; }
-	[JsonPropertyName("name")]
+    [JsonPropertyName("name")]
     public required string Name { get; set; }
-	[JsonPropertyName("fields")]
+    [JsonPropertyName("fields")]
     public required Field[] Fields { get; set; }
 }
 
 public class Field
 {
-	[JsonPropertyName("name")]
+    [JsonPropertyName("name")]
     public required string Name { get; set; }
-	[JsonPropertyName("type")]
+    [JsonPropertyName("type")]
     public required Type Type { get; set; }
 }
 
 public class Type
 {
-	[JsonPropertyName("kind")]
+    [JsonPropertyName("kind")]
     public required string Kind { get; set; }
-	[JsonPropertyName("ofType")]
-	public Type? OfType { get; set; }
+    [JsonPropertyName("ofType")]
+    public Type? OfType { get; set; }
 }
 
 /*

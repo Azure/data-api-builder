@@ -20,7 +20,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Dependencies
         private ILogger? _logger;
         private HealthCheckUtility _healthCheckUtility;
-        
 
         public EnhancedHealthReportResponseWriter(ILogger<HealthReportResponseWriter>? logger, HealthCheckUtility healthCheckUtility)
         {
@@ -69,14 +68,15 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             DabHealthCheckReport dabHealthCheckReport = await _healthCheckUtility.GetHealthCheckResponse(healthReport, config).ConfigureAwait(false);
             FormatDabHealthCheckReport(ref dabHealthCheckReport);
             dabHealthCheckReport.HealthCheckResults = null;
-            
+
             string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
             return context.Response.WriteAsync(response);
         }
 
         private static void FormatDabHealthCheckReport(ref DabHealthCheckReport dabHealthCheckReport)
         {
-            if (dabHealthCheckReport.HealthCheckResults == null) { return; }
+            if (dabHealthCheckReport.HealthCheckResults == null)
+            { return; }
 
             dabHealthCheckReport.Checks = new();
             if (dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults != null)

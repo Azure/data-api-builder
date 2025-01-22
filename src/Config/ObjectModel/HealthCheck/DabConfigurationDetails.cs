@@ -13,6 +13,5 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         public bool Caching { get; init; }
         public bool Telemetry { get; init; }
         public HostMode Mode { get; init; }
-        public required string DabSchema { get; init; }
     }
 }

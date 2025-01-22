@@ -19,15 +19,13 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     {
         // Dependencies
         private ILogger? _logger;
-        private HealthCheckUtlity _healthCheckUtlity;
+        private HealthCheckUtility _healthCheckUtility;
+        
 
-        // Constants
-        private const string JSON_CONTENT_TYPE = "application/json; charset=utf-8";
-
-        public EnhancedHealthReportResponseWriter(ILogger<HealthReportResponseWriter>? logger, HealthCheckUtlity healthCheckUtlity)
+        public EnhancedHealthReportResponseWriter(ILogger<HealthReportResponseWriter>? logger, HealthCheckUtility healthCheckUtility)
         {
             _logger = logger;
-            _healthCheckUtlity = healthCheckUtlity;
+            _healthCheckUtility = healthCheckUtility;
         }
 
         /* {
@@ -64,12 +62,46 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="healthReport">Result of health check(s).</param>
         /// <param name="config">Result of health check(s).</param>
         /// <returns>Writes the http response to the http context.</returns>
-        public Task WriteResponse(HttpContext context, HealthReport healthReport, RuntimeConfig config)
+        public async Task<Task> WriteResponse(HttpContext context, HealthReport healthReport, RuntimeConfig config)
         {
-            context.Response.ContentType = JSON_CONTENT_TYPE;
+            context.Response.ContentType = Utilities.JSON_CONTENT_TYPE;
             LogTrace("Writing health report response.");
-            DabHealthCheckReport dabHealthCheckReport = _healthCheckUtlity.GetHealthCheckResponse(healthReport, config);
-            return context.Response.WriteAsync(JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }));
+            DabHealthCheckReport dabHealthCheckReport = await _healthCheckUtility.GetHealthCheckResponse(healthReport, config).ConfigureAwait(false);
+            FormatDabHealthCheckReport(ref dabHealthCheckReport);
+            string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+            return context.Response.WriteAsync(response);
+        }
+
+        private static void FormatDabHealthCheckReport(ref DabHealthCheckReport dabHealthCheckReport)
+        {
+            if (dabHealthCheckReport.HealthCheckResults == null) { return; }
+
+            dabHealthCheckReport.Checks = new();
+            if (dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults != null)
+            {
+                dabHealthCheckReport.Checks.DataSourceHealthCheckResults = new();
+                foreach (HealthCheckDetailsResultEntry dataSourceList in dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults)
+                {
+                    if (dataSourceList.Name != null)
+                    {
+                        dabHealthCheckReport.Checks.DataSourceHealthCheckResults.Add(dataSourceList.Name, dataSourceList);
+                    }
+                }
+            }
+
+            if (dabHealthCheckReport.HealthCheckResults.EntityHealthCheckResults != null)
+            {
+                dabHealthCheckReport.Checks.EntityHealthCheckResults = new();
+                foreach (HealthCheckEntityResultEntry EntityList in dabHealthCheckReport.HealthCheckResults.EntityHealthCheckResults)
+                {
+                    if (EntityList.Name != null)
+                    {
+                        dabHealthCheckReport.Checks.EntityHealthCheckResults.Add(EntityList.Name, EntityList.EntityHealthCheckResults);
+                    }
+                }
+            }
+
+            dabHealthCheckReport.HealthCheckResults = null;
         }
 
         /// <summary>

@@ -184,7 +184,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
-            services.AddSingleton<HealthCheckUtlity>();
+            services.AddSingleton<HealthCheckUtility>();
+            services.AddSingleton<HttpUtilities>();
             services.AddSingleton<HealthReportResponseWriter>();
             services.AddSingleton<OriginalHealthReportResponseWriter>();
             services.AddSingleton<EnhancedHealthReportResponseWriter>();

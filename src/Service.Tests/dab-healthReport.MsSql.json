@@ -1,0 +1,90 @@
+{
+  "HealthStatus": "Healthy",
+  "Version": "1.4.0",
+  "AppName": "dab_oss_1.4.0",
+  "DabConfigurationDetails": {
+    "Rest": true,
+    "GraphQL": true,
+    "Caching": false,
+    "Telemetry": false,
+    "Mode": "Development"
+  },
+  "Checks": {
+    "DataSourceHealthCheckResults": {
+      "sqlserver": {
+        "HealthStatus": "Healthy",
+        "ResponseTimeData": {
+          "ResponseTimeMs": 1,
+          "MaxAllowedResponseTimeMs": 1000
+        },
+        "Name": "sqlserver"
+      }
+    },
+    "EntityHealthCheckResults": {
+      "Publisher": {
+        "Rest": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 138,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        },
+        "GraphQL": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 808,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        }
+      },
+      "Stock": {
+        "Rest": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 9,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        },
+        "GraphQL": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 41,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        }
+      },
+      "Book": {
+        "Rest": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 11,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        },
+        "GraphQL": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 39,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        }
+      },
+      "Author": {
+        "Rest": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 8,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        },
+        "GraphQL": {
+          "HealthStatus": "Healthy",
+          "ResponseTimeData": {
+            "ResponseTimeMs": 38,
+            "MaxAllowedResponseTimeMs": 1000
+          }
+        }
+      }
+    }
+  }
+}

@@ -47,7 +47,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
         public override DataSource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null, null);
+            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, Options: null, Health: null);
             if (reader.TokenType is JsonTokenType.StartObject)
             {
 

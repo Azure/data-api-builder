@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -12,17 +15,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     /// Creates a JSON response for the health check endpoint using the provided health report.
     /// If the response has already been created, it will be reused.
     /// </summary>
-    public class HealthCheckUtlity
+    public class HealthCheckUtility
     {
         // Dependencies
         private ILogger? _logger;
+        private HttpUtilities _httpUtility;
 
-        public HealthCheckUtlity(ILogger<HealthCheckUtlity>? logger)
+        public HealthCheckUtility(ILogger<HealthCheckUtility>? logger, HttpUtilities httpUtility)
         {
             _logger = logger;
+            _httpUtility = httpUtility;
         }
 
-        public DabHealthCheckReport GetHealthCheckResponse(HealthReport healthReport, RuntimeConfig runtimeConfig)
+        public async Task<DabHealthCheckReport> GetHealthCheckResponse(HealthReport healthReport, RuntimeConfig runtimeConfig)
         {
             // Create a JSON response for the health check endpoint using the provided health report.
             // If the response has already been created, it will be reused.
@@ -35,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 };
                 UpdateVersionAndAppName(ref dabHealthCheckReport, healthReport);
                 UpdateDabConfigurationDetails(ref dabHealthCheckReport, runtimeConfig);
-                UpdateHealthCheckDetails(ref dabHealthCheckReport, runtimeConfig);
+                await UpdateHealthCheckDetails(dabHealthCheckReport, runtimeConfig);
                 return dabHealthCheckReport;
             }
 
@@ -54,29 +59,28 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 Caching = runtimeConfig?.Runtime?.IsCachingEnabled ?? false,
                 Telemetry = runtimeConfig?.Runtime?.Telemetry != null,
                 Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Development,
-                DabSchema = runtimeConfig != null ? runtimeConfig.Schema : string.Empty,
             };
         }
 
-        private void UpdateHealthCheckDetails(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        private async Task UpdateHealthCheckDetails(DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             if (dabHealthCheckReport != null)
             {
                 dabHealthCheckReport.HealthCheckResults = new DabHealthCheckResults()
                 {
-                    DataSourceHealthCheckResults = new List<HealthCheckResultEntry>(),
-                    EntityHealthCheckResults = new List<HealthCheckResultEntry>(),
+                    DataSourceHealthCheckResults = new List<HealthCheckDetailsResultEntry>(),
+                    EntityHealthCheckResults = new List<HealthCheckEntityResultEntry>(),
                 };
 
                 if (runtimeConfig != null)
                 {
                     UpdateDataSourceHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);
-                    UpdateEntityHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);
+                    await UpdateEntityHealthCheckResults(dabHealthCheckReport, runtimeConfig);
                 }
             }
         }
 
-        private void UpdateEntityHealthCheckResults(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        private async Task UpdateEntityHealthCheckResults(DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Entities != null && dabHealthCheckReport?.HealthCheckResults?.EntityHealthCheckResults != null)
             {
@@ -85,38 +89,83 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     DabHealthCheckConfig? healthConfig = Entity.Value?.Health;
                     if (healthConfig != null && healthConfig.Enabled)
                     {
-                        string query = healthConfig.Query ?? string.Empty;
-                        int responseTime = ExecuteSqlQuery(query);
-                        if (responseTime <= healthConfig.ThresholdMs)
-                        {
-                            dabHealthCheckReport.HealthCheckResults.EntityHealthCheckResults.Add(new HealthCheckResultEntry
-                            {
-                                Name = Entity.Key,
-                                ResponseTimeData = new ResponseTimeData
-                                {
-                                    ResponseTimeMs = responseTime,
-                                    MaxAllowedResponseTimeMs = healthConfig.ThresholdMs
-                                },
-                                HealthStatus = Config.ObjectModel.HealthStatus.Healthy
-                            });
-                        }
-                        else
-                        {
-                            dabHealthCheckReport.HealthCheckResults.EntityHealthCheckResults.Add(new HealthCheckResultEntry
-                            {
-                                Name = Entity.Key,
-                                Exception = "The response time exceeded the threshold.",
-                                ResponseTimeData = new ResponseTimeData
-                                {
-                                    ResponseTimeMs = responseTime,
-                                    MaxAllowedResponseTimeMs = healthConfig.ThresholdMs
-                                },
-                                HealthStatus = Config.ObjectModel.HealthStatus.Unhealthy
-                            });
-                        }
+                        await PopulateEntityQuery(dabHealthCheckReport, Entity, runtimeConfig);
                     }
                 }
             }
+        }
+
+        private async Task PopulateEntityQuery(DabHealthCheckReport dabHealthCheckReport, KeyValuePair<string, Entity> entity, RuntimeConfig runtimeConfig)
+        {
+            Dictionary<string, HealthCheckDetailsResultEntry> entityHealthCheckResults = new();
+            if (runtimeConfig?.Runtime?.Rest?.Enabled ?? false)
+            {
+                string restSuffixPath = (entity.Value.Rest?.Path ?? entity.Key).TrimStart('/');
+                int responseTime = ExecuteSqlEntityQuery(runtimeConfig.Runtime.Rest.Path, restSuffixPath, entity.Value?.Health?.First);
+                if (responseTime >=0 && responseTime <= entity.Value?.Health?.ThresholdMs)
+                {
+                    entityHealthCheckResults.Add("Rest", new HealthCheckDetailsResultEntry
+                    {
+                        ResponseTimeData = new ResponseTimeData
+                        {
+                            ResponseTimeMs = responseTime,
+                            MaxAllowedResponseTimeMs = entity.Value?.Health?.ThresholdMs
+                        },
+                        HealthStatus = Config.ObjectModel.HealthStatus.Healthy
+                    });
+                }
+                else
+                {
+                    entityHealthCheckResults.Add("Rest", new HealthCheckDetailsResultEntry
+                    {
+                        Exception = "The Entity is unavailable or response time exceeded the threshold.",
+                        ResponseTimeData = new ResponseTimeData
+                        {
+                            ResponseTimeMs = responseTime,
+                            MaxAllowedResponseTimeMs = entity.Value?.Health?.ThresholdMs
+                        },
+                        HealthStatus = Config.ObjectModel.HealthStatus.Unhealthy
+                    });
+                }
+            }
+
+            if (runtimeConfig?.Runtime?.GraphQL?.Enabled ?? false)
+            {
+                int responseTime = await ExecuteSqlGraphQLEntityQuery(runtimeConfig.Runtime.GraphQL.Path, entity.Key, entity.Value?.Source.Object, entity.Value?.Health?.First).ConfigureAwait(false);
+                if (responseTime >=0 && responseTime <= entity.Value?.Health?.ThresholdMs)
+                {
+                    entityHealthCheckResults.Add("GraphQL", new HealthCheckDetailsResultEntry
+                    {
+                        ResponseTimeData = new ResponseTimeData
+                        {
+                            ResponseTimeMs = responseTime,
+                            MaxAllowedResponseTimeMs = entity.Value?.Health?.ThresholdMs
+                        },
+                        HealthStatus = Config.ObjectModel.HealthStatus.Healthy
+                    });
+                }
+                else
+                {
+                    entityHealthCheckResults.Add("GraphQL", new HealthCheckDetailsResultEntry
+                    {
+                        Exception = "The Entity is unavailable or response time exceeded the threshold.",
+                        ResponseTimeData = new ResponseTimeData
+                        {
+                            ResponseTimeMs = responseTime,
+                            MaxAllowedResponseTimeMs = entity.Value?.Health?.ThresholdMs
+                        },
+                        HealthStatus = Config.ObjectModel.HealthStatus.Unhealthy
+                    });
+                }
+            }
+
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            dabHealthCheckReport?.HealthCheckResults?.EntityHealthCheckResults.Add(new HealthCheckEntityResultEntry
+            {
+                Name = entity.Key,
+                EntityHealthCheckResults = entityHealthCheckResults
+            });
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
         }
 
         private void UpdateDataSourceHealthCheckResults(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
@@ -124,14 +173,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (runtimeConfig?.DataSource != null && runtimeConfig.DataSource?.Health != null && runtimeConfig.DataSource.Health.Enabled)
             {
                 string query = runtimeConfig.DataSource?.Health.Query ?? string.Empty;
-                int responseTime = ExecuteSqlQuery(query);
+                int responseTime = ExecuteSqlDBQuery(query, runtimeConfig.DataSource?.ConnectionString);
                 if (dabHealthCheckReport?.HealthCheckResults?.DataSourceHealthCheckResults != null)
                 {
-                    if (responseTime <= runtimeConfig?.DataSource?.Health.ThresholdMs)
+                    if (responseTime >= 0 && responseTime <= runtimeConfig?.DataSource?.Health.ThresholdMs)
                     {
-                        dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults.Add(new HealthCheckResultEntry
+                        dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults.Add(new HealthCheckDetailsResultEntry
                         {
-                            Name = runtimeConfig?.DataSource?.Health.Moniker,
+                            Name = runtimeConfig?.DataSource?.Health.Moniker ?? Utilities.SqlServerMoniker,
                             ResponseTimeData = new ResponseTimeData
                             {
                                 ResponseTimeMs = responseTime,
@@ -142,9 +191,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     }
                     else
                     {
-                        dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults.Add(new HealthCheckResultEntry
+                        dabHealthCheckReport.HealthCheckResults.DataSourceHealthCheckResults.Add(new HealthCheckDetailsResultEntry
                         {
-                            Name = runtimeConfig?.DataSource?.Health.Moniker,
+                            Name = runtimeConfig?.DataSource?.Health.Moniker ?? Utilities.SqlServerMoniker,
                             Exception = "The response time exceeded the threshold.",
                             ResponseTimeData = new ResponseTimeData
                             {
@@ -159,11 +208,45 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         }
 
-        private int ExecuteSqlQuery(string query)
+        private int ExecuteSqlDBQuery(string query, string? connectionString)
         {
-            // TODO: Update this function to execute the respected query wit the DB
-            LogTrace($"Executing SQL query: {query}");
-            return 5;
+            if (!string.IsNullOrEmpty(query) && !string.IsNullOrEmpty(connectionString))
+            {
+                Stopwatch stopwatch = new();
+                stopwatch.Start();
+                bool isSuccess = _httpUtility.ExecuteDbQuery(query, connectionString);
+                stopwatch.Stop();
+                return isSuccess ? (int)stopwatch.ElapsedMilliseconds : -1;
+            }
+
+            return -1;
+        }
+
+        private int ExecuteSqlEntityQuery(string UriSuffix, string EntityName, int? First)
+        {
+            if (!string.IsNullOrEmpty(EntityName))
+            {
+                Stopwatch stopwatch = new();
+                stopwatch.Start();
+                bool isSuccess = _httpUtility.ExecuteEntityRestQuery(UriSuffix, EntityName, First ?? 1);
+                stopwatch.Stop();
+                return isSuccess ? (int)stopwatch.ElapsedMilliseconds : -1;
+            }
+
+            return -1;
+        }
+        private async Task<int> ExecuteSqlGraphQLEntityQuery(string UriSuffix, string EntityName, string? TableName, int? First)
+        {
+            if (!string.IsNullOrEmpty(EntityName))
+            {
+                Stopwatch stopwatch = new();
+                stopwatch.Start();
+                bool isSuccess = await _httpUtility.ExecuteEntityGraphQLQueryAsync(UriSuffix, EntityName, TableName ?? EntityName, First ?? 1);
+                stopwatch.Stop();
+                return isSuccess ? (int)stopwatch.ElapsedMilliseconds : -1;
+            }
+
+            return -1;
         }
 
         private void UpdateVersionAndAppName(ref DabHealthCheckReport response, HealthReport healthReport)
@@ -200,6 +283,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace(message);
+            }
+            else
+            {
+                Console.WriteLine(message);
             }
         }
     }

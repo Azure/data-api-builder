@@ -41,5 +41,17 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// The health check results of the dab service.
         /// </summary>
         public DabHealthCheckResults? HealthCheckResults { get; set; }
+
+        /// <summary>
+        /// The health check results of the dab service in output format.
+        /// </summary>
+        public DabHealthCheckResultFormat? Checks { get; set; }
+    }
+
+    public class DabHealthCheckResultFormat
+    {
+        public Dictionary<string, HealthCheckDetailsResultEntry>? DataSourceHealthCheckResults { get; set; }
+
+        public Dictionary<string, Dictionary<string, HealthCheckDetailsResultEntry>>? EntityHealthCheckResults { get; set; }        
     }
 }

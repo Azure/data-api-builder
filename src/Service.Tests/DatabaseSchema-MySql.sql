@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS default_books;
 DROP TABLE IF EXISTS players;
 DROP TABLE IF EXISTS clubs;
 DROP TABLE IF EXISTS publishers;
@@ -48,6 +49,11 @@ CREATE TABLE books(
     id int AUTO_INCREMENT PRIMARY KEY,
     title text NOT NULL,
     publisher_id int NOT NULL
+);
+
+CREATE TABLE default_books (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) DEFAULT 'Placeholder'
 );
 
 CREATE TABLE players(

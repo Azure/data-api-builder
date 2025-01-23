@@ -114,10 +114,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder insertQuery = new();
             if (!isInsertDMLTriggerEnabled)
             {
-                // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
-                insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
-                    $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
-                insertQuery.Append(values);
+                if (!string.IsNullOrEmpty(insertColumns))
+                {
+                    // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
+                    insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
+                    insertQuery.Append(values);
+                }
+                else
+                {
+                    insertQuery.Append($"INSERT INTO {tableName} OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} DEFAULT VALUES");
+                }
             }
             else
             {

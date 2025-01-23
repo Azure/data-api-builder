@@ -295,7 +295,7 @@ WHERE
                 }
                 else if (columnDef.HasDefault)
                 {
-                    selections.Add($"{GetMySQLDefaultValue(columnDef)} as {quotedColName}");
+                    selections.Add($"'{GetMySQLDefaultValue(columnDef)}' as {quotedColName}");
                 }
             }
 

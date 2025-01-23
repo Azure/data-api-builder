@@ -95,10 +95,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder insertQuery = new();
             if (!isInsertDMLTriggerEnabled)
             {
-                // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
-                insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
-                    $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
-                insertQuery.Append(values);
+                if (!string.IsNullOrEmpty(insertColumns))
+                {
+                    // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
+                    insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
+                    insertQuery.Append(values);
+                }
+                else
+                {
+                    insertQuery.Append($"INSERT INTO {tableName} OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} DEFAULT VALUES");
+                }
             }
             else
             {
@@ -329,7 +337,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string createPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
 
                 // Query to insert record (if there exists none for given PK).
-                StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) ");
+                StringBuilder insertQuery = new($"INSERT INTO {tableName} ");
+
+                if (!string.IsNullOrEmpty(insertColumns)) {
+                    insertQuery.Append(insertColumns);
+                }
 
                 bool isInsertTriggerEnabled = sourceDefinition.IsInsertDMLTriggerEnabled;
                 // We can only use OUTPUT clause to return inserted data when there is no trigger enabled on the entity.

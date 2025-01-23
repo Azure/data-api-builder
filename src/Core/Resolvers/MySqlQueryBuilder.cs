@@ -296,7 +296,7 @@ WHERE
                 else if (columnDef.HasDefault)
                 {
                     string columnSelectionValue = structure.InsertColumns.Any() ? GetMySQLDefaultValue(columnDef) : $"'{GetMySQLDefaultValue(columnDef)}'";
-                    selections.Add($"'{columnSelectionValue}' as {quotedColName}");
+                    selections.Add($"{columnSelectionValue} as {quotedColName}");
                 }
             }
 

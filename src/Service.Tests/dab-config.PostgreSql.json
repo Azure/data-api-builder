@@ -854,6 +854,41 @@
         }
       }
     },
+    "Default_Books": {
+      "source": {
+        "object": "default_books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "default_book",
+          "plural": "default_books"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
     "BookWebsitePlacement": {
       "source": {
         "object": "book_website_placements",

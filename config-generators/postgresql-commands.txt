@@ -1,4 +1,5 @@
-﻿init --config "dab-config.PostgreSql.json" --database-type postgresql --connection-string "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
+
+init --config "dab-config.PostgreSql.json" --database-type postgresql --connection-string "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.PostgreSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"

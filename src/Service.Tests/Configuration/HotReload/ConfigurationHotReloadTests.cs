@@ -25,10 +25,10 @@ public class ConfigurationHotReloadTests
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
     private static StringWriter _writer;
-    internal const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
-    internal const string GQL_QUERY_NAME = "books";
+    private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
+    private const string GQL_QUERY_NAME = "books";
 
-    internal const string GQL_QUERY = @"{
+    private const string GQL_QUERY = @"{
                 books(first: 100) {
                     items {
                         id
@@ -38,7 +38,7 @@ public class ConfigurationHotReloadTests
                 }
             }";
 
-    internal static string _bookDBOContents;
+    private static string _bookDBOContents;
 
     private static void GenerateConfigFile(
         string schema = "",
@@ -110,47 +110,63 @@ public class ConfigurationHotReloadTests
                           ""enabled"": " + restEntityEnabled + @"
                         },
                         ""permissions"": [
-                        {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                            {
-                              ""action"": ""create""
-                            },
-                            {
-                              ""action"": ""read""
-                            },
-                            {
-                              ""action"": ""update""
-                            },
-                            {
-                              ""action"": ""delete""
-                            }
-                          ]
-                        },
-                        {
-                          ""role"": ""authenticated"",
-                          ""actions"": [
-                            {
-                              ""action"": ""create""
-                            },
-                            {
-                              ""action"": ""read""
-                            },
-                            {
-                              ""action"": ""update""
-                            },
-                            {
-                              ""action"": ""delete""
-                            }
-                          ]
-                        }
-                      ],
+                          {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          },
+                          {
+                            ""role"": ""authenticated"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          }
+                        ],
                         ""mappings"": {
                           """ + entityBackingColumn + @""": """ + entityExposedName + @"""
                         }
+                      },
+                      ""Publisher"": {
+                        ""source"": {
+                          ""object"": ""publishers"",
+                          ""type"": ""table""
+                        },
+                        ""graphql"": {
+                          ""enabled"": true,
+                          ""type"": {
+                            ""singular"": ""Publisher"",
+                            ""plural"": ""Publishers""
+                          }
+                        },
+                        ""rest"": {
+                          ""enabled"": true
+                        },
+                        ""permissions"": [
+                          {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          },
+                          {
+                            ""role"": ""authenticated"",
+                            ""actions"": [
+                              {
+                                ""action"": ""*""
+                              }
+                            ]
+                          }
+                        ]
                       }
-                  }
-              }");
+                    }
+                }");
     }
 
     /// <summary>
@@ -302,6 +318,190 @@ public class ConfigurationHotReloadTests
 
         // Assert
         Assert.AreEqual(HttpStatusCode.NotFound, gQLResult.StatusCode);
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file by saving a new file with the graphQL enabled property
+    /// set to false at the entity level. Validate that the response from the server is INTERNAL SERVER ERROR when making a request after
+    /// the hot reload since no such entity exist in the query.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod("Hot-reload gql disabled at entity level.")]
+    public async Task HotReloadEntityGQLEnabledFlag()
+    {
+        // Arrange
+        string gQLEntityEnabled = "false";
+        string query = @"{
+            book_by_pk(id: 1) {
+                title
+            }
+        }";
+
+        object payload =
+            new { query };
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            gQLEntityEnabled: gQLEntityEnabled);
+        System.Threading.Thread.Sleep(2000);
+
+        // Act
+        HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.BadRequest, gQLResult.StatusCode);
+        string errorContent = await gQLResult.Content.ReadAsStringAsync();
+        Assert.IsTrue(errorContent.Contains("The field `book_by_pk` does not exist on the type `Query`."));
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file by replacing an old entity book with a new entity author.
+    /// Validate that the new entity is accessible via GraphQL after the hot reload and the old one isn't.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigAddEntity()
+    {
+        // Arrange
+        string newEntityName = "Author";
+        string newEntitySource = "authors";
+        string newEntityGQLSingular = "author";
+        string newEntityGQLPlural = "authors";
+
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            entityName: newEntityName,
+            sourceObject: newEntitySource,
+            gQLEntitySingular: newEntityGQLSingular,
+            gQLEntityPlural: newEntityGQLPlural);
+        System.Threading.Thread.Sleep(2000);
+
+        // Act
+        string queryWithOldEntity = @"{
+            books(filter: {id: {eq: 1}}) {
+                items {
+                    title
+                }
+            }
+        }";
+
+        object payload =
+            new { query = queryWithOldEntity };
+
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        HttpResponseMessage gQLResultWithOldEntity = await _testClient.SendAsync(request);
+
+        string queryWithNewEntity = @"{
+            authors(filter: {id: {eq: 123}}) {
+                items {
+                    name
+                }
+            }
+        }";
+
+        payload = new { query = queryWithNewEntity };
+        request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        HttpResponseMessage gQLResultWithNewEntity = await _testClient.SendAsync(request);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.BadRequest, gQLResultWithOldEntity.StatusCode);
+        string errorContent = await gQLResultWithOldEntity.Content.ReadAsStringAsync();
+        Assert.IsTrue(errorContent.Contains("The field `books` does not exist on the type `Query`."));
+
+        Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewEntity.StatusCode);
+        string responseContent = await gQLResultWithNewEntity.Content.ReadAsStringAsync();
+        JsonDocument jsonResponse = JsonDocument.Parse(responseContent);
+        JsonElement items = jsonResponse.RootElement.GetProperty("data").GetProperty("authors").GetProperty("items");
+        string expectedResponse = @"[
+            {
+                ""name"": ""Jelte""
+            }
+        ]";
+
+        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
+        Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson.RootElement.ToString(), items.ToString()));
+    }
+
+    /// <summary>
+    /// Here, we updated the old mappings of the entity book field "title" to "bookTitle".
+    /// Validate that the response from the server is correct, by ensuring that the old mappings when used in the query
+    /// results in bad request, while the new mappings results in a correct response as "title" field is no longer valid.
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public async Task HotReloadConfigUpdateMappings()
+    {
+        // Arrange
+        string newMappingFieldName = "bookTitle";
+        // Update the configuration with new mappings
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            entityBackingColumn: "title",
+            entityExposedName: newMappingFieldName);
+        System.Threading.Thread.Sleep(2000);
+
+        // Act
+        string queryWithOldMapping = @"{
+            books(filter: { id: { eq: 1 } }) {
+                items {
+                    title
+                }
+            }
+        }";
+
+        object payload = new { query = queryWithOldMapping };
+        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        HttpResponseMessage gQLResultWithOldMapping = await _testClient.SendAsync(request);
+
+        string queryWithNewMapping = @"{
+            books(filter: { id: { eq: 1 } }) {
+                items {
+                    bookTitle
+                }
+            }
+        }";
+
+        payload = new { query = queryWithNewMapping };
+        request = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        HttpResponseMessage gQLResultWithNewMapping = await _testClient.SendAsync(request);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.BadRequest, gQLResultWithOldMapping.StatusCode);
+        string errorContent = await gQLResultWithOldMapping.Content.ReadAsStringAsync();
+        Assert.IsTrue(errorContent.Contains("The field `title` does not exist on the type `book`."));
+
+        Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewMapping.StatusCode);
+        string responseContent = await gQLResultWithNewMapping.Content.ReadAsStringAsync();
+        JsonDocument jsonResponse = JsonDocument.Parse(responseContent);
+        JsonElement items = jsonResponse.RootElement.GetProperty("data").GetProperty("books").GetProperty("items");
+        string expectedResponse = @"[
+            {
+                ""bookTitle"": ""Awesome book""
+            }
+        ]";
+
+        JsonDocument expectedJson = JsonDocument.Parse(expectedResponse);
+        Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson.RootElement.ToString(), items.ToString()));
     }
 
     /// <summary>

@@ -337,12 +337,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string createPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
 
                 // Query to insert record (if there exists none for given PK).
-                StringBuilder insertQuery = new($"INSERT INTO {tableName} ");
-
-                if (!string.IsNullOrEmpty(insertColumns))
-                {
-                    insertQuery.Append(insertColumns);
-                }
+                StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) ");
 
                 bool isInsertTriggerEnabled = sourceDefinition.IsInsertDMLTriggerEnabled;
                 // We can only use OUTPUT clause to return inserted data when there is no trigger enabled on the entity.

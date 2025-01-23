@@ -619,7 +619,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _integrationTableName + @"
-                      ORDER BY title asc, id asc
+                      ORDER BY id asc, title asc
                       LIMIT 1
                   ) AS subq"
             },

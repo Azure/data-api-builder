@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                insertQuery += "DEFAULT VALUES";
+                insertQuery += "DEFAULT VALUES ";
             }
 
             return $"{insertQuery} RETURNING {Build(structure.OutputColumns)}";

@@ -67,9 +67,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"VALUES ({string.Join(", ", (structure.Values))}) " +
-                    $"RETURNING {Build(structure.OutputColumns)};";
+            string insertQuery = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ";
+            if (structure.InsertColumns.Any())
+            {
+                insertQuery += $"({Build(structure.InsertColumns)}) " +
+                    $"VALUES ({string.Join(", ", (structure.Values))}) ";
+            }
+            else
+            {
+                insertQuery += "DEFAULT VALUES ";
+            }
+
+            return $"{insertQuery} RETURNING {Build(structure.OutputColumns)}";
         }
 
         /// <inheritdoc />

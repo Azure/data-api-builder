@@ -339,7 +339,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Query to insert record (if there exists none for given PK).
                 StringBuilder insertQuery = new($"INSERT INTO {tableName} ");
 
-                if (!string.IsNullOrEmpty(insertColumns)) {
+                if (!string.IsNullOrEmpty(insertColumns))
+                {
                     insertQuery.Append(insertColumns);
                 }
 

@@ -372,6 +372,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 );
         }
 
+        /// <summary>
+        /// Validates we are able to successfully insert with an empty request body into a table
+        /// that has default values available for its columns.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task InsertOneWithDefaultValuesAndEmptyRequestBody()
         {

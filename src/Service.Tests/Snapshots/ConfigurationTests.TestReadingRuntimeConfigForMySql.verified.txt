@@ -767,6 +767,41 @@
       }
     },
     {
+      Default_Books: {
+        Source: {
+          Object: default_books,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: default_book,
+          Plural: default_books,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       BookNF: {
         Source: {
           Object: books,

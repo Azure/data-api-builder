@@ -126,6 +126,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             },
             {
+                "InsertOneWithDefaultValuesAndEmptyRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _tableWithDefaultValues + @"
+                    ) AS subq
+                "
+            },
+            {
                 "InsertSqlInjectionQuery1",
                 @"
                     SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
@@ -228,6 +238,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         public void InsertOneInViewBadRequestTest()
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Validates we are able to successfully insert with an empty request body into a table
+        /// that has default values available for its columns.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task InsertOneWithDefaultValuesAndEmptyRequestBody()
+        {
+            // Validate that we can insert when request body is empty but we have columns that have default values.
+            string requestBody = @"
+            {
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithDefaultValues,
+                sqlQuery: GetQuery(nameof(InsertOneWithDefaultValuesAndEmptyRequestBody)),
+                operationType: EntityActionOperation.Insert,
+                exceptionExpected: false,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created
+                );
         }
 
         #region overridden tests

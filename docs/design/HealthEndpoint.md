@@ -1,6 +1,7 @@
 # Design Document: DAB Health Endpoint
 ## Objective:
 The objective of this task is to enhance the "Health Endpoint" for DAB. Currently we only show whether the DAB Engine is healthy or not and which version of DAB is running. However, the objective under this task item is to enhance this to support detailed description of each supported (enabled) endpoint with all different kinds of parameters that would be defined below.
+The objective of this task is to enhance the "Health Endpoint" for DAB. Currently we only show whether the DAB Engine is healthy or not and which version of DAB is running. However, the objective under this task item is to enhance this to support detailed description of each supported (enabled) endpoint with all different kinds of parameters that would be defined below.
 
 ## Need for DAB Health Check Endpoint
 Azure App Service & Azure Kubernetes Service (AKS) support health probes to monitor the health of your application. If a service fails health checks, Azure can automatically restart it or redirect traffic to healthy instances.
@@ -62,7 +63,7 @@ We need to update the dab config file to include details of the health check for
 
 #### `runtime.health` Configuration
 
-The runtime configuration would include details like cache-ttl in case we need to cache the response of health checks, the max-drop value which tells you the degree of parallelism i.e. how many queries that DAB should run at once to get health results and roles i.e. which role is allowed to view the health information of DAB.
+The runtime configuration would include details like cache-ttl in case we need to cache the response of health checks, the max-dop value which tells you the degree of parallelism i.e. how many queries that DAB should run at once to get health results and roles i.e. which role is allowed to view the health information of DAB.
 
 | **Property**   | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |----------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
@@ -73,7 +74,7 @@ The runtime configuration would include details like cache-ttl in case we need t
 
 #### `data-source.health` Configuration
 
-The data source config parameters specify the query that we should run on the data source and the threshold of ms if should come under to qualify as a healthy data source for DAB.
+The data source config parameters specify the query that we should run on the data source and the threshold of ms it should come under to qualify as a healthy data source for DAB.
 
 | **Property**      | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |-------------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
@@ -203,8 +204,7 @@ The time it took to execute the above query is the time elapsed for checking the
 ## Output Sample
 ```
 {
-  "status": "Unhealthy",
-  "status": "Healthy",
+  "status": "Unhealthy",/"status": "Healthy",
   "version": "1.2.10",
   "app-name": "dab_oss_1.2.10",
   "dab-configuration": {

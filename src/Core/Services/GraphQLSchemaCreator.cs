@@ -238,6 +238,17 @@ namespace Azure.DataApiBuilder.Core.Services
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+
+                            if (_runtimeConfigProvider.GetConfig().EnableAggregation)
+                            {
+                                InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputObjects);
+                                // Generate aggregation type for the entity
+                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(entityName, node);
+                                if (aggregationType.Fields.Any())
+                                {
+                                    objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
+                                }
+                            }
                         }
 
                         objectTypes.Add(entityName, node);

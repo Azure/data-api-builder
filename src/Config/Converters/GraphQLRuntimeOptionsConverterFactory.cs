@@ -103,6 +103,17 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             }
 
                             break;
+                        case "enable-aggregation":
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { EnableAggregation = reader.GetBoolean() };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for enable-aggregation: {reader.TokenType}");
+                            }
+
+                            break;
                         case "path":
                             if (reader.TokenType is JsonTokenType.String)
                             {

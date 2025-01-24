@@ -135,6 +135,15 @@ public record RuntimeConfig
     [JsonIgnore]
     public string DefaultDataSourceName { get; set; }
 
+    /// <summary>
+    /// Retrieves the value of runtime.graphql.aggregation.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool EnableAggregation =>
+        Runtime is not null &&
+        Runtime.GraphQL is not null &&
+        Runtime.GraphQL.EnableAggregation;
+
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();

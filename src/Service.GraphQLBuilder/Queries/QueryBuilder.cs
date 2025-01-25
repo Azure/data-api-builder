@@ -281,7 +281,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                                 location: null,
                                 new NameNode("fields"),
                                 new StringValueNode("Fields to group by"),
-                                new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(scalarFieldsEnumName)))),
+                                new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(scalarFieldsEnumName))),
                                 defaultValue: null,
                                 new List<DirectiveNode>()
                             )

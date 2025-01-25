@@ -241,6 +241,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 
         public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)
         {
+            string scalarFieldsEnumName = EnumTypeBuilder.GenerateScalarFieldsEnumName(name.Value);
+
             return new(
                 location: null,
                 new NameNode(GeneratePaginationTypeName(name.Value)),
@@ -256,7 +258,24 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                         new List<DirectiveNode>()),
                     new(
-                        location : null,
+                        location: null,
+                        new NameNode("groupBy"),
+                        new StringValueNode("Group results by specified fields"),
+                        new List<InputValueDefinitionNode>
+                        {
+                            new(
+                                location: null,
+                                new NameNode("fields"),
+                                new StringValueNode("Fields to group by"),
+                                new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(scalarFieldsEnumName)))),
+                                defaultValue: null,
+                                new List<DirectiveNode>()
+                            )
+                        },
+                        new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode($"{name.Value}GroupBy")))),
+                        new List<DirectiveNode>()),
+                    new(
+                        location: null,
                         new NameNode(PAGINATION_TOKEN_FIELD_NAME),
                         new StringValueNode("A pagination token to provide to subsequent pages of a query"),
                         new List<InputValueDefinitionNode>(),

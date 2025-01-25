@@ -189,6 +189,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // (relationship/column) and non-relationship fields from the linking table.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
 
+            Dictionary<string, EnumTypeDefinitionNode> enumTypes = new();
+
             // 1. Build up the object and input types for all the exposed entities in the config.
             foreach ((string entityName, Entity entity) in entities)
             {
@@ -241,12 +243,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
                             if (_runtimeConfigProvider.GetConfig().EnableAggregation)
                             {
-                                InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputObjects);
+                                EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
+                                EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
                                 // Generate aggregation type for the entity
-                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(entityName, node);
+                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
                                 if (aggregationType.Fields.Any())
                                 {
+                                    Console.WriteLine($"Aggregation type generated for {node.Name.Value}");
                                     objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
+                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node));
                                 }
                             }
                         }
@@ -304,6 +309,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 fields.Values.ToImmutableList()));
 
             List<IDefinitionNode> nodes = new(objectTypes.Values);
+            nodes.AddRange(enumTypes.Values);
             return new DocumentNode(nodes);
         }
 

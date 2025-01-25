@@ -23,6 +23,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
     public static class SchemaConverter
     {
         private static readonly string _aggregationTypeSuffix = "Aggregations";
+        private static readonly string _groupByTypeSuffix = "GroupBy";
 
         /// <summary>
         /// Generate a GraphQL object type from a SQL table/view/stored-procedure definition, combined with the runtime config entity information
@@ -286,7 +287,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode, string filterInputType)
         {
             // Create an input type specific to this entity's numeric fields
-            string inputTypeName = InputTypeBuilder.GenerateNumericAggregateFieldsInputName(entityNode.Name.Value);
+            string inputTypeName = EnumTypeBuilder.GenerateNumericAggregateFieldsEnumName(entityNode.Name.Value);
 
             return new FieldDefinitionNode(
                 location: null,
@@ -315,6 +316,52 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 },
                 type: new NamedTypeNode(new NameNode(returnType)),
                 directives: new List<DirectiveNode>());
+        }
+
+        /// <summary>
+        /// Generates a GroupBy type for a given entity that includes fields and aggregations.
+        /// Example:
+        /// type BookGroupBy {
+        ///     fields: [BookScalarFields]
+        ///     aggregations: BookAggregations
+        /// }
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="entityNode">The entity's ObjectTypeDefinitionNode</param>
+        /// <returns>ObjectTypeDefinitionNode for the GroupBy type</returns>
+        public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
+        {
+            string groupByTypeName = GenerateGroupByTypeName(entityName);
+            string scalarFieldsEnumName = EnumTypeBuilder.GenerateScalarFieldsEnumName(entityNode.Name.Value);
+            string aggregationsTypeName = GenerateObjectAggregationNodeName(entityName);
+
+            List<FieldDefinitionNode> groupByFields = new()
+            {
+                new FieldDefinitionNode(
+                    location: null,
+                    name: new NameNode("fields"),
+                    description: new StringValueNode($"Grouped fields from {entityName}"),
+                    arguments: new List<InputValueDefinitionNode>(),
+                    type: new ListTypeNode(new NamedTypeNode(new NameNode(scalarFieldsEnumName))),
+                    directives: new List<DirectiveNode>()
+                ),
+                new FieldDefinitionNode(
+                    location: null,
+                    name: new NameNode("aggregations"),
+                    description: new StringValueNode($"Aggregated fields from {entityName}"),
+                    arguments: new List<InputValueDefinitionNode>(),
+                    type: new NamedTypeNode(new NameNode(aggregationsTypeName)),
+                    directives: new List<DirectiveNode>()
+                )
+            };
+
+            return new ObjectTypeDefinitionNode(
+                location: null,
+                name: new NameNode(groupByTypeName),
+                description: new StringValueNode($"GroupBy type for {entityName}"),
+                directives: new List<DirectiveNode>(),
+                interfaces: new List<NamedTypeNode>(),
+                fields: groupByFields);
         }
 
         /// <summary>
@@ -609,6 +656,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         public static string GenerateObjectAggregationNodeName(string entityName)
         {
             return $"{entityName}{_aggregationTypeSuffix}";
+        }
+
+        public static string GenerateGroupByTypeName(string entityName)
+        {
+            return $"{entityName}{_groupByTypeSuffix}";
         }
     }
 }

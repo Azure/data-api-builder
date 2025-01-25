@@ -291,7 +291,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 );
             }
 
-            return new (
+            return new(
                 location: null,
                 new NameNode(GeneratePaginationTypeName(name.Value)),
                 new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),

@@ -150,4 +150,4 @@ type Foo @model(name:""Foo"") {
             EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
         }
     }
-} 
+}

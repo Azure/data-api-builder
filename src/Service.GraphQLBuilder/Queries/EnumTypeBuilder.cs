@@ -102,4 +102,4 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             );
         }
     }
-} 
+}

@@ -44,6 +44,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private bool _isMultipleCreateOperationEnabled;
+        private bool _isAggregationEnabled;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -66,6 +67,8 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
+            _isAggregationEnabled = runtimeConfig.EnableAggregation;
+
             _entities = runtimeConfig.Entities;
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
@@ -152,7 +155,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 entityToDatabaseType.TryAdd(entityName, metadataprovider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects
-            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
+            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isAggregationEnabled);
 
             // Generate the GraphQL mutations from the provided objects
             DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationEnabled);
@@ -241,7 +244,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
 
-                            if (_runtimeConfigProvider.GetConfig().EnableAggregation)
+                            if (_isAggregationEnabled)
                             {
                                 EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
                                 EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);

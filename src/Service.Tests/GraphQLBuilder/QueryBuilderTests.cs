@@ -510,7 +510,7 @@ type Table @model(name: ""table"") {
             NameNode entityName = new("Book");
 
             // Act
-            ObjectTypeDefinitionNode returnType = QueryBuilder.GenerateReturnType(entityName);
+            ObjectTypeDefinitionNode returnType = QueryBuilder.GenerateReturnType(entityName, aggregationEnabled: true);
 
             // Assert
             FieldDefinitionNode groupByField = returnType.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");

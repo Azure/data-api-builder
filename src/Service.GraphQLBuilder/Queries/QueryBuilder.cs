@@ -41,7 +41,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             RuntimeEntities entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
-            Dictionary<string, DatabaseObject>? dbObjects = null
+            Dictionary<string, DatabaseObject>? dbObjects = null,
+            bool _isAggregationEnabled = false
             )
         {
             List<FieldDefinitionNode> queryFields = new();
@@ -73,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     else
                     {
                         IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Read, entityPermissionsMap);
-                        ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name);
+                        ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name, _isAggregationEnabled);
 
                         if (rolesAllowedForRead.Any())
                         {
@@ -239,17 +240,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
         }
 
-        public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)
+        public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name, bool aggregationEnabled = false)
         {
             string scalarFieldsEnumName = EnumTypeBuilder.GenerateScalarFieldsEnumName(name.Value);
 
-            return new(
-                location: null,
-                new NameNode(GeneratePaginationTypeName(name.Value)),
-                new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
-                new List<DirectiveNode>(),
-                new List<NamedTypeNode>(),
-                new List<FieldDefinitionNode> {
+            List<FieldDefinitionNode> fields = new() {
                     new(
                         location: null,
                         new NameNode(PAGINATION_FIELD_NAME),
@@ -257,6 +252,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         new List<InputValueDefinitionNode>(),
                         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                         new List<DirectiveNode>()),
+                    new(
+                        location: null,
+                        new NameNode(PAGINATION_TOKEN_FIELD_NAME),
+                        new StringValueNode("A pagination token to provide to subsequent pages of a query"),
+                        new List<InputValueDefinitionNode>(),
+                        new StringType().ToTypeNode(),
+                        new List<DirectiveNode>()),
+                    new(
+                        location: null,
+                        new NameNode(HAS_NEXT_PAGE_FIELD_NAME),
+                        new StringValueNode("Indicates if there are more pages of items to return"),
+                        new List<InputValueDefinitionNode>(),
+                        new NonNullType(new BooleanType()).ToTypeNode(),
+                        new List<DirectiveNode>())
+                };
+
+            if (aggregationEnabled)
+            {
+                fields.Add(
                     new(
                         location: null,
                         new NameNode("groupBy"),
@@ -273,23 +287,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                             )
                         },
                         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode($"{name.Value}GroupBy")))),
-                        new List<DirectiveNode>()),
-                    new(
-                        location: null,
-                        new NameNode(PAGINATION_TOKEN_FIELD_NAME),
-                        new StringValueNode("A pagination token to provide to subsequent pages of a query"),
-                        new List<InputValueDefinitionNode>(),
-                        new StringType().ToTypeNode(),
-                        new List<DirectiveNode>()),
-                    new(
-                        location: null,
-                        new NameNode(HAS_NEXT_PAGE_FIELD_NAME),
-                        new StringValueNode("Indicates if there are more pages of items to return"),
-                        new List<InputValueDefinitionNode>(),
-                        new NonNullType(new BooleanType()).ToTypeNode(),
                         new List<DirectiveNode>())
-                }
-            );
+                );
+            }
+
+            return new (
+                location: null,
+                new NameNode(GeneratePaginationTypeName(name.Value)),
+                new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
+                new List<DirectiveNode>(),
+                new List<NamedTypeNode>(),
+                fields);
         }
 
         public static string GeneratePaginationTypeName(string name)

@@ -55,12 +55,6 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
             foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
                 field.MiddlewareDefinitions.Add(_queryMiddleware);
-
-                // Only block groupBy at the root query level
-                if (field.Name.Value == "groupBy")
-                {
-                    field.PureResolver = _groupByFieldResolver;
-                }
             }
         }
         else if (completionContext.IsMutationType ?? false)

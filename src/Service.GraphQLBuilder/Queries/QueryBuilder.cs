@@ -24,6 +24,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string ORDER_BY_FIELD_NAME = "orderBy";
         public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
         public const string ID_FIELD_NAME = "id";
+        public const string GROUP_BY_FIELD_NAME = "groupBy";
+        public const string GROUP_BY_FIELDS_FIELD_NAME = "fields";
 
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
@@ -273,13 +275,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 fields.Add(
                     new(
                         location: null,
-                        new NameNode("groupBy"),
+                        new NameNode(GROUP_BY_FIELD_NAME),
                         new StringValueNode("Group results by specified fields"),
                         new List<InputValueDefinitionNode>
                         {
                             new(
                                 location: null,
-                                new NameNode("fields"),
+                                new NameNode(GROUP_BY_FIELDS_FIELD_NAME),
                                 new StringValueNode("Fields to group by"),
                                 new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(scalarFieldsEnumName))),
                                 defaultValue: null,

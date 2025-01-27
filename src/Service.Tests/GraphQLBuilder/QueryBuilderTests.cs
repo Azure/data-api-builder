@@ -520,9 +520,8 @@ type Table @model(name: ""table"") {
             InputValueDefinitionNode fieldsArg = groupByField.Arguments.FirstOrDefault(a => a.Name.Value == "fields");
             Assert.IsNotNull(fieldsArg, "fields argument should exist");
 
-            // Check that fields argument is [BookScalarFields!]!
-            Assert.IsTrue(fieldsArg.Type is NonNullTypeNode, "fields argument should be non-null");
-            ListTypeNode listType = (fieldsArg.Type as NonNullTypeNode)!.Type as ListTypeNode;
+            // Check that fields argument is [BookScalarFields!]
+            ListTypeNode listType = fieldsArg.Type as ListTypeNode;
             Assert.IsNotNull(listType, "fields argument should be a list");
             Assert.IsTrue(listType.Type is NonNullTypeNode, "list elements should be non-null");
             NamedTypeNode enumType = (listType.Type as NonNullTypeNode)!.Type as NamedTypeNode;

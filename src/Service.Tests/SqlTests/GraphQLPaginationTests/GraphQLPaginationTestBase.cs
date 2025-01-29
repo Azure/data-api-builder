@@ -143,6 +143,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 14,
                   ""title"": ""Before Sunset""
+                },
+                {
+                  ""id"": 15,
+                  ""title"": ""SQL_CONN""
+                },
+                {
+                  ""id"": 16,
+                  ""title"": ""SOME%CONN""
+                },
+                {
+                  ""id"": 17,
+                  ""title"": ""CONN%_CONN""
+                },
+                {
+                  ""id"": 18,
+                  ""title"": ""[Special Book]""
+                },
+                {
+                  ""id"": 19,
+                  ""title"": ""ME\\YOU""
+                },
+                {
+                  ""id"": 20,
+                  ""title"": ""C:\\\\LIFE""
                 }
               ],
               ""endCursor"": null,
@@ -229,6 +253,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 14,
                   ""title"": ""Before Sunset""
+                },
+                {
+                  ""id"": 15,
+                  ""title"": ""SQL_CONN""
+                },
+                {
+                  ""id"": 16,
+                  ""title"": ""SOME%CONN""
+                },
+                {
+                  ""id"": 17,
+                  ""title"": ""CONN%_CONN""
+                },
+                {
+                  ""id"": 18,
+                  ""title"": ""[Special Book]""
+                },
+                {
+                  ""id"": 19,
+                  ""title"": ""ME\\YOU""
+                },
+                {
+                  ""id"": 20,
+                  ""title"": ""C:\\\\LIFE""
                 }
               ],
               ""endCursor"": null,

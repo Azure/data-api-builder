@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
             {
                 "DeleteOneWithStoredProcedureTest",
                 $"SELECT [id] FROM { _integrationTableName } " +
-                $"WHERE id = 14"
+                $"WHERE id = 20"
             }
         };
         #region Test Fixture Setup

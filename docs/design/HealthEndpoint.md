@@ -110,7 +110,6 @@ The Entity config parameters contain information about the GET filter which need
     "health" : {
       "name": "mssql", (optional default: Database Type) // not required as mostly configs have just one
       "enabled": true, (default: false)
-      "query": "SELECT TOP 1 1", (Based on DB Type)
       "threshold-ms": 100 (optional default: 10000)
     }
   }
@@ -164,7 +163,7 @@ Finally we add the query parameters which is first to get the query to execute a
 #### GraphQL Query
 
 To execute this query we first need to get the schema of that particular table. Hence for each table we run the `introspection query` to get the schema which gives the column names which are then used to query the GraphQL endpoint to check the health.
-For this we run a **POST** query against the base URL **http://localhost:5000/graphl/** with a Request BODY.\
+For this we run a **POST** query against the base URL **http://localhost:5000/graphql/** with a Request BODY.\
 The CURL Command of that query is 
 ```
 curl --request POST \
@@ -204,7 +203,7 @@ The time it took to execute the above query is the time elapsed for checking the
 ## Output Sample
 ```
 {
-  "status": "Unhealthy",/"status": "Healthy",
+  "status": "Unhealthy/Healthy",
   "version": "1.2.10",
   "app-name": "dab_oss_1.2.10",
   "dab-configuration": {
@@ -217,43 +216,43 @@ The time it took to execute the above query is the time elapsed for checking the
     "mode": "development"
   },
   "checks": {
-    "database-name" : {
-        "status": "Healthy",
-        "tags": ["database", "performance"]
-        "description": "Checks if the database is responding within an acceptable timeframe.",
-        "data": {
-            "responseTimeMs": 10,
-            "maxAllowedResponseTimeMs": 10
-        }
-    },
-    "<entity-name>": {
+    {
+      "name": "database-name",
       "status": "Healthy",
-      "description": "Checks if the endpoint is responding within an acceptable timeframe.",
-      "tags": ["endpoint", "REST"]
+      "tags": ["data-source", "mssql"],
       "data": {
           "responseTimeMs": 10,
           "maxAllowedResponseTimeMs": 10
       }
-   },
-    "<entity-name>": {
+    },
+    {
+      "name": "<entity-name>",
+      "status": "Healthy",
+      "tags": ["endpoint", "rest"],
+      "data": {
+          "responseTimeMs": 10,
+          "maxAllowedResponseTimeMs": 10
+      }
+    },
+    {
+      "name": "<entity-name>",
+      "status": "Healthy",
+      "tags": ["endpoint", "graphql"]
+      "data": {
+          "responseTimeMs": 20,
+          "maxAllowedResponseTimeMs": 50
+      }
+    },
+    {
+      "name": "<entity-name>",
       "status": "Unhealthy",
-      "description": "Checks if the endpoint is responding within an acceptable timeframe.",
-      "tags": ["endpoint", "GRAPHQL"]
+      "tags": ["endpoint", "graphql"]
+      "exception": "{exception-message-here}",
       "data": {
           "responseTimeMs": 20,
           "maxAllowedResponseTimeMs": 10
       }
-   },
-    "<entity-name>": {
-      "status": "Unhealthy",
-      "description": "Checks if the endpoint is responding within an acceptable timeframe.",
-      "tags": ["endpoint", "REST"]
-      "data": {
-          "responseTimeMs": 20,
-          "maxAllowedResponseTimeMs": 10
-      }
-      "exception": "{exception-message-here}"
-   },
+    },
   }
 }
 ```
@@ -261,3 +260,4 @@ The time it took to execute the above query is the time elapsed for checking the
 ## Limitations
 
 + We do not support health checks for stored procedures.
++ Hot-Reload is not supported in Comprehensive Health Endpoint.

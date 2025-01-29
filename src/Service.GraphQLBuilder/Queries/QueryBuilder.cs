@@ -270,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         new List<DirectiveNode>())
                 };
 
-            if (aggregationEnabled)
+            if (isAggregationEnabled)
             {
                 fields.Add(
                     new(

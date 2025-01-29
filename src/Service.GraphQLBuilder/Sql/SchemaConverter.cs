@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -21,6 +22,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 {
     public static class SchemaConverter
     {
+        private static readonly string _aggregationTypeSuffix = "Aggregations";
+
         /// <summary>
         /// Generate a GraphQL object type from a SQL table/view/stored-procedure definition, combined with the runtime config entity information
         /// </summary>
@@ -216,6 +219,127 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 fieldDefinitionNodes.Values.ToImmutableList());
         }
 
+        public static bool IsNumericField(ITypeNode type)
+        {
+            string typeName = type.NamedType().Name.Value;
+            return SupportedAggregateTypes.NumericAggregateTypes.Contains(typeName);
+        }
+
+        /// <summary>
+        /// Generates aggregation type for a given entity name.
+        /// Example:
+        /// type BookAggregations {
+        /// max(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean) : Float
+        /// min(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// avg(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// sum(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// count(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Int
+        /// }
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="entityNode"></param>
+        /// <returns></returns>
+        public static ObjectTypeDefinitionNode GenerateAggregationTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
+        {
+            string aggregationTypeName = GenerateObjectAggregationNodeName(entityName);
+
+            List<string> numericFields = entityNode.Fields
+                .Where(f => IsNumericField(f.Type))
+                .Select(f => f.Type.NamedType().Name.Value)
+                .ToList();
+
+            List<FieldDefinitionNode> aggregationFields = new();
+
+            // Add numeric aggregation fields
+            if (numericFields.Any())
+            {
+                string filterInputType = numericFields.Count == 1 ? $"{numericFields[0]}FilterInput" : GetCommonFilterInputType(numericFields);
+                aggregationFields.AddRange(new[]
+                {
+                    CreateNumericAggregationField("max", FLOAT_TYPE, "Maximum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField("min", FLOAT_TYPE, "Minimum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField("avg", FLOAT_TYPE, "Average value", entityNode, filterInputType),
+                    CreateNumericAggregationField("sum", FLOAT_TYPE, "Sum of values", entityNode, filterInputType),
+                    CreateNumericAggregationField("count", INT_TYPE, "Count of numeric values", entityNode, filterInputType)
+                });
+            }
+
+            return new ObjectTypeDefinitionNode(
+                location: null,
+                name: new NameNode(aggregationTypeName),
+                description: new StringValueNode($"Aggregation type for {entityName}"),
+                directives: new List<DirectiveNode>(),
+                interfaces: new List<NamedTypeNode>(),
+                fields: aggregationFields);
+        }
+
+        /// <summary>
+        /// Creates a numeric aggregation field for a graphql entity.
+        /// for example in the aggregations node for books it would create min/max/avg operations.
+        /// </summary>
+        /// <param name="operationName">The name of the aggregation operation (e.g., "sum", "avg").</param>
+        /// <param name="returnType">The return type of the aggregation operation (e.g., "Float", "Int").</param>
+        /// <param name="description">A description of the aggregation operation.</param>
+        /// <param name="entityNode">The GraphQL entity node that contains the numeric fields to be aggregated.</param>
+        /// <param name="filterInputType">The input type used for filtering criteria in the aggregation operation.</param>
+        /// <returns>A <see cref="FieldDefinitionNode"/> representing the numeric aggregation field in the GraphQL schema.</returns>
+        private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode, string filterInputType)
+        {
+            // Create an input type specific to this entity's numeric fields
+            string inputTypeName = InputTypeBuilder.GenerateNumericAggregateFieldsInputName(entityNode.Name.Value);
+
+            return new FieldDefinitionNode(
+                location: null,
+                name: new NameNode(operationName),
+                description: new StringValueNode(description),
+                arguments: new List<InputValueDefinitionNode>
+                {
+            new(null,
+                new NameNode("field"),
+                new StringValueNode("Field to aggregate on"),
+                new NonNullTypeNode(new NamedTypeNode(new NameNode(inputTypeName))),
+                null,
+                new List<DirectiveNode>()),
+            new(null,
+                new NameNode("having"),
+                new StringValueNode("Filter criteria for aggregation"),
+                new NamedTypeNode(new NameNode(filterInputType)),
+                null,
+                new List<DirectiveNode>()),
+            new(null,
+                new NameNode("distinct"),
+                new StringValueNode("Whether to aggregate on distinct values"),
+                new BooleanType().ToTypeNode(),
+                new BooleanValueNode(false),
+                new List<DirectiveNode>())
+                },
+                type: new NamedTypeNode(new NameNode(returnType)),
+                directives: new List<DirectiveNode>());
+        }
+
+        /// <summary>
+        /// Determines the most appropriate common filter input type for a collection of numeric types
+        /// </summary>
+        private static string GetCommonFilterInputType(List<string> numericTypes)
+        {
+            Dictionary<string, int> typeHierarchy = new()
+            {
+                { DECIMAL_TYPE, 1 },
+                { FLOAT_TYPE, 2 },
+                { SINGLE_TYPE, 3 },
+                { LONG_TYPE, 4 },
+                { INT_TYPE, 5 },
+                { SHORT_TYPE, 6 },
+                { BYTE_TYPE, 7 }
+            };
+
+            // Find the highest precision type among the numeric types
+            string highestPrecisionType = numericTypes
+                .OrderBy(t => typeHierarchy.GetValueOrDefault(t, 0))
+                .First();
+
+            return $"{highestPrecisionType}FilterInput";
+        }
         /// <summary>
         /// Helper method to generate the FieldDefinitionNode for a column in a table/view or a result set field in a stored-procedure.
         /// </summary>
@@ -475,6 +599,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             return isNullableRelationship;
+        }
+
+        /// <summary>
+        /// Returns the aggregation node name for the given entity name.
+        /// </summary>
+        /// <param name="entityName">input entity name.</param>
+        /// <returns>{entityName}Aggregations</returns>
+        public static string GenerateObjectAggregationNodeName(string entityName)
+        {
+            return $"{entityName}{_aggregationTypeSuffix}";
         }
     }
 }

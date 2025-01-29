@@ -3,6 +3,7 @@ add Publisher --config "dab-config.MsSql.json" --source publishers --permissions
 add Publisher_MM --config "dab-config.MsSql.json" --source publishers_mm --graphql "Publisher_MM:Publishers_MM" --permissions "anonymous:*"
 add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
+add Default_Books --config "dab-config.MsSql.json" --source default_books --permissions "anonymous:create,read,update,delete" --graphql "default_book:default_books"
 add Book_MM --config "dab-config.MsSql.json" --source books_mm --permissions "anonymous:*" --graphql "book_mm:books_mm"
 add BookWebsitePlacement --config "dab-config.MsSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.MsSql.json" --source authors --permissions "anonymous:read"

@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Assert.IsNotNull(inputTypeObjects);
             Assert.AreEqual(9, inputTypeObjects.Count, $"{nameof(InputObjectTypeDefinitionNode)} is invalid. input Type objects have not been created correctly.");
 
-            // 9 input types generated for the 3 entity types in the schema.gql. IntFilter,StringFilter etc should not be duplicated.
+            // 11 input types generated for the 3 entity types in the schema.gql. IntFilter,StringFilter etc should not be duplicated.
             Assert.AreEqual(13, root.Definitions.Count, $"{nameof(DocumentNode)}:Root is invalid. root definitions count does not match expected count.");
         }
     }

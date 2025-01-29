@@ -37,4 +37,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         public const string SMALLDATETIME_TYPE = "smalldatetime";
         public const string DATETIME2_TYPE = "datetime2";
     }
+
+    /// <summary>
+    /// class representing mapping between hotchocolate types and return type for aggregate.
+    /// </summary>
+    public static class SupportedAggregateTypes
+    {
+        public static HashSet<string> NumericAggregateTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            SupportedHotChocolateTypes.LONG_TYPE,
+            SupportedHotChocolateTypes.INT_TYPE,
+            SupportedHotChocolateTypes.SHORT_TYPE,
+            SupportedHotChocolateTypes.DECIMAL_TYPE,
+            SupportedHotChocolateTypes.FLOAT_TYPE,
+            SupportedHotChocolateTypes.BYTE_TYPE,
+        };
+    }
 }

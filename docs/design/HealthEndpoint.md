@@ -36,7 +36,7 @@ We want the user to provide a check and threshold value what DAB would carry out
 **Case 1: Datasource**\
 Here we would carry out standard queries based on the datasource type and execute them under the given threshold. If the engine gets the result below the specified threshold, the DB is considered healthy else unhealthy.
 
-> Example: If we have a SQL Server, we would execute the standard query given belowe for SQL Server and if the elapsed time for this query is under the threshold, the data source would be considered healthy.
+> Example: If we have a SQL Server, we would execute the standard query given below for SQL Server and if the elapsed time for this query is under the threshold, the data source would be considered healthy.
 
 
 **Case 2: Entity**\
@@ -63,7 +63,7 @@ We need to update the dab config file to include details of the health check for
 
 #### `runtime.health` Configuration
 
-The runtime configuration would include details like cache-ttl in case we need to cache the response of health checks, the max-dop value which tells you the degree of parallelism i.e. how many queries that DAB should run at once to get health results and roles i.e. which role is allowed to view the health information of DAB.
+The runtime configuration would include details like cache-ttl in case we need to cache the response of health checks, the max-dop value which specifies the degree of parallelism i.e. how many queries that DAB should run at once to get health results and roles i.e. which role is allowed to view the health information of DAB.
 
 | **Property**   | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |----------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|

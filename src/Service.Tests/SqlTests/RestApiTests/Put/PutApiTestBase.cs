@@ -982,7 +982,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/18",
+                    primaryKeyRoute: "id/24",
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,

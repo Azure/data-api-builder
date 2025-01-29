@@ -2,6 +2,7 @@ init --config "dab-config.PostgreSql.json" --database-type postgresql --connecti
 add Publisher --config "dab-config.PostgreSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.PostgreSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.PostgreSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
+add Default_Books --config "dab-config.PostgreSql.json" --source default_books --permissions "anonymous:create,read,update,delete" --graphql "default_book:default_books"
 add BookWebsitePlacement --config "dab-config.PostgreSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.PostgreSql.json" --source authors --permissions "anonymous:read"
 add Review --config "dab-config.PostgreSql.json" --source reviews --permissions "anonymous:create,read,update" --rest false --graphql "review:reviews"

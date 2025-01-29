@@ -257,6 +257,32 @@ The time it took to execute the above query is the time elapsed for checking the
 }
 ```
 
+## Test Scenarios
+
+Health Check result scenarios for different cases of Health check and GraphQL and Rest entities enabled or disabled.\
+'_' means enabled/disabled (doesn't matter)
+
+* Global Health Enabled
+  * Global GraphQL Enabled
+    * Entity health ENABLED and Entity GraphQL ENABLED : Health is shown for this particular entity (Positive Scenario)
+    * Entity health DISABLED and Entity GraphQL ENABLED : No GraphQL Health check for this particular entity
+    * Entity health _ and Entity GraphQL DISABLED : Validation Error in Config
+  
+  * Global GraphQL Disabled
+    * Entity health _ and Entity GraphQL _ : No GraphQL Health Report for all entities
+    
+  * Global REST Enabled
+    * Entity health ENABLED and Entity REST ENABLED : Health is shown for this particular entity (Positive Scenario)
+    * Entity health DISABLED and Entity REST ENABLED : No REST Health check for this particular entity
+    * Entity health _ and Entity REST DISABLED : REST Health check shows Unhealthy entity
+  
+  * Global REST Disabled
+    * Entity health _ and Entity REST _ : No REST Health Report for all entities
+
+* Global Health Disabled
+  * Global GraphQL/REST _
+    * Entity health _ and Entity GraphQL/REST _ : No Comprehensive health check report for all entities
+
 ## Limitations
 
 + We do not support health checks for stored procedures.

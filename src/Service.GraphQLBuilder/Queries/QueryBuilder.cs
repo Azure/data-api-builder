@@ -242,7 +242,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
         }
 
-        public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name, bool aggregationEnabled = false)
+        public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name, bool isAggregationEnabled = false)
         {
             string scalarFieldsEnumName = EnumTypeBuilder.GenerateScalarFieldsEnumName(name.Value);
 

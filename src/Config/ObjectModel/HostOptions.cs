@@ -38,8 +38,8 @@ public record HostOptions
 
     public HostOptions(CorsOptions? Cors, AuthenticationOptions? Authentication, HostMode Mode = HostMode.Production, int? MaxResponseSizeMB = null)
     {
-        this.Cors = Cors;
-        this.Authentication = Authentication;
+        this.Cors = Cors?? new (Array.Empty<string>());
+        this.Authentication = Authentication?? new ();
         this.Mode = Mode;
         this.MaxResponseSizeMB = MaxResponseSizeMB;
 

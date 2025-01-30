@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
@@ -32,6 +33,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     {
         // Error code for semaphore timeout in MsSql.
         private const int ERRORCODE_SEMAPHORE_TIMEOUT = 121;
+
+        // The key of the item stored in http context
+        private const string TOTAL_DB_EXECUTION_TIME = "TotalDbExecutionTime";
+
         /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify
         /// User, Password, and Authentication method.
@@ -355,22 +360,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
             // Call the actual ExecuteQueryAsync method.
-            queryExecutor.Setup(x => x.ExecuteQueryAsync(
+            queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
+                It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
-                It.IsAny<string>(),
                 It.IsAny<HttpContext>(),
+                It.IsAny<string>(),
                 It.IsAny<List<string>>())).CallBase();
 
-            await queryExecutor.Object.ExecuteQueryAsync<object>(
-                sqltext: string.Empty,
-                parameters: new Dictionary<string, DbConnectionParam>(),
-                dataReaderHandler: null,
-                dataSourceName: String.Empty,
-                httpContext: null,
-                args: null);
-            Assert.IsTrue(context.Items.ContainsKey("TotalDbExecutionTime"), "HttpContext object must contain the total db execution time after execution of a query");
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            try
+            {
+                await queryExecutor.Object.ExecuteQueryAgainstDbAsync<object>(
+                    conn: null,
+                    sqltext: string.Empty,
+                    parameters: new Dictionary<string, DbConnectionParam>(),
+                    dataReaderHandler: null,
+                    dataSourceName: String.Empty,
+                    httpContext: null,
+                    args: null);
+            }
+            catch (Exception)
+            {
+                // as the SqlConnection object is a sealed class and can't be mocked, ignore any exceptions caused to bypass
+            }
+
+            stopwatch.Stop();
+
+            Assert.IsTrue(context.Items.ContainsKey(TOTAL_DB_EXECUTION_TIME), "HttpContext object must contain the total db execution time after execution of a query");
+            Assert.IsTrue(stopwatch.ElapsedMilliseconds >= (long)context.Items[TOTAL_DB_EXECUTION_TIME], "The execution time stored in http context must be valid.");
         }
 
         /// <summary>

@@ -27,6 +27,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string GROUP_BY_FIELD_NAME = "groupBy";
         public const string GROUP_BY_FIELDS_FIELD_NAME = "fields";
 
+        // Define the enabled database types for aggregation
+        public static readonly HashSet<DatabaseType> AggregationEnabledDatabaseTypes = new()
+        {
+            DatabaseType.MSSQL,
+            DatabaseType.DWSQL,
+        };
+
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
         /// Also populates the DocumentNode with return types.
@@ -76,7 +83,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     else
                     {
                         IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Read, entityPermissionsMap);
-                        ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name, _isAggregationEnabled);
+                        bool isAggregationEnabledForEntity = _isAggregationEnabled && AggregationEnabledDatabaseTypes.Contains(databaseTypes[entityName]);
+
+                        ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name, isAggregationEnabledForEntity);
 
                         if (rolesAllowedForRead.Any())
                         {

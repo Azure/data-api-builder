@@ -38,6 +38,7 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -3108,6 +3109,59 @@ type Moon {
         }
 
         /// <summary>
+        /// Validates that DAB supports a configuration without authentication, as it's optional.
+        /// Ensures both REST and GraphQL queries return success when authentication is not configured.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task TestEngineSupportConfigWithNoAuthentication()
+        {
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = CreateBasicRuntimeConfigWithSingleEntityAndAuthOptions(dataSource: dataSource, authenticationOptions: null);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    books {
+                        items{
+                            id
+                            title
+                        }
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                Assert.IsFalse(body.Contains("errors")); // In GraphQL, All errors end up in the errors array, no matter what kind of error they are.
+
+                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
+                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+            }
+        }
+
+        /// <summary>
         /// In CosmosDB NoSQL, we store data in the form of JSON. Practically, JSON can be very complex.
         /// But DAB doesn't support JSON with circular references e.g if 'Character.Moon' is a valid JSON Path, then
         /// 'Moon.Character' should not be there, DAB would throw an exception during the load itself.
@@ -4671,6 +4725,43 @@ type Planet @model(name:""PlanetAlias"") {
                     Host: new(null, null)
                 ),
                 Entities: new(new Dictionary<string, Entity>())
+            );
+
+            return runtimeConfig;
+        }
+
+        /// <summary>
+        /// Create basic runtime config with a single entity and given auth options.
+        /// </summary>
+        private static RuntimeConfig CreateBasicRuntimeConfigWithSingleEntityAndAuthOptions(
+            DataSource dataSource,
+            AuthenticationOptions authenticationOptions = null)
+        {
+            Entity entity = new(
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "book", Plural: "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+                );
+
+            string entityName = "Book";
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { entityName, entity }
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "testSchema.json",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(Cors: null, Authentication: authenticationOptions)
+                ),
+                Entities: new(entityMap)
             );
 
             return runtimeConfig;

@@ -44,6 +44,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private bool _isMultipleCreateOperationEnabled;
+        private bool _isAggregationEnabled;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -66,6 +67,8 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
+            _isAggregationEnabled = runtimeConfig.EnableAggregation;
+
             _entities = runtimeConfig.Entities;
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
@@ -152,7 +155,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 entityToDatabaseType.TryAdd(entityName, metadataprovider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects
-            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
+            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isAggregationEnabled);
 
             // Generate the GraphQL mutations from the provided objects
             DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationEnabled);
@@ -188,6 +191,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // followed by an insertion in the linking table. The directional linking object contains all the fields from the target entity
             // (relationship/column) and non-relationship fields from the linking table.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
+
+            Dictionary<string, EnumTypeDefinitionNode> enumTypes = new();
 
             // 1. Build up the object and input types for all the exposed entities in the config.
             foreach ((string entityName, Entity entity) in entities)
@@ -239,14 +244,17 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
 
-                            if (_runtimeConfigProvider.GetConfig().EnableAggregation)
+                            if (_isAggregationEnabled)
                             {
-                                InputTypeBuilder.GenerateAggregationNumericInputForObjectType(node, inputObjects);
+                                EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
+                                EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
                                 // Generate aggregation type for the entity
-                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(entityName, node);
+                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
                                 if (aggregationType.Fields.Any())
                                 {
+                                    Console.WriteLine($"Aggregation type generated for {node.Name.Value}");
                                     objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
+                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node));
                                 }
                             }
                         }
@@ -304,6 +312,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 fields.Values.ToImmutableList()));
 
             List<IDefinitionNode> nodes = new(objectTypes.Values);
+            nodes.AddRange(enumTypes.Values);
             return new DocumentNode(nodes);
         }
 

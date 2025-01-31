@@ -13,6 +13,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
     private readonly PureFieldDelegate _leafFieldResolver;
     private readonly PureFieldDelegate _objectFieldResolver;
     private readonly PureFieldDelegate _listFieldResolver;
+    private readonly PureFieldDelegate _groupByFieldResolver;
 
     public ResolverTypeInterceptor(ExecutionHelper executionHelper)
     {
@@ -35,6 +36,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         _leafFieldResolver = ctx => ExecutionHelper.ExecuteLeafField(ctx);
         _objectFieldResolver = ctx => executionHelper.ExecuteObjectField(ctx);
         _listFieldResolver = ctx => executionHelper.ExecuteListField(ctx);
+        _groupByFieldResolver = _ => throw new NotSupportedException("GroupBy operations are not supported.");
     }
 
     public override void OnBeforeCompleteType(
@@ -70,15 +72,19 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         {
             foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
-                // In order to inspect the type we need to resolve the type reference on the definition.
-                // If it's null or cannot be resolved something is wrong, but we skip over this and let
-                // the type validation deal with schema errors.
                 if (field.Type is not null &&
                     completionContext.TryGetType(field.Type, out IType? type))
                 {
                     // Do not override a PureResolver when one is already set.
                     if (field.PureResolver is not null)
                     {
+                        continue;
+                    }
+
+                    // Check if this is a GroupBy type
+                    if (type.TypeName().Value.EndsWith("GroupBy"))
+                    {
+                        field.PureResolver = _groupByFieldResolver;
                         continue;
                     }
 

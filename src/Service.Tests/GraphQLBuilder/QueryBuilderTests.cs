@@ -194,13 +194,21 @@ type Foo @model(name:""Foo"") {
             ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
             string returnTypeName = query.Fields.First(f => f.Name.Value == $"foos").Type.NamedType().Name.Value;
             ObjectTypeDefinitionNode returnType = queryRoot.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>().First(d => d.Name.Value == returnTypeName);
-            Assert.AreEqual(3, returnType.Fields.Count);
-            Assert.AreEqual("items", returnType.Fields[0].Name.Value);
-            Assert.AreEqual("[Foo!]!", returnType.Fields[0].Type.ToString());
-            Assert.AreEqual(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, returnType.Fields[1].Name.Value);
-            Assert.AreEqual("String", returnType.Fields[1].Type.NamedType().Name.Value);
-            Assert.AreEqual("hasNextPage", returnType.Fields[2].Name.Value);
-            Assert.AreEqual("Boolean", returnType.Fields[2].Type.NamedType().Name.Value);
+
+            // Verify items field exists and has correct type
+            FieldDefinitionNode itemsField = returnType.Fields.FirstOrDefault(f => f.Name.Value == "items");
+            Assert.IsNotNull(itemsField, "items field should exist");
+            Assert.AreEqual("[Foo!]!", itemsField.Type.ToString(), "items field should be non-null list of non-null Foo");
+
+            // Verify pagination token field exists and has correct type
+            FieldDefinitionNode paginationTokenField = returnType.Fields.FirstOrDefault(f => f.Name.Value == QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
+            Assert.IsNotNull(paginationTokenField, "pagination token field should exist");
+            Assert.AreEqual("String", paginationTokenField.Type.NamedType().Name.Value, "pagination token should be String type");
+
+            // Verify hasNextPage field exists and has correct type
+            FieldDefinitionNode hasNextPageField = returnType.Fields.FirstOrDefault(f => f.Name.Value == "hasNextPage");
+            Assert.IsNotNull(hasNextPageField, "hasNextPage field should exist");
+            Assert.AreEqual("Boolean", hasNextPageField.Type.NamedType().Name.Value, "hasNextPage should be Boolean type");
         }
 
         [TestMethod]
@@ -485,6 +493,49 @@ type Table @model(name: ""table"") {
                 Assert.IsTrue(!query.Fields.Any(), message: FIELDNOTFOUND_ERROR);
             }
 
+        }
+
+        /// <summary>
+        /// Tests that the return type includes a properly structured groupBy field.
+        /// Verifies:
+        /// 1. groupBy field exists with correct structure
+        /// 2. fields argument is a non-null list of non-null scalar field enum values
+        /// 3. groupBy field returns a non-null list of non-null GroupBy type
+        /// </summary>
+        [TestMethod]
+        [TestCategory("Query Builder - Return Type")]
+        public void GenerateReturnType_IncludesGroupByField()
+        {
+            // Arrange
+            NameNode entityName = new("Book");
+
+            // Act
+            ObjectTypeDefinitionNode returnType = QueryBuilder.GenerateReturnType(entityName, isAggregationEnabled: true);
+
+            // Assert
+            FieldDefinitionNode groupByField = returnType.Fields.FirstOrDefault(f => f.Name.Value == "groupBy");
+            Assert.IsNotNull(groupByField, "groupBy field should exist");
+
+            // Verify fields argument
+            InputValueDefinitionNode fieldsArg = groupByField.Arguments.FirstOrDefault(a => a.Name.Value == "fields");
+            Assert.IsNotNull(fieldsArg, "fields argument should exist");
+
+            // Check that fields argument is [BookScalarFields!]
+            ListTypeNode listType = fieldsArg.Type as ListTypeNode;
+            Assert.IsNotNull(listType, "fields argument should be a list");
+            Assert.IsTrue(listType.Type is NonNullTypeNode, "list elements should be non-null");
+            NamedTypeNode enumType = (listType.Type as NonNullTypeNode)!.Type as NamedTypeNode;
+            Assert.IsNotNull(enumType, "list elements should be named type");
+            Assert.AreEqual("BookScalarFields", enumType.Name.Value, "should use scalar fields enum");
+
+            // Check return type is [BookGroupBy!]!
+            Assert.IsTrue(groupByField.Type is NonNullTypeNode, "return type should be non-null");
+            ListTypeNode returnListType = (groupByField.Type as NonNullTypeNode)!.Type as ListTypeNode;
+            Assert.IsNotNull(returnListType, "return type should be a list");
+            Assert.IsTrue(returnListType.Type is NonNullTypeNode, "return list elements should be non-null");
+            NamedTypeNode groupByType = (returnListType.Type as NonNullTypeNode)!.Type as NamedTypeNode;
+            Assert.IsNotNull(groupByType, "return elements should be named type");
+            Assert.AreEqual("BookGroupBy", groupByType.Name.Value, "should return GroupBy type");
         }
 
         public static ObjectTypeDefinitionNode GetQueryNode(DocumentNode queryRoot)

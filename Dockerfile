@@ -11,5 +11,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-cbl-mariner2.0 AS runtime
 
 COPY --from=build /out /App
 WORKDIR /App
-ENV ASPNETCORE_URLS="http://localhost:5000"
+ENV ASPNETCORE_URLS="http://0.0.0.0:5000"
 ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]

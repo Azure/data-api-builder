@@ -266,7 +266,7 @@ Health Check result scenarios for different cases of Health check and GraphQL an
   * Global GraphQL Enabled
     * Entity health ENABLED and Entity GraphQL ENABLED : Health is shown for this particular entity (Positive Scenario)
     * Entity health DISABLED and Entity GraphQL ENABLED : No GraphQL Health check for this particular entity
-    * Entity health _ and Entity GraphQL DISABLED : Validation Error in Config
+    * Entity health _ and Entity GraphQL DISABLED : GraphQL Health check should be omitted for this entity
   
   * Global GraphQL Disabled
     * Entity health _ and Entity GraphQL _ : No GraphQL Health Report for all entities
@@ -274,7 +274,7 @@ Health Check result scenarios for different cases of Health check and GraphQL an
   * Global REST Enabled
     * Entity health ENABLED and Entity REST ENABLED : Health is shown for this particular entity (Positive Scenario)
     * Entity health DISABLED and Entity REST ENABLED : No REST Health check for this particular entity
-    * Entity health _ and Entity REST DISABLED : REST Health check shows Unhealthy entity
+    * Entity health _ and Entity REST DISABLED : REST Health check should be omitted for this entity
   
   * Global REST Disabled
     * Entity health _ and Entity REST _ : No REST Health Report for all entities

@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new InvalidOperationException("Container Name can not be blank");
             }
 
-            if(jsonData == null || jsonData.Count == 0)
+            if (jsonData == null || jsonData.Count == 0)
             {
                 logger?.LogWarning($"No JSON data found to generate schema, from Container: {containerName}");
                 return string.Empty;

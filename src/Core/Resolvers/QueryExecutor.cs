@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -298,9 +299,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Prepares a database command for execution.
+        /// Prepares a database command for execution - given a TConnection
         /// </summary>
-        /// <param name="conn">Connection object used to connect to database.</param>
+        /// <param name="conn">TConnection object used to connect to database.</param>
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="httpContext">Current user httpContext.</param>
@@ -314,26 +315,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName)
         {
             DbCommand cmd = conn.CreateCommand();
-            cmd.CommandType = CommandType.Text;
+            return PrepareSqlDbCommandHelper(cmd, sqltext, parameters, httpContext, dataSourceName);
+        }
 
-            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
-            // at the database level.
-            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
-
-            cmd.CommandText = sessionParamsQuery + sqltext;
-            if (parameters is not null)
-            {
-                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
-                {
-                    DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
-                    PopulateDbTypeForParameter(parameterEntry, parameter);
-                    cmd.Parameters.Add(parameter);
-                }
-            }
-
-            return cmd;
+        /// <summary>
+        /// Prepares a database command for execution - given a SqlConnection
+        /// </summary>
+        /// <param name="conn">SqlConnection object used to connect to database.</param>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>A DbCommand object ready for execution.</returns>
+        public virtual DbCommand PrepareSqlDbCommand(
+            SqlConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
+        {
+            DbCommand cmd = conn.CreateCommand();
+            return PrepareSqlDbCommandHelper(cmd, sqltext, parameters, httpContext, dataSourceName);
         }
 
         /// <inheritdoc/>
@@ -351,31 +353,51 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                conn.Open();
-                DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
-
-                try
+                if (conn is SqlConnection)
                 {
-                    using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                        cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                    if (dataReaderHandler is not null && dbDataReader is not null)
+                    // If connection is a SQLConnection
+                    SqlConnection? sqlConn = conn as SqlConnection;
+
+                    if (sqlConn != null)
                     {
-                        return dataReaderHandler(dbDataReader, args);
+                        // If connection is a SQLConnection and it is not null, we can extract the info message
+                        sqlConn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
+                        {
+                            // Log the statement ids returned by the SQL engine when we executed the batch.
+                            // This helps in correlating with SQL engine telemetry.
+
+                            // If the info message has an error code that matches the well-known codes used for returning statement id,
+                            // then we can be certain that the message contains no PII, and is safe to log unmodified.
+
+                            IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
+
+                            IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
+
+                            IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
+
+                            foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
+                            {
+                                // Add to request
+                            }
+                        };
+
+                        conn.Open();
+                        DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+                        return ExecuteQueryAgainstDbHelper(cmd, dataReaderHandler, httpContext, args);
+
                     }
                     else
                     {
-                        return default(TResult);
+                        throw new System.Exception("TODO");
                     }
+
                 }
-                catch (DbException e)
+                else
                 {
-                    string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                    QueryExecutorLogger.LogError(
-                        exception: e,
-                        message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                        correlationId,
-                        e.Message);
-                    throw DbExceptionParser.Parse(e);
+                    // If connection is not an SQLConnection
+                    conn.Open();
+                    DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+                    return ExecuteQueryAgainstDbHelper(cmd, dataReaderHandler, httpContext, args);
                 }
             }
             finally
@@ -572,6 +594,75 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return resultArray;
+        }
+
+        /// <summary>
+        /// Helper method that prepares a database command for execution
+        /// </summary>
+        /// <param name="cmd">The initial command.</param>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>The same cmd command given, but ready for execution.</returns>
+        private DbCommand PrepareSqlDbCommandHelper(
+            DbCommand cmd,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
+        {
+            cmd.CommandType = CommandType.Text;
+
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
+
+            cmd.CommandText = sessionParamsQuery + sqltext;
+            if (parameters is not null)
+            {
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
+                {
+                    DbParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return cmd;
+        }
+
+        private TResult? ExecuteQueryAgainstDbHelper<TResult>(
+            DbCommand cmd,
+            Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
+            HttpContext? httpContext,
+            List<string>? args = null)
+        {
+            try
+            {
+                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
+                    cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                if (dataReaderHandler is not null && dbDataReader is not null)
+                {
+                    return dataReaderHandler(dbDataReader, args);
+                }
+                else
+                {
+                    return default(TResult);
+                }
+            }
+            catch (DbException e)
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                    correlationId,
+                    e.Message);
+                throw DbExceptionParser.Parse(e);
+            }
         }
 
         /// <summary>

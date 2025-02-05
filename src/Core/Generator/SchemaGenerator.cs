@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             // Validate input parameters.
             if (string.IsNullOrEmpty(containerName))
             {
-                throw new InvalidOperationException("Container Name can not be blank");
+                throw new InvalidOperationException("Container name cannot be blank");
             }
 
             if (jsonData == null || jsonData.Count == 0)

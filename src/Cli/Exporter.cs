@@ -119,7 +119,7 @@ namespace Cli
 
             if (string.IsNullOrEmpty(schemaText))
             {
-                logger.LogError("Generated GraphQL schema is empty. Please check if you have data to generate the schema out of it.");
+                logger.LogError("Generated GraphQL schema is empty. Please ensure data is available to generate the schema.");
                 return;
             }
 

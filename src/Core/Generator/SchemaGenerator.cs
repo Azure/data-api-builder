@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             if (sb.Length == 0)
             {
-                _logger?.LogWarning("Generated Schema is empty.");
+                _logger?.LogWarning("Generated schema is empty.");
             }
 
             return sb.ToString();

@@ -20,6 +20,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         // Azure Cosmos DB reserved properties, these properties will be ignored in the schema generation as they are not user-defined properties.
         private readonly List<string> _cosmosDbReservedProperties = new() { "_ts", "_etag", "_rid", "_self", "_attachments" };
 
+        // Logger instance for logging messages.
         private readonly ILogger? _logger;
 
         // Maps GraphQL entities to their corresponding attributes.
@@ -165,7 +166,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             if (sb.Length == 0)
             {
-                _logger?.LogWarning("Generated schema is empty.");
+                _logger?.LogWarning("Generated GraphQL schema is empty.");
             }
 
             return sb.ToString();

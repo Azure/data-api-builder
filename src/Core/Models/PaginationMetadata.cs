@@ -23,6 +23,11 @@ public class PaginationMetadata : IMetadata
     public bool RequestedItems { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
 
     /// <summary>
+    /// Shows if <c>GroupBY</c> is requested from the pagination result
+    /// </summary>
+    public bool RequestedGroupBy { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;
+
+    /// <summary>
     /// Shows if <c>endCursor</c> is requested from the pagination result
     /// </summary>
     public bool RequestedEndCursor { get; set; } = DEFAULT_PAGINATION_FLAGS_VALUE;

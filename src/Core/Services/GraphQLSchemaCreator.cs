@@ -252,7 +252,6 @@ namespace Azure.DataApiBuilder.Core.Services
                                 ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
                                 if (aggregationType.Fields.Any())
                                 {
-                                    Console.WriteLine($"Aggregation type generated for {node.Name.Value}");
                                     objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
                                     objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node));
                                 }

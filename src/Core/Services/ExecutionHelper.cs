@@ -173,6 +173,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     UrlType => new Uri(fieldValue.GetString()!),
                     UuidType => fieldValue.GetGuid(),
                     TimeSpanType => TimeSpan.Parse(fieldValue.GetString()!),
+                    AnyType => fieldValue.ToString(),
                     _ => fieldValue.GetString()
                 };
             }
@@ -275,6 +276,12 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 propertyValue = default;
                 return false;
+            }
+            else if (context.Path is NamePathSegment namePathSegment && namePathSegment.Parent is NamePathSegment parentSegment && parentSegment.Name.Value == "aggregations" &&
+                parentSegment.Parent?.Parent is NamePathSegment grandParentSegment && grandParentSegment.Name.Value.StartsWith("groupBy", StringComparison.OrdinalIgnoreCase))
+            {
+                string propertyName = namePathSegment.Name.Value;
+                return parent.TryGetProperty(propertyName, out propertyValue);
             }
 
             return parent.TryGetProperty(context.Selection.Field.Name.Value, out propertyValue);

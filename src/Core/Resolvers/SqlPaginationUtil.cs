@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Wrapper for CreatePaginationConnectionFromJsonElement
         /// </summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
+        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata, GroupByMetadata? groupByMetadata = null)
         {
             // necessary for MsSql because it doesn't coalesce list query results like Postgres
             if (jsonDocument is null)
@@ -47,10 +47,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             JsonElement root = jsonDocument.RootElement.Clone();
 
             // create the connection object.
-            return CreatePaginationConnection(root, paginationMetadata).ToJsonDocument();
+            return CreatePaginationConnection(root, paginationMetadata, groupByMetadata).ToJsonDocument();
         }
 
-        private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)
+        private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata, GroupByMetadata? groupByMetadata = null)
         {
             // Maintains the connection JSON object *Connection
             JsonObject connection = new();
@@ -103,6 +103,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // if the result doesn't have an extra element, just return the dbResult for *Connection.items
                     connection.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
                 }
+            }
+
+            if (groupByMetadata is not null && (groupByMetadata.RequestedFields || groupByMetadata.RequestedAggregations))
+            {
+                JsonArray groupByArray = new();
+                foreach (JsonElement element in rootEnumerated)
+                {
+                    JsonObject fieldObject = new();
+                    JsonObject aggregationObject = new();
+                    JsonObject combinedObject = new();
+                    foreach (JsonProperty property in element.EnumerateObject())
+                    {
+                        if (groupByMetadata.Fields.ContainsKey(property.Name))
+                        {
+                            if (groupByMetadata.RequestedFields)
+                            {
+                                fieldObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
+                            }
+                        }
+                        else
+                        {
+                            aggregationObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
+                        }
+                    }
+
+                    combinedObject.Add(QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME, fieldObject);
+                    combinedObject.Add("aggregations", aggregationObject);
+                    groupByArray.Add(combinedObject);
+                }
+
+                connection.Add(QueryBuilder.GROUP_BY_FIELD_NAME, JsonSerializer.Serialize(groupByArray));
             }
 
             if (paginationMetadata.RequestedEndCursor)

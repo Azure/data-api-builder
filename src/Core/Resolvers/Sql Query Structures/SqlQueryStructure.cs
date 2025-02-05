@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     /// <summary>
@@ -85,6 +86,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// a multiple create mutation operation.
         /// </summary>
         public bool IsMultipleCreateOperation;
+
+        /// <summary>
+        /// Hold the groupBy metadata for the query
+        /// </summary>
+        public GroupByMetadata GroupByMetadata { get; private set; }
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
@@ -167,7 +173,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     ProcessPaginationFields(queryField.SelectionSet.Selections);
 
                     // override schemaField and queryField with the schemaField and queryField of *Connection.items
-                    queryField = ExtractItemsQueryField(queryField);
+                    queryField = ExtractQueryField(queryField);
                 }
 
                 schemaField = ExtractItemsSchemaField(schemaField);
@@ -397,7 +403,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     ProcessPaginationFields(queryField.SelectionSet.Selections);
 
                     // override schemaField and queryField with the schemaField and queryField of *Connection.items
-                    queryField = ExtractItemsQueryField(queryField);
+                    queryField = ExtractQueryField(queryField);
                 }
 
                 schemaField = ExtractItemsSchemaField(schemaField);
@@ -419,6 +425,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             EntityName = sqlMetadataProvider.GetDatabaseType() == DatabaseType.DWSQL ? GraphQLUtils.GetEntityNameFromContext(ctx) : _underlyingFieldType.Name;
+            bool isGroupByQuery = queryField?.Name.Value == QueryBuilder.GROUP_BY_FIELD_NAME;
 
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
             {
@@ -433,7 +440,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // There may be another entity to resolve as a sub-query.
             if (queryField != null && queryField.SelectionSet != null)
             {
-                AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
+                if (isGroupByQuery)
+                {
+                    ProcessGroupByField(queryField, ctx);
+                }
+                else
+                {
+                    AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
+                }
             }
 
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
@@ -480,7 +494,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            OrderByColumns = PrimaryKeyAsOrderByColumns();
+            // primary key should only be added to order by for non groupby queries.
+            OrderByColumns = isGroupByQuery ? [] : PrimaryKeyAsOrderByColumns();
             if (IsListQuery && queryParams.ContainsKey(QueryBuilder.ORDER_BY_FIELD_NAME))
             {
                 object? orderByObject = queryParams[QueryBuilder.ORDER_BY_FIELD_NAME];
@@ -510,7 +525,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // If there are no columns, add the primary key column
             // to prevent failures when executing the database query.
-            if (!Columns.Any())
+            if (!Columns.Any() && !isGroupByQuery)
             {
                 AddColumn(PrimaryKey()[0]);
             }
@@ -540,6 +555,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             JoinQueries = new();
             PaginationMetadata = new(this);
+            GroupByMetadata = new();
             ColumnLabelToParam = new();
             FilterPredicates = string.Empty;
             OrderByColumns = new();
@@ -669,6 +685,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         break;
                     case QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME:
                         PaginationMetadata.RequestedHasNextPage = true;
+                        break;
+                    case QueryBuilder.GROUP_BY_FIELD_NAME:
+                        PaginationMetadata.RequestedGroupBy = true;
                         break;
                 }
             }
@@ -811,6 +830,191 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Processes the groupBy field and populates GroupByMetadata.
+        /// 
+        /// Steps:
+        /// 1. Extract the 'fields' argument.
+        ///    - For each field argument, add it as a column in the query and to GroupByMetadata.
+        /// 2. Process the selections (fields and aggregations).
+        /// 
+        /// Example:
+        /// groupBy(fields: [categoryid]) {
+        ///   fields {
+        ///     categoryid
+        ///   }
+        ///   aggregations {
+        ///     max(field: price, having: { gt: 43 }, distinct: true)
+        ///     max2: sum(field: price, having: { gt: 1 })
+        ///   }
+        /// }
+        /// </summary>
+        private void ProcessGroupByField(FieldNode groupByField, IMiddlewareContext ctx)
+        {
+            // Extract 'fields' argument
+            ArgumentNode? fieldsArg = groupByField.Arguments.FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME);
+            HashSet<string> fieldsInArgument = new();
+
+            if (fieldsArg is { Value: ListValueNode fieldsList })
+            {
+                foreach (EnumValueNode value in fieldsList.Items)
+                {
+                    string fieldName = value.Value;
+                    string columnName = MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumn) ? backingColumn : fieldName;
+
+                    GroupByMetadata.Fields[columnName] = new Column(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, SourceAlias);
+                    AddColumn(fieldName, backingColumn ?? fieldName);
+                    fieldsInArgument.Add(fieldName);
+                }
+            }
+
+            // Process selections
+            if (groupByField.SelectionSet == null)
+            {
+                return;
+            }
+
+            foreach (FieldNode field in groupByField.SelectionSet.Selections.Cast<FieldNode>())
+            {
+                switch (field.Name.Value)
+                {
+                    case QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME:
+                        GroupByMetadata.RequestedFields = true;
+
+                        if (field.SelectionSet?.Selections.Any(node => !fieldsInArgument.Contains(((FieldNode)node).Name.Value)) == true)
+                        {
+                            throw new DataApiBuilderException(
+                                "Groupby fields in selection must match the fields in the groupby argument.",
+                                HttpStatusCode.BadRequest,
+                                DataApiBuilderException.SubStatusCodes.BadRequest
+                            );
+                        }
+
+                        break;
+
+                    case QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME:
+                        GroupByMetadata.RequestedAggregations = true;
+                        ProcessAggregations(field, ctx);
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Processes the aggregations field in a GraphQL groupBy query and populates the GroupByMetadata.Aggregations property.
+        /// This method extracts the aggregation operations (e.g., SUM, AVG) and their corresponding fields from the GraphQL query,
+        /// and constructs AggregationColumn objects to represent these operations. It also handles any HAVING clauses associated
+        /// with the aggregations, parsing them into predicates.
+        /// 1. Extract the aggregation operation and field name from the GraphQL query.
+        /// 2. Construct an AggregationColumn object to represent the aggregation operation.
+        /// 3. Parse any HAVING clauses associated with the aggregation into predicates.
+        /// 4. Add the AggregationColumn object to the GroupByMetadata.Aggregations property.
+        /// Example:
+        /// aggregations
+        /// {
+        ///     max(field: price, having: {
+        ///     gt:43}, distinct: true)
+        ///     max2: sum(field:price, having: { gt:1 })
+        /// }
+        /// </summary>
+        /// <param name="aggregationsField">The FieldNode representing the aggregations field in the GraphQL query.</param>
+        /// <param name="ctx"> middleware context.</param>
+        private void ProcessAggregations(FieldNode aggregationsField, IMiddlewareContext ctx)
+        {
+            // If there are no selections in the aggregation field, exit early
+            if (aggregationsField.SelectionSet == null)
+            {
+                return;
+            }
+
+            // Retrieve the schema field from the GraphQL context
+            IObjectField schemaField = ctx.Selection.Field;
+
+            // Get the 'group by' field from the schema's entity type
+            IObjectField groupByField = GraphQLUtils.UnderlyingGraphQLEntityType(schemaField.Type)
+                .Fields[QueryBuilder.GROUP_BY_FIELD_NAME];
+
+            // Get the 'aggregations' field from the 'group by' entity type
+            IObjectField aggregationsObjectField = GraphQLUtils.UnderlyingGraphQLEntityType(groupByField.Type)
+                .Fields[QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME];
+
+            // Iterate through each selection in the aggregation field
+            foreach (ISelectionNode selection in aggregationsField.SelectionSet.Selections)
+            {
+                FieldNode field = (FieldNode)selection;
+
+                // Find the argument specifying which field to aggregate
+                ArgumentNode? fieldArg = field.Arguments
+                    .FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_ARG_NAME);
+
+                if (fieldArg != null)
+                {
+                    // Parse the aggregation type (e.g., max, min, avg, etc.)
+                    AggregationType operation = Enum.Parse<AggregationType>(field.Name.Value);
+
+                    // Extract the field name from the argument
+                    string fieldName = ((EnumValueNode)fieldArg.Value).Value;
+
+                    // Determine if the aggregation should be distinct
+                    bool distinct = field.Arguments
+                        .FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_DISTINCT_NAME)
+                        ?.Value.Value as bool? ?? false;
+
+                    string columnName = fieldName;
+
+                    // If there is a backing column name, use that instead
+                    if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumn))
+                    {
+                        columnName = backingColumn;
+                        fieldName = backingColumn;
+                    }
+
+                    // Use the field alias if provided, otherwise default to the operation name
+                    string alias = field.Alias?.Value ?? operation.ToString();
+
+                    // Construct an aggregation column representation
+                    AggregationColumn column = new(
+                        DatabaseObject.SchemaName,
+                        DatabaseObject.Name,
+                        columnName,
+                        operation,
+                        alias,
+                        distinct,
+                        SourceAlias
+                    );
+
+                    // Check if there is a 'having' clause associated with this aggregation
+                    ArgumentNode? havingArg = field.Arguments
+                        .FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_HAVING_NAME);
+
+                    List<Predicate> predicates = new();
+
+                    if (havingArg is not null)
+                    {
+                        // Extract filter conditions from the 'having' argument
+                        List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)havingArg.Value.Value!;
+
+                        // Retrieve the corresponding aggregation operation field from the schema
+                        IObjectField operationObjectField = GraphQLUtils.UnderlyingGraphQLEntityType(aggregationsObjectField.Type)
+                            .Fields[operation.ToString()];
+
+                        // Parse the filtering conditions and apply them to the aggregation
+                        predicates.Add(
+                            FieldFilterParser.Parse(
+                                ctx,
+                                operationObjectField.Arguments[QueryBuilder.GROUP_BY_AGGREGATE_FIELD_HAVING_NAME],
+                                column,
+                                filterFields,
+                                this.MakeDbConnectionParam
+                            )
+                        );
+                    }
+
+                    GroupByMetadata.Aggregations.Add(new AggregationOperation(column, having: predicates));
+                }
+            }
+        }
+
+        /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
         public uint? Limit()
@@ -831,12 +1035,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// so we find their backing column names before creating the orderBy list.
         /// All the remaining primary key columns are also added to ensure there are no tie breaks.
         /// </summary>
-        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields, IInputField orderByArgumentSchema)
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields, IInputField orderByArgumentSchema, bool isGroupByQuery = false)
         {
             if (_ctx is null)
             {
-                throw new ArgumentNullException("IMiddlewareContext should be initialized before " +
-                                                "trying to parse the orderBy argument.");
+                throw new ArgumentNullException("IMiddlewareContext should be initialized before trying to parse the orderBy argument.");
             }
 
             // Create list of primary key columns
@@ -869,33 +1072,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
 
+                // Validate that the orderBy field is present in the groupBy fields if it's a groupBy query
+                if (isGroupByQuery && !GroupByMetadata.Fields.ContainsKey(backingColumnName))
+                {
+                    throw new DataApiBuilderException(message: $"OrderBy field '{fieldName}' must be present in the groupBy fields.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
                 // remove pk column from list if it was specified as a
                 // field in orderBy
                 remainingPkCols.Remove(backingColumnName);
 
-                if (fieldValue.ToString() == $"{OrderBy.DESC}")
-                {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                             tableName: DatabaseObject.Name,
-                                                             columnName: backingColumnName,
-                                                             tableAlias: SourceAlias,
-                                                             direction: OrderBy.DESC));
-                }
-                else
-                {
-                    orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                             tableName: DatabaseObject.Name,
-                                                             columnName: backingColumnName,
-                                                             tableAlias: SourceAlias));
-                }
+                OrderBy direction = fieldValue.ToString() == $"{OrderBy.DESC}" ? OrderBy.DESC : OrderBy.ASC;
+                orderByColumnsList.Add(new OrderByColumn(
+                    tableSchema: DatabaseObject.SchemaName,
+                    tableName: DatabaseObject.Name,
+                    columnName: backingColumnName,
+                    tableAlias: SourceAlias,
+                    direction: direction));
             }
 
             foreach (string colName in remainingPkCols)
             {
-                orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
-                                                         tableName: DatabaseObject.Name,
-                                                         columnName: colName,
-                                                         tableAlias: SourceAlias));
+                orderByColumnsList.Add(new OrderByColumn(
+                    tableSchema: DatabaseObject.SchemaName,
+                    tableName: DatabaseObject.Name,
+                    columnName: colName,
+                    tableAlias: SourceAlias));
             }
 
             return orderByColumnsList;

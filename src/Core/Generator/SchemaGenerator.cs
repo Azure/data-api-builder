@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 // Check if the parent type is not in the entity mapping.
                 if (_entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(parentType.Pascalize()))
                 {
-                    _logger?.LogWarning($"{parentType.Pascalize()} is not available, If it is unexpected, add an entry of it, in the config file.");
+                    _logger?.LogWarning($"{parentType.Pascalize()} is not available, If it is unexpected, add an entity of it, in the config file.");
                     continue;
                 }
 

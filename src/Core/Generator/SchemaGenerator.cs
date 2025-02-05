@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             {
                 if (config.Entities == null || config.Entities.Count() == 0)
                 {
-                    throw new Exception("Define one or more entities to generate the schema in the config file. ");
+                    throw new Exception("Define one or more entities in the config file to generate the GraphQL schema.");
                 }
                 // Populate entity and singular name mapping if configuration is provided.
                 foreach (KeyValuePair<string, Entity> item in config.Entities)

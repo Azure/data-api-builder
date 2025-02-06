@@ -393,8 +393,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <exception cref="ArgumentException"></exception>
         public static IValueNode GetFieldNodeForGivenFieldName(List<ObjectFieldNode> objectFieldNodes, string fieldName)
         {
-            ObjectFieldNode? requiredFieldNode = objectFieldNodes
-                .Where(fieldNode => fieldNode.Name.Value.Equals(fieldName)).FirstOrDefault();
+            ObjectFieldNode? requiredFieldNode = objectFieldNodes.FirstOrDefault(fieldNode => fieldNode.Name.Value.Equals(fieldName));
             if (requiredFieldNode != null)
             {
                 return requiredFieldNode.Value;

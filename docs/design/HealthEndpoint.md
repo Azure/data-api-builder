@@ -135,7 +135,7 @@ In case `runtime.health.enabled` is true, then the comprehensive health report i
 ### Roles
 We focus on two aspects in terms of roles for health report. 
 + First is to check the roles present in the `runtime.health.roles` array in the config. We check if the incoming user has access to the comprehensive health check report i.e. they are in this array of allowed roles. For Health report of DB, we only need to check the first condition. 
-+ For Health report on entities (rest and graphql), we focus on the second configuration where we check if this incoming role is allowed to perform the `read` query on the DB. For this we focus on the entity section, where the incoming role should be added with `read` permissions. If so, we perform the health check for the entity and report according to results. Else, we show `status: Unhealthy` and `exception: Health could not be check for this entity as it does not have permissions to perform read query`.
++ For Health report on entities (rest and graphql), we focus on the second configuration where we check if this incoming role is allowed to perform the `read` query on the DB. For this we focus on the entity section, where the incoming role should be added with `read` permissions. If so, we perform the health check for the entity and report according to results. Else, we show `status: Unhealthy` and `exception: Health could not be checked for this entity as it does not have permissions to perform read query`.
 
 > NOTE that BASIC health does NOT include configuration.
 
@@ -280,7 +280,7 @@ Health Check result scenarios for different cases of Health check and GraphQL an
 
 * Roles (Global Health and Entity Health are both enabled)
   * Runtime Health check parameter, `runtime.health.roles` contains "UserRole". However entity permissions doesn't have read permissions on this entity
-    * Health for this entity is displayed with `status: Unhealthy` and `exception: Health could not be check for this entity as health check call does not have permissions to perform read query`. 
+    * Health for this entity is displayed with `status: Unhealthy` and `exception: Health could not be checked for this entity as it does not have permissions to perform read operation`. 
   
 **Cases where Global or Entity health and REST and GraphQL for that Entity is enabled or disabled**
 * Global Health Enabled

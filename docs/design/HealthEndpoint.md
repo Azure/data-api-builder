@@ -72,7 +72,7 @@ The runtime configuration would include details like `cache-ttl-sec` in case we 
 
 #### `data-source.health` Configuration
 
-The data source config parameters specify the threshold of ms it should come under to qualify as a healthy data source for DAB. We get the database type from the runtime parameters to get the query to run on the specific DB Type.
+The database type in the data source health config determine the threshold of ms it should come under to qualify as a healthy data source for DAB. We get the database type from the runtime parameters to get the query to run on the specific DB Type.
 
  > TODO: Handle Health Endpoint for multiple data-source configs in the upcoming enhancements
 

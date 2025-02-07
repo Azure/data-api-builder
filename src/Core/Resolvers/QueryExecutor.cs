@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -27,7 +26,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         where TConnection : DbConnection, new()
     {
         private const string TOTALDBEXECUTIONTIME = "TotalDbExecutionTime";
-        private static readonly object _httpContextLock = new();
+
+        // Lock used to add information to httpcontext
+        protected static readonly object _httpContextLock = new();
 
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
@@ -109,61 +110,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
             };
 
-            int retryAttempt = 0;
-
-            SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
-
-            TResult? result = default(TResult?);
-
-            result = _retryPolicy.Execute(() =>
-            {
-                retryAttempt++;
-                try
-                {
-                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
-                    if (!ConfigProvider.IsLateConfigured)
-                    {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
-                    }
-
-                    TResult? result = ExecuteQueryAgainstDb(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
-
-                    if (retryAttempt > 1)
-                    {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        int maxRetries = _maxRetryCount + 1;
-                        // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
-                    }
-
-                    return result;
-                }
-                catch (DbException e)
-                {
-                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
-                    {
-                        throw;
-                    }
-                    else
-                    {
-                        QueryExecutorLogger.LogError(
-                            exception: e,
-                            message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                            HttpContextExtensions.GetLoggerCorrelationId(httpContext),
-                            e.Message);
-
-                        // Throw custom DABException
-                        throw DbExceptionParser.Parse(e);
-                    }
-                }
-            });
-
-            return result;
+            return ExecuteQueryHelper(conn, sqltext, parameters, dataReaderHandler, httpContext, args, dataSourceName);
         }
 
         /// <inheritdoc/>
-        public virtual async Task<TResult?> ExecuteQueryAsync<TResult>(
+        public virtual async Task<TResult> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
@@ -189,53 +140,63 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
             TResult? result = default(TResult);
 
-            result = await _retryPolicyAsync.ExecuteAsync(async () =>
+            try
             {
-                retryAttempt++;
-                try
+                result = await _retryPolicyAsync.ExecuteAsync(async () =>
                 {
-                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
-                    if (!ConfigProvider.IsLateConfigured)
+                    retryAttempt++;
+                    try
                     {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                        if (!ConfigProvider.IsLateConfigured)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        }
+
+                        TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
+
+                        if (retryAttempt > 1)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            int maxRetries = _maxRetryCount + 1;
+                            // This implies that the request got successfully executed during one of retry attempts.
+                            QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
+                        }
+
+                        return result;
                     }
-
-                    TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
-
-                    if (retryAttempt > 1)
+                    catch (DbException e)
                     {
-                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                        int maxRetries = _maxRetryCount + 1;
-                        // This implies that the request got successfully executed during one of retry attempts.
-                        QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
-                    }
+                        if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                        {
+                            throw;
+                        }
+                        else
+                        {
+                            QueryExecutorLogger.LogError(
+                                exception: e,
+                                message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                                HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                                e.Message);
 
-                    return result;
-                }
-                catch (DbException e)
-                {
-                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
-                    {
-                        throw;
+                            // Throw custom DABException
+                            throw DbExceptionParser.Parse(e);
+                        }
                     }
-                    else
-                    {
-                        QueryExecutorLogger.LogError(
-                            exception: e,
-                            message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                            HttpContextExtensions.GetLoggerCorrelationId(httpContext),
-                            e.Message);
+                });
+            }
+            finally
+            {
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
 
-                        // Throw custom DABException
-                        throw DbExceptionParser.Parse(e);
-                    }
-                }
-            });
-
-            return result;
+            return result!;
         }
 
         /// <summary>
@@ -260,48 +221,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             Stopwatch queryExecutionTimer = new();
             queryExecutionTimer.Start();
+            await conn.OpenAsync();
+            DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+            TResult? result = default(TResult);
             try
             {
-                await conn.OpenAsync();
-                DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
-                TResult? result = default(TResult);
-                try
+                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
+                    await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                if (dataReaderHandler is not null && dbDataReader is not null)
                 {
-                    using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                        await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-                    if (dataReaderHandler is not null && dbDataReader is not null)
-                    {
-                        result = await dataReaderHandler(dbDataReader, args);
-                    }
-                    else
-                    {
-                        result = default(TResult);
-                    }
+                    result = await dataReaderHandler(dbDataReader, args);
                 }
-                catch (DbException e)
+                else
                 {
-                    string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                    QueryExecutorLogger.LogError(
-                        exception: e,
-                        message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                        correlationId,
-                        e.Message);
-                    throw DbExceptionParser.Parse(e);
+                    result = default(TResult);
                 }
-
-                return result;
+            }
+            catch (DbException e)
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                    correlationId,
+                    e.Message);
+                throw DbExceptionParser.Parse(e);
             }
             finally
             {
                 queryExecutionTimer.Stop();
                 AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
             }
+
+            return result;
         }
 
         /// <summary>
-        /// Prepares a database command for execution - given a TConnection
+        /// Prepares a database command for execution.
         /// </summary>
-        /// <param name="conn">TConnection object used to connect to database.</param>
+        /// <param name="conn">Connection object used to connect to database.</param>
         /// <param name="sqltext">Sql text to be executed.</param>
         /// <param name="parameters">The parameters used to execute the SQL text.</param>
         /// <param name="httpContext">Current user httpContext.</param>
@@ -315,27 +273,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName)
         {
             DbCommand cmd = conn.CreateCommand();
-            return PrepareSqlDbCommandHelper(cmd, sqltext, parameters, httpContext, dataSourceName);
-        }
+            cmd.CommandType = CommandType.Text;
 
-        /// <summary>
-        /// Prepares a database command for execution - given a SqlConnection
-        /// </summary>
-        /// <param name="conn">SqlConnection object used to connect to database.</param>
-        /// <param name="sqltext">Sql text to be executed.</param>
-        /// <param name="parameters">The parameters used to execute the SQL text.</param>
-        /// <param name="httpContext">Current user httpContext.</param>
-        /// <param name="dataSourceName">The name of the data source.</param>
-        /// <returns>A DbCommand object ready for execution.</returns>
-        public virtual DbCommand PrepareSqlDbCommand(
-            SqlConnection conn,
-            string sqltext,
-            IDictionary<string, DbConnectionParam> parameters,
-            HttpContext? httpContext,
-            string dataSourceName)
-        {
-            DbCommand cmd = conn.CreateCommand();
-            return PrepareSqlDbCommandHelper(cmd, sqltext, parameters, httpContext, dataSourceName);
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
+
+            cmd.CommandText = sessionParamsQuery + sqltext;
+            if (parameters is not null)
+            {
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
+                {
+                    DbParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return cmd;
         }
 
         /// <inheritdoc/>
@@ -350,60 +307,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             Stopwatch queryExecutionTimer = new();
             queryExecutionTimer.Start();
+            conn.Open();
+            DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
             try
             {
-                if (conn is SqlConnection)
+                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
+                    cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                if (dataReaderHandler is not null && dbDataReader is not null)
                 {
-                    // If connection is a SQLConnection
-                    SqlConnection? sqlConn = conn as SqlConnection;
-
-                    if (sqlConn != null)
-                    {
-                        // If connection is a SQLConnection and it is not null, we can extract the info message
-                        sqlConn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
-                        {
-                            // Log the statement ids returned by the SQL engine when we executed the batch.
-                            // This helps in correlating with SQL engine telemetry.
-
-                            // If the info message has an error code that matches the well-known codes used for returning statement id,
-                            // then we can be certain that the message contains no PII, and is safe to log unmodified.
-
-                            IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
-
-                            IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
-
-                            IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
-
-                            foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
-                            {
-                                // Add to request
-                            }
-                        };
-
-                        conn.Open();
-                        DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
-                        return ExecuteQueryAgainstDbHelper(cmd, dataReaderHandler, httpContext, args);
-
-                    }
-                    else
-                    {
-                        throw new System.Exception("TODO");
-                    }
-
+                    return dataReaderHandler(dbDataReader, args);
                 }
                 else
                 {
-                    // If connection is not an SQLConnection
-                    conn.Open();
-                    DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
-                    return ExecuteQueryAgainstDbHelper(cmd, dataReaderHandler, httpContext, args);
+                    return default(TResult);
                 }
             }
-            finally
+            catch (DbException e)
             {
-                queryExecutionTimer.Stop();
-                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                    correlationId,
+                    e.Message);
+                throw DbExceptionParser.Parse(e);
             }
         }
 
@@ -597,72 +525,158 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method that prepares a database command for execution
+        /// TODO
         /// </summary>
-        /// <param name="cmd">The initial command.</param>
-        /// <param name="sqltext">Sql text to be executed.</param>
-        /// <param name="parameters">The parameters used to execute the SQL text.</param>
-        /// <param name="httpContext">Current user httpContext.</param>
-        /// <param name="dataSourceName">The name of the data source.</param>
-        /// <returns>The same cmd command given, but ready for execution.</returns>
-        private DbCommand PrepareSqlDbCommandHelper(
-            DbCommand cmd,
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="conn"></param>
+        /// <param name="sqltext"></param>
+        /// <param name="parameters"></param>
+        /// <param name="dataReaderHandler"></param>
+        /// <param name="httpContext"></param>
+        /// <param name="args"></param>
+        /// <param name="dataSourceName"></param>
+        /// <returns></returns>
+        protected virtual TResult? ExecuteQueryHelper<TResult>(
+            TConnection conn,
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
-            HttpContext? httpContext,
-            string dataSourceName)
-        {
-            cmd.CommandType = CommandType.Text;
-
-            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
-            // at the database level.
-            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
-
-            cmd.CommandText = sessionParamsQuery + sqltext;
-            if (parameters is not null)
-            {
-                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
-                {
-                    DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
-                    PopulateDbTypeForParameter(parameterEntry, parameter);
-                    cmd.Parameters.Add(parameter);
-                }
-            }
-
-            return cmd;
-        }
-
-        private TResult? ExecuteQueryAgainstDbHelper<TResult>(
-            DbCommand cmd,
             Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
             HttpContext? httpContext,
-            List<string>? args = null)
+            List<string>? args,
+            string dataSourceName)
         {
+            int retryAttempt = 0;
+
+            SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
+
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
+            TResult? result = default(TResult?);
+
             try
             {
-                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                    cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                if (dataReaderHandler is not null && dbDataReader is not null)
+                result = _retryPolicy.Execute(() =>
                 {
-                    return dataReaderHandler(dbDataReader, args);
-                }
-                else
-                {
-                    return default(TResult);
-                }
+                    retryAttempt++;
+                    try
+                    {
+                        // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                        if (!ConfigProvider.IsLateConfigured)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        }
+
+                        TResult? result = ExecuteQueryAgainstDb(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
+
+                        if (retryAttempt > 1)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            int maxRetries = _maxRetryCount + 1;
+                            // This implies that the request got successfully executed during one of retry attempts.
+                            QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
+                        }
+
+                        return result;
+                    }
+                    catch (DbException e)
+                    {
+                        if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                        {
+                            throw;
+                        }
+                        else
+                        {
+                            QueryExecutorLogger.LogError(
+                                exception: e,
+                                message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                                HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                                e.Message);
+
+                            // Throw custom DABException
+                            throw DbExceptionParser.Parse(e);
+                        }
+                    }
+                });
             }
-            catch (DbException e)
+            finally
             {
-                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                QueryExecutorLogger.LogError(
-                    exception: e,
-                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                    correlationId,
-                    e.Message);
-                throw DbExceptionParser.Parse(e);
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
             }
+
+            return result;
+        }
+
+        protected virtual async Task<TResult?> ExecuteQueryHelperAsync<TResult>(
+            TConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            string dataSourceName,
+            HttpContext? httpContext = null,
+            List<string>? args = null)
+        {
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
+
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
+            TResult? result = default(TResult);
+            int retryAttempt = 0;
+
+            try
+            {
+                result = await _retryPolicyAsync.ExecuteAsync(async () =>
+                {
+                    retryAttempt++;
+                    try
+                    {
+                        // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                        if (!ConfigProvider.IsLateConfigured)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                        }
+
+                        TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
+
+                        if (retryAttempt > 1)
+                        {
+                            string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                            int maxRetries = _maxRetryCount + 1;
+                            // This implies that the request got successfully executed during one of retry attempts.
+                            QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
+                        }
+
+                        return result;
+                    }
+                    catch (DbException e)
+                    {
+                        if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                        {
+                            throw;
+                        }
+                        else
+                        {
+                            QueryExecutorLogger.LogError(
+                                exception: e,
+                                message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                                HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                                e.Message);
+
+                            // Throw custom DABException
+                            throw DbExceptionParser.Parse(e);
+                        }
+                    }
+                });
+            }
+            finally
+            {
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
+            }
+
+            return result;
         }
 
         /// <summary>

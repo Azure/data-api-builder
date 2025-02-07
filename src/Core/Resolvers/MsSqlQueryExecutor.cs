@@ -64,6 +64,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
+        private const string STATEMENTIDHEADER = "StatementID";
+
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
@@ -196,6 +198,118 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return _defaultAccessToken?.Token;
+        }
+
+        /// <inheritdoc/>
+        public override TResult ExecuteQuery<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
+            HttpContext? httpContext = null,
+            List<string>? args = null,
+            string dataSourceName = "")
+        {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+            }
+
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
+            {
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
+
+            using SqlConnection conn = new()
+            {
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+            };
+
+            // If connection is a SQLConnection and it is not null, we can extract the info message
+            conn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
+            {
+                // Log the statement ids returned by the SQL engine when we executed the batch.
+                // This helps in correlating with SQL engine telemetry.
+
+                // If the info message has an error code that matches the well-known codes used for returning statement id,
+                // then we can be certain that the message contains no PII, and is safe to log unmodified.
+
+                IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
+
+                IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
+
+                IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
+
+                foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
+                {
+                    // Add statementID to request
+                    AddStatementIDToMiddlewareContext(infoErrorMessageReceived);
+                }
+            };
+
+            TResult? result = ExecuteQueryHelper(conn, sqltext, parameters, dataReaderHandler, httpContext, args, dataSourceName);
+
+            if (result == null)
+            {
+                throw new Exception("TODO");
+            }
+
+            return result;
+        }
+
+        /// <inheritdoc/>
+        public override async Task<TResult> ExecuteQueryAsync<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            string dataSourceName,
+            HttpContext? httpContext = null,
+            List<string>? args = null)
+        {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+            }
+
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
+            {
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
+
+            using SqlConnection conn = new()
+            {
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+            };
+
+            // If connection is a SQLConnection and it is not null, we can extract the info message
+            conn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
+            {
+                // Log the statement ids returned by the SQL engine when we executed the batch.
+                // This helps in correlating with SQL engine telemetry.
+
+                // If the info message has an error code that matches the well-known codes used for returning statement id,
+                // then we can be certain that the message contains no PII, and is safe to log unmodified.
+
+                IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
+
+                IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
+
+                IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
+
+                foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
+                {
+                    // Add statementID to request
+                    AddStatementIDToMiddlewareContext(infoErrorMessageReceived);
+                }
+            };
+
+            TResult? result = await ExecuteQueryHelperAsync(conn, sqltext, parameters, dataReaderHandler, dataSourceName, httpContext, args);
+
+            if (result == null)
+            {
+                throw new Exception("TODO");
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -362,6 +476,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (parameterEntry.Value.SqlDbType is not null)
                 {
                     parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
+                }
+            }
+        }
+
+        private void AddStatementIDToMiddlewareContext(string statementId)
+        {
+            HttpContext? httpContext = HttpContextAccessor?.HttpContext;
+            if (httpContext != null)
+            {
+                // locking is because we could have multiple queries in a single http request and each query will be processed in parallel leading to concurrent access of the httpContext.Items.
+                lock (_httpContextLock)
+                {
+                    if (httpContext.Items.TryGetValue(STATEMENTIDHEADER, out object? currentValue) && currentValue is not null)
+                    {
+                        httpContext.Items[STATEMENTIDHEADER] = (string)currentValue + ";" + statementId;
+                    }
+                    else
+                    {
+                        httpContext.Items[STATEMENTIDHEADER] = statementId;
+                    }
                 }
             }
         }

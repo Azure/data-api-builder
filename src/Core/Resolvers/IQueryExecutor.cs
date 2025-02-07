@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <param name="dataSourceName">dataSourceName against which to run query. Can specify null or empty to run against default db.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
-        public Task<TResult?> ExecuteQueryAsync<TResult>(
+        public Task<TResult> ExecuteQueryAsync<TResult>(
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,

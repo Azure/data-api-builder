@@ -122,15 +122,13 @@ namespace Azure.DataApiBuilder.Core.Generator
                 List<JsonDocument> dataArray = await schemaGeneratorSampler.GetSampleAsync();
 
                 logger.LogInformation("{0} records collected as Sample", dataArray.Count);
-                if (dataArray.Count == 0)
-                {
-                    logger.LogError($"No data was sampled from Database: {dbContainer[0]} Container: {dbContainer[1]}. Please try a different sampling mode or provide different sampling options.");
-                    throw new ArgumentException($"No data was sampled from Database: {dbContainer[0]} Container: {dbContainer[1]}. Please try a different sampling mode or provide different sampling options.");
-                }
-
                 logger.LogInformation("GraphQL schema generation started.");
 
-                schema.AppendLine(SchemaGenerator.Generate(dataArray, dbContainer[1], config));
+                string generatedSchema = SchemaGenerator.Generate(dataArray, dbContainer[1], config, logger);
+                if (!string.IsNullOrEmpty(generatedSchema))
+                {
+                    schema.AppendLine(generatedSchema);
+                }
             }
 
             // Generate and return the GraphQL schema based on the sampled data.

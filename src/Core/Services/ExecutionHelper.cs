@@ -172,7 +172,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     DecimalType => fieldValue.GetDecimal(),
                     DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
                     DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
-                    LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
+                    HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
                     ByteArrayType => fieldValue.GetBytesFromBase64(),
                     BooleanType => fieldValue.GetBoolean(), // spec
                     UrlType => new Uri(fieldValue.GetString()!),

@@ -309,11 +309,9 @@ namespace Azure.DataApiBuilder.Service
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
                     {
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
-                                .WithMessage(thrownException.Message)
-                                .WithCode($"{thrownException.SubStatusCode}");
+                        return error.WithException(null)
+                            .WithMessage(thrownException.Message)
+                            .WithCode($"{thrownException.SubStatusCode}");
                     }
 
                     return error;

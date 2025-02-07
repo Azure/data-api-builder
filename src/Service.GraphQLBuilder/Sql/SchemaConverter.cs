@@ -12,7 +12,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using HotChocolate.Types.NodaTime;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
@@ -305,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
         /// <summary>
         /// Helper method to generate the list of directives for an entity's object type definition.
-        /// Generates and returns the authorize and model directives to be later added to the object's definition. 
+        /// Generates and returns the authorize and model directives to be later added to the object's definition.
         /// </summary>
         /// <param name="entityName">Name of the entity for whose object type definition, the list of directives are to be created.</param>
         /// <param name="configEntity">Entity definition.</param>
@@ -386,7 +385,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
                 DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
                 byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
-                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(LOCALTIME_TYPE, new LocalTimeType().ParseResult(value))),
+                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ParseResult(value))),
                 _ => throw new DataApiBuilderException(
                     message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",
                     statusCode: HttpStatusCode.InternalServerError,

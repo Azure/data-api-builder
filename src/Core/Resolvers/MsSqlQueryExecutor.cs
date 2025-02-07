@@ -86,6 +86,54 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Creates a SQLConnection to the data source of given name. This method also adds an event handler to
+        /// the connection's InfoMessage to extract the statement ID from the request and add it to httpcontext.
+        /// </summary>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>The SQLConnection</returns>
+        /// <exception cref="DataApiBuilderException">Exception thrown if datasource is not found.</exception>
+        public override SqlConnection CreateConnection(string dataSourceName)
+        {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+            }
+
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
+            {
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
+
+            SqlConnection conn = new()
+            {
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+            };
+
+            // If connection is a SQLConnection and it is not null, we can extract the info message
+            conn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
+            {
+                // Log the statement ids returned by the SQL engine when we executed the batch.
+                // This helps in correlating with SQL engine telemetry.
+
+                // If the info message has an error code that matches the well-known codes used for returning statement ID,
+                // then we can be certain that the message contains no PII.
+                IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
+
+                IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
+
+                IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
+
+                foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
+                {
+                    // Add statement ID to request
+                    AddStatementIDToMiddlewareContext(infoErrorMessageReceived);
+                }
+            };
+
+            return conn;
+        }
+
+        /// <summary>
         /// Configure during construction or a hot-reload scenario.
         /// </summary>
         private void ConfigureMsSqlQueryEecutor()
@@ -198,48 +246,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return _defaultAccessToken?.Token;
-        }
-
-        /// <inheritdoc/>
-        public override TResult ExecuteQuery<TResult>(
-            string sqltext,
-            IDictionary<string, DbConnectionParam> parameters,
-            Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
-            HttpContext? httpContext = null,
-            List<string>? args = null,
-            string dataSourceName = "")
-        {
-            using SqlConnection conn = CreateSQLConnection(dataSourceName);
-
-            TResult? result = ExecuteQueryHelper(conn, sqltext, parameters, dataReaderHandler, httpContext, args, dataSourceName);
-
-            if (result == null)
-            {
-                throw new DataApiBuilderException("Query execution failed. Query result is null", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.UnexpectedError);
-            }
-
-            return result;
-        }
-
-        /// <inheritdoc/>
-        public override async Task<TResult> ExecuteQueryAsync<TResult>(
-            string sqltext,
-            IDictionary<string, DbConnectionParam> parameters,
-            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
-            string dataSourceName,
-            HttpContext? httpContext = null,
-            List<string>? args = null)
-        {
-            using SqlConnection conn = CreateSQLConnection(dataSourceName);
-
-            TResult? result = await ExecuteQueryHelperAsync(conn, sqltext, parameters, dataReaderHandler, dataSourceName, httpContext, args);
-
-            if (result == null)
-            {
-                throw new DataApiBuilderException("Query execution failed. Query result is null", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.UnexpectedError);
-            }
-
-            return result;
         }
 
         /// <summary>
@@ -408,54 +414,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
                 }
             }
-        }
-
-        /// <summary>
-        /// Creates a SQLConnection to the data source of given name. This method also adds an event handler to
-        /// the connection's InfoMessage to extract the statement ID from the request and add it to httpcontext.
-        /// </summary>
-        /// <param name="dataSourceName">The name of the data source.</param>
-        /// <returns>The SQLConnection</returns>
-        /// <exception cref="DataApiBuilderException">Exception thrown if datasource is not found.</exception>
-        private SqlConnection CreateSQLConnection(string dataSourceName)
-        {
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
-            }
-
-            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
-            {
-                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
-            }
-
-            SqlConnection conn = new()
-            {
-                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
-            };
-
-            // If connection is a SQLConnection and it is not null, we can extract the info message
-            conn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
-            {
-                // Log the statement ids returned by the SQL engine when we executed the batch.
-                // This helps in correlating with SQL engine telemetry.
-
-                // If the info message has an error code that matches the well-known codes used for returning statement ID,
-                // then we can be certain that the message contains no PII.
-                IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
-
-                IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
-
-                IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
-
-                foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
-                {
-                    // Add statement ID to request
-                    AddStatementIDToMiddlewareContext(infoErrorMessageReceived);
-                }
-            };
-
-            return conn;
         }
 
         private void AddStatementIDToMiddlewareContext(string statementId)

@@ -72,7 +72,7 @@ The runtime configuration would include details like `cache-ttl-sec` in case we 
 
 #### `data-source.health` Configuration
 
-The database type in the data source health config determine the threshold of ms it should come under to qualify as a healthy data source for DAB. We get the database type from the runtime parameters to get the query to run on the specific DB Type.
+The database type in the data source health config determines the query that we should run on the data source. The time to run this query should come under the user specified threshold of ms to qualify as a healthy data source for DAB. We get the database type from the runtime parameters to get the query to run on the specific DB Type.
 
  > TODO: Handle Health Endpoint for multiple data-source configs in the upcoming enhancements
 
@@ -162,7 +162,7 @@ While running the health checks for entities, we need the BASE URL on which DAB 
 > Note: Current implementation we consider `http://localhost:5000` as the base URL. Need to track this, in case different. Everywhere in the document, using `baseUrl` in place of `http://localhost:5000`.
 
 #### Rest Query
-We take the base URL which is and append the REST path in the suffix. After this we get baseUrl/api. (Default Rest Path: /api)\
+We take the base URL and append the REST path in the suffix. After this we get baseUrl/api. (Default Rest Path: /api)\
 For each entity we have rest as a parameter in the config block as well in case the path of entity is different from its name. We build the entity REST path using `<entity-name>.rest.path ?? entityName`. This means if the path is given use that, else the entity name is the path to append to suffix.
 Further our call becomes ` baseUrl/api/usertable`. (Assuming the entity name is UserTable)
 
@@ -195,7 +195,7 @@ For each field we get the `field.type` object
 + Condition 1: If the `field.type.kind` is `SCALAR` then this is a primitive column name.
 + Condition 2: If the `field.type.kind` is `NON_NULL` then check if `field.type.ofType.kind` is `SCALAR`. 
 
-We add all those column names which satisfies either of these two conditions to the top `columnNames` array and finally use this to create the graphQL query.
+We add all those column names which satisfy either of these two conditions to the top `columnNames` array and finally use this to create the graphQL query.
 
 **GraphQL Query**\
 After getting column names for the entity we create the graphQL query payload 
@@ -279,7 +279,7 @@ Health Check result scenarios for different cases of Health check and GraphQL an
 > '_' means enabled/disabled (doesn't matter)
 
 * Roles (Global Health and Entity Health are both enabled)
-  * Runtime Health check parameter, `runtime.health.roles` contains "UserRole". However entity permissions doesn't have read permissions on this entity
+  * Runtime Health check parameter, `runtime.health.roles` contains "UserRole". However entity doesn't have read permissions for this role.
     * Health for this entity is displayed with `status: Unhealthy` and `exception: Health could not be checked for this entity as it does not have permissions to perform read operation`. 
   
 **Cases where Global or Entity health and REST and GraphQL for that Entity is enabled or disabled**
@@ -287,7 +287,7 @@ Health Check result scenarios for different cases of Health check and GraphQL an
   * Global GraphQL Enabled
     * Entity health ENABLED and Entity GraphQL ENABLED : Health is shown for this particular entity with `status: Healthy`.
     * Entity health DISABLED and Entity GraphQL ENABLED : GraphQL Health check `omitted` for this entity
-    * Entity health _ and Entity GraphQL DISABLED : GraphQL Health check shows `status: Unhealthy` and `exception: Health could not be check for this entity as it is disabled in config`. 
+    * Entity health _ and Entity GraphQL DISABLED : GraphQL Health check shows `status: Unhealthy` and `exception: Health could not be checked for this entity as it is disabled in config`. 
   
   * Global GraphQL Disabled
     * Entity health _ and Entity GraphQL _ : GraphQL Health checks are `omitted` from Health Report.

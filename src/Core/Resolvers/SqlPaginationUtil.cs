@@ -50,6 +50,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return CreatePaginationConnection(root, paginationMetadata, groupByMetadata).ToJsonDocument();
         }
 
+        private static string GenerateGroupByObjectFromResult(GroupByMetadata groupByMetadata, IEnumerable<JsonElement> rootEnumerated)
+        {
+            JsonArray groupByArray = new();
+            foreach (JsonElement element in rootEnumerated)
+            {
+                JsonObject fieldObject = new();
+                JsonObject aggregationObject = new();
+                JsonObject combinedObject = new();
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    if (groupByMetadata.Fields.ContainsKey(property.Name))
+                    {
+                        if (groupByMetadata.RequestedFields)
+                        {
+                            fieldObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
+                        }
+                    }
+                    else
+                    {
+                        aggregationObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
+                    }
+                }
+
+                combinedObject.Add(QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME, fieldObject);
+                combinedObject.Add(QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME, aggregationObject);
+                groupByArray.Add(combinedObject);
+            }
+
+            return JsonSerializer.Serialize(groupByArray);
+        }
+
         private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata, GroupByMetadata? groupByMetadata = null)
         {
             // Maintains the connection JSON object *Connection
@@ -105,35 +136,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            if (groupByMetadata is not null && (groupByMetadata.RequestedFields || groupByMetadata.RequestedAggregations))
+            if (groupByMetadata is not null && paginationMetadata.RequestedGroupBy == true)
             {
-                JsonArray groupByArray = new();
-                foreach (JsonElement element in rootEnumerated)
-                {
-                    JsonObject fieldObject = new();
-                    JsonObject aggregationObject = new();
-                    JsonObject combinedObject = new();
-                    foreach (JsonProperty property in element.EnumerateObject())
-                    {
-                        if (groupByMetadata.Fields.ContainsKey(property.Name))
-                        {
-                            if (groupByMetadata.RequestedFields)
-                            {
-                                fieldObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
-                            }
-                        }
-                        else
-                        {
-                            aggregationObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
-                        }
-                    }
 
-                    combinedObject.Add(QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME, fieldObject);
-                    combinedObject.Add("aggregations", aggregationObject);
-                    groupByArray.Add(combinedObject);
-                }
-
-                connection.Add(QueryBuilder.GROUP_BY_FIELD_NAME, JsonSerializer.Serialize(groupByArray));
+                connection.Add(QueryBuilder.GROUP_BY_FIELD_NAME, GenerateGroupByObjectFromResult(groupByMetadata, rootEnumerated));
             }
 
             if (paginationMetadata.RequestedEndCursor)

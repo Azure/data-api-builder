@@ -227,13 +227,12 @@ type PhoneNumber {
 
         /// <summary>
         /// Tests the <see cref="SchemaGenerator.Generate"/> method with an empty JSON array.
-        /// Ensures that the method correctly handles an empty input by throwing an appropriate exception.
         /// </summary>
         [TestMethod]
         public void TestEmptyJsonArray()
         {
             List<JsonDocument> jsonArray = new();
-            Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
+            Assert.AreEqual(string.Empty, SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
         /// <summary>

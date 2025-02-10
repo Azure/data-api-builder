@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
-        private const string STATEMENTIDHEADER = "StatementID";
+        private const string QUERYIDHEADER = "QueryIDs";
 
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -424,13 +424,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // locking is because we could have multiple queries in a single http request and each query will be processed in parallel leading to concurrent access of the httpContext.Items.
                 lock (_httpContextLock)
                 {
-                    if (httpContext.Items.TryGetValue(STATEMENTIDHEADER, out object? currentValue) && currentValue is not null)
+                    if (httpContext.Items.TryGetValue(QUERYIDHEADER, out object? currentValue) && currentValue is not null)
                     {
-                        httpContext.Items[STATEMENTIDHEADER] = (string)currentValue + ";" + statementId;
+                        httpContext.Items[QUERYIDHEADER] = (string)currentValue + ";" + statementId;
                     }
                     else
                     {
-                        httpContext.Items[STATEMENTIDHEADER] = statementId;
+                        httpContext.Items[QUERYIDHEADER] = statementId;
                     }
                 }
             }

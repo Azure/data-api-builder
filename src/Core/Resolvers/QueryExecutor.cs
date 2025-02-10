@@ -167,7 +167,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext? httpContext = null,
             List<string>? args = null)
         {
-
+            int retryAttempt = 0;
             using TConnection conn = CreateConnection(dataSourceName);
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
@@ -175,7 +175,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Stopwatch queryExecutionTimer = new();
             queryExecutionTimer.Start();
             TResult? result = default(TResult);
-            int retryAttempt = 0;
 
             try
             {

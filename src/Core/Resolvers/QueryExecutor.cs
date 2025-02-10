@@ -348,31 +348,39 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             Stopwatch queryExecutionTimer = new();
             queryExecutionTimer.Start();
-            conn.Open();
-            DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
-
             try
             {
-                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
-                    cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
-                if (dataReaderHandler is not null && dbDataReader is not null)
+                conn.Open();
+                DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+
+                try
                 {
-                    return dataReaderHandler(dbDataReader, args);
+                    using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
+                        cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                    if (dataReaderHandler is not null && dbDataReader is not null)
+                    {
+                        return dataReaderHandler(dbDataReader, args);
+                    }
+                    else
+                    {
+                        return default(TResult);
+                    }
                 }
-                else
+                catch (DbException e)
                 {
-                    return default(TResult);
+                    string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                    QueryExecutorLogger.LogError(
+                        exception: e,
+                        message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                        correlationId,
+                        e.Message);
+                    throw DbExceptionParser.Parse(e);
                 }
             }
-            catch (DbException e)
+            finally
             {
-                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                QueryExecutorLogger.LogError(
-                    exception: e,
-                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                    correlationId,
-                    e.Message);
-                throw DbExceptionParser.Parse(e);
+                queryExecutionTimer.Stop();
+                AddDbExecutionTimeToMiddlewareContext(queryExecutionTimer.ElapsedMilliseconds);
             }
         }
 

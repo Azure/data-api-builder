@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -116,8 +117,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         [MemberNotNull(nameof(OrderByColumns))]
         private void Init(IDictionary<string, object?> queryParams)
         {
-            IFieldSelection selection = _context.Selection;
-            ObjectType underlyingType = GraphQLUtils.UnderlyingGraphQLEntityType(selection.Field.Type);
+            ISelection selection = _context.Selection;
+            ObjectType underlyingType = selection.Field.Type.NamedType<ObjectType>();
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
@@ -127,10 +128,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (fieldNode is not null)
                 {
-                    Columns.AddRange(GenerateQueryColumns(fieldNode.SelectionSet!, _context.Document, SourceAlias));
+                    Columns.AddRange(GenerateQueryColumns(fieldNode.SelectionSet!, _context.Operation.Document, SourceAlias));
                 }
 
-                ObjectType realType = GraphQLUtils.UnderlyingGraphQLEntityType(underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type);
+                ObjectType realType = underlyingType.Fields[QueryBuilder.PAGINATION_FIELD_NAME].Type.NamedType<ObjectType>();
                 string entityName = MetadataProvider.GetEntityName(realType.Name);
                 EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
@@ -138,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Document, SourceAlias));
+                Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Operation.Document, SourceAlias));
                 string typeName = GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingType.Directives, out string? modelName) ?
                     modelName :
                     underlyingType.Name;

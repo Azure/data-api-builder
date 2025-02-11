@@ -16,7 +16,7 @@ using static Cli.Utils;
 namespace Cli
 {
     /// <summary>
-    /// Provides functionality for exporting GraphQL schemas, either by generating from a Azure Cosmos DB database or fetching from a GraphQL API.
+    /// Provides functionality for exporting GraphQL schemas, either by generating from an Azure Cosmos DB database or fetching from a GraphQL API.
     /// </summary>
     internal class Exporter
     {
@@ -44,10 +44,7 @@ namespace Cli
             }
 
             // Load the runtime configuration from the file
-            if (!loader.TryLoadConfig(
-                    runtimeConfigFile,
-                    out RuntimeConfig? runtimeConfig,
-                    replaceEnvVar: true) || runtimeConfig is null)
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
             {
                 logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
                 return false;
@@ -90,14 +87,20 @@ namespace Cli
         }
 
         /// <summary>
-        /// Exports the GraphQL schema either by generating it from a Azure Cosmos DB database or fetching it from a GraphQL API.
+        /// Exports the GraphQL schema either by generating it from an Azure Cosmos DB database or fetching it from a GraphQL API.
         /// </summary>
         /// <param name="options">The options for exporting, including sampling mode and schema file name.</param>
         /// <param name="runtimeConfig">The runtime configuration for the export process.</param>
         /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
+        /// <param name="loader">The loader for runtime configuration files.</param>
         /// <param name="logger">The logger instance for logging information and errors.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        private static async Task ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader, ILogger logger)
+        private static async Task ExportGraphQL(
+            ExportOptions options,
+            RuntimeConfig runtimeConfig,
+            IFileSystem fileSystem,
+            FileSystemRuntimeConfigLoader loader,
+            ILogger logger)
         {
             string schemaText;
             if (options.Generate)
@@ -146,12 +149,12 @@ namespace Cli
             try
             {
                 logger.LogInformation("Trying to fetch schema from DAB Service using HTTPS endpoint.");
-                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL: false);
+                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackUrl: false);
             }
             catch
             {
                 logger.LogInformation("Failed to fetch schema from DAB Service using HTTPS endpoint. Trying with HTTP endpoint.");
-                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackURL: true);
+                schemaText = GetGraphQLSchema(runtimeConfig, useFallbackUrl: true);
             }
 
             return schemaText;
@@ -161,34 +164,36 @@ namespace Cli
         /// Retrieves the GraphQL schema from the DAB service using either the HTTPS or HTTP endpoint based on the specified fallback option.
         /// </summary>
         /// <param name="runtimeConfig">The runtime configuration containing the GraphQL path and other settings.</param>
-        /// <param name="useFallbackURL">A boolean flag indicating whether to use the fallback HTTP endpoint. If false, the method attempts to use the HTTPS endpoint.</param>
-        internal virtual string GetGraphQLSchema(RuntimeConfig runtimeConfig, bool useFallbackURL = false)
+        /// <param name="useFallbackUrl">A boolean flag indicating whether to use the fallback HTTP endpoint. If false, the method attempts to use the HTTPS endpoint.</param>
+        internal virtual string GetGraphQLSchema(RuntimeConfig runtimeConfig, bool useFallbackUrl = false)
         {
-            HttpClient client;
-            if (!useFallbackURL)
-            {
-                client = new( // CodeQL[SM02185] Loading internal server connection
-                                                    new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
-                                                )
-                {
-                    BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLPath}")
-                };
-            }
-            else
-            {
-                client = new()
-                {
-                    BaseAddress = new Uri($"http://localhost:5000{runtimeConfig.GraphQLPath}")
-                };
-            }
+            HttpClient client = CreateIntrospectionClient(runtimeConfig.GraphQLPath, useFallbackUrl);
 
-            IntrospectionClient introspectionClient = new();
-            Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
+            Task<HotChocolate.Language.DocumentNode> response = IntrospectionClient.IntrospectServerAsync(client);
             response.Wait();
 
             HotChocolate.Language.DocumentNode node = response.Result;
 
             return node.ToString();
+        }
+
+        private static HttpClient CreateIntrospectionClient(string path, bool useFallbackUrl)
+        {
+            if (useFallbackUrl)
+            {
+                return new HttpClient { BaseAddress = new Uri($"http://localhost:5000{path}") };
+            }
+
+            // CodeQL[SM02185] Loading internal server connection
+            return new HttpClient(
+                new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback =
+                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                })
+            {
+                BaseAddress = new Uri($"https://localhost:5001{path}")
+            };
         }
 
         private static async Task<string> ExportGraphQLFromCosmosDB(ExportOptions options, RuntimeConfig runtimeConfig, ILogger logger)
@@ -219,6 +224,7 @@ namespace Cli
         /// <param name="options">The options containing the output directory and schema file name.</param>
         /// <param name="fileSystem">The file system abstraction for handling file operations.</param>
         /// <param name="content">The schema content to be written to the file.</param>
+        /// <param name="logger">The logger instance for logging information and errors.</param>
         private static void WriteSchemaFile(ExportOptions options, IFileSystem fileSystem, string content, ILogger logger)
         {
 

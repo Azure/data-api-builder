@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
-            return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+            return connectionSchemaField.Type.NamedType<ObjectType>().Fields[QueryBuilder.PAGINATION_FIELD_NAME];
         }
     }
 }

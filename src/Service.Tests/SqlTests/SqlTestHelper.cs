@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
@@ -155,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="groupByArray">groupByArray</param>
         /// <param name="expectedArray">expectedArray</param>
-        public static void AssertNumericAggregations(JsonElement groupByArray, JsonElement expectedArray)
+        public static void AssertNumericAggregations(JsonElement groupByArray, JsonElement expectedArray, bool isfieldsPresentInResponse = true, bool isAggregatesPresentInResponse = true)
         {
             // Assert: Ensure expected and actual are arrays
             Assert.AreEqual(JsonValueKind.Array, expectedArray.ValueKind);
@@ -170,21 +171,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Act: Iterate over each `groupBy` object in actual
             foreach (JsonElement groupByObject in groupByArray.EnumerateArray())
             {
-                // Assert: Ensure each groupBy object contains "aggregations"
-                Assert.IsTrue(groupByObject.TryGetProperty("aggregations", out JsonElement aggregations), "Aggregations object not found.");
-                Assert.AreEqual(JsonValueKind.Object, aggregations.ValueKind);
+                // Create a combined dictionary and populate it with fields first
+                Dictionary<string, JsonElement> combinedDictionary = new();
 
-                // Convert the aggregations JSON into a dictionary
-                Dictionary<string, JsonElement> actualAggregations = aggregations.EnumerateObject()
-                    .ToDictionary(prop => prop.Name, prop => prop.Value);
+                if (isfieldsPresentInResponse)
+                {
+                    Assert.IsTrue(groupByObject.TryGetProperty("fields", out JsonElement fields), "Fields object not found.");
+                    Assert.AreEqual(JsonValueKind.Object, fields.ValueKind);
+
+                    // Add fields to the combined dictionary
+                    foreach (JsonProperty field in fields.EnumerateObject())
+                    {
+                        combinedDictionary[field.Name] = field.Value;
+                    }
+                }
+
+                if (isAggregatesPresentInResponse)
+                {
+                    Assert.IsTrue(groupByObject.TryGetProperty(QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME, out JsonElement aggregations), "Aggregations object not found.");
+                    Assert.AreEqual(JsonValueKind.Object, aggregations.ValueKind);
+
+                    // Add aggregations to the combined dictionary
+                    foreach (JsonProperty aggregation in aggregations.EnumerateObject())
+                    {
+                        combinedDictionary[aggregation.Name] = aggregation.Value;
+                    }
+                }
 
                 // Convert actual aggregations and expectedList[index] to strings
-                string actualAggregationsString = JsonSerializer.Serialize(actualAggregations);
+                string resultString = JsonSerializer.Serialize(combinedDictionary);
                 string expectedAggregationsString = JsonSerializer.Serialize(expectedList[index]);
 
                 // Check if expected key-value pairs exist in actual aggregations
-                Assert.IsTrue(JsonStringsDeepEqual(expectedAggregationsString, actualAggregationsString),
-                    "Expected values did not match with any aggregations object in groupBy.");
+                Assert.IsTrue(JsonStringsDeepEqual(expectedAggregationsString, resultString),
+                    "GroupBy result did not match expected result.");
 
                 index++;
             }

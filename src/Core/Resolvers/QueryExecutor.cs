@@ -93,6 +93,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null,
             string dataSourceName = "")
         {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+            }
+
             using TConnection conn = CreateConnection(dataSourceName);
 
             int retryAttempt = 0;
@@ -158,6 +163,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null)
         {
             int retryAttempt = 0;
+
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+            }
+
             using TConnection conn = CreateConnection(dataSourceName);
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
@@ -219,11 +230,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <exception cref="DataApiBuilderException">Exeption thrown if the data source could not be found</exception>
         public virtual TConnection CreateConnection(string dataSourceName)
         {
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
-            }
-
             if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
             {
                 throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);

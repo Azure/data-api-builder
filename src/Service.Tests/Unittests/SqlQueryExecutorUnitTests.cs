@@ -174,6 +174,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
+            queryExecutor.Setup(x => x.CreateConnection(
+               It.IsAny<string>())).CallBase();
+
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
@@ -279,6 +282,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, handler);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+
+            queryExecutor.Setup(x => x.CreateConnection(
+               It.IsAny<string>())).CallBase();
+
             queryExecutor.Setup(x => x.PrepareDbCommand(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),

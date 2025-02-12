@@ -94,11 +94,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <exception cref="DataApiBuilderException">Exception thrown if datasource is not found.</exception>
         public override SqlConnection CreateConnection(string dataSourceName)
         {
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
-            }
-
             if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
             {
                 throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);

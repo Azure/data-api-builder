@@ -429,7 +429,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
                         catch
                         {
-                            // TODO: Log error casting current value to string
+                            QueryExecutorLogger.LogWarning("Could not cast query identifying ID to string. The ID was not added to httpcontext");
                             return;
                         }
                     }

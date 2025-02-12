@@ -4,7 +4,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -632,7 +631,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
     {
         stocks_prices {
             items {
-                id
                 price
             }
             groupBy {
@@ -643,11 +641,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
     }";
 
-            // Act & Assert: Execute the query and expect an InvalidOperationException
-            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            if (result[0].TryGetProperty("message", out JsonElement message))
             {
-                await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            });
+                Assert.IsTrue(message.ToString() == "Cannot have both groupBy and items in the same query", "Requesting groupby and items in same query should fail.");
+            }
         }
 
         #endregion

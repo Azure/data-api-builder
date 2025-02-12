@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using static System.Text.Json.JsonElement;
 
 namespace Azure.DataApiBuilder.Core.Generator
@@ -18,6 +19,9 @@ namespace Azure.DataApiBuilder.Core.Generator
     {
         // Azure Cosmos DB reserved properties, these properties will be ignored in the schema generation as they are not user-defined properties.
         private readonly List<string> _cosmosDbReservedProperties = new() { "_ts", "_etag", "_rid", "_self", "_attachments" };
+
+        // Logger instance for logging messages.
+        private readonly ILogger? _logger;
 
         // Maps GraphQL entities to their corresponding attributes.
         private Dictionary<string, HashSet<AttributeObject>> _attrMapping = new();
@@ -35,19 +39,25 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="data">A list of JSON documents to be used to generate the schema.</param>
         /// <param name="containerName">The name of the Azure Cosmos DB container which is used to generate the GraphQL schema.</param>
         /// <param name="config">Optional configuration that maps GraphQL entity names to their singular forms.</param>
-        private SchemaGenerator(List<JsonDocument> data, string containerName, RuntimeConfig? config)
+        /// <param name="logger">Optional Logger</param>
+        private SchemaGenerator(List<JsonDocument> data, string containerName, RuntimeConfig? config, ILogger? logger)
         {
+            this._logger = logger;
+
             this._data = data;
             this._containerName = containerName;
             if (config != null)
             {
+                if (config.Entities == null || config.Entities.Count() == 0)
+                {
+                    throw new Exception("Define one or more entities in the config file to generate the GraphQL schema.");
+                }
                 // Populate entity and singular name mapping if configuration is provided.
                 foreach (KeyValuePair<string, Entity> item in config.Entities)
                 {
                     _entityAndSingularNameMapping.Add(item.Value.GraphQL.Singular.Pascalize(), item.Key);
                 }
             }
-
         }
 
         /// <summary>
@@ -56,19 +66,29 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="jsonData">A list of JSON documents to generate the schema from.</param>
         /// <param name="containerName">The name of the Azure Cosmos DB container.</param>
         /// <param name="config">Optional configuration that maps GraphQL entity names to their singular forms.</param>
+        /// <param name="logger">Optional Logger</param>
         /// <returns>A string representing the generated GraphQL schema.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the JSON data is empty or the container name is null or empty.</exception>
-        public static string Generate(List<JsonDocument> jsonData, string containerName, RuntimeConfig? config = null)
+        public static string Generate(List<JsonDocument> jsonData, string containerName, RuntimeConfig? config = null, ILogger? logger = null)
         {
             // Validate input parameters.
-            if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
+            if (string.IsNullOrEmpty(containerName))
             {
-                throw new InvalidOperationException("There must be at least one JSON object and Container Name can not be blank");
+                throw new InvalidOperationException("Container name cannot be blank");
+            }
+
+            if (jsonData == null || jsonData.Count == 0)
+            {
+                logger?.LogWarning($"No JSON data found to generate schema, from Container: {containerName}");
+                return string.Empty;
             }
 
             // Create an instance of SchemaGenerator and generate the schema.
-            return new SchemaGenerator(jsonData, containerName.Singularize(), config)
-                        .ConvertJsonToGQLSchema();
+            return new SchemaGenerator(jsonData,
+                        containerName.Singularize(),
+                        config,
+                        logger)
+                  .ConvertJsonToGQLSchema();
         }
 
         /// <summary>
@@ -144,6 +164,11 @@ namespace Azure.DataApiBuilder.Core.Generator
                 sb.AppendLine("}");
             }
 
+            if (sb.Length == 0)
+            {
+                _logger?.LogWarning("Generated GraphQL schema is empty.");
+            }
+
             return sb.ToString();
         }
 
@@ -165,6 +190,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 // Check if the parent type is not in the entity mapping.
                 if (_entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(parentType.Pascalize()))
                 {
+                    _logger?.LogWarning($"{parentType.Pascalize()} is not available, If it is unexpected, add an entity of it, in the config file.");
                     continue;
                 }
 

@@ -159,7 +159,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             paginationMetadata.Structure!.EntityName,
                             paginationMetadata.Structure!.DatabaseObject.SchemaName,
                             paginationMetadata.Structure!.DatabaseObject.Name,
-                            paginationMetadata.Structure!.MetadataProvider));
+                            paginationMetadata.Structure!.MetadataProvider,
+                            paginationMetadata.RequestedGroupBy));
                 }
             }
 
@@ -209,7 +210,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = "",
             string schemaName = "",
             string tableName = "",
-            ISqlMetadataProvider? sqlMetadataProvider = null)
+            ISqlMetadataProvider? sqlMetadataProvider = null,
+            bool isGroupByQuery = false)
         {
             List<NextLinkField> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -217,9 +219,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // in the worst case for this function. If list is used
             // we will have in the worst case quadratic runtime.
             HashSet<string> remainingKeys = new();
-            foreach (string key in primaryKey)
+
+            if (!isGroupByQuery)
             {
-                remainingKeys.Add(key);
+                foreach (string key in primaryKey)
+                {
+                    remainingKeys.Add(key);
+                }
             }
 
             // must include all orderByColumns to maintain
@@ -368,19 +374,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // if any primary keys are not contained in after's column names we throw exception
                 List<string> primaryKeys = paginationMetadata.Structure!.PrimaryKey();
 
-                foreach (string pk in primaryKeys)
+                if (!paginationMetadata.RequestedGroupBy)
                 {
-                    // REST calls this function with a non null sqlMetadataProvider
-                    // which will get the exposed name for safe messaging in the response.
-                    // Since we are looking for primary keys we expect these columns to
-                    // exist.
-                    string exposedFieldName = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
-                    if (!exposedFieldNameToBackingColumn.ContainsKey(exposedFieldName))
+                    // primary key not valid check for groupby ordering.
+                    foreach (string pk in primaryKeys)
                     {
-                        throw new DataApiBuilderException(
-                            message: $"Pagination token is not well formed because it is missing an expected field: {exposedFieldName}",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        // REST calls this function with a non null sqlMetadataProvider
+                        // which will get the exposed name for safe messaging in the response.
+                        // Since we are looking for primary keys we expect these columns to
+                        // exist.
+                        string exposedFieldName = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
+                        if (!exposedFieldNameToBackingColumn.ContainsKey(exposedFieldName))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Pagination token is not well formed because it is missing an expected field: {exposedFieldName}",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
                     }
                 }
 

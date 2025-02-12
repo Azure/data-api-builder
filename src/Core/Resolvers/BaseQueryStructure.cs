@@ -1,11 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -185,7 +187,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (itemsField != null && groupByField != null)
             {
                 // This is temporary and iteratively we will allow both items and groupby in same query.
-                throw new InvalidOperationException("Cannot have both groupBy and items in the same query");
+                throw new DataApiBuilderException(
+                    message: "Cannot have both groupBy and items in the same query",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             return groupByField is null ? itemsField : groupByField;

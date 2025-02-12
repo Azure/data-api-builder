@@ -277,9 +277,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 propertyValue = default;
                 return false;
             }
-            else if (context.Path is NamePathSegment namePathSegment && namePathSegment.Parent is NamePathSegment parentSegment && parentSegment.Name.Value == "aggregations" &&
-                parentSegment.Parent?.Parent is NamePathSegment grandParentSegment && grandParentSegment.Name.Value.StartsWith("groupBy", StringComparison.OrdinalIgnoreCase))
+            else if (context.Path is NamePathSegment namePathSegment && namePathSegment.Parent is NamePathSegment parentSegment && parentSegment.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME &&
+                parentSegment.Parent?.Parent is NamePathSegment grandParentSegment && grandParentSegment.Name.Value.StartsWith(QueryBuilder.GROUP_BY_FIELD_NAME, StringComparison.OrdinalIgnoreCase))
             {
+                // verify that current selection is part of a groupby query and within that an aggregation and then get the key which would be the operation name or its alias (eg: max, max_price etc)
                 string propertyName = namePathSegment.Name.Value;
                 return parent.TryGetProperty(propertyName, out propertyValue);
             }

@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -618,6 +619,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             // Execute the test for the SQL query
             await TestSupportForGroupByNoAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check that an exception is thrown when both items and groupBy are present in the same query.
+        /// </summary>
+        [TestMethod]
+        public async Task TestInvalidQueryWithItemsAndGroupBy()
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            items {
+                id
+                price
+            }
+            groupBy {
+                aggregations {
+                    sum_price: sum(field: price)
+                }
+            }
+        }
+    }";
+
+            // Act & Assert: Execute the query and expect an InvalidOperationException
+            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
+            {
+                await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            });
         }
 
         #endregion

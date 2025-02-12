@@ -502,7 +502,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (orderByObject is not null)
                 {
-                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME]);
+                    OrderByColumns = ProcessGqlOrderByArg((List<ObjectFieldNode>)orderByObject, queryArgumentSchemas[QueryBuilder.ORDER_BY_FIELD_NAME], isGroupByQuery);
                 }
             }
 
@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (PaginationMetadata.RequestedEndCursor)
                 {
-                    AddColumnsForEndCursor();
+                    AddColumnsForEndCursor(isGroupByQuery);
                 }
 
                 if (PaginationMetadata.RequestedHasNextPage || PaginationMetadata.RequestedEndCursor)
@@ -868,7 +868,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // Process selections
-            if (groupByField.SelectionSet == null)
+            if (groupByField.SelectionSet is null)
             {
                 return;
             }
@@ -1093,13 +1093,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     direction: direction));
             }
 
-            foreach (string colName in remainingPkCols)
+            if (!isGroupByQuery)
             {
-                orderByColumnsList.Add(new OrderByColumn(
-                    tableSchema: DatabaseObject.SchemaName,
-                    tableName: DatabaseObject.Name,
-                    columnName: colName,
-                    tableAlias: SourceAlias));
+                // primary key columns to only be used for pagination if not a groupby query
+                // TODO: do we need to include primary keys in order by if not specified by user?
+                foreach (string colName in remainingPkCols)
+                {
+                    orderByColumnsList.Add(new OrderByColumn(
+                        tableSchema: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        columnName: colName,
+                        tableAlias: SourceAlias));
+                }
             }
 
             return orderByColumnsList;
@@ -1136,15 +1141,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// and order by columns to the list of columns in the select clause.
         /// When adding to the columns of the select clause, we make sure to use exposed column names as the label.
         /// </summary>
-        private void AddColumnsForEndCursor()
+        private void AddColumnsForEndCursor(bool isGroupByQuery = false)
         {
-            // add the primary keys in the selected columns if they are missing
-            IEnumerable<string> primaryKeyExtraColumns = PrimaryKey().Except(Columns.Select(c => c.ColumnName));
-
-            foreach (string column in primaryKeyExtraColumns)
+            if (!isGroupByQuery)
             {
-                MetadataProvider.TryGetExposedColumnName(EntityName, column, out string? exposedColumnName);
-                AddColumn(column, labelName: exposedColumnName!);
+                // for groupby queries we cannot order by primary key as primary key may not be selected. has to only be with orderby.
+                // add the primary keys in the selected columns if they are missing
+                IEnumerable<string> primaryKeyExtraColumns = PrimaryKey().Except(Columns.Select(c => c.ColumnName));
+
+                foreach (string column in primaryKeyExtraColumns)
+                {
+                    MetadataProvider.TryGetExposedColumnName(EntityName, column, out string? exposedColumnName);
+                    AddColumn(column, labelName: exposedColumnName!);
+                }
             }
 
             // Add any other left over orderBy columns to the select clause apart from those

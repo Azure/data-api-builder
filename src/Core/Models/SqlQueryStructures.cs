@@ -85,12 +85,12 @@ public class AggregationColumn : Column
     /// <summary>
     /// Alias for the aggregation operation.
     /// </summary>
-    public string Alias { get; set; }
+    public string OperationAlias { get; set; }
 
     /// <summary>
     /// Whether to apply DISTINCT to the aggregation
     /// </summary>
-    public bool Distinct { get; set; }
+    public bool IsDistinct { get; set; }
 
     public AggregationColumn(string tableSchema,
                             string tableName,
@@ -102,8 +102,8 @@ public class AggregationColumn : Column
         : base(tableSchema, tableName, columnName, tableAlias)
     {
         this.Type = type;
-        this.Alias = alias;
-        this.Distinct = distinct;
+        this.OperationAlias = alias;
+        this.IsDistinct = distinct;
     }
 }
 

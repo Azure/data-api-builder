@@ -2051,6 +2051,7 @@ query {
             JsonElement expectedArray = expectedDocument.RootElement;
             SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isAggregatesPresentInResponse: false);
         }
+
         #endregion
 
         #region Negative Tests

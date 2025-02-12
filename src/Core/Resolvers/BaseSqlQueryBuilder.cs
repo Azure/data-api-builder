@@ -188,8 +188,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 columnName = $"{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
             }
 
-            columnName = column.Distinct ? $"DISTINCT ({columnName})" : columnName;
-            string appendAlias = useAlias ? $" AS {QuoteIdentifier(column.Alias)}" : string.Empty;
+            columnName = column.IsDistinct ? $"DISTINCT ({columnName})" : columnName;
+            string appendAlias = useAlias ? $" AS {QuoteIdentifier(column.OperationAlias)}" : string.Empty;
             return $"{column.Type.ToString()}({columnName}) {appendAlias}";
         }
 

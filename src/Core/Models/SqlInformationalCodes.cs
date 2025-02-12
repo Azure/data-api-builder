@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Core.Models
         /// <remarks>
         /// Text in summary is copied verbatim from the engine definition.
         /// </remarks>
-        POLARIS_QUERY_IDENTIFIER = 15806,
+        FABRIC_QUERY_EXECUTOR_REQUEST_IDENTIFIER = 15806,
 
         /// <summary>
         /// Prints statement ID for supportability purposes. If a non-distributed query hits an issue, it'd be helpful if the customer could share the statement id.
@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Core.Models
         /// <remarks>
         /// Text in summary is copied verbatim from the engine definition.
         /// </remarks>
-        DW_TRIDENT_QUERY_IDENTIFIER = 24528,
+        DW_FABRIC_QUERY_IDENTIFIER = 24528,
 
     }
 }

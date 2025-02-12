@@ -232,7 +232,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
             {
-                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+                throw new DataApiBuilderException(
+                    "Query execution failed. Could not find datasource to execute query against",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
             TConnection conn = new()

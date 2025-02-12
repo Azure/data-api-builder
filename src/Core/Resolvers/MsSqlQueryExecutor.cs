@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
             };
 
-            // If connection is a SQLConnection and it is not null, we can extract the info message
+            // Extract info message from SQLConnection
             conn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
             {
                 // Log the statement ids returned by the SQL engine when we executed the batch.
@@ -421,7 +421,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (httpContext.Items.TryGetValue(QUERYIDHEADER, out object? currentValue) && currentValue is not null)
                     {
-                        httpContext.Items[QUERYIDHEADER] = (string)currentValue + ";" + statementId;
+                        string currentStringVal = string.Empty;
+                        try
+                        {
+                            currentStringVal = (string)currentValue;
+                            httpContext.Items[QUERYIDHEADER] = currentStringVal + ";" + statementId;
+                        }
+                        catch
+                        {
+                            // TODO: Log error casting current value to string
+                            return;
+                        }
                     }
                     else
                     {

@@ -10,6 +10,7 @@ using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
@@ -397,6 +398,40 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.IsTrue(context.Items.ContainsKey(TOTAL_DB_EXECUTION_TIME), "HttpContext object must contain the total db execution time after execution of a query");
             Assert.IsTrue(stopwatch.ElapsedMilliseconds >= (long)context.Items[TOTAL_DB_EXECUTION_TIME], "The execution time stored in http context must be valid.");
+        }
+
+        /// <summary>
+        /// Test to validate whether we are adding an info message handler when adding the connection
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void TestInfoMessageHandlerIsAdded()
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            FileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+            EventHandler handler = null;
+            Mock<MsSqlQueryExecutor> queryExecutor
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object, handler);
+
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+
+            // Call the actual CreateConnection method.
+            queryExecutor.Setup(x => x.CreateConnection(
+                It.IsAny<string>())).CallBase();
+
+            SqlConnection conn = queryExecutor.Object.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+
+            FieldInfo eventField = typeof(SqlConnection).GetField("InfoMessage", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            MulticastDelegate eventDelegate = (MulticastDelegate)eventField.GetValue(conn);
+
+            Delegate[] handlers = eventDelegate.GetInvocationList();
+
+            Assert.IsTrue(handlers.Length != 0);
         }
 
         /// <summary>

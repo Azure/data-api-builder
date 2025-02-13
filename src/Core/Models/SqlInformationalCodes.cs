@@ -7,12 +7,10 @@ namespace Azure.DataApiBuilder.Core.Models
     {
 
         /// <summary>
-        /// Prints statement ID, query hash and distributed request ID for development purposes.
+        /// MsSQL information code that contains the statement ID, query hash and
+        /// distributed request ID. This information can be used for development purposes.
         /// </summary>
-        /// <remarks>
-        /// Text in summary is copied verbatim from the engine definition.
-        /// </remarks>
-        FABRIC_QUERY_EXECUTOR_REQUEST_IDENTIFIER = 15806,
+        MSSQL_STATEMENT_ID_INFORMATION_CODE = 15806,
 
         /// <summary>
         /// Prints statement ID for supportability purposes. If a non-distributed query hits an issue, it'd be helpful if the customer could share the statement id.

@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -9,26 +8,24 @@ namespace Azure.DataApiBuilder.Product;
 
 public static class VersionChecker
 {
-    private const string PackageName = "Microsoft.DataApiBuilder";
-    private const string NuGetApiUrl = "https://api.nuget.org/v3-flatcontainer/{0}/index.json";
+    private const string NuGetApiUrl = "https://api.nuget.org/v3-flatcontainer/Microsoft.DataApiBuilder/index.json";
 
-    public static (string? LatestVersion, string? CurrentVersion) GetVersions()
+    public static void GetVersions(out string? latestVersion, out string? currentVersion)
     {
-        var latestVersion = FetchLatestNuGetVersion();
-        var currentVersion = GetCurrentVersionFromAssembly(Assembly.GetExecutingAssembly());
-        return (latestVersion, currentVersion);
+        latestVersion = FetchLatestNuGetVersion();
+        currentVersion = GetCurrentVersionFromAssembly(Assembly.GetExecutingAssembly());
     }
 
     private static string? FetchLatestNuGetVersion()
     {
         try
         {
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) }; 
-            var url = string.Format(NuGetApiUrl, PackageName.ToLower());
-            var versionData = httpClient.GetFromJsonAsync<NuGetVersionResponse>(url).GetAwaiter().GetResult();
+            using HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+            NuGetVersionResponse? versionData = httpClient.GetFromJsonAsync<NuGetVersionResponse>(NuGetApiUrl)
+                .GetAwaiter().GetResult();
 
             return versionData?.Versions
-                ?.Where(v => !v.Contains("-rc"))
+                ?.Where(version => !version.Contains("-rc"))
                 .Max(); // Get the latest stable version
         }
         catch
@@ -39,7 +36,7 @@ public static class VersionChecker
 
     private static string? GetCurrentVersionFromAssembly(Assembly assembly)
     {
-        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         return !string.IsNullOrEmpty(version) ? version.Split('+')[0] : assembly.GetName().Version?.ToString();
     }
 

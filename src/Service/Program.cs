@@ -28,10 +28,10 @@ namespace Azure.DataApiBuilder.Service
         public static void Main(string[] args)
         {
             // Compare current version of DAB with latest (non-rc) version in NuGet. 
-            var (latestVersion, currentVersion) = await Azure.DataApiBuilder.Product.VersionChecker.GetVersionsAsync();
+            VersionChecker.GetVersions(out string? latestVersion, out string? currentVersion);
             if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
             {
-                Console.Error.WriteLine("A newer version of Data API builder is available. {currentVersion} -> {latestVersion}");
+                Console.Error.WriteLine($"A newer version of Data API builder is available. {currentVersion} -> {latestVersion}");
             }
 
             if (!ValidateAspNetCoreUrls())

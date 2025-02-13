@@ -1939,15 +1939,20 @@ query {
         [TestMethod]
         public async Task TestSupportForHavingAggregation(string msSqlQuery)
         {
-            string graphQLQueryName = "stocks_prices";
+            string graphQLQueryName = "publishers";
             string graphQLQuery = @"
     {
-        stocks_prices {
-            groupBy {
-                aggregations {
-                    sum_price: sum(field: price, having:{ gt: 50 })
-                }
+        publishers
+        {
+        groupBy
+        {
+            aggregations
+            {
+            max(field: id, having:  {
+                gt: 2346
+            })
             }
+        }
         }
     }";
 

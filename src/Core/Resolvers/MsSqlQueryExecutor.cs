@@ -421,11 +421,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (httpContext.Items.TryGetValue(QUERYIDHEADER, out object? currentValue) && currentValue is not null)
                     {
-                        string currentStringVal = string.Empty;
                         try
                         {
-                            currentStringVal = (string)currentValue;
-                            httpContext.Items[QUERYIDHEADER] = currentStringVal + ";" + statementId;
+                            httpContext.Items[QUERYIDHEADER] = (string)currentValue + ";" + statementId;
                         }
                         catch
                         {

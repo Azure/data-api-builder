@@ -424,18 +424,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForAggregationsWithAliases()
         {
             string msSqlQuery = @"
-                SELECT 
-                    MAX(categoryid) AS max, 
-                    MAX(price) AS max_price,
-                    MIN(price) AS min_price,
-                    AVG(price) AS avg_price,
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' + N'""max"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max]), 'json'), 'null') + ',' +
+        N'""max_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max_price]), 'json'), 'null') + ',' +
+        N'""min_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [min_price]), 'json'), 'null') + ',' +
+        N'""avg_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [avg_price]), 'json'), 'null') + ',' +
+        N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + '}', ', '
+    ) + ']', '[]'
+) 
+FROM (
+    SELECT TOP 100  
+        max([table0].[categoryid]) AS [max], 
+        max([table0].[price]) AS [max_price], 
+        min([table0].[price]) AS [min_price], 
+        avg([table0].[price]) AS [avg_price], 
+        sum([table0].[price]) AS [sum_price] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForAggregationsWithAliases(msSqlQuery);
@@ -446,20 +456,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByAggregationsWithAliases()
         {
             string msSqlQuery = @"
-                SELECT
-                    MAX(categoryid) AS max,
-                    MAX(price) AS max_price,
-                    MIN(price) AS min_price,
-                    AVG(price) AS avg_price,
-                    SUM(price) AS sum_price,
-                    COUNT(categoryid) AS count
-                FROM stocks_price
-                GROUP BY categoryid
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' + N'""max"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max]), 'json'), 'null') + ',' +
+        N'""max_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max_price]), 'json'), 'null') + ',' +
+        N'""min_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [min_price]), 'json'), 'null') + ',' +
+        N'""avg_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [avg_price]), 'json'), 'null') + ',' +
+        N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + ',' +
+        N'""count"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [count]), 'json'), 'null') + '}', ', '
+    ) + ']', '[]'
+) 
+FROM (
+    SELECT TOP 100
+        max([table0].[categoryid]) AS [max], 
+        max([table0].[price]) AS [max_price], 
+        min([table0].[price]) AS [min_price], 
+        avg([table0].[price]) AS [avg_price], 
+        sum([table0].[price]) AS [sum_price], 
+        count([table0].[categoryid]) AS [count] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1 
+    GROUP BY [table0].[categoryid]
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForGroupByAggregationsWithAliases(msSqlQuery);
@@ -470,16 +491,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForMinAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    MIN(price) AS min_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' + N'""min_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [min_price]), 'json'), 'null') + '}', ', '
+    ) + ']', '[]'
+) 
+FROM (
+    SELECT TOP 100 min([table0].[price]) AS [min_price] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1
+) AS [table0];";
 
-            // Execute the test for the SQL query
             await TestSupportForMinAggregation(msSqlQuery);
         }
 
@@ -488,14 +513,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForMaxAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    MAX(price) AS max_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE('['+STRING_AGG('{'+N'""max_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max_price]),'json'),'null')+'}',', ')+']','[]') 
+FROM (
+    SELECT TOP 100 max([table0].[price]) AS [max_price] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForMaxAggregation(msSqlQuery);
@@ -506,14 +532,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForAvgAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    AVG(price) AS avg_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE('['+STRING_AGG('{'+N'""avg_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [avg_price]),'json'),'null')+'}',', ')+']','[]') 
+FROM (
+    SELECT TOP 100 avg([table0].[price]) AS [avg_price] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForAvgAggregation(msSqlQuery);
@@ -524,14 +551,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForSumAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE('['+STRING_AGG('{'+N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]),'json'),'null')+'}',', ')+']','[]') 
+FROM (
+    SELECT TOP 100 sum([table0].[price]) AS [sum_price] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForSumAggregation(msSqlQuery);
@@ -542,14 +570,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForCountAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    COUNT(categoryid) AS count_categoryid
-                FROM stocks_price
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE('[' + STRING_AGG('{' + N'""count_categoryid"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [count_categoryid]), 'json'), 'null') + '}', ', ') + ']', '[]')
+FROM (
+    SELECT TOP 100 count([table0].[categoryid]) AS [count_categoryid]
+    FROM [dbo].[stocks_price] AS [table0]
+    WHERE 1 = 1
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForCountAggregation(msSqlQuery);
@@ -560,15 +589,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForHavingAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                HAVING SUM(price) > 50
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE('[' + STRING_AGG('{' + N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + '}', ', ') + ']', '[]')
+FROM (
+    SELECT TOP 100 sum([table0].[price]) AS [sum_price]
+    FROM [dbo].[stocks_price] AS [table0]
+    HAVING SUM(price) > 50
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForHavingAggregation(msSqlQuery);
@@ -579,16 +608,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByHavingAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                HAVING SUM(price) > 50
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' + N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + '}', ', '
+    ) + ']', '[]'
+) 
+FROM (
+    SELECT TOP 100 
+        SUM([table0].[price]) AS [sum_price] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1 
+    GROUP BY [table0].[categoryid], [table0].[pieceid] 
+    HAVING SUM([table0].[price]) > 50
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForGroupByHavingAggregation(msSqlQuery);
@@ -599,19 +634,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByHavingFieldsAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    categoryid,
-                    pieceid,
-                    SUM(price) AS sum_price,
-                    COUNT(pieceid) AS count_piece
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                HAVING SUM(price) > 50 AND COUNT(pieceid) <= 100
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' + N'""categoryid"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [categoryid]), 'json'), 'null') + ',' +
+        N'""pieceid"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [pieceid]), 'json'), 'null') + ',' +
+        N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + ',' +
+        N'""count_piece"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [count_piece]), 'json'), 'null') + '}', ', '
+    ) + ']', '[]'
+) 
+FROM (
+    SELECT TOP 100 
+        [table0].[categoryid] AS [categoryid], 
+        [table0].[pieceid] AS [pieceid], 
+        SUM([table0].[price]) AS [sum_price], 
+        COUNT([table0].[pieceid]) AS [count_piece] 
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1 
+    GROUP BY [table0].[categoryid], [table0].[pieceid] 
+    HAVING SUM([table0].[price]) > 50 AND COUNT([table0].[pieceid]) <= 100
+) AS [table0];";
 
             // Execute the test for the SQL query
             await TestSupportForGroupByHavingFieldsAggregation(msSqlQuery);
@@ -622,16 +666,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task TestSupportForGroupByNoAggregation()
         {
             string msSqlQuery = @"
-                SELECT
-                    categoryid,
-                    pieceid
-                FROM stocks_price
-                GROUP BY categoryid, pieceid
-                FOR JSON PATH, INCLUDE_NULL_VALUES";
+SELECT COALESCE(
+    '[' + STRING_AGG(
+        '{' + N'""categoryid"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [categoryid]), 'json'), 'null') + ',' +
+        N'""pieceid"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [pieceid]), 'json'), 'null') + '}', ', '
+    ) + ']', '[]'
+) 
+FROM (
+    SELECT TOP 100  
+        [table0].[categoryid] AS [categoryid], 
+        [table0].[pieceid] AS [pieceid]  
+    FROM [dbo].[stocks_price] AS [table0] 
+    WHERE 1 = 1 
+    GROUP BY [table0].[categoryid], [table0].[pieceid]
+) AS [table0]";
 
             // Execute the test for the SQL query
             await TestSupportForGroupByNoAggregation(msSqlQuery);

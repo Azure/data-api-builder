@@ -67,10 +67,44 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // contains LIKE and add the ESCAPE clause accordingly.
             predicates = AddEscapeToLikeClauses(predicates);
 
-            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
+            string aggregations = string.Empty;
+            if (structure.GroupByMetadata.Aggregations.Count > 0)
+            {
+                if (structure.Columns.Any())
+                {
+                    aggregations = $",{BuildAggregationColumns(structure.GroupByMetadata)}";
+                }
+                else
+                {
+                    aggregations = $"{BuildAggregationColumns(structure.GroupByMetadata)}";
+                }
+            }
+
+            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}"
                 + $" FROM {fromSql}"
-                + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.OrderByColumns)}";
+                + $" WHERE {predicates}";
+
+            // Add GROUP BY clause if there are any group by columns
+            if (structure.GroupByMetadata.Fields.Any())
+            {
+                query += $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
+                if (structure.GroupByMetadata.Aggregations.Count > 0)
+                {
+                    List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
+                          .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
+                          .ToList();
+
+                    if (havingPredicates.Any())
+                    {
+                        query += $" HAVING {Build(havingPredicates)}";
+                    }
+                }
+            }
+
+            if (structure.OrderByColumns.Any())
+            {
+                query += $" ORDER BY {Build(structure.OrderByColumns)}";
+            }
 
             query += FOR_JSON_SUFFIX;
             if (!structure.IsListQuery)
@@ -79,6 +113,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return query;
+        }
+
+        /// <summary>
+        /// Builds the aggregation columns part of the SELECT clause
+        /// </summary>
+        private string BuildAggregationColumns(GroupByMetadata metadata)
+        {
+            return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
         }
 
         /// <summary>

@@ -179,13 +179,14 @@ public class ClientRoleHeaderAuthenticationMiddleware
     /// <returns>Authentication Scheme</returns>
     private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
     {
-        if (string.Equals(configuredProviderName, SupportedAuthNProviders.APP_SERVICE, StringComparison.OrdinalIgnoreCase))
-        {
-            return EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
-        }
-        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(configuredProviderName)
+            || string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
         {
             return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+        }
+        else if (string.Equals(configuredProviderName, SupportedAuthNProviders.APP_SERVICE, StringComparison.OrdinalIgnoreCase))
+        {
+            return EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
         }
         else if (string.Equals(configuredProviderName, SupportedAuthNProviders.SIMULATOR, StringComparison.OrdinalIgnoreCase))
         {

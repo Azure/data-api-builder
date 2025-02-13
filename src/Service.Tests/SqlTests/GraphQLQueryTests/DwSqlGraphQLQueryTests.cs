@@ -592,11 +592,12 @@ FROM (
         public async Task TestSupportForHavingAggregation()
         {
             string msSqlQuery = @"
-SELECT COALESCE('[' + STRING_AGG('{' + N'""sum_price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [sum_price]), 'json'), 'null') + '}', ', ') + ']', '[]')
+SELECT COALESCE('[' + STRING_AGG('{' + N'""max"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [max]), 'json'), 'null') + '}', ', ') + ']', '[]') 
 FROM (
-    SELECT TOP 100 sum([table0].[price]) AS [sum_price]
-    FROM [dbo].[stocks_price] AS [table0]
-    HAVING SUM(price) > 50
+    SELECT TOP 100 max([table0].[id]) AS [max] 
+    FROM [dbo].[publishers] AS [table0] 
+    WHERE 1 = 1 
+    HAVING max([table0].[id]) > 2346
 ) AS [table0];";
 
             // Execute the test for the SQL query

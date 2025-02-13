@@ -104,16 +104,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.GroupByMetadata.Fields.Any())
             {
                 query += $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
-                if (structure.GroupByMetadata.Aggregations.Count > 0)
-                {
-                    List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
-                          .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
-                          .ToList();
+            }
 
-                    if (havingPredicates.Any())
-                    {
-                        query += $" HAVING {Build(havingPredicates)}";
-                    }
+            if (structure.GroupByMetadata.Aggregations.Count > 0)
+            {
+                List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
+                      .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
+                      .ToList();
+
+                if (havingPredicates.Any())
+                {
+                    query += $" HAVING {Build(havingPredicates)}";
                 }
             }
 

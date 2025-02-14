@@ -23,6 +23,11 @@ public static class VersionChecker
     /// Returns <c>true</c> if the local version matches the latest NuGet version or if the NuGet version is not available;
     /// otherwise, returns <c>false</c>.
     /// </returns>
+    /// <remarks>
+    //  If the internet is unavailable or NuGet is down or the HTTP request fails for any reason
+    /// (there is a 2 second Timeout on the request), then the NuGet version will be <c>null</c> and
+    //  this method will return <c>true</c>. This is mostly because this check is a user courtesy.
+    // </remarks>
     public static bool IsCurrentVersion(out string? nugetVersion, out string? localVersion)
     {
         nugetVersion = FetchLatestNuGetVersion();

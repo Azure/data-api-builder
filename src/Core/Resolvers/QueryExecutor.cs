@@ -100,6 +100,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             using TConnection conn = CreateConnection(dataSourceName);
 
+            // Check if connection creation succeeded
+            if (conn == null)
+            {
+                throw new DataApiBuilderException(
+                    "Connection creation failed. Connection was null",
+                    HttpStatusCode.InternalServerError,
+                    DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
             int retryAttempt = 0;
 
             SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
@@ -170,6 +179,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             using TConnection conn = CreateConnection(dataSourceName);
+
+            // Check if connection creation succeeded
+            if (conn == null)
+            {
+                throw new DataApiBuilderException(
+                    "Connection creation failed. Connection was null",
+                    HttpStatusCode.InternalServerError,
+                    DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 

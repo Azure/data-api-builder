@@ -107,21 +107,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Extract info message from SQLConnection
             conn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
             {
-                // Log the statement ids returned by the SQL engine when we executed the batch.
-                // This helps in correlating with SQL engine telemetry.
-
-                // If the info message has an error code that matches the well-known codes used for returning statement ID,
-                // then we can be certain that the message contains no PII.
-                IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
-
-                IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
-
-                IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
-
-                foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
+                try
                 {
-                    // Add statement ID to request
-                    AddStatementIDToMiddlewareContext(infoErrorMessageReceived);
+                    // Log the statement ids returned by the SQL engine when we executed the batch.
+                    // This helps in correlating with SQL engine telemetry.
+
+                    // If the info message has an error code that matches the well-known codes used for returning statement ID,
+                    // then we can be certain that the message contains no PII.
+                    IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
+
+                    IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
+
+                    IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
+
+                    foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
+                    {
+                        // Add statement ID to request
+                        AddStatementIDToMiddlewareContext(infoErrorMessageReceived);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    QueryExecutorLogger.LogError($"Error in info message handler while extracting query-identifying ID from SQLConnection. Error: {ex.Message}");
                 }
             };
 

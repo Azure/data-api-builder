@@ -7,6 +7,7 @@ using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;

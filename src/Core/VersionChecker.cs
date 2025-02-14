@@ -1,27 +1,24 @@
-using System;
-using System.Linq;
-using System.Net.Http;
+using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
-namespace Azure.DataApiBuilder.Product;
+namespace Azure.DataApiBuilder.Core;
 
 public static class VersionChecker
 {
-    private const string NuGetApiUrl = "https://api.nuget.org/v3-flatcontainer/Microsoft.DataApiBuilder/index.json";
-
     public static void GetVersions(out string? latestVersion, out string? currentVersion)
     {
         latestVersion = FetchLatestNuGetVersion();
-        currentVersion = GetCurrentVersionFromAssembly(Assembly.GetExecutingAssembly());
+        currentVersion = GetCurrentVersionFromAssembly(Assembly.GetCallingAssembly());
     }
 
     private static string? FetchLatestNuGetVersion()
     {
         try
         {
-            using HttpClient httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            NuGetVersionResponse? versionData = httpClient.GetFromJsonAsync<NuGetVersionResponse>(NuGetApiUrl)
+            using HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(2) };
+            NuGetVersionResponse? versionData = httpClient
+                .GetFromJsonAsync<NuGetVersionResponse>("https://api.nuget.org/v3-flatcontainer/microsoft.dataapibuilder/index.json")
                 .GetAwaiter().GetResult();
 
             return versionData?.Versions
@@ -29,7 +26,7 @@ public static class VersionChecker
                 .Select(version => new Version(version))     // Convert to Version objects
                 .Max()?.ToString();                          // Get the latest 
         }
-        catch
+        catch (Exception)
         {
             return null; // Assume no update available on failure
         }
@@ -38,7 +35,10 @@ public static class VersionChecker
     private static string? GetCurrentVersionFromAssembly(Assembly assembly)
     {
         string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        return !string.IsNullOrEmpty(version) ? version.Split('+')[0] : assembly.GetName().Version?.ToString();
+
+        return version is { Length: > 0 } && version.Contains('+')
+            ? version[..version.IndexOf('+')] // Slice version string before '+'
+            : version ?? assembly.GetName().Version?.ToString();
     }
 
     private class NuGetVersionResponse

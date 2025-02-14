@@ -28,7 +28,6 @@ public static class VersionChecker
                 ?.Where(version => !version.Contains("-rc")) // Filter out pre-release versions
                 .Select(version => new Version(version))     // Convert to Version objects
                 .Max()?.ToString();                          // Get the latest 
-                .Max()                                       // Get the latest 
 
                 ?.ToString();                                // Convert to string
 

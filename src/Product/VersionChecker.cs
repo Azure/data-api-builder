@@ -25,12 +25,10 @@ public static class VersionChecker
                 .GetAwaiter().GetResult();
 
             return versionData?.Versions
-                ?.Where(version => !version.Contains("-rc")) // Filter out pre-release versions
-                .Select(version => new Version(version))     // Convert to Version objects
-                .Max()?.ToString();                          // Get the latest 
-
-                ?.ToString();                                // Convert to string
-
+                ?.Where(version => !version.Contains("-rc")) // Filter out pre-release versions
+                .Select(version => new Version(version))     // Convert to Version objects
+                .Max()?.ToString();                          // Get the latest 
+        }
         catch
         {
             return null; // Assume no update available on failure

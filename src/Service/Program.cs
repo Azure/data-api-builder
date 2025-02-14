@@ -7,7 +7,6 @@ using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
@@ -28,13 +27,6 @@ namespace Azure.DataApiBuilder.Service
 
         public static void Main(string[] args)
         {
-            // Compare current version of DAB with latest (non-rc) version in NuGet. 
-            VersionChecker.GetVersions(out string? latestVersion, out string? currentVersion);
-            if (!string.IsNullOrEmpty(latestVersion) && latestVersion != currentVersion)
-            {
-                Console.Error.WriteLine($"A newer version of Data API builder is available. {currentVersion} -> {latestVersion}");
-            }
-
             if (!ValidateAspNetCoreUrls())
             {
                 Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");

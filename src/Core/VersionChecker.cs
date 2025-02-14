@@ -1,17 +1,19 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
-using System.Reflection;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Product;
 
 namespace Azure.DataApiBuilder.Core;
 
 public static class VersionChecker
 {
-    private const string NUGETURL = "https://api.nuget.org/v3/registration5-semver1/azure.dataapibuilder/index.json";
+    private const string NUGETURL = "https://api.nuget.org/v3-flatcontainer/microsoft.dataapibuilder/index.json";
 
-    public static void GetVersions(out string? latestVersion, out string? currentVersion)
+    public static bool IsCurrentVersion(out string? nugetVersion, out string? localVersion)
     {
-        latestVersion = FetchLatestNuGetVersion();
-        currentVersion = GetCurrentVersionFromAssembly(Assembly.GetCallingAssembly());
+        nugetVersion = FetchLatestNuGetVersion();
+        localVersion = ProductInfo.GetProductVersion(false);
+        return string.IsNullOrEmpty(nugetVersion) || nugetVersion == localVersion;
     }
 
     private static string? FetchLatestNuGetVersion()
@@ -20,7 +22,7 @@ public static class VersionChecker
         {
             using HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(2) };
             NuGetVersionResponse? versionData = httpClient
-                .GetFromJsonAsync<NuGetVersionResponse>(NUGETURL)
+                .GetFromJsonAsync<NuGetVersionResponse>(new Uri(NUGETURL).ToString())
                 .GetAwaiter().GetResult();
 
             return versionData?.Versions
@@ -32,15 +34,6 @@ public static class VersionChecker
         {
             return null; // Assume no update available on failure
         }
-    }
-
-    private static string? GetCurrentVersionFromAssembly(Assembly assembly)
-    {
-        string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-
-        return version is { Length: > 0 } && version.Contains('+')
-            ? version[..version.IndexOf('+')] // Slice version string before '+'
-            : version ?? assembly.GetName().Version?.ToString();
     }
 
     private class NuGetVersionResponse

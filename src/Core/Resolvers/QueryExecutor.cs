@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         where TConnection : DbConnection, new()
     {
         private const string TOTALDBEXECUTIONTIME = "TotalDbExecutionTime";
-        private static readonly object _httpContextLock = new();
+        protected static readonly object _httpContextLock = new();
 
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
@@ -98,15 +98,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
-            {
-                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
-            }
+            using TConnection conn = CreateConnection(dataSourceName);
 
-            using TConnection conn = new()
+            // Check if connection creation succeeded
+            if (conn == null)
             {
-                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
-            };
+                throw new DataApiBuilderException(
+                    "Connection creation failed. Connection was null",
+                    HttpStatusCode.InternalServerError,
+                    DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
 
             int retryAttempt = 0;
 
@@ -170,21 +171,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext? httpContext = null,
             List<string>? args = null)
         {
+            int retryAttempt = 0;
+
             if (string.IsNullOrEmpty(dataSourceName))
             {
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
-            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
-            {
-                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
-            }
+            using TConnection conn = CreateConnection(dataSourceName);
 
-            int retryAttempt = 0;
-            using TConnection conn = new()
+            // Check if connection creation succeeded
+            if (conn == null)
             {
-                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
-            };
+                throw new DataApiBuilderException(
+                    "Connection creation failed. Connection was null",
+                    HttpStatusCode.InternalServerError,
+                    DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
@@ -235,6 +238,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             });
 
             return result;
+        }
+
+        /// <summary>
+        /// Creates and setups a TConnection to the data source of given name
+        /// </summary>
+        /// <param name="dataSourceName">The data source name</param>
+        /// <returns>A connection to the data source</returns>
+        /// <exception cref="DataApiBuilderException">Exeption thrown if the data source could not be found</exception>
+        public virtual TConnection CreateConnection(string dataSourceName)
+        {
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
+            {
+                throw new DataApiBuilderException(
+                    "Query execution failed. Could not find datasource to execute query against",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
+
+            TConnection conn = new()
+            {
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+            };
+
+            return conn;
         }
 
         /// <summary>
@@ -348,7 +375,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             Stopwatch queryExecutionTimer = new();
             queryExecutionTimer.Start();
-
             try
             {
                 conn.Open();

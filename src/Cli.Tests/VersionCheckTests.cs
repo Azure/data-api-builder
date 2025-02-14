@@ -8,8 +8,6 @@ namespace Cli.Tests;
 [TestClass]
 public class VersionCheckTests
 {
-    public TestContext TestContext { get; set; } = null!;
-    
     [TestMethod]
     public void GetVersions_LatestVersionNotNull()
     {

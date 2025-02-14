@@ -6,6 +6,8 @@ namespace Azure.DataApiBuilder.Core;
 
 public static class VersionChecker
 {
+    private const string NUGETURL = "https://api.nuget.org/v3/registration5-semver1/azure.dataapibuilder/index.json";
+
     public static void GetVersions(out string? latestVersion, out string? currentVersion)
     {
         latestVersion = FetchLatestNuGetVersion();
@@ -18,7 +20,7 @@ public static class VersionChecker
         {
             using HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(2) };
             NuGetVersionResponse? versionData = httpClient
-                .GetFromJsonAsync<NuGetVersionResponse>("https://api.nuget.org/v3-flatcontainer/microsoft.dataapibuilder/index.json")
+                .GetFromJsonAsync<NuGetVersionResponse>(NUGETURL)
                 .GetAwaiter().GetResult();
 
             return versionData?.Versions

@@ -879,16 +879,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     case QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME:
                         GroupByMetadata.RequestedFields = true;
-
-                        if (field.SelectionSet?.Selections.Any(node => !fieldsInArgument.Contains(((FieldNode)node).Name.Value)) == true)
-                        {
-                            throw new DataApiBuilderException(
-                                "Groupby fields in selection must match the fields in the groupby argument.",
-                                HttpStatusCode.BadRequest,
-                                DataApiBuilderException.SubStatusCodes.BadRequest
-                            );
-                        }
-
+                        ProcessGroupByFieldSelections(field, fieldsInArgument);
                         break;
 
                     case QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME:
@@ -897,6 +888,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         break;
                 }
             }
+        }
+
+        private void ProcessGroupByFieldSelections(FieldNode groupByFieldSelection, HashSet<string> fieldsInArgument)
+        {
+            if (groupByFieldSelection.SelectionSet is null)
+            {
+                return;
+            }
+
+            foreach (ISelectionNode node in groupByFieldSelection.SelectionSet.Selections)
+            {
+                string fieldName = ((FieldNode)node).Name.Value;
+                if (!fieldsInArgument.Contains(fieldName))
+                {
+                    throw new DataApiBuilderException(
+                        "Groupby fields in selection must match the fields in the groupby argument.",
+                        HttpStatusCode.BadRequest,
+                        DataApiBuilderException.SubStatusCodes.BadRequest
+                    );
+                }
+
+                string columnName = MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumn) ? backingColumn : fieldName;
+                AddColumn(fieldName, columnName);
+            }
+
         }
 
         /// <summary>

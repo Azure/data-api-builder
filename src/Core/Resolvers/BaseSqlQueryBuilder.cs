@@ -161,6 +161,39 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Build column as
+        /// AggregateOperation([{tableAlias}].[{ColumnName}])
+        /// or if SourceAlias is empty, as
+        /// AggregateOperation([{schema}].[{table}].[{ColumnName}])
+        /// or if schema is empty, as
+        /// AggregateOperation([{table}].[{ColumnName}])
+        /// </summary>
+        protected virtual string Build(AggregationColumn column, bool useAlias = false)
+        {
+            string columnName;
+
+            // If the table alias is not empty, we return [{SourceAlias}].[{Column}]
+            if (!string.IsNullOrEmpty(column.TableAlias))
+            {
+                columnName = $"{QuoteIdentifier(column.TableAlias)}.{QuoteIdentifier(column.ColumnName)}";
+            }
+            // If there is no table alias then if the schema is not empty, we return [{TableSchema}].[{TableName}].[{Column}]
+            else if (!string.IsNullOrEmpty(column.TableSchema))
+            {
+                columnName = $"{QuoteIdentifier($"{column.TableSchema}")}.{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
+            }
+            // If there is no table alias, and no schema, we return [{TableName}].[{Column}]
+            else
+            {
+                columnName = $"{QuoteIdentifier($"{column.TableName}")}.{QuoteIdentifier(column.ColumnName)}";
+            }
+
+            columnName = column.IsDistinct ? $"DISTINCT ({columnName})" : columnName;
+            string appendAlias = useAlias ? $" AS {QuoteIdentifier(column.OperationAlias)}" : string.Empty;
+            return $"{column.Type.ToString()}({columnName}) {appendAlias}";
+        }
+
+        /// <summary>
         /// Build orderby column as
         /// {SourceAlias}.{ColumnName} {direction}
         /// If SourceAlias is null
@@ -223,6 +256,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             BaseSqlQueryStructure? sqlQueryStructure;
             if ((c = operand.AsColumn()) != null)
             {
+                if (c is AggregationColumn aggregationColumn)
+                {
+                    return Build(aggregationColumn);
+                }
+
                 return Build(c);
             }
             else if ((s = operand.AsString()) != null)

@@ -24,6 +24,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
     {
         private static readonly string _aggregationTypeSuffix = "Aggregations";
         private static readonly string _groupByTypeSuffix = "GroupBy";
+        public enum AggregationType
+        {
+            max,
+            min,
+            avg,
+            sum,
+            count
+        }
 
         /// <summary>
         /// Generate a GraphQL object type from a SQL table/view/stored-procedure definition, combined with the runtime config entity information
@@ -257,11 +265,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 string filterInputType = numericFields.Count == 1 ? $"{numericFields[0]}FilterInput" : GetCommonFilterInputType(numericFields);
                 aggregationFields.AddRange(new[]
                 {
-                    CreateNumericAggregationField("max", FLOAT_TYPE, "Maximum value for numeric fields", entityNode, filterInputType),
-                    CreateNumericAggregationField("min", FLOAT_TYPE, "Minimum value for numeric fields", entityNode, filterInputType),
-                    CreateNumericAggregationField("avg", FLOAT_TYPE, "Average value", entityNode, filterInputType),
-                    CreateNumericAggregationField("sum", FLOAT_TYPE, "Sum of values", entityNode, filterInputType),
-                    CreateNumericAggregationField("count", INT_TYPE, "Count of numeric values", entityNode, filterInputType)
+                    CreateNumericAggregationField(AggregationType.max.ToString(), FLOAT_TYPE, "Maximum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.min.ToString(), FLOAT_TYPE, "Minimum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.avg.ToString(), FLOAT_TYPE, "Average value", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.sum.ToString(), FLOAT_TYPE, "Sum of values", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.count.ToString(), INT_TYPE, "Count of numeric values", entityNode, filterInputType)
                 });
             }
 
@@ -332,7 +340,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
         {
             string groupByTypeName = GenerateGroupByTypeName(entityName);
-            string scalarFieldsEnumName = EnumTypeBuilder.GenerateScalarFieldsEnumName(entityNode.Name.Value);
             string aggregationsTypeName = GenerateObjectAggregationNodeName(entityName);
 
             List<FieldDefinitionNode> groupByFields = new()
@@ -342,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     name: new NameNode("fields"),
                     description: new StringValueNode($"Grouped fields from {entityName}"),
                     arguments: new List<InputValueDefinitionNode>(),
-                    type: new ListTypeNode(new NamedTypeNode(new NameNode(scalarFieldsEnumName))),
+                    type: new NamedTypeNode(new NameNode(entityName)),
                     directives: new List<DirectiveNode>()
                 ),
                 new FieldDefinitionNode(

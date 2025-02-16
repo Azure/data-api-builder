@@ -113,6 +113,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="SqlTests\Helpers\" />
+  </ItemGroup>
+
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>

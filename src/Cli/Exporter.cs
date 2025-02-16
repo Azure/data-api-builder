@@ -80,6 +80,10 @@ namespace Cli
                     logger.LogError("Failed to export GraphQL schema.");
                 }
             }
+            else
+            {
+                logger.LogError("Exporting GraphQL schema is not enabled. You need to pass --graphql.");
+            }
 
             _cancellationTokenSource.Cancel();
             return isSuccess;
@@ -115,7 +119,7 @@ namespace Cli
 
             if (string.IsNullOrEmpty(schemaText))
             {
-                logger.LogError("Failed to export the GraphQL schema.");
+                logger.LogError("Generated GraphQL schema is empty. Please ensure data is available to generate the schema.");
                 return;
             }
 

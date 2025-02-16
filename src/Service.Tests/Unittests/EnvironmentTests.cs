@@ -89,7 +89,7 @@ public class EnvironmentTests
 
         string originalEnvValue = Environment.GetEnvironmentVariable(ASPNETCORE_URLS_NAME);
         Environment.SetEnvironmentVariable(ASPNETCORE_URLS_NAME, input);
-        
+
         // Act
         Assert.AreEqual(expected, Program.ValidateAspNetCoreUrls());
 

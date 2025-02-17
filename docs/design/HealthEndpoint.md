@@ -29,8 +29,23 @@ This is generated in the `Startup.cs` file when mapping the base URL `(/)` to th
 | **Status.Unhealthy**| The system has a critical failure or issue.            |
 
 ## Proposed Change
-We want to create a detailed version of the `Health endpoint for DAB Engine` with information regarding all REST and GraphQL endpoints and their behavior. Here we would update the configuration schema to include some parameters which would be required from the user to perform all checks on that data-source/entity (described below) to validate if they are healthy.
-We want the user to provide a check and threshold value for each for each entity for which health is enabled and DAB engine would carry out this check. If the result is under the threshold, the DAB Engine would be considered `healthy` for that endpoint, else `unhealthy`. 
+We want to create a detailed version of the `Health endpoint for DAB Engine` with information regarding all REST and GraphQL endpoints and their behavior. Here we would update the configuration schema to include some parameters which would be required from the user to perform all checks on that data-source/entity (described below) to validate if they are healthy.\
+`We would have the basic health results displayed at the '/' (root) and create a new endpoint '/health' for the comprehensive health report depending on a mixture of if health is enabled and the user meets the roles requirement.`\
+We want the user to provide a check and threshold value for each for each entity for which health is enabled and DAB engine would carry out this check. If the result is under the threshold, the DAB Engine would be considered `healthy` for that endpoint, else `unhealthy`.
+
+### **Overall Health Calculation**
+| **Healthy** | **Unhealthy** | **Global Status** |
+|------------|--------------|-------------------|
+| -          | 0            | `Healthy`        |
+| -          | ≥ 1          | `Unhealthy`      |
+
+- **Healthy**: All checks pass.  
+- **Unhealthy**: At least one check fails. 
+
+> The time elapsed to run the query for DB or Entity (Rest or GraphQL) is compared to the threshold(ms) as given in the config. The value of healthCheck is given based on the condition below. In case of any error while executing the healthCheck query, we consider the "Unhealthy" and specify the exception message appropriately.\
+`HealthCheck = time_Elapsed_ms < threshold_ms ? Healthy : Unhealthy`
+
+**By default the DAB Comprehensive Health Check would be enabled `true` for datasource and all entities in both development and production mode of deployment. User will have to mark <datasource>.enabled or <entity-name>.enabled to false to mark this comprehensive check as disabled.** 
 
 **Case 1: Datasource**\
 Here we would carry out standard queries based on the datasource type and execute them under the given threshold. If the engine gets the result below the specified threshold, the DB is considered healthy else unhealthy.
@@ -43,44 +58,69 @@ In case of entities we would ask the user to provide a number in the config as t
 
 > Example: In case for entity `UserTable` we say that we need to run a health query with first = 5 under 100ms threshold. While running the DAB Engine we would execute the REST endpoint for `UserTable` and fetch the fist 5 rows and similar for GraphQL and check if the threshold is under 100ms. If so, it would be consider healthy entity.
 
+Lower level details about the two cases are described in the document below.
+
 ## Implementation Details
 ### High-Level Schema
 Health check responses follow a common convention rather than a strict standard. The typical pattern involves a "checks" property for individual components' statuses (e.g., database, memory), with each status rolling up to an overall "status" at the top level.
 ```
 {
   "status": "Healthy",
-  "checks": {
-    "check-name": { "status": "Healthy" },
-    "check-name": { "status": "Healthy" }
-  }
+  "checks": [
+    "check-name": { "status": "Healthy" ... },
+    "check-name": { "status": "Healthy" ... }
+  ]
 }
 ```
 
 ### Configuration Updates
-We need to update the dab config file to include details of the health check for different configuration parameters like runtime, data source, entities. 
+The customer needs to update the `dab-config.json` file to include details of the health check for different configuration parameters like runtime, data source and entities. 
 
 #### `runtime.health` Configuration
-
-The runtime configuration would include details like `cache-ttl-sec` in case we need to cache the response of health checks, the `max-dop` value which specifies the degree of parallelism i.e. how many queries that DAB should run at once to get health results and `roles` i.e. which role is allowed to view the health information of DAB.
+The runtime configuration would include details like `cache-ttl-seconds` in case we need to cache the response of health checks, the `max-dop` value which specifies the degree of parallelism i.e. how many queries that DAB should run at once to get health results and `roles` i.e. which role is allowed to view the comprehensive health information of DAB engine.
 
 | **Property**   | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |----------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
-| `enabled`     | Boolean       | No           | `false`      | Enables or disables the comprehensive health checks for DAB Engine. In case of disabled; we show the previous format of health check.                                             |
-| `cache-ttl-sec`   | Integer       | No           | `5`         | Time-to-live (in seconds) for caching health check results. If this value is not specified, caching would not be enabled. Currently, caching is not implemented hence, value is considered to be null.                                        |
-| `max-dop`     | Integer       | No           | `1`         | Maximum Degree of Parallelism for running health checks.                                             |
-| `roles`       | Array of strings         | Yes           | NA         | Roles allowed to access the health endpoint (e.g., `anonymous`, `authenticated`).                   |
+| `enabled`     | Boolean       | No           | `true`      | Enables or disables the comprehensive health checks for DAB Engine. **In case it is disabled, the '/health' updated health endpoint returns 404 (Not Found).**                                            |
+| `cache-ttl-seconds`   | Integer       | No           | `5`         | Time-to-live (in seconds) for caching health check results. **If this value is not specified or is 0, caching would not be enabled.** Currently, caching is not implemented hence, value is considered to be null.                                        |
+| `max-dop`     | Integer       | No           | `8`         | Maximum Degree of Parallelism for running health checks.                                             |
+| `roles`       | Array of strings         | <table><tr><th>Environment</th><th>Required</th></tr><tr><td>Development</td><td>No</td></tr><tr><td>Production</td><td>Yes</td></tr></table>   | <table><tr><th>Environment</th><th>Default</th></tr><tr><td>Development</td><td>["anonymous"]</td></tr><tr><td>Production</td><td>NA</td></tr></table>        | List of Roles allowed to access the comprehensive health endpoint (e.g., `anonymous`, `authenticated` or `customer-role`).                   |
+
+```
+{
+  "runtime": {
+    "health": {
+      "enabled": true,
+      "cache-ttl-seconds": 5,
+      "max-dop": 5,
+      "roles": ["anonymous", "authenticated"]
+    }
+  }
+}
+```
 
 #### `data-source.health` Configuration
 
-The database type in the data source health config determines the query that we should run on the data source. The time to run this query should come under the user specified threshold of ms to qualify as a healthy data source for DAB. We get the database type from the runtime parameters to get the query to run on the specific DB Type.
-
- > TODO: Handle Health Endpoint for multiple data-source configs in the upcoming enhancements
+The database type in the data source health config determines the query that we should run on the data source. The time to run this query should come under the user specified threshold_ms to qualify as a healthy data source for DAB. We get the database type from the runtime parameters to get the query to run on the specific DB Type.\
+**This check opens a connection to the data source and validates the connection string and network access. Further it runs a simple query to validate user permissions and responsiveness or the DB.**
 
 | **Property**      | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |-------------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
-| `enabled`         | Boolean       | No           | `true`      | Enables or disables health checks for the data source.                                              |
-| `name`         | Array of String        | No (Yes in case of multiple data source)           | Database Type      | Identifier for the data source; useful when multiple data sources exist.  
-| `threshold-ms`    | Integer       | No           | `10000`     | Threshold in milliseconds for the query response time before the check is considered degraded.      |
+| `enabled`         | Boolean       | No           | `true`      | Enables or disables health checks for the data source.                                             |
+| `name`         | String        | No           | Database Type `runtime.data-source.database-type`     | Identifier for the data source. Useful when multiple data sources exist, to identify each independently in the health check.  
+| `threshold-ms`    | Integer       | No           | `10000`     | Threshold in milliseconds for the query response time before the check is considered unhealthy. Minimum : 1 Maximum: INT_MAX. Zero is not allowed.      |
+
+```
+{
+  "data-source": {
+    "health": {
+      "name": "sqlserver",
+      "enabled": true,
+      "threshold-ms": 100
+    }
+  }
+}
+```
 
 #### `<entity-name>.health` Configuration
 
@@ -88,8 +128,20 @@ The Entity config parameters contain information about the `first` which defines
 | **Property**     | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |------------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
 | `enabled`        | Boolean       | No           | `false`      | Enables or disables health checks for the specific entity.                                          |
-| `first`          | Integer       | No           | `1`         | Number of records to query during the health check. Value is used to create the SELECT query to fetch records for REST and GraphQL endpoints.                                                 |
-| `threshold-ms`   | Integer       | No           | `10000`     | Threshold in milliseconds for the query response time before the check is considered degraded.      |
+| `first`          | Integer       | No           | `100`         | Number of records to query during the health check. Value is used to create the SELECT query to fetch records for REST and GraphQL endpoints. Minimum : 1 Maximum: INT_MAX. Zero is not allowed.                                                |
+| `threshold-ms`   | Integer       | No           | `10000`     | Threshold in milliseconds for the query response time before the check is considered degraded. Minimum : 1 Maximum: INT_MAX. Zero is not allowed.     |
+
+```
+{
+  "<entity-name>": {
+    "health": {
+      "enabled": true,
+      "first": 1,
+      "threshold-ms": 100
+    }
+  }
+}
+```
 
 #### Example
 ```
@@ -97,28 +149,25 @@ The Entity config parameters contain information about the `first` which defines
   "runtime" : {
     ...
     "health" : {
-      "enabled": true, (default: false)
-      "cache-ttl-sec": 5, (optional; default: null) // Default value would be updated to 5sec once caching is enabled
-      "max-dop": 5, (optional; default: 1)
-      "roles": ["anonymous", "authenticated"] (required)
+      "enabled": true, (default: true)
+      "cache-ttl-seconds": 5, (optional; default: null) // Default value would be updated to 5sec once caching is enabled
+      "max-dop": 5, (optional; default: 1) // Default value would be updated to 8 once parallelization is enabled
+      "roles": ["anonymous", "authenticated"] // More in detail Later
     }
-  }
-}
-{
+  },
   "data-source" : {
     ...
     "health" : {
-      "name": ["mssql"], (optional; default: Database Type) // not required as mostly configs have just one
-      "enabled": true, (default: false)
+      "name": ["mssql"], (optional; default: Database Type)
+      "enabled": true, (default: true)
       "threshold-ms": 100 (optional; default: 10000)
     }
-  }
-}
-{
-  "<entity-name>": {
+  },
+  "entities":{
+    "<entity-name>": {
       "health": {
         "enabled": true, (default: true)
-        "first": 1 (optional; default: 1),
+        "first": 1 (optional; default: 100),
         "threshold-ms": 100 (optional; default: 10000)
       },
       ...
@@ -128,25 +177,85 @@ The Entity config parameters contain information about the `first` which defines
 ```
 The idea of using this updated configuration is to allow the developer to influence how the health checks work against the datasource/entity. This would provide them with a more detailed process for checking if DAB engine is healthy and would give them an enhanced user experience. 
 
-## Code Details
-In case `runtime.health.enabled` is false/null then we show the user the original health endpoint format at both `'/'` and `'/health'`.\
-In case `runtime.health.enabled` is true, then the comprehensive health report is displayed based on the rules and check below.
-
-### Roles
+### Permissions for Health Check Report
 We focus on two aspects in terms of roles for health report. 
-+ First is to check the roles present in the `runtime.health.roles` array in the config. We check if the incoming user has access to the comprehensive health check report i.e. they are in this array of allowed roles. For Health report of DB, we only need to check the first condition. 
-+ For Health report on entities (rest and graphql), we focus on the second configuration where we check if this incoming role is allowed to perform the `read` query on the DB. For this we focus on the entity section, where the incoming role should be added with `read` permissions. If so, we perform the health check for the entity and report according to results. Else, we show `status: Unhealthy` and `exception: Health could not be checked for this entity as it does not have permissions to perform read query`.
+
++ Health Report Access\
+We validate if the incoming user has access to the comprehensive health check report i.e. check the allowed roles in the `runtime.health.roles` array in the config. Only if the user has access, we display the health report, else we show a 403 Forbidden error message.
++ Read Permissions Access\
+We check if this incoming role is allowed to perform the `read` query on the DB. For this we focus on the entity section in the config, where the incoming role should be added with `read` permissions. Else, the http client trying to run the `read` command will fail with 403. We return the error message from http client with Unhealthy status. 
+
+> For data source health check we only need to check health report access but for entities (rest and graphql) we run both health report access and read permissions access. 
+
+**Important Point to Note**\
+In case of Development and Production mode of deployment for DAB, we have certain changes in role permissions. The below table shows cases where health checks are run if roles are not configured, allowed, and not allowed.
+
+| Role Membership | Health Check
+| - | - |
+|{not configured} | <table><tr><th>Runtime</th><th>Run Checks</th></tr><tr><td>Development</td><td>Yes</td></tr><tr><td>Production</td><td>No (403 Forbidden) </td></tr></table> |
+| Allowed | <table><tr><th>Runtime</th><th>Run Checks</th></tr><tr><td>Development</td><td>Yes</td></tr><tr><td>Production</td><td>Yes</td></tr></table> |
+| Not Allowed | <table><tr><th>Runtime</th><th>Run Checks</th></tr><tr><td>Development</td><td>No (403 Forbidden)</td></tr><tr><td>Production</td><td>No (403 Forbidden)</td></tr></table> |
 
 > NOTE that BASIC health does NOT include configuration.
 
+### Base URL for DAB
+While running the health checks for entities, we need the BASE URL on which DAB is running which we use to run all rest and graphql queries on our engine. This base URL is identified during runtime by using `httpcontext`. The following command fetches the base URL upon which all health checks would be run subsequently. 
+```
+string path = UriHelper.GetEncodedUrl(httpContext!.Request).Split('?')[0];
+```
+
+## Health Endpoint Report Calculation 
+This section contains details on how the health check details are calculated and Comprehensive Health Check report is formulated at the newly updated endpoint: `/health`.
+
+> Case 1: `runtime.health.enabled` is false/null\
+The endpoint returns a 404 (Not Found) error response when hitting the page as comprehensive health check report is disabled.\
+
+> Case2:  `runtime.health.enabled` is true\
+The endpoint returns the comprehensive health check report after executing the checks for data-source and entities.\
+
+### Configuration Parameters
+The Health Report also contains a section for the configuration summary for the health checks. It provides information about various parameters being enabled or disabled on the global runtime scale. 
+It includes the following
++ Http
++ Https
++ Rest
++ GraphQL
++ Telemetry
++ Caching
++ Mode of Deployment
+
+
+### Application Name
+The application name created by DAB that is appended to data source connection string; is a rich string that exposes a lot of internal stuff. This would be enhanced in the future, hence use the `GetDataApiBuilderUserAgent` function to fetch this for the health report. 
+
 ### DataSource Health Check
-For each database we have two parameters in the health check config parameters. (Enabled and threshold)\
-For each database type we execute a standard query to get the results for that DB and check if the time elapsed is under the threshold.
+For each database we have two parameters in the `data-source.health` config parameters. (Enabled and threshold_ms)\
+For each database, we execute a standard query (given below) to get the time elapsed result (ms) for that DB and use this value to compare with threshold according to the [Overall Health Calculation](#overall-health-calculation) and get the status as `Healthy/Unhealthy`.
+
 The standard queries that would be run on each Database Type are the following
-+ Postgres: SELECT 1 LIMIT 1;
-+ MySQL: SELECT 1 LIMIT 1;
-+ Cosmos DB: SELECT TOP 1 1 FROM c
-+ MS SQL: SELECT TOP 1 1
++ Postgres: SELECT 1;
++ MySQL: SELECT 1;
++ Cosmos DB: SELECT VALUE 1; (for SQL API)
++ MS SQL: SELECT 1;
+
+
+**Here we add the tag `database` in the tags array to differentiate the datasource health check result from the entity health check result where `endpoint` is being added to Tags array.**
+
+```
+{
+  "checks": [
+    {
+      "name": "<database-type>",
+      "status": "Healthy/Unhealthy",
+      "tags": ["database"],
+      "data": {
+        "duration-ms": , // Response time of query in ms
+        "threshold-ms": , // Max Allowed response time for query in ms
+      }
+    }
+  ]
+}
+```
 
 ### Entity Health Check
 
@@ -156,63 +265,59 @@ In the config, for each entity we have three health parameters (Enabled, First a
 + First: This would be used to create the query for endpoints to fetch first 'x' records for the DB.
 + Threshold: This is used to check the time elapsed to run the above query.
 
-To form the query we run a for loop against the entities in the config file. For each entity, we add two parameters in the checks array of the output. One for REST and second for GraphQL, these calls are differentiated using the Tags array in the output report.\
-
-While running the health checks for entities, we need the BASE URL on which DAB is running which we use to run all rest and graphql queries on our engine. 
-> Note: Current implementation we consider `http://localhost:5000` as the base URL. Need to track this, in case different. Everywhere in the document, using `baseUrl` in place of `http://localhost:5000`.
+To form the query we run a for loop against the entities in the config file. For each entity, we add two objects in the output checks array; first for REST and second for GraphQL. These objects are differentiated using the Tags array in the output report. For each rest or graphql we add the appropriate tag in the array for filtering. 
+```
+{
+  "checks": [
+    {
+      "name": "<entity-name>",
+      "status": "Healthy/Unhealthy",
+      "tags": ["rest/graphql", "endpoint"],
+      "data": {
+        "duration-ms": , // Response time of query in ms
+        "threshold-ms": , // Max Allowed response time for query in ms
+      }
+    }
+  ]
+}
+```
 
 #### Rest Query
-We take the base URL and append the REST path in the suffix. After this we get baseUrl/api. (Default Rest Path: /api)\
-For each entity we have rest as a parameter in the config block as well in case the path of entity is different from its name. We build the entity REST path using `<entity-name>.rest.path ?? entityName`. This means if the path is given use that, else the entity name is the path to append to suffix.
-Further our call becomes ` baseUrl/api/usertable`. (Assuming the entity name is UserTable)
+We take the base URL and append the REST path in the suffix to get `<baseUrl>/<runtime.rest.path>`. (Default Rest Path: /api)\
+For each entity, we need to build the rest query url using the above path as prefix. We build the entity REST path using `<entity-name>.rest.path ?? entityName`. This means if the path is given use that, else the entity name is the path to append to suffix.
+Further our call becomes `<baseUrl>/<runtime.rest.path>/<entity-name>.rest.path`.
 
-Finally we add the query parameters which is the first 'x' values to get the query as `baseUrl/api/usertable?$first=5`. This query is then executed to get the elapsed time and we get whether the REST endpoint of UserTable healthy or not.
+Finally we add the query parameter which is the first 'x' values to get the final query as **`<baseUrl>/<runtime.rest.path>/<entity-name>.rest.path?$first=x`**.
+
+This query is then executed to get the elapsed time and we use this value to compare with threshold according to the [Overall Health Calculation](#overall-health-calculation) and get the status as `Healthy/Unhealthy`.
 
 #### GraphQL Query
 
-To execute this query we first need to get the schema of that particular entity. Hence for each entity we run the `introspection query` to get the schema which gives the field names which are then used to query the GraphQL endpoint to check the health.
-For this we run a **POST** query against the base URL **baseUrl/graphql/** with a Request BODY.\
-The CURL Command of that query is 
-```
-curl --request POST \
-  --url baseUrl/graphql \
-  --header 'Content-Type: application/json' \
-  --header 'User-Agent: insomnia/10.3.0' \
-  --data '{
-  "operationName": "IntrospectionQuery",
-  "query": "query IntrospectionQuery {\n  __schema {\n    queryType {\n      name\n    }\n    mutationType {\n      name\n    }\n    subscriptionType {\n      name\n    }\n    types {\n      ...FullType\n    }\n    directives {\n      name\n      description\n      isRepeatable\n      args {\n        ...InputValue\n      }\n      locations\n    }\n  }\n}\n\nfragment FullType on __Type {\n  kind\n  name\n  description\n  specifiedByURL\n  oneOf\n  fields(includeDeprecated: true) {\n    name\n    description\n    args {\n      ...InputValue\n    }\n    type {\n      ...TypeRef\n    }\n    isDeprecated\n    deprecationReason\n  }\n  inputFields {\n    ...InputValue\n  }\n  interfaces {\n    ...TypeRef\n  }\n  enumValues(includeDeprecated: true) {\n    name\n    description\n    isDeprecated\n    deprecationReason\n  }\n  possibleTypes {\n    ...TypeRef\n  }\n}\n\nfragment InputValue on __InputValue {\n  name\n  description\n  type {\n    ...TypeRef\n  }\n  defaultValue\n}\n\nfragment TypeRef on __Type {\n  kind\n  name\n  ofType {\n    kind\n    name\n    ofType {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n          }\n        }\n      }\n    }\n  }\n}"
-}'
-```
-The above introspection query is formatted at `src/media/introspection-query.graphql`.
+To execute this query we first need to get the schema of that particular entity. After fetching the schema, we get the column names which are then used to create the payload for the GraphQL endpoint to check the health.
+For this we run a **POST** query against the base URL `<baseUrl>/<runtime.graphql.path>` with a Request BODY.\
+To create the request body we need to fetch the primitive column names for this entity. 
 
-**Introspection Query Filter**
-
-This gives us the GraphQL Schema which is deserialized to get the column names.\
-Now we need to create a `columnNames` array which contains the list of column names which can be used to create the graphQL query.\
-In the output of the above CURL command we get `Data.Schema.Types` array which contains these column names. We loop through this array and match the `type.kind` value with `OBJECT` and `type.name` value with the name of the entity i.e. `UserTable`. (Note: Only one entry satisfies this check)
-After identifying that specific entity `type` that satisfies the above conditions, we get the object that contains the entity column names. However an entity can have primitive column types or Object column type which are nested further. These object nested types cannot be used to create the graphql query and hence we need to filter out the primitive data types. To resolve this we loop on `type.fields` array and match it with two conditions. If either of the conditions match, we add it to the column names array.\
-For each field we get the `field.type` object 
-+ Condition 1: If the `field.type.kind` is `SCALAR` then this is a primitive column name.
-+ Condition 2: If the `field.type.kind` is `NON_NULL` then check if `field.type.ofType.kind` is `SCALAR`. 
-
-We add all those column names which satisfy either of these two conditions to the top `columnNames` array and finally use this to create the graphQL query.
+##### **Fetch Column Names**
+To get column names for an entity, we use the 'MetadataProvider' for each DB Type. Each Metadata Provider has `EntityToDatabaseObject` which can be used to write the function `GetSchemaGraphQLFieldNamesForEntityName()` which provides the primitive column names for each entity.\
+The `EntityToDatabaseObject` is a Dictionary with key as string containing the name of entity and value as DatabaseObject containing the metadata of the entity. This DatabaseObject contains a parameter `SourceDefinition` which holds information about the database table definition. It contains properties that are common between a database table and a view. This SourceDefinition contains a parameter `Dictionary<string, ColumnDefinition> Columns` which has key as column name and value as basic details of the column. 
 
 **GraphQL Query**\
-After getting column names for the entity we create the graphQL query payload 
-`query = $"{{{entityName.ToLowerInvariant()}(first: {First}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
-`. We execute a **POST** query against the GraphQL base URL.\
+After getting column names array (`columnNames`) for the entity we create the graphQL query payload 
+```
+query = $"{{{entityName.ToLowerInvariant()}(first: {First}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
+````
+We execute a **POST** query against the GraphQL base URL to calculate time elapsed for health check and use this value to compare with threshold according to the [Overall Health Calculation](#overall-health-calculation) and get the status as `Healthy/Unhealthy`.\
+
 CURL Command
 ```
 curl --request POST \
-  --url baseUrl/graphql \
+  --url <baseUrl>/<runtime.graphql.path> \
   --header 'Content-Type: application/json' \
   --header 'User-Agent: insomnia/10.3.0' \
   --data '{
 	"query": "{UserTable(first: 4) {items { content id }}}"
 }'
 ```
-The time it took to execute the above query is the time elapsed for checking the graphQL health.
-
 
 ## Output Sample
 After executing the above queries for DB and entities, we create the below sample for comprehensive Health Check Report.
@@ -221,7 +326,7 @@ After executing the above queries for DB and entities, we create the below sampl
   "status": "Unhealthy/Healthy",
   "version": "1.2.10",
   "app-name": "dab_oss_1.2.10",
-  "dab-configuration": {
+  "configuration": {
     "http": true,
     "https": true,
     "rest": true,
@@ -230,14 +335,14 @@ After executing the above queries for DB and entities, we create the below sampl
     "caching": true,
     "mode": "development"
   },
-  "checks": {
+  "checks": [
     {
       "name": "database-name",
       "status": "Healthy",
       "tags": ["data-source", "mssql"],
       "data": {
-          "responseTimeMs": 10,
-          "maxAllowedResponseTimeMs": 10
+          "duration-ms": 10,
+          "threshold-ms": 100
       }
     },
     {
@@ -245,8 +350,8 @@ After executing the above queries for DB and entities, we create the below sampl
       "status": "Healthy",
       "tags": ["endpoint", "rest"],
       "data": {
-          "responseTimeMs": 10,
-          "maxAllowedResponseTimeMs": 10
+          "duration-ms": 2,
+          "threshold-ms": 10
       }
     },
     {
@@ -254,8 +359,18 @@ After executing the above queries for DB and entities, we create the below sampl
       "status": "Healthy",
       "tags": ["endpoint", "graphql"]
       "data": {
-          "responseTimeMs": 20,
-          "maxAllowedResponseTimeMs": 50
+          "duration-ms": 20,
+          "threshold-ms": 50
+      }
+    },
+    {
+      "name": "<entity-name>",
+      "status": "Unhealthy",
+      "tags": ["endpoint", "rest"]
+      "exception": "{exception-message-here}",
+      "data": {
+          "duration-ms": 20,
+          "threshold-ms": 20
       }
     },
     {
@@ -264,48 +379,26 @@ After executing the above queries for DB and entities, we create the below sampl
       "tags": ["endpoint", "graphql"]
       "exception": "{exception-message-here}",
       "data": {
-          "responseTimeMs": 20,
-          "maxAllowedResponseTimeMs": 10
+          "duration-ms": 20,
+          "threshold-ms": 10
       }
     },
-  }
+  ]
 }
 ```
 
 ## Test Scenarios
 
-Health Check result scenarios for different cases of Health check and GraphQL and Rest entities enabled or disabled.
+Health Check result scenarios for different cases of Health checks for DataSource, Rest and GraphQL entities to be enabled or disabled.
 
-> '_' means enabled/disabled (doesn't matter)
+![Class Diagram](dataSourceHealthCheckTestScenarioFlowchart.png)
 
-* Roles (Global Health and Entity Health are both enabled)
-  * Runtime Health check parameter, `runtime.health.roles` contains "UserRole". However entity doesn't have read permissions for this role.
-    * Health for this entity is displayed with `status: Unhealthy` and `exception: Health could not be checked for this entity as it does not have permissions to perform read operation`. 
-  
-**Cases where Global or Entity health and REST and GraphQL for that Entity is enabled or disabled**
-* Global Health Enabled
-  * Global GraphQL Enabled
-    * Entity health ENABLED and Entity GraphQL ENABLED : Health is shown for this particular entity with `status: Healthy`.
-    * Entity health DISABLED and Entity GraphQL ENABLED : GraphQL Health check `omitted` for this entity
-    * Entity health _ and Entity GraphQL DISABLED : GraphQL Health check shows `status: Unhealthy` and `exception: Health could not be checked for this entity as it is disabled in config`. 
-  
-  * Global GraphQL Disabled
-    * Entity health _ and Entity GraphQL _ : GraphQL Health checks are `omitted` from Health Report.
-    
-  * Global REST Enabled
-    * Entity health ENABLED and Entity REST ENABLED : Health is shown for this particular entity with `status: Healthy`.
-    * Entity health DISABLED and Entity REST ENABLED : REST Health check `omitted` for this entity
-    * Entity health _ and Entity REST DISABLED : REST Health shows check `status: Unhealthy` and `exception: Health could not be check for this entity as it is disabled in config`. 
-  
-  * Global REST Disabled
-    * Entity health _ and Entity REST _ : REST Health checks are `omitted` from Health Report.
+![Class Diagram](entityHealthCheckTestScenarioFlowchart.png)
 
-* Global Health Disabled
-  * Global GraphQL/REST _
-    * Entity health _ and Entity GraphQL/REST _ : Original Health Format Report
 
-## Limitations
+> **Important Point to Note**: In case the Role Membership for Health is successful, then we run the REST/GraphQL query on the entity. While running the query, if we find out that the user's role doesn't have the permissions to perform this read operation, we return 403 (Forbidden) and forward the exception that HttpClient provides. 
+
+## Limitations 
 
 + We do not support health checks for stored procedures.
 + Hot-Reload is not supported in Comprehensive Health Endpoint.
-+ Multiple data-source configs are not supported in the HealthCheck Report

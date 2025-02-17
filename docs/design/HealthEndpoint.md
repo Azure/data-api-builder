@@ -177,7 +177,7 @@ The Entity config parameters contain information about the `first` which defines
 ```
 The idea of using this updated configuration is to allow the developer to influence how the health checks work against the datasource/entity. This would provide them with a more detailed process for checking if DAB engine is healthy and would give them an enhanced user experience. 
 
-### Permissions for Health Check Report
+### Permissions for Health Check Report (Roles)
 We focus on two aspects in terms of roles for health report. 
 
 + Health Report Access\
@@ -187,7 +187,21 @@ We check if this incoming role is allowed to perform the `read` query on the DB.
 
 > For data source health check we only need to check health report access but for entities (rest and graphql) we run both health report access and read permissions access. 
 
+There are three kinds of roles in DAB.\
+System roles are built-in roles recognized by Data API builder. A system role is auto assigned to a requestor regardless of the requestor's role membership denoted in their access tokens. There are two system roles: anonymous and authenticated.
++ Anonymous\
+This is the superset of all roles. The anonymous system role is assigned to requests executed by unauthenticated users. Runtime configuration defined entities must include permissions for the anonymous role if unauthenticated access is desired.
++ Authenticated\
+The authenticated system role is assigned to requests executed by authenticated users. All customer roles are part of Authenticated role. 
++ Custom Roles\
+Custom roles are non-system roles that are assigned to users within the identity provider you set in the runtime config. 
+
+> In Static Web Apps, a user is a member of the anonymous role by default. If the user is authenticated, the user is a member of both the anonymous and authenticated roles. If the client application's request includes the HTTP header `X-MS-API-ROLE` with the value 'author', the request is evaluated in the context of the 'author role'. 
+
+**Access to comprehensive health report is measured via the `runtime.health.roles` array where `anonymous` is added to allow unauthenticated access to an entity, `authenticated` is added to allow all custom roles, and `custome-role` is added to allow that specific role to view the report.**
+
 **Important Point to Note**\
+
 In case of Development and Production mode of deployment for DAB, we have certain changes in role permissions. The below table shows cases where health checks are run if roles are not configured, allowed, and not allowed.
 
 | Role Membership | Health Check

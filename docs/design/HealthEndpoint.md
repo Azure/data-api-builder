@@ -42,13 +42,13 @@ We want the user to provide a check and threshold value for each for each entity
 - **Healthy**: All checks pass.  
 - **Unhealthy**: At least one check fails. 
 
-> The time elapsed to run the query for DB or Entity (Rest or GraphQL) is compared to the threshold(ms) as given in the config. The value of healthCheck is given based on the condition below. In case of any error while executing the healthCheck query, we consider the "Unhealthy" and specify the exception message appropriately.\
+The time elapsed to run the query for DB or Entity (Rest or GraphQL) is compared to the threshold(ms) as given in the config. The value of healthCheck is given based on the condition below. In case of any error while executing the healthCheck query, we consider the "Unhealthy" and specify the exception message appropriately.\
 `HealthCheck = time_Elapsed_ms < threshold_ms ? Healthy : Unhealthy`
 
-**By default the DAB Comprehensive Health Check would be enabled `true` for datasource and all entities in both development and production mode of deployment. User will have to mark <datasource>.enabled or <entity-name>.enabled to false to mark this comprehensive check as disabled.** 
+**By default the DAB Comprehensive Health Check would be enabled `true` for datasource and all entities in both development and production mode of deployment. User will have to mark datasource.enabled or entity-name.enabled to false to mark this comprehensive check as disabled for particular data source of entity.** 
 
 **Case 1: Datasource**\
-Here we would carry out standard queries based on the datasource type and execute them under the given threshold. If the engine gets the result below the specified threshold, the DB is considered healthy else unhealthy.
+Carry out standard queries based on the datasource type and execute them under the given threshold. If the engine gets the result below the specified threshold, the DB is considered healthy else unhealthy.
 
 > Example: If we have a SQL Server, we would execute the standard query given below in the document for SQL Server. If the elapsed time for this query is under the given threshold, the data source would be considered healthy.
 
@@ -77,7 +77,7 @@ Health check responses follow a common convention rather than a strict standard.
 The customer needs to update the `dab-config.json` file to include details of the health check for different configuration parameters like runtime, data source and entities. 
 
 #### `runtime.health` Configuration
-The runtime configuration would include details like `cache-ttl-seconds` in case we need to cache the response of health checks, the `max-dop` value which specifies the degree of parallelism i.e. how many queries that DAB should run at once to get health results and `roles` i.e. which role is allowed to view the comprehensive health information of DAB engine.
+The runtime configuration would include details like `cache-ttl-seconds` in case we need to cache the response of health checks, the `max-dop` value which specifies the degree of parallelism i.e. how many queries that DAB should run in parallel and `roles` i.e. all roles which are allowed to view the comprehensive health information of DAB engine.
 
 | **Property**   | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |----------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
@@ -124,7 +124,7 @@ The database type in the data source health config determines the query that we 
 
 #### `<entity-name>.health` Configuration
 
-The Entity config parameters contain information about the `first` which defines the number of first rows to be returned when executing a SELECT query on the data source entity and under what threshold ms should the response be received for it to qualify as a healthy entity.
+The Entity config parameters contain information about the `first` which defines the number of first rows to be returned when executing a READ operation on the data source entity and under what threshold ms should the response be received for it to qualify as a healthy entity.
 | **Property**     | **Data Type** | **Required** | **Default** | **Description**                                                                                      |
 |------------------|---------------|--------------|-------------|------------------------------------------------------------------------------------------------------|
 | `enabled`        | Boolean       | No           | `false`      | Enables or disables health checks for the specific entity.                                          |
@@ -192,17 +192,17 @@ System roles are built-in roles recognized by Data API builder. A system role is
 + Anonymous\
 This is the superset of all roles. The anonymous system role is assigned to requests executed by unauthenticated users. Runtime configuration defined entities must include permissions for the anonymous role if unauthenticated access is desired.
 + Authenticated\
-The authenticated system role is assigned to requests executed by authenticated users. All customer roles are part of Authenticated role. 
+The authenticated system role is assigned to requests executed by authenticated users. All custom roles are part of Authenticated role. 
 + Custom Roles\
 Custom roles are non-system roles that are assigned to users within the identity provider you set in the runtime config. 
 
-> In Static Web Apps, a user is a member of the anonymous role by default. If the user is authenticated, the user is a member of both the anonymous and authenticated roles. If the client application's request includes the HTTP header `X-MS-API-ROLE` with the value 'author', the request is evaluated in the context of the 'author role'. 
+> In Static Web Apps, a user is a member of the anonymous role by default. If the user is authenticated, the user is a member of both the anonymous and authenticated roles. If the client application's request includes the HTTP header `X-MS-API-ROLE` with a custom value, the request is evaluated in the context of the 'custom role'. 
 
 **Access to comprehensive health report is measured via the `runtime.health.roles` array where `anonymous` is added to allow unauthenticated access to an entity, `authenticated` is added to allow all custom roles, and `custome-role` is added to allow that specific role to view the report.**
 
-**Important Point to Note**\
+**Important Point to Note**
 
-In case of Development and Production mode of deployment for DAB, we have certain changes in role permissions. The below table shows cases where health checks are run if roles are not configured, allowed, and not allowed.
+In case of Development and Production mode of deployment for DAB, we have certain changes in role permissions. The below table shows cases whether health checks are run if roles are not configured, allowed, and not allowed.
 
 | Role Membership | Health Check
 | - | - |
@@ -210,10 +210,8 @@ In case of Development and Production mode of deployment for DAB, we have certai
 | Allowed | <table><tr><th>Runtime</th><th>Run Checks</th></tr><tr><td>Development</td><td>Yes</td></tr><tr><td>Production</td><td>Yes</td></tr></table> |
 | Not Allowed | <table><tr><th>Runtime</th><th>Run Checks</th></tr><tr><td>Development</td><td>No (403 Forbidden)</td></tr><tr><td>Production</td><td>No (403 Forbidden)</td></tr></table> |
 
-> NOTE that BASIC health does NOT include configuration.
-
 ### Base URL for DAB
-While running the health checks for entities, we need the BASE URL on which DAB is running which we use to run all rest and graphql queries on our engine. This base URL is identified during runtime by using `httpcontext`. The following command fetches the base URL upon which all health checks would be run subsequently. 
+While running the health checks for entities, we need the BASE URL on which DAB is running. This BASE URL is used to run all datasource, rest and graphql health check queries for our engine. This base URL is identified during runtime by using `httpcontext`. The following command fetches the base URL upon which all health checks would be run subsequently. 
 ```
 string path = UriHelper.GetEncodedUrl(httpContext!.Request).Split('?')[0];
 ```
@@ -222,10 +220,10 @@ string path = UriHelper.GetEncodedUrl(httpContext!.Request).Split('?')[0];
 This section contains details on how the health check details are calculated and Comprehensive Health Check report is formulated at the newly updated endpoint: `/health`.
 
 > Case 1: `runtime.health.enabled` is false/null\
-The endpoint returns a 404 (Not Found) error response when hitting the page as comprehensive health check report is disabled.\
+The endpoint returns a 404 (Not Found) error response when hitting the page as comprehensive health check report is disabled.
 
 > Case2:  `runtime.health.enabled` is true\
-The endpoint returns the comprehensive health check report after executing the checks for data-source and entities.\
+The endpoint returns the comprehensive health check report after executing the checks for data-source and entities.
 
 ### Configuration Parameters
 The Health Report also contains a section for the configuration summary for the health checks. It provides information about various parameters being enabled or disabled on the global runtime scale. 
@@ -238,12 +236,13 @@ It includes the following
 + Caching
 + Mode of Deployment
 
+> NOTE that BASIC health does NOT include configuration.
 
 ### Application Name
-The application name created by DAB that is appended to data source connection string; is a rich string that exposes a lot of internal stuff. This would be enhanced in the future, hence use the `GetDataApiBuilderUserAgent` function to fetch this for the health report. 
+The application name created by DAB that is appended to data source connection string; is a rich string that exposes a lot of internal stuff. This would be enhanced in the future, hence use the `GetDataApiBuilderUserAgent()` function from the `ProductInfo` class to fetch this for the health report. 
 
 ### DataSource Health Check
-For each database we have two parameters in the `data-source.health` config parameters. (Enabled and threshold_ms)\
+DAB Config has two parameters in the `data-source.health` config section. (Enabled and threshold_ms)\
 For each database, we execute a standard query (given below) to get the time elapsed result (ms) for that DB and use this value to compare with threshold according to the [Overall Health Calculation](#overall-health-calculation) and get the status as `Healthy/Unhealthy`.
 
 The standard queries that would be run on each Database Type are the following
@@ -320,7 +319,7 @@ After getting column names array (`columnNames`) for the entity we create the gr
 ```
 query = $"{{{entityName.ToLowerInvariant()}(first: {First}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
 ````
-We execute a **POST** query against the GraphQL base URL to calculate time elapsed for health check and use this value to compare with threshold according to the [Overall Health Calculation](#overall-health-calculation) and get the status as `Healthy/Unhealthy`.\
+We execute a **POST** query against the GraphQL base URL to calculate time elapsed for health check and use this value to compare with threshold according to the [Overall Health Calculation](#overall-health-calculation) and get the status as `Healthy/Unhealthy`.
 
 CURL Command
 ```

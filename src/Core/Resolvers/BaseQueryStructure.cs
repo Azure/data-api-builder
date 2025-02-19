@@ -1,11 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -163,9 +165,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Extracts the *Connection.items query field from the *Connection query field
         /// </summary>
         /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        internal static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
+        internal static FieldNode? ExtractQueryField(FieldNode connectionQueryField)
         {
             FieldNode? itemsField = null;
+            FieldNode? groupByField = null;
             foreach (ISelectionNode node in connectionQueryField.SelectionSet!.Selections)
             {
                 FieldNode field = (FieldNode)node;
@@ -174,11 +177,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (fieldName == QueryBuilder.PAGINATION_FIELD_NAME)
                 {
                     itemsField = field;
-                    break;
+                }
+                else if (fieldName == QueryBuilder.GROUP_BY_FIELD_NAME)
+                {
+                    groupByField = field;
                 }
             }
 
-            return itemsField;
+            if (itemsField != null && groupByField != null)
+            {
+                // This is temporary and iteratively we will allow both items and groupby in same query.
+                throw new DataApiBuilderException(
+                    message: "Cannot have both groupBy and items in the same query",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return groupByField is null ? itemsField : groupByField;
         }
 
         /// <summary>

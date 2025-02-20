@@ -25,6 +25,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using HotChocolate.AspNetCore;
+using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
@@ -42,6 +43,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -54,9 +59,12 @@ namespace Azure.DataApiBuilder.Service
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
         public static bool IsLogLevelOverriddenByCli;
+        public static OpenTelemetryOptions OpenTelemetryOptions = new();
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+        private HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
+        private RuntimeConfigProvider? _configProvider;
 
         public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
@@ -78,28 +86,62 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
-            services.AddSingleton(hotReloadEventHandler);
+            services.AddSingleton(_hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, hotReloadEventHandler, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
+            _configProvider = configProvider;
 
             services.AddSingleton(fileSystem);
             services.AddSingleton(configLoader);
             services.AddSingleton(configProvider);
 
-            if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
-                && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
+            bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.Telemetry?.ApplicationInsights is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
             {
                 // Add ApplicationTelemetry service and register
                 // custom ITelemetryInitializer implementation with the dependency injection
                 services.AddApplicationInsightsTelemetry();
                 services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            }
+
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.Telemetry?.OpenTelemetry is not null
+                && runtimeConfig.Runtime.Telemetry.OpenTelemetry.Enabled)
+            {
+                services.AddOpenTelemetry()
+                .WithMetrics(metrics =>
+                {
+                    metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddOtlpExporter(configure =>
+                        {
+                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                            configure.Protocol = OtlpExportProtocol.Grpc;
+                        })
+                        .AddRuntimeInstrumentation();
+                })
+                .WithTracing(tracing =>
+                {
+                    tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddOtlpExporter(configure =>
+                        {
+                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                            configure.Protocol = OtlpExportProtocol.Grpc;
+                        });
+                });
             }
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
@@ -204,6 +246,10 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
+
+            // Subscribe the GraphQL schema refresh method to the specific hot-reload event
+            _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
+
             services.AddFusionCache()
                 .WithOptions(options =>
                 {
@@ -287,6 +333,17 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .UseRequest<BuildRequestStateMiddleware>()
                 .UseDefaultPipeline();
+        }
+
+        /// <summary>
+        /// Refreshes the GraphQL schema when the runtime config updates during hot-reload scenario.
+        /// </summary>
+        private void RefreshGraphQLSchema(IServiceCollection services)
+        {
+            // Re-add GraphQL services with updated config.
+            RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
+            Console.WriteLine("Updating GraphQL service.");
+            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -404,6 +461,9 @@ namespace Azure.DataApiBuilder.Service
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
 
+            IRequestExecutorResolver requestExecutorResolver = app.ApplicationServices.GetRequiredService<IRequestExecutorResolver>();
+            _hotReloadEventHandler.Subscribe("GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED", (sender, args) => EvictGraphQLSchema(requestExecutorResolver));
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
@@ -433,7 +493,16 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// If LogLevel is NOT overridden by CLI, attempts to find the 
+        /// Evicts the GraphQL schema from the request executor resolver.
+        /// </summary>
+        private static void EvictGraphQLSchema(IRequestExecutorResolver requestExecutorResolver)
+        {
+            Console.WriteLine("Evicting old GraphQL schema.");
+            requestExecutorResolver.EvictRequestExecutor();
+        }
+
+        /// <summary>
+        /// If LogLevel is NOT overridden by CLI, attempts to find the
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
         /// </summary>

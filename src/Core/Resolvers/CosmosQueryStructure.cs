@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             OrderByColumns = new();
             if (IsPaginated)
             {
-                FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
+                FieldNode? fieldNode = ExtractQueryField(selection.SyntaxNode);
 
                 if (fieldNode is not null)
                 {

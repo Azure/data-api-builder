@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -39,10 +40,11 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IQueryEngineFactory _queryEngineFactory;
         private readonly IMutationEngineFactory _mutationEngineFactory;
         private readonly IMetadataProviderFactory _metadataProviderFactory;
-        private readonly RuntimeEntities _entities;
+        private RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private bool _isMultipleCreateOperationEnabled;
+        private bool _isAggregationEnabled;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -52,22 +54,39 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="mutationEngineFactory">MutationEngineFactory to retreive mutation engine to be used by resolvers.</param>
         /// <param name="metadataProviderFactory">MetadataProviderFactory to get metadata provider used when generating the SQL-based GraphQL schema. Ignored if the runtime is Cosmos.</param>
         /// <param name="authorizationResolver">Authorization information for the runtime, to be applied to the GraphQL schema.</param>
+        /// <param name="handler">Optional hot-reload event handler to subscribe to the config change event.</param>
         public GraphQLSchemaCreator(
             RuntimeConfigProvider runtimeConfigProvider,
             IQueryEngineFactory queryEngineFactory,
             IMutationEngineFactory mutationEngineFactory,
             IMetadataProviderFactory metadataProviderFactory,
-            IAuthorizationResolver authorizationResolver)
+            IAuthorizationResolver authorizationResolver,
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
         {
+            handler?.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, OnConfigChanged);
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
             _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
+            _isAggregationEnabled = runtimeConfig.EnableAggregation;
+
             _entities = runtimeConfig.Entities;
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
             _metadataProviderFactory = metadataProviderFactory;
             _authorizationResolver = authorizationResolver;
             _runtimeConfigProvider = runtimeConfigProvider;
+        }
+
+        /// <summary>
+        /// Executed when a hot-reload event occurs. Pulls the latest
+        /// runtimeconfig object from the provider and updates the flag indicating
+        /// whether multiple create operations are enabled, and the entities based on the new config.
+        /// </summary>
+        protected void OnConfigChanged(object? sender, HotReloadEventArgs args)
+        {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
+            _entities = runtimeConfig.Entities;
         }
 
         /// <summary>
@@ -136,7 +155,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 entityToDatabaseType.TryAdd(entityName, metadataprovider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects
-            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
+            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isAggregationEnabled);
 
             // Generate the GraphQL mutations from the provided objects
             DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationEnabled);
@@ -172,6 +191,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // followed by an insertion in the linking table. The directional linking object contains all the fields from the target entity
             // (relationship/column) and non-relationship fields from the linking table.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
+
+            Dictionary<string, EnumTypeDefinitionNode> enumTypes = new();
 
             // 1. Build up the object and input types for all the exposed entities in the config.
             foreach ((string entityName, Entity entity) in entities)
@@ -222,6 +243,19 @@ namespace Azure.DataApiBuilder.Core.Services
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
                             InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
+
+                            if (_isAggregationEnabled)
+                            {
+                                EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
+                                EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
+                                // Generate aggregation type for the entity
+                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
+                                if (aggregationType.Fields.Any())
+                                {
+                                    objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
+                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node));
+                                }
+                            }
                         }
 
                         objectTypes.Add(entityName, node);
@@ -277,6 +311,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 fields.Values.ToImmutableList()));
 
             List<IDefinitionNode> nodes = new(objectTypes.Values);
+            nodes.AddRange(enumTypes.Values);
             return new DocumentNode(nodes);
         }
 

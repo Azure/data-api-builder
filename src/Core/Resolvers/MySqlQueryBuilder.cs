@@ -295,7 +295,8 @@ WHERE
                 }
                 else if (columnDef.HasDefault)
                 {
-                    selections.Add($"{GetMySQLDefaultValue(columnDef)} as {quotedColName}");
+                    string columnSelectionValue = structure.InsertColumns.Any() ? GetMySQLDefaultValue(columnDef) : $"'{GetMySQLDefaultValue(columnDef)}'";
+                    selections.Add($"{columnSelectionValue} as {quotedColName}");
                 }
             }
 

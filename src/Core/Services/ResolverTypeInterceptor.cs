@@ -70,9 +70,6 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         {
             foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
-                // In order to inspect the type we need to resolve the type reference on the definition.
-                // If it's null or cannot be resolved something is wrong, but we skip over this and let
-                // the type validation deal with schema errors.
                 if (field.Type is not null &&
                     completionContext.TryGetType(field.Type, out IType? type))
                 {

@@ -13,18 +13,9 @@ Invoke-WebRequest $chiliCreamLicenseMetadataURL -UseBasicParsing |
  Select-Object -ExpandProperty Content |
  Out-File $chiliCreamLicenseSavePath
 
-# Download and save the Microsoft.Data.SqlClient.SNI.runtime license
-$sqlClientSNILicenseSavePath = "$BuildArtifactStagingDir/sqlclient_sni_runtime.txt"
-$sqlClientSNILicenseMetadataURL = "https://www.nuget.org/packages/Microsoft.Data.SqlClient.SNI.runtime/5.2.0/License"
-$pageContent = Invoke-WebRequest $sqlClientSNILicenseMetadataURL -UseBasicParsing
-
-# Regular expression with three capture groups.
-# Capture Group 1: HTML tag which indicates start of license text
-# Named Capture Group licenseText: License text. Match across many lines with regex modifier (?s)
-# Capture Group 3: HTML tag which indicates end of license text.
-$licenseRegex = '(<pre class="license-file-contents custom-license-container">)(?<licenseText>(?s).*)(<\/pre>)'
-$pageContent -match $licenseRegex
-$sqlClientSNILicense = $Matches.licenseText
+# Define the path to the license file in your repository and Read the content of the license file
+$sqlClientSNILicenseFilePath = "$BuildSourcesDir/external_licenses/Microsoft.Data.SqlClient.SNI.5.2.0.License.txt"
+$sqlClientSNILicense = Get-Content -Path $sqlClientSNILicenseFilePath -Raw
 
 # Path of notice file generated in CI/CD pipeline.
 $noticeFilePath = "$BuildSourcesDir/NOTICE.txt"

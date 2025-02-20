@@ -689,6 +689,65 @@ FROM (
             await TestSupportForGroupByNoAggregation(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test to check that an exception is thrown when both items and groupBy are present in the same query.
+        /// </summary>
+        [TestMethod]
+        public async Task TestInvalidQueryWithItemsAndGroupBy()
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            items {
+                price
+            }
+            groupBy {
+                aggregations {
+                    sum_price: sum(field: price)
+                }
+            }
+        }
+    }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            if (result[0].TryGetProperty("message", out JsonElement message))
+            {
+                Assert.IsTrue(message.ToString() == "Cannot have both groupBy and items in the same query", "Requesting groupby and items in same query should fail.");
+            }
+        }
+
+        /// <summary>
+        /// Test groupby selection fields not matching arguments.
+        /// </summary>
+        [TestMethod]
+        public async Task TestGroupBySelectionsNotPresentInArguments()
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy(fields: [categoryid, pieceid]) {
+                fields
+                {
+                    categoryid
+                    pieceid,
+                    price
+                }
+                aggregations {
+                    sum_price: sum(field: price, having:{ gt: 50 })
+                    count_piece: count(field: pieceid, having: { lte : 100 })
+                }
+            }
+        }
+    }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            if (result[0].TryGetProperty("message", out JsonElement message))
+            {
+                Assert.IsTrue(message.ToString() == "Groupby fields in selection must match the fields in the groupby argument.");
+            }
+        }
         #endregion
     }
 }

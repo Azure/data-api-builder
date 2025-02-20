@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (structure.Columns.Any())
                 {
-                    aggregations = $",{BuildAggregationColumns(structure.GroupByMetadata)}";
+                    aggregations = $", {BuildAggregationColumns(structure.GroupByMetadata)}";
                 }
                 else
                 {
@@ -96,32 +96,35 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}"
-                + $" FROM {fromSql}"
-                + $" WHERE {predicates}";
+            StringBuilder queryBuilder = new();
+            queryBuilder.Append($"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}");
+            queryBuilder.Append($" FROM {fromSql}");
+            queryBuilder.Append($" WHERE {predicates}");
 
             // Add GROUP BY clause if there are any group by columns
             if (structure.GroupByMetadata.Fields.Any())
             {
-                query += $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
+                queryBuilder.Append($" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}");
             }
 
             if (structure.GroupByMetadata.Aggregations.Count > 0)
             {
-                List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
+                List<Predicate> havingPredicates = structure.GroupByMetadata.Aggregations
                       .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
                       .ToList();
 
                 if (havingPredicates.Any())
                 {
-                    query += $" HAVING {Build(havingPredicates)}";
+                    queryBuilder.Append($" HAVING {Build(havingPredicates)}");
                 }
             }
 
             if (structure.OrderByColumns.Any())
             {
-                query += $" ORDER BY {Build(structure.OrderByColumns)}";
+                queryBuilder.Append($" ORDER BY {Build(structure.OrderByColumns)}");
             }
+
+            string query = queryBuilder.ToString();
 
             return query;
         }
@@ -149,7 +152,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (col_type == typeof(DateTime))
                     {
                         // Need to wrap datetime in quotes to ensure correct deserialization.
-                        stringAgg.Append($"N\'\"{escapedLabel}\":\"\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null') + \'\"\'+");
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\"\' + {BuildJson(col_value)},'null') + \'\"\'+");
                     }
                     else if (col_type == typeof(Boolean))
                     {
@@ -158,7 +161,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else
                     {
                         // Create json. Example: "book.id": 1 would be a sample output.
-                        stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null')");
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\' + {BuildJson(col_value)},'null')");
                     }
                 }
                 else
@@ -184,14 +187,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (aggregationColumnCount == 0 && columnCount != 0)
                 {
                     // need to add a comma if there are columns before the aggregation columns
-                    stringAgg.Append("+\',\'+");
+                    stringAgg.Append("+\', \'+");
                 }
 
                 string col_value = aggregation.Column.OperationAlias;
                 col_value = $"CONVERT(NVARCHAR(MAX), [{col_value}])";
                 string escapedLabel = aggregation.Column.OperationAlias.Replace("'", "''");
 
-                stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null')");
+                stringAgg.Append($"N\'\"{escapedLabel}\":\' + {BuildJson(col_value)},'null')");
 
                 aggregationColumnCount++;
 
@@ -360,6 +363,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         WrapSubqueryColumn(c, structure.JoinQueries[c.TableAlias!]) + $" AS {QuoteIdentifier(c.Label)}" :
                         Build(c)
             ));
+        }
+
+        private static string BuildJson(string col_value)
+        {
+            return $"ISNULL(STRING_ESCAPE({col_value},'json')";
         }
 
         /// <inheritdoc />

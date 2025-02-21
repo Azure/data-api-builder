@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (col_type == typeof(DateTime))
                     {
                         // Need to wrap datetime in quotes to ensure correct deserialization.
-                        stringAgg.Append($"{BuildJson(escapedLabel, col_value)},'null') + \'\"\'+");
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\"\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null') + \'\"\'+");
                     }
                     else if (col_type == typeof(Boolean))
                     {
@@ -367,7 +367,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static string BuildJson(string escapedLabel, string col_value)
         {
-            return $"N\'\"{escapedLabel}\":\"\' + ISNULL(STRING_ESCAPE({col_value},'json')";
+            return $"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json')";
         }
 
         /// <inheritdoc />

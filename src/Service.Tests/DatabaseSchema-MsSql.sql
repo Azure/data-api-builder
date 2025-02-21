@@ -61,6 +61,7 @@ DROP TABLE IF EXISTS default_with_function_table;
 DROP TABLE IF EXISTS [DimAccount]
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
+DROP TABLE IF EXISTS default_books;
 DROP SCHEMA IF EXISTS [foo];
 DROP SCHEMA IF EXISTS [bar];
 COMMIT;
@@ -387,6 +388,11 @@ CREATE TABLE user_profiles (
 	userid INT
 );
 
+CREATE TABLE default_books(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    title NVARCHAR(100)
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -443,6 +449,10 @@ ON DELETE CASCADE;
 
 ALTER TABLE sales
 ADD total AS (subtotal + tax) PERSISTED;
+
+ALTER TABLE default_books
+ADD CONSTRAINT title_constraint
+DEFAULT 'Placeholder' FOR title
 
 SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
@@ -514,7 +524,13 @@ VALUES (1, 'Awesome book', 1234),
 (11, 'Policy-Test-04', 1941),
 (12, 'Time to Eat 2', 1941),
 (13, 'Before Sunrise', 1234),
-(14, 'Before Sunset', 1234);
+(14, 'Before Sunset', 1234),
+(15, 'SQL_CONN', 1234),
+(16, 'SOME%CONN', 1234),
+(17, 'CONN%_CONN', 1234),
+(18, '[Special Book]', 1234),
+(19, 'ME\YOU', 1234),
+(20, 'C:\\LIFE', 1234);
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT books_mm ON
@@ -532,7 +548,13 @@ VALUES (1, 'Awesome book', 1234),
 (11, 'Policy-Test-04', 1941),
 (12, 'Time to Eat 2', 1941),
 (13, 'Before Sunrise', 1234),
-(14, 'Before Sunset', 1234);
+(14, 'Before Sunset', 1234),
+(15, 'SQL_CONN', 1234),
+(16, 'SOME%CONN', 1234),
+(17, 'CONN%_CONN', 1234),
+(18, '[Special Book]', 1234),
+(19, 'ME\YOU', 1234),
+(20, 'C:\\LIFE', 1234);
 SET IDENTITY_INSERT books_mm OFF
 
 SET IDENTITY_INSERT players ON

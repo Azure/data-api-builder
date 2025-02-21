@@ -24,6 +24,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string ORDER_BY_FIELD_NAME = "orderBy";
         public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
         public const string ID_FIELD_NAME = "id";
+        public const string GROUP_BY_FIELD_NAME = "groupBy";
+        public const string GROUP_BY_FIELDS_FIELD_NAME = "fields";
+        public const string GROUP_BY_AGGREGATE_FIELD_NAME = "aggregations";
+        public const string GROUP_BY_AGGREGATE_FIELD_ARG_NAME = "field";
+        public const string GROUP_BY_AGGREGATE_FIELD_DISTINCT_NAME = "distinct";
+        public const string GROUP_BY_AGGREGATE_FIELD_HAVING_NAME = "having";
+
+        // Define the enabled database types for aggregation
+        public static readonly HashSet<DatabaseType> AggregationEnabledDatabaseTypes = new()
+        {
+            DatabaseType.MSSQL,
+            DatabaseType.DWSQL,
+        };
 
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries
@@ -41,7 +54,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             RuntimeEntities entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
-            Dictionary<string, DatabaseObject>? dbObjects = null
+            Dictionary<string, DatabaseObject>? dbObjects = null,
+            bool _isAggregationEnabled = false
             )
         {
             List<FieldDefinitionNode> queryFields = new();
@@ -73,7 +87,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     else
                     {
                         IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Read, entityPermissionsMap);
-                        ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name);
+                        bool isAggregationEnabledForEntity = _isAggregationEnabled && AggregationEnabledDatabaseTypes.Contains(databaseTypes[entityName]);
+
+                        ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name, isAggregationEnabledForEntity);
 
                         if (rolesAllowedForRead.Any())
                         {
@@ -239,15 +255,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
         }
 
-        public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name)
+        public static ObjectTypeDefinitionNode GenerateReturnType(NameNode name, bool isAggregationEnabled = false)
         {
-            return new(
-                location: null,
-                new NameNode(GeneratePaginationTypeName(name.Value)),
-                new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
-                new List<DirectiveNode>(),
-                new List<NamedTypeNode>(),
-                new List<FieldDefinitionNode> {
+            string scalarFieldsEnumName = EnumTypeBuilder.GenerateScalarFieldsEnumName(name.Value);
+
+            List<FieldDefinitionNode> fields = new() {
                     new(
                         location: null,
                         new NameNode(PAGINATION_FIELD_NAME),
@@ -256,7 +268,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                         new List<DirectiveNode>()),
                     new(
-                        location : null,
+                        location: null,
                         new NameNode(PAGINATION_TOKEN_FIELD_NAME),
                         new StringValueNode("A pagination token to provide to subsequent pages of a query"),
                         new List<InputValueDefinitionNode>(),
@@ -269,8 +281,38 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         new List<InputValueDefinitionNode>(),
                         new NonNullType(new BooleanType()).ToTypeNode(),
                         new List<DirectiveNode>())
-                }
-            );
+                };
+
+            if (isAggregationEnabled)
+            {
+                fields.Add(
+                    new(
+                        location: null,
+                        new NameNode(GROUP_BY_FIELD_NAME),
+                        new StringValueNode("Group results by specified fields"),
+                        new List<InputValueDefinitionNode>
+                        {
+                            new(
+                                location: null,
+                                new NameNode(GROUP_BY_FIELDS_FIELD_NAME),
+                                new StringValueNode("Fields to group by"),
+                                new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(scalarFieldsEnumName))),
+                                defaultValue: null,
+                                new List<DirectiveNode>()
+                            )
+                        },
+                        new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode($"{name.Value}GroupBy")))),
+                        new List<DirectiveNode>())
+                );
+            }
+
+            return new(
+                location: null,
+                new NameNode(GeneratePaginationTypeName(name.Value)),
+                new StringValueNode("The return object from a filter query that supports a pagination token for paging through results"),
+                new List<DirectiveNode>(),
+                new List<NamedTypeNode>(),
+                fields);
         }
 
         public static string GeneratePaginationTypeName(string name)

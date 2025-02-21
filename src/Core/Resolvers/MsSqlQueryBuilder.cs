@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Text;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
@@ -17,6 +18,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
         private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
+        private const string MSSQL_ESCAPE_CHAR = "\\";
 
         // Name of the column which stores the number of records with given PK. Used in Upsert queries.
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
@@ -60,10 +62,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     Build(structure.PaginationMetadata.PaginationPredicate));
             }
 
-            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
+            // we add '\' character to escape the special characters in the string, but if special characters are needed to be searched
+            // as literal characters we need to escape the '\' character itself. Since we add `\` only for LIKE, so we search if the query
+            // contains LIKE and add the ESCAPE clause accordingly.
+            predicates = AddEscapeToLikeClauses(predicates);
+
+            string aggregations = string.Empty;
+            if (structure.GroupByMetadata.Aggregations.Count > 0)
+            {
+                if (structure.Columns.Any())
+                {
+                    aggregations = $",{BuildAggregationColumns(structure.GroupByMetadata)}";
+                }
+                else
+                {
+                    aggregations = $"{BuildAggregationColumns(structure.GroupByMetadata)}";
+                }
+            }
+
+            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}"
                 + $" FROM {fromSql}"
-                + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.OrderByColumns)}";
+                + $" WHERE {predicates}";
+
+            // Add GROUP BY clause if there are any group by columns
+            if (structure.GroupByMetadata.Fields.Any())
+            {
+                query += $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
+                if (structure.GroupByMetadata.Aggregations.Count > 0)
+                {
+                    List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
+                          .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
+                          .ToList();
+
+                    if (havingPredicates.Any())
+                    {
+                        query += $" HAVING {Build(havingPredicates)}";
+                    }
+                }
+            }
+
+            if (structure.OrderByColumns.Any())
+            {
+                query += $" ORDER BY {Build(structure.OrderByColumns)}";
+            }
 
             query += FOR_JSON_SUFFIX;
             if (!structure.IsListQuery)
@@ -72,6 +113,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return query;
+        }
+
+        /// <summary>
+        /// Builds the aggregation columns part of the SELECT clause
+        /// </summary>
+        private string BuildAggregationColumns(GroupByMetadata metadata)
+        {
+            return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
+        }
+
+        /// <summary>
+        /// Helper method to add ESCAPE clause to the LIKE clauses in the query.
+        /// </summary>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        private static string AddEscapeToLikeClauses(string predicate)
+        {
+            const string escapeClause = $" ESCAPE '{MSSQL_ESCAPE_CHAR}'";
+            // Regex to find LIKE clauses and append ESCAPE
+            return Regex.Replace(predicate, @"(LIKE\s+@[\w\d]+)", $"$1{escapeClause}", RegexOptions.IgnoreCase);
         }
 
         /// <inheritdoc />
@@ -95,10 +156,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder insertQuery = new();
             if (!isInsertDMLTriggerEnabled)
             {
-                // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
-                insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
-                    $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
-                insertQuery.Append(values);
+                if (!string.IsNullOrEmpty(insertColumns))
+                {
+                    // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
+                    insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
+                    insertQuery.Append(values);
+                }
+                else
+                {
+                    insertQuery.Append($"INSERT INTO {tableName} OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} DEFAULT VALUES");
+                }
             }
             else
             {

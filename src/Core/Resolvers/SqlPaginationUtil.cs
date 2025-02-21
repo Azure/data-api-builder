@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Wrapper for CreatePaginationConnectionFromJsonElement
         /// </summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
+        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata, GroupByMetadata? groupByMetadata = null)
         {
             // necessary for MsSql because it doesn't coalesce list query results like Postgres
             if (jsonDocument is null)
@@ -47,10 +47,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             JsonElement root = jsonDocument.RootElement.Clone();
 
             // create the connection object.
-            return CreatePaginationConnection(root, paginationMetadata).ToJsonDocument();
+            return CreatePaginationConnection(root, paginationMetadata, groupByMetadata).ToJsonDocument();
         }
 
-        private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)
+        private static string GenerateGroupByObjectFromResult(GroupByMetadata groupByMetadata, IEnumerable<JsonElement> rootEnumerated)
+        {
+            JsonArray groupByArray = new();
+            foreach (JsonElement element in rootEnumerated)
+            {
+                JsonObject fieldObject = new();
+                JsonObject aggregationObject = new();
+                JsonObject combinedObject = new();
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    if (groupByMetadata.Fields.ContainsKey(property.Name))
+                    {
+                        if (groupByMetadata.RequestedFields)
+                        {
+                            fieldObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
+                        }
+                    }
+                    else
+                    {
+                        aggregationObject.Add(property.Name, JsonNode.Parse(property.Value.GetRawText()));
+                    }
+                }
+
+                combinedObject.Add(QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME, fieldObject);
+                combinedObject.Add(QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME, aggregationObject);
+                groupByArray.Add(combinedObject);
+            }
+
+            return JsonSerializer.Serialize(groupByArray);
+        }
+
+        private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata, GroupByMetadata? groupByMetadata = null)
         {
             // Maintains the connection JSON object *Connection
             JsonObject connection = new();
@@ -105,6 +136,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
+            if (groupByMetadata is not null && paginationMetadata.RequestedGroupBy == true)
+            {
+
+                connection.Add(QueryBuilder.GROUP_BY_FIELD_NAME, GenerateGroupByObjectFromResult(groupByMetadata, rootEnumerated));
+            }
+
             if (paginationMetadata.RequestedEndCursor)
             {
                 // Note: if we do not add endCursor to the connection but it was in the request, its value will
@@ -122,7 +159,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             paginationMetadata.Structure!.EntityName,
                             paginationMetadata.Structure!.DatabaseObject.SchemaName,
                             paginationMetadata.Structure!.DatabaseObject.Name,
-                            paginationMetadata.Structure!.MetadataProvider));
+                            paginationMetadata.Structure!.MetadataProvider,
+                            paginationMetadata.RequestedGroupBy));
                 }
             }
 
@@ -172,7 +210,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = "",
             string schemaName = "",
             string tableName = "",
-            ISqlMetadataProvider? sqlMetadataProvider = null)
+            ISqlMetadataProvider? sqlMetadataProvider = null,
+            bool isGroupByQuery = false)
         {
             List<NextLinkField> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -180,9 +219,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // in the worst case for this function. If list is used
             // we will have in the worst case quadratic runtime.
             HashSet<string> remainingKeys = new();
-            foreach (string key in primaryKey)
+
+            if (!isGroupByQuery)
             {
-                remainingKeys.Add(key);
+                foreach (string key in primaryKey)
+                {
+                    remainingKeys.Add(key);
+                }
             }
 
             // must include all orderByColumns to maintain
@@ -331,19 +374,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // if any primary keys are not contained in after's column names we throw exception
                 List<string> primaryKeys = paginationMetadata.Structure!.PrimaryKey();
 
-                foreach (string pk in primaryKeys)
+                if (!paginationMetadata.RequestedGroupBy)
                 {
-                    // REST calls this function with a non null sqlMetadataProvider
-                    // which will get the exposed name for safe messaging in the response.
-                    // Since we are looking for primary keys we expect these columns to
-                    // exist.
-                    string exposedFieldName = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
-                    if (!exposedFieldNameToBackingColumn.ContainsKey(exposedFieldName))
+                    // primary key not valid check for groupby ordering.
+                    foreach (string pk in primaryKeys)
                     {
-                        throw new DataApiBuilderException(
-                            message: $"Pagination token is not well formed because it is missing an expected field: {exposedFieldName}",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        // REST calls this function with a non null sqlMetadataProvider
+                        // which will get the exposed name for safe messaging in the response.
+                        // Since we are looking for primary keys we expect these columns to
+                        // exist.
+                        string exposedFieldName = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
+                        if (!exposedFieldNameToBackingColumn.ContainsKey(exposedFieldName))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Pagination token is not well formed because it is missing an expected field: {exposedFieldName}",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
                     }
                 }
 

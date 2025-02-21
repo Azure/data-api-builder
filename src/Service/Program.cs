@@ -4,6 +4,8 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -26,6 +28,13 @@ namespace Azure.DataApiBuilder.Service
 
         public static void Main(string[] args)
         {
+            if (!ValidateAspNetCoreUrls())
+            {
+                Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
+                Environment.ExitCode = -1;
+                return;
+            }
+
             if (!StartEngine(args))
             {
                 Environment.ExitCode = -1;
@@ -223,6 +232,57 @@ namespace Azure.DataApiBuilder.Service
             configurationBuilder
                 .AddEnvironmentVariables(prefix: FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX)
                 .AddCommandLine(args);
+        }
+
+        /// <summary>
+        /// Validates the URLs specified in the ASPNETCORE_URLS environment variable.
+        /// Ensures that each URL is valid and properly formatted.
+        /// </summary>
+        internal static bool ValidateAspNetCoreUrls()
+        {
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is not string urls)
+            {
+                return true; // If the environment variable is missing, then it cannot be invalid.
+            }
+
+            if (string.IsNullOrWhiteSpace(urls))
+            {
+                return false;
+            }
+
+            char[] separators = new[] { ';', ',', ' ' };
+            string[] urlList = urls.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string url in urlList)
+            {
+                if (IsUnixDomainSocketUrl(url))
+                {
+                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || !ValidateUnixDomainSocketUrl(url))
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                string testUrl = ReplaceWildcardHost(url);
+                if (!Uri.TryCreate(testUrl, UriKind.Absolute, out Uri? uriResult) ||
+                    (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+
+            static bool IsUnixDomainSocketUrl(string url) =>
+                Regex.IsMatch(url, @"^https?://unix:", RegexOptions.IgnoreCase);
+
+            static bool ValidateUnixDomainSocketUrl(string url) =>
+                Regex.IsMatch(url, @"^https?://unix:/\S+");
+
+            static string ReplaceWildcardHost(string url) =>
+                Regex.Replace(url, @"^(https?://)[\+\*]", "$1localhost", RegexOptions.IgnoreCase);
         }
     }
 }

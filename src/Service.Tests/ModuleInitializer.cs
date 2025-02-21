@@ -55,6 +55,10 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.GraphQLPath);
         // Ignore the AllowIntrospection as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
+        // Ignore the EnableAggregation as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableAggregation);
+        // Ignore the EnableAggregation as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableAggregation);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Ignore DefaultDataSourceName as that's not serialized in our config file.

@@ -25,6 +25,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using HotChocolate.AspNetCore;
+using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
@@ -62,6 +63,8 @@ namespace Azure.DataApiBuilder.Service
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
+        private HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
+        private RuntimeConfigProvider? _configProvider;
 
         public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
@@ -83,15 +86,15 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            HotReloadEventHandler<HotReloadEventArgs> hotReloadEventHandler = new();
-            services.AddSingleton(hotReloadEventHandler);
+            services.AddSingleton(_hotReloadEventHandler);
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, hotReloadEventHandler, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
+            _configProvider = configProvider;
 
             services.AddSingleton(fileSystem);
             services.AddSingleton(configLoader);
@@ -247,6 +250,10 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
+
+            // Subscribe the GraphQL schema refresh method to the specific hot-reload event
+            _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
+
             services.AddFusionCache()
                 .WithOptions(options =>
                 {
@@ -330,6 +337,17 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .UseRequest<BuildRequestStateMiddleware>()
                 .UseDefaultPipeline();
+        }
+
+        /// <summary>
+        /// Refreshes the GraphQL schema when the runtime config updates during hot-reload scenario.
+        /// </summary>
+        private void RefreshGraphQLSchema(IServiceCollection services)
+        {
+            // Re-add GraphQL services with updated config.
+            RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
+            Console.WriteLine("Updating GraphQL service.");
+            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -447,6 +465,9 @@ namespace Azure.DataApiBuilder.Service
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
 
+            IRequestExecutorResolver requestExecutorResolver = app.ApplicationServices.GetRequiredService<IRequestExecutorResolver>();
+            _hotReloadEventHandler.Subscribe("GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED", (sender, args) => EvictGraphQLSchema(requestExecutorResolver));
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
@@ -473,6 +494,15 @@ namespace Azure.DataApiBuilder.Service
                     ResponseWriter = app.ApplicationServices.GetRequiredService<HealthReportResponseWriter>().WriteResponse
                 });
             });
+        }
+
+        /// <summary>
+        /// Evicts the GraphQL schema from the request executor resolver.
+        /// </summary>
+        private static void EvictGraphQLSchema(IRequestExecutorResolver requestExecutorResolver)
+        {
+            Console.WriteLine("Evicting old GraphQL schema.");
+            requestExecutorResolver.EvictRequestExecutor();
         }
 
         /// <summary>

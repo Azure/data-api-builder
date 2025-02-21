@@ -197,6 +197,18 @@ public class RestAuthorizationHandler : IAuthorizationHandler
 
                         restContext.UpdateReturnFields(fieldsReturnedForFind);
                     }
+                    else if (columnsToCheck.Count() == 0 && restContext.OperationType is EntityActionOperation.Insert)
+                    {
+                        // It's possible that a INSERT operation has no columns in the request
+                        // body, but the operation is still allowed in cases where the table
+                        // contains default values for all columns. In such cases, we check
+                        // all the columns if the insert operation is allowed.
+                        IEnumerable<string> fieldsForCreate = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, operation);
+                        if (fieldsForCreate.Count() == 0)
+                        {
+                            context.Fail();
+                        }
+                    }
                     else
                     {
                         context.Fail();

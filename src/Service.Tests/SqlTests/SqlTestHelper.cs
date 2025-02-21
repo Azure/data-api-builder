@@ -9,12 +9,14 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
@@ -146,6 +148,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error");
+            }
+        }
+
+        /// <summary>
+        /// Validates the result from the sql db matches the graphql result returned by the engine.
+        /// </summary>
+        /// <param name="groupByArray">groupByArray</param>
+        /// <param name="expectedArray">expectedArray</param>
+        public static void AssertNumericAggregations(JsonElement groupByArray, JsonElement expectedArray, bool isfieldsPresentInResponse = true, bool isAggregatesPresentInResponse = true)
+        {
+            // Assert: Ensure expected and actual are arrays
+            Assert.AreEqual(JsonValueKind.Array, expectedArray.ValueKind);
+            Assert.AreEqual(JsonValueKind.Array, groupByArray.ValueKind);
+
+            // Convert expected values into a list of dictionaries for easy lookup
+            List<Dictionary<string, JsonElement>> expectedList = expectedArray.EnumerateArray()
+                .Select(obj => obj.EnumerateObject().ToDictionary(prop => prop.Name, prop => prop.Value))
+                .ToList();
+
+            int index = 0;
+            // Act: Iterate over each `groupBy` object in actual
+            foreach (JsonElement groupByObject in groupByArray.EnumerateArray())
+            {
+                // Create a combined dictionary and populate it with fields first
+                Dictionary<string, JsonElement> combinedDictionary = new();
+
+                if (isfieldsPresentInResponse)
+                {
+                    Assert.IsTrue(groupByObject.TryGetProperty("fields", out JsonElement fields), "Fields object not found.");
+                    Assert.AreEqual(JsonValueKind.Object, fields.ValueKind);
+
+                    // Add fields to the combined dictionary
+                    foreach (JsonProperty field in fields.EnumerateObject())
+                    {
+                        combinedDictionary[field.Name] = field.Value;
+                    }
+                }
+
+                if (isAggregatesPresentInResponse)
+                {
+                    Assert.IsTrue(groupByObject.TryGetProperty(QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME, out JsonElement aggregations), "Aggregations object not found.");
+                    Assert.AreEqual(JsonValueKind.Object, aggregations.ValueKind);
+
+                    // Add aggregations to the combined dictionary
+                    foreach (JsonProperty aggregation in aggregations.EnumerateObject())
+                    {
+                        combinedDictionary[aggregation.Name] = aggregation.Value;
+                    }
+                }
+
+                // Convert actual aggregations and expectedList[index] to strings
+                string resultString = JsonSerializer.Serialize(combinedDictionary);
+                string expectedAggregationsString = JsonSerializer.Serialize(expectedList[index]);
+
+                // Check if expected key-value pairs exist in actual aggregations
+                Assert.IsTrue(JsonStringsDeepEqual(expectedAggregationsString, resultString),
+                    "GroupBy result did not match expected result.");
+
+                index++;
             }
         }
 
@@ -392,6 +453,63 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             typenameResponseBuilder.Append("]");
             return typenameResponseBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Compares the expected JSON result with the actual JSON result after applying necessary transformations.
+        /// </summary>
+        /// <param name="expectedJson">The expected JSON string.</param>
+        /// <param name="actualJson">The actual JSON string to compare.</param>
+        public static void PerformTestEqualJsonStringsWithTransformations(string expectedJson, string actualJson)
+        {
+            // Parse the expected and actual JSON
+            JsonDocument expectedDocument = JsonDocument.Parse(expectedJson);
+
+            // Transform expected JSON to match the actual GraphQL format
+            string transformedExpectedJson = TransformExpectedJson(expectedDocument);
+
+            // Compare the transformed expected JSON with the actual JSON
+            Assert.AreEqual(transformedExpectedJson, actualJson, "The JSON results do not match.");
+        }
+
+        /// <summary>
+        /// Transforms the expected JSON to match the format of the actual GraphQL output.
+        /// This method is generic and can handle various structures.
+        /// </summary>
+        /// <param name="expectedDocument">The expected JSON document.</param>
+        /// <returns>The transformed expected JSON as a string.</returns>
+        private static string TransformExpectedJson(JsonDocument expectedDocument)
+        {
+            // Create a new JSON array to hold the transformed data
+            JsonArray transformedArray = new();
+
+            // Iterate through each element in the expected JSON array
+            foreach (JsonElement element in expectedDocument.RootElement.EnumerateArray())
+            {
+                JsonObject transformedElement = new();
+
+                // Iterate through each property in the element
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    // Generic transformation logic
+                    // For example, you might want to rename properties or adjust their values
+                    string newPropertyName = property.Name;
+
+                    // Example transformation: if the property name starts with "max_", remove the prefix
+                    if (newPropertyName.StartsWith("max_"))
+                    {
+                        newPropertyName = newPropertyName.Substring(4); // Remove "max_" prefix
+                    }
+
+                    // Add the transformed property to the new object
+                    transformedElement[newPropertyName] = JsonNode.Parse(property.Value.GetRawText());
+                }
+
+                // Add the transformed element to the transformed array
+                transformedArray.Add(transformedElement);
+            }
+
+            return transformedArray.ToString();
         }
 
         /// <summary>

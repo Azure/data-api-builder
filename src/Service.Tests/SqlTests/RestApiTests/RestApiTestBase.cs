@@ -71,6 +71,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _defaultValueAsBuiltInMethodsTable = "default_with_function_table";
         protected static readonly string _tableWithVarcharMax = "journals";
         protected static readonly string _entityWithVarcharMax = "Journal";
+        protected static readonly string _entityWithDefaultValues = "Default_Books";
+        protected static readonly string _tableWithDefaultValues = "default_books";
 
         public abstract string GetQuery(string key);
     }

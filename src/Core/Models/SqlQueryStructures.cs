@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 
 namespace Azure.DataApiBuilder.Core.Models;
 
@@ -70,6 +71,39 @@ public class PaginationColumn : OrderByColumn
     {
         Value = value;
         ParamName = paramName;
+    }
+}
+
+/// <summary>
+/// Aggregation column to have information for the aggregation operation
+/// Example: COUNT(*), SUM(columnName), AVG(columnName)
+/// </summary>
+public class AggregationColumn : Column
+{
+    public AggregationType Type { get; }
+
+    /// <summary>
+    /// Alias for the aggregation operation.
+    /// </summary>
+    public string OperationAlias { get; set; }
+
+    /// <summary>
+    /// Whether to apply DISTINCT to the aggregation
+    /// </summary>
+    public bool IsDistinct { get; set; }
+
+    public AggregationColumn(string tableSchema,
+                            string tableName,
+                            string columnName,
+                            AggregationType type,
+                            string alias,
+                            bool distinct,
+                            string? tableAlias = null)
+        : base(tableSchema, tableName, columnName, tableAlias)
+    {
+        this.Type = type;
+        this.OperationAlias = alias;
+        this.IsDistinct = distinct;
     }
 }
 

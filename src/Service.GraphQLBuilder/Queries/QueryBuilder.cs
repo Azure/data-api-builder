@@ -26,6 +26,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string ID_FIELD_NAME = "id";
         public const string GROUP_BY_FIELD_NAME = "groupBy";
         public const string GROUP_BY_FIELDS_FIELD_NAME = "fields";
+        public const string GROUP_BY_AGGREGATE_FIELD_NAME = "aggregations";
+        public const string GROUP_BY_AGGREGATE_FIELD_ARG_NAME = "field";
+        public const string GROUP_BY_AGGREGATE_FIELD_DISTINCT_NAME = "distinct";
+        public const string GROUP_BY_AGGREGATE_FIELD_HAVING_NAME = "having";
 
         // Define the enabled database types for aggregation
         public static readonly HashSet<DatabaseType> AggregationEnabledDatabaseTypes = new()

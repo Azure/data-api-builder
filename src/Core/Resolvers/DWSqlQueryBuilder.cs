@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (col_type == typeof(DateTime))
                     {
                         // Need to wrap datetime in quotes to ensure correct deserialization.
-                        stringAgg.Append($"N\'\"{escapedLabel}\":\"\' + {BuildJson(col_value)},'null') + \'\"\'+");
+                        stringAgg.Append($"{BuildJson(escapedLabel, col_value)},'null') + \'\"\'+");
                     }
                     else if (col_type == typeof(Boolean))
                     {
@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else
                     {
                         // Create json. Example: "book.id": 1 would be a sample output.
-                        stringAgg.Append($"N\'\"{escapedLabel}\":\' + {BuildJson(col_value)},'null')");
+                        stringAgg.Append($"{BuildJson(escapedLabel, col_value)},'null')");
                     }
                 }
                 else
@@ -194,7 +194,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 col_value = $"CONVERT(NVARCHAR(MAX), [{col_value}])";
                 string escapedLabel = aggregation.Column.OperationAlias.Replace("'", "''");
 
-                stringAgg.Append($"N\'\"{escapedLabel}\":\' + {BuildJson(col_value)},'null')");
+                stringAgg.Append($"{BuildJson(escapedLabel, col_value)},'null')");
 
                 aggregationColumnCount++;
 
@@ -365,9 +365,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ));
         }
 
-        private static string BuildJson(string col_value)
+        private static string BuildJson(string escapedLabel, string col_value)
         {
-            return $"ISNULL(STRING_ESCAPE({col_value},'json')";
+            return $"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json')";
         }
 
         /// <inheritdoc />

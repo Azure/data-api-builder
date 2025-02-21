@@ -190,13 +190,13 @@ We check if this incoming role is allowed to perform the `read` query on the DB.
 There are three kinds of roles in DAB.\
 System roles are built-in roles recognized by Data API builder. A system role is auto assigned to a requestor regardless of the requestor's role membership denoted in their access tokens. There are two system roles: anonymous and authenticated.
 + Anonymous\
-This is the superset of all roles. The anonymous system role is assigned to requests executed by unauthenticated users. Runtime configuration defined entities must include permissions for the anonymous role if unauthenticated access is desired.
+This is the superset of all roles meaning if the roles array contains anonymous, then we don't have to evaluate any further. All authenticated and custom roles are given permissions to view the health endpoint. The anonymous system role is assigned to requests executed by unauthenticated users. Runtime configuration defined entities must include permissions for the anonymous role if unauthenticated access is desired.
 + Authenticated\
-The authenticated system role is assigned to requests executed by authenticated users. All custom roles are part of Authenticated role. 
+The authenticated system role is assigned to requests executed by authenticated users. All custom roles are part of Authenticated role. If the roles array contains authenticated at the top role, then all custom roles are validated.
 + Custom Roles\
-Custom roles are non-system roles that are assigned to users within the identity provider you set in the runtime config. 
+Custom roles are non-system roles that are assigned to users within the identity provider you set in the runtime config. They need to specifically match with the incoming user to authenticate the health request.
 
-> Example: In Static Web Apps, a user is a member of the anonymous role by default. If the user is authenticated, the user is a member of both the anonymous and authenticated roles. If the client application's request includes the HTTP header `X-MS-API-ROLE` with a custom value, the request is evaluated in the context of the 'custom role'. 
+> Example: In Static Web Apps, a user is a member of the anonymous role by default. If the user is authenticated, the user is a member of both the anonymous and authenticated roles. Because Data API builder evaluates requests in the context of a single role, it evaluates the request in the context of the system role authenticated by default.If the client application's request includes the HTTP header `X-MS-API-ROLE` with a custom value, the request is evaluated in the context of the 'custom role'. 
 
 **Access to comprehensive health report is measured via the `runtime.health.roles` array where `anonymous` is added to allow unauthenticated access to an entity, `authenticated` is added to allow all custom roles, and `custom-role` is added to allow that specific role to view the report.**
 

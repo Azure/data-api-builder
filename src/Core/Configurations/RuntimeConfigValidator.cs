@@ -141,6 +141,11 @@ public class RuntimeConfigValidator : IConfigValidator
         string configFilePath,
         ILoggerFactory loggerFactory)
     {
+        if (!VersionChecker.IsCurrentVersion(out string? nugetVersion, out string? localVersion))
+        {
+            _logger.LogWarning("A newer version of Data API builder is available. Update {LocalVersion} -> {NugetVersion}.", localVersion, nugetVersion);
+        }
+
         RuntimeConfig? runtimeConfig;
 
         if (!_runtimeConfigProvider.TryGetConfig(out runtimeConfig))

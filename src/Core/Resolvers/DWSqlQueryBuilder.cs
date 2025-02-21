@@ -367,7 +367,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static string BuildJson(string escapedLabel, string col_value)
         {
-            return $"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json')";
+            return $"N\'\"{escapedLabel}\":\"\' + ISNULL(STRING_ESCAPE({col_value},'json')";
         }
 
         /// <inheritdoc />

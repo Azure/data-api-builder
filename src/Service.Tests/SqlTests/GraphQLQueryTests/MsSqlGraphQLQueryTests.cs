@@ -551,9 +551,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = @"
                 SELECT
-                    SUM(price) AS sum_price
-                FROM stocks_price
-                HAVING SUM(price) > 50
+                    MAX(id) AS max
+                FROM publishers
+                HAVING MAX(id) > 2346
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             // Execute the test for the SQL query

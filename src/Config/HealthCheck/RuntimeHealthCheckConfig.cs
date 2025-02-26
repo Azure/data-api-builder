@@ -4,10 +4,10 @@
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record RuntimeHealthCheckConfig : HealthCheckConfig
-{    
+{
     // TODO: Add support for caching in upcoming PRs
     // public int cache-ttl-seconds { get; set; };
-    
+
     // TODO: Add support for "roles": ["anonymous", "authenticated"] in upcoming PRs
     // public string[] Roles { get; set; };
 

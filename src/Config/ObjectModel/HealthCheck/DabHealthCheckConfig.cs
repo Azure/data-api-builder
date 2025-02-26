@@ -12,10 +12,12 @@ public record DabHealthCheckConfig
     // The moniker or simple name of the data source to be checked.
     // Required when there is a multiple data source scenario.
     // TODO: Add validity support for when multiple data sources
+    [JsonPropertyName("moniker")]
     public string? Moniker { get; set; }
 
     // The query to be executed to check the health of the data source.
     // "query: "SELECT TOP 1 1"
+    [JsonPropertyName("query")]
     public string? Query { get; set; }
 
     // This provides the ability to specify the 'x' first rows to be returned by the query.

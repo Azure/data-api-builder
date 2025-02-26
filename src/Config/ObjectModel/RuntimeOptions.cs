@@ -25,7 +25,8 @@ public record RuntimeOptions
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
         EntityCacheOptions? Cache = null,
-        PaginationOptions? Pagination = null)
+        PaginationOptions? Pagination = null,
+        DabHealthCheckConfig? Health = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -34,6 +35,7 @@ public record RuntimeOptions
         this.Telemetry = Telemetry;
         this.Cache = Cache;
         this.Pagination = Pagination;
+        this.Health = Health;
     }
 
     /// <summary>

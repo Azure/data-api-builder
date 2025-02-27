@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
+using Azure.DataApiBuilder.Service.Telemetry;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
@@ -128,19 +129,27 @@ namespace Azure.DataApiBuilder.Service
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
-                        .AddRuntimeInstrumentation();
+                        .AddRuntimeInstrumentation()
+                        .AddMeter(TelemetryMetricsHelper.MeterName);
                 })
                 .WithTracing(tracing =>
                 {
                     tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        .AddAspNetCoreInstrumentation()
+                        //.AddAspNetCoreInstrumentation(options =>
+                        //{
+                        //    options.EnrichWithHttpRequest = (activity, httpRequest) =>
+                        //    {
+                        //        activity.DisplayName = httpRequest.Path;
+                        //    };
+                        //})
                         .AddHttpClientInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
-                        });
+                        })
+                        .AddSource(TelemetryTracesHelper.DABActivitySource.Name);
                 });
             }
 

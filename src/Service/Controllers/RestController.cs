@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -9,9 +10,12 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Trace;
 
 namespace Azure.DataApiBuilder.Service.Controllers
 {
@@ -179,14 +183,29 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <summary>
         /// Handle the given operation.
         /// </summary>
+        /// <param name="method">The method.</param>
         /// <param name="route">The entire route.</param>
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
             string route,
             EntityActionOperation operationType)
         {
-            try
+            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {route.Split('/')[1]}");
+            if(activity is not null && activity.IsAllDataRequested)
             {
+                activity.SetTag("http.method", HttpContext.Request.Method);
+                activity.SetTag("user-agent", HttpContext.Request.Headers["User-Agent"].ToString());
+                activity.SetTag("action.type", operationType.ToString());
+                activity.SetTag("http.url", route);
+                activity.SetTag("http.querystring", HttpContext.Request.QueryString.ToString());
+                activity.SetTag("user.role", HttpContext.User.FindFirst("role")?.Value);
+                activity.SetTag("api.type", "REST");
+            }
+
+            TelemetryMetricsHelper.IncrementActiveRequests();
+            try
+            { 
+            
                 if (route.Equals(REDIRECTED_ROUTE))
                 {
                     throw new DataApiBuilderException(
@@ -221,6 +240,13 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
 
+                int statusCode = (result as ObjectResult)?.StatusCode ?? (result as StatusCodeResult)?.StatusCode ?? (result as JsonResult)?.StatusCode ?? 200;
+                if (activity is not null && activity.IsAllDataRequested)
+                {
+                    activity.SetTag("status.code", Response.StatusCode);
+                }
+
+                TelemetryMetricsHelper.TrackRequest(HttpContext.Request.Method, statusCode, route, "REST");
                 return result;
             }
             catch (DataApiBuilderException ex)
@@ -231,6 +257,16 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)ex.StatusCode;
+                if (activity is not null && activity.IsAllDataRequested)
+                {
+                    activity.SetStatus(Status.Error.WithDescription(ex.Message));
+                    activity.RecordException(ex);
+                    activity.SetTag("error.type", ex.GetType().Name);
+                    activity.SetTag("error.message", ex.Message);
+                    activity.SetTag("status.code", Response.StatusCode);
+                }
+
+                TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
@@ -241,10 +277,29 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                if (activity is not null && activity.IsAllDataRequested)
+                {
+                    activity.SetStatus(Status.Error.WithDescription(ex.Message));
+                    activity.RecordException(ex);
+                    activity.SetTag("error.type", ex.GetType().Name);
+                    activity.SetTag("error.message", ex.Message);
+                    activity.SetTag("status.code", Response.StatusCode);
+                }
+
+                TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,
                     HttpStatusCode.InternalServerError);
+            }
+            finally
+            {
+                if(activity is not null && activity.IsAllDataRequested)
+                {
+                    activity.Dispose();
+                }
+
+                TelemetryMetricsHelper.DecrementActiveRequests();
             }
         }
 

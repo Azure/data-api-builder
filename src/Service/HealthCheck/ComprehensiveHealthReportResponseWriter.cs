@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         public Task WriteResponse(HttpContext context, HealthReport healthReport)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
-            if (true && config != null)
+            if (config?.Runtime != null && config.Runtime?.Health != null && config.Runtime.Health.Enabled)
             {
                 // TODO: Enhance to improve the Health Report with the latest configuration
                 string response = JsonSerializer.Serialize(healthReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });

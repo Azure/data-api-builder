@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -12,6 +13,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Resolvers;
@@ -299,8 +301,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName, bool isMultipleCreateOperation = false)
         {
+            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"QUERY {structure.EntityName}");
+
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            string? databaseName = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString
+                .Split(';')
+                .FirstOrDefault(x => x.StartsWith("Database=", StringComparison.OrdinalIgnoreCase))
+                ?.Split('=')[1];
             DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            string? tableName = runtimeConfig.GetDataSourceNameFromEntityName(structure.EntityName);
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
 
@@ -332,6 +341,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
                     byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
                     JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+
+                    if (activity is not null && activity.IsAllDataRequested)
+                    {
+                        activity.SetTag("data-source.name", databaseName);
+                        activity.SetTag("data-source.type", databaseType);
+                        activity.SetTag("data-source.entity", tableName);
+                        activity.SetTag("db.operation", queryString.Split(' ').First());
+                        activity.SetTag("db.statement", queryString);
+                        //activity.SetTag("query.rows_returned", );
+                        activity.SetTag("query.mb_returned", jsonBytes.Length / 1024);
+                        //activity.SetTag("query.used_cache", useCache);
+                    }
+
+                    if (activity is not null && activity.IsAllDataRequested)
+                    {
+                        activity.Dispose();
+                    }
                     return cacheServiceResponse;
                 }
             }
@@ -348,6 +374,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 httpContext: _httpContextAccessor.HttpContext!,
                 args: null,
                 dataSourceName: dataSourceName);
+
+            byte[] responseByte = JsonSerializer.SerializeToUtf8Bytes(response);
+
+            if (activity is not null && activity.IsAllDataRequested)
+            {
+                activity.SetTag("data-source.name", databaseName);
+                activity.SetTag("data-source.type", databaseType);
+                activity.SetTag("data-source.entity", tableName);
+                activity.SetTag("db.operation", queryString.Split(' ').First());
+                activity.SetTag("db.statement", queryString);
+                //activity.SetTag("query.rows_returned", response.);
+                activity.SetTag("query.mb_returned", responseByte.Length / 1024);
+                //activity.SetTag("query.used_cache", useCache);
+            }
+
+            if (activity is not null && activity.IsAllDataRequested)
+            {
+                activity.Dispose();
+            }
+
             return response;
         }
 

@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Trace;
 
 namespace Azure.DataApiBuilder.Service.Controllers
 {
@@ -187,6 +189,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <summary>
         /// Handle the given operation.
         /// </summary>
+        /// <param name="method">The method.</param>
         /// <param name="route">The entire route.</param>
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(

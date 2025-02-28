@@ -591,6 +591,12 @@ FROM
             await TestSupportForGroupByNoAggregation(msSqlQuery);
         }
 
+        [TestMethod]
+        [Ignore]
+        public async Task ValidateAggregationNodeIsNotGeneratedWhenNoNumericFieldsPresent()
+        {
+            await TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
         #endregion
     }
 }

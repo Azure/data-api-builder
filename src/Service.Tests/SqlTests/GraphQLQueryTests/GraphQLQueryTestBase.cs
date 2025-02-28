@@ -2057,6 +2057,35 @@ query {
             SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isAggregatesPresentInResponse: false);
         }
 
+        /// <summary>
+        /// Test to verify that aggregation operations are not available for tables without numeric fields.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        {
+            string graphQLQuery = @"
+    {
+        dateOnlyTables {
+            groupBy {
+                aggregations {
+                    max(field: event_date)
+                }
+            }
+        }
+    }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, "date_only_tables", isAuthenticated: false);
+
+            // Check if we got an error response
+            Assert.IsTrue(result[0].TryGetProperty("message", out JsonElement message),
+                "Expected an error when trying to use aggregations on a table without numeric fields");
+
+            // Verify the error message indicates that aggregations aren't available
+            string errorMessage = message.GetString();
+            Assert.IsTrue(errorMessage.Contains("The field `aggregations` does not exist on the type `DateOnlyTableGroupBy`."),
+                $"Expected error about missing aggregations field, but got: {errorMessage}");
+        }
+
         #endregion
 
         #region Negative Tests

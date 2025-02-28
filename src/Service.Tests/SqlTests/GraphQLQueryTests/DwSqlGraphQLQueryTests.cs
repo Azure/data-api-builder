@@ -748,6 +748,12 @@ FROM (
                 Assert.IsTrue(message.ToString() == "Groupby fields in selection must match the fields in the groupby argument.");
             }
         }
+
+        [TestMethod]
+        public async Task ValidateAggregationNodeIsNotGeneratedWhenNoNumericFieldsPresent()
+        {
+            await TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
         #endregion
     }
 }

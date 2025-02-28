@@ -246,14 +246,18 @@ namespace Azure.DataApiBuilder.Core.Services
 
                             if (_isAggregationEnabled)
                             {
-                                EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
-                                EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
-                                // Generate aggregation type for the entity
-                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
-                                if (aggregationType.Fields.Any())
+                                bool aggregationEnumCreated = EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
+                                if (aggregationEnumCreated)
                                 {
+                                    // Generate aggregation type for the entity
+                                    ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
                                     objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
-                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node));
+                                }
+
+                                bool groupByColumnsEnumCreated = EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
+                                if (groupByColumnsEnumCreated)
+                                {
+                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node, aggregationEnumCreated));
                                 }
                             }
                         }

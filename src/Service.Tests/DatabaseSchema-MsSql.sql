@@ -59,6 +59,7 @@ DROP TABLE IF EXISTS intern_data;
 DROP TABLE IF EXISTS books_sold;
 DROP TABLE IF EXISTS default_with_function_table;
 DROP TABLE IF EXISTS [DimAccount]
+DROP TABLE IF EXISTS date_only_table;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS default_books;
@@ -813,3 +814,14 @@ BEGIN
     FROM intern_data
     INNER JOIN inserted ON intern_data.id = inserted.id AND intern_data.months = inserted.months;
 END;');
+
+CREATE TABLE date_only_table (
+    event_date date NOT NULL,
+    event_time time NOT NULL,
+    event_timestamp datetime NOT NULL
+);
+
+INSERT INTO date_only_table( event_date, event_time, event_timestamp) 
+VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'), 
+       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'), 
+       ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');

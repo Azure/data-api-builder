@@ -39,6 +39,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// <param name="fieldSelector">Function to select which fields to include in the enum.</param>
         /// <param name="enumNameSuffix">Suffix to append to the enum type name.</param>
         /// <param name="description">Description for the generated enum type.</param>
+        /// <returns>True if the enum type was generated, false otherwise.</returns>
         public static bool TryGenerateEnum(
             ObjectTypeDefinitionNode node,
             IDictionary<string, EnumTypeDefinitionNode> enumTypes,

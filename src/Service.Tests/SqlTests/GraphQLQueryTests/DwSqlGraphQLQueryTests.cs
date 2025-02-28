@@ -750,9 +750,9 @@ FROM (
         }
 
         [TestMethod]
-        public async Task ValidateAggregationNodeIsNotGeneratedWhenNoNumericFieldsPresent()
+        public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
         {
-            await TestNoAggregationOptionsForTableWithoutNumericFields();
+            await base.TestNoAggregationOptionsForTableWithoutNumericFields();
         }
         #endregion
     }

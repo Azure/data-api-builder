@@ -2061,7 +2061,7 @@ query {
         /// Test to verify that aggregation operations are not available for tables without numeric fields.
         /// </summary>
         [TestMethod]
-        public async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        public virtual async Task TestNoAggregationOptionsForTableWithoutNumericFields()
         {
             string graphQLQuery = @"
     {

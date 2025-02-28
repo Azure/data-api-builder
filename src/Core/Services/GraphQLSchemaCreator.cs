@@ -254,6 +254,7 @@ namespace Azure.DataApiBuilder.Core.Services
                                     objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
                                 }
 
+                                // this generates a scalar fields enum that has the list of fields you can have in groupby arguments.
                                 bool groupByColumnsEnumCreated = EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
                                 if (groupByColumnsEnumCreated)
                                 {

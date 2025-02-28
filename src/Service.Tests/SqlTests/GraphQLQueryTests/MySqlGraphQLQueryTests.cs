@@ -749,7 +749,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
         [TestMethod]
         [Ignore]
-        public async Task ValidateAggregationNodeIsNotGeneratedWhenNoNumericFieldsPresent()
+        public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
         {
             await TestNoAggregationOptionsForTableWithoutNumericFields();
         }

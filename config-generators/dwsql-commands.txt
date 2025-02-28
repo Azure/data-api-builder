@@ -35,6 +35,7 @@ add InsertBook --config "dab-config.DwSql.json" --source "insert_book" --source.
 add DeleteLastInsertedBook --config "dab-config.DwSql.json" --source "delete_last_inserted_book" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
 add UpdateBookTitle --config "dab-config.DwSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:execute" --rest true --graphql true
 add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.DwSql.json" --source "insert_and_display_all_books_for_given_publisher" --source.type "stored-procedure" --source.params "title:MyTitle,publisher_name:MyPublisher" --permissions "anonymous:execute" --rest true --graphql true
+add DateOnlyTable --config "dab-config.DwSql.json" --source "date_only_table" --permissions "anonymous:*" --rest true --graphql true --source.key-fields "event_date"
 update stocks_price --config "dab-config.DwSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
 update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"

@@ -336,11 +336,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// </summary>
         /// <param name="entityName">Name of the entity</param>
         /// <param name="entityNode">The entity's ObjectTypeDefinitionNode</param>
+        /// <param name="shouldGenerateAggregationNode">Should aggregation node be generated.</param>
         /// <returns>ObjectTypeDefinitionNode for the GroupBy type</returns>
-        public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
+        public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode, bool shouldGenerateAggregationNode)
         {
             string groupByTypeName = GenerateGroupByTypeName(entityName);
-            string aggregationsTypeName = GenerateObjectAggregationNodeName(entityName);
 
             List<FieldDefinitionNode> groupByFields = new()
             {
@@ -351,16 +351,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     arguments: new List<InputValueDefinitionNode>(),
                     type: new NamedTypeNode(new NameNode(entityName)),
                     directives: new List<DirectiveNode>()
-                ),
-                new FieldDefinitionNode(
+                )
+            };
+
+            if (shouldGenerateAggregationNode)
+            {
+                string aggregationsTypeName = GenerateObjectAggregationNodeName(entityName);
+                groupByFields.Add(new FieldDefinitionNode(
                     location: null,
                     name: new NameNode("aggregations"),
-                    description: new StringValueNode($"Aggregated fields from {entityName}"),
+                    description: new StringValueNode($"Aggregations for {entityName}"),
                     arguments: new List<InputValueDefinitionNode>(),
                     type: new NamedTypeNode(new NameNode(aggregationsTypeName)),
                     directives: new List<DirectiveNode>()
-                )
-            };
+                ));
+            }
 
             return new ObjectTypeDefinitionNode(
                 location: null,

@@ -32,7 +32,8 @@ DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS authors_history;
-DROP TABLE IF EXISTS [DimAccount]
+DROP TABLE IF EXISTS [DimAccount];
+DROP TABLE IF EXISTS date_only_table;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -428,3 +429,14 @@ EXEC('CREATE VIEW books_publishers_view_composite as SELECT
 EXEC('CREATE VIEW stocks_view_selected AS SELECT
       categoryid,pieceid,categoryName,piecesAvailable
       FROM dbo.stocks');
+
+CREATE TABLE date_only_table (
+    event_date date NOT NULL,
+    event_time time NOT NULL,
+    event_timestamp datetime NOT NULL
+);
+
+INSERT INTO date_only_table( event_date, event_time, event_timestamp) 
+VALUES ('2023-01-01', '08:30:00', '2023-01-01 08:30:00'), 
+       ('2023-02-15', '12:45:00', '2023-02-15 12:45:00'), 
+       ('2023-03-30', '17:15:00', '2023-03-30 17:15:00');

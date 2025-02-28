@@ -746,6 +746,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             // Execute the test for the SQL query
             await TestSupportForGroupByNoAggregation(msSqlQuery);
         }
+
+        [TestMethod]
+        [Ignore]
+        public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        {
+            await TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
         #endregion
     }
 }

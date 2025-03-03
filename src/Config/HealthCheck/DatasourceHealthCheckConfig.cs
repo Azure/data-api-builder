@@ -14,5 +14,5 @@ public record DatasourceHealthCheckConfig : HealthCheckConfig
     // The expected milliseconds the query took to be considered healthy.
     // (Default: 10000ms)
     [JsonPropertyName("threshold-ms")]
-    public int? ThresholdMs { get; set; }
+    public int ThresholdMs { get; set; } = 1000;
 }

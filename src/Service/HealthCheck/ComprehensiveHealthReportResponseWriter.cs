@@ -19,13 +19,18 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     public class ComprehensiveHealthReportResponseWriter
     {
         // Dependencies
-        private ILogger? _logger;
-        private RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ILogger<ComprehensiveHealthReportResponseWriter> _logger;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly HealthCheckHelper _healthCheckHelper;
 
-        public ComprehensiveHealthReportResponseWriter(ILogger<ComprehensiveHealthReportResponseWriter>? logger, RuntimeConfigProvider runtimeConfigProvider)
+        public ComprehensiveHealthReportResponseWriter(
+            ILogger<ComprehensiveHealthReportResponseWriter> logger,
+            RuntimeConfigProvider runtimeConfigProvider,
+            HealthCheckHelper healthCheckHelper)
         {
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _healthCheckHelper = healthCheckHelper;
         }
 
         /* {
@@ -62,10 +67,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         public Task WriteResponse(HttpContext context, HealthReport healthReport)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
-            if (true && config != null)
+            
+            // Global comprehensive Health Check Enabled
+            if (config?.Runtime != null && config.Runtime?.Health != null && config.Runtime.Health.Enabled)
             {
-                // TODO: Enhance to improve the Health Report with the latest configuration
-                string response = JsonSerializer.Serialize(healthReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+                DabHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
+                string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
                 LogTrace($"Health check response writer writing status as: {healthReport.Status}");
                 return context.Response.WriteAsync(response);
             }

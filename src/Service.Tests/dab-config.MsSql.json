@@ -2,12 +2,16 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;",
-    "options": {
-      "set-session-context": true
+    "connection-string": "Server=tcp:localhost,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;",
+    "health": {
+      "enabled": true,
+      "threshold-ms": 10
     }
   },
   "runtime": {
+    "health": {
+      "enabled": true
+    },
     "rest": {
       "enabled": true,
       "path": "/api",
@@ -38,6 +42,11 @@
   },
   "entities": {
     "Publisher": {
+      "health": {
+        "enabled": true,
+        "first": 10,
+        "threshold-ms": 500
+      },
       "source": {
         "object": "publishers",
         "type": "table"
@@ -342,6 +351,11 @@
       }
     },
     "Stock": {
+      "health": {
+        "enabled": true,
+        "first": 10,
+        "threshold-ms": 1000
+      },
       "source": {
         "object": "stocks",
         "type": "table"
@@ -1152,6 +1166,11 @@
       }
     },
     "Author": {
+      "health": {
+        "enabled": true,
+        "first": 10,
+        "threshold-ms": 250
+      },
       "source": {
         "object": "authors",
         "type": "table"
@@ -1552,6 +1571,11 @@
       }
     },
     "Broker": {
+      "health": {
+        "enabled": true,
+        "first": 1,
+        "threshold-ms": 10
+      },
       "source": {
         "object": "brokers",
         "type": "table"

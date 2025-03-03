@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <returns>Writes the http response to the http context.</returns>
         public Task WriteResponse(HttpContext context, HealthReport healthReport)
         {
-
+            LogTrace("Writing response for basic health check endpoint.");
             context.Response.ContentType = JSON_CONTENT_TYPE;
 
             if (_responseBytes is null)

@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service
     {
         private ILogger<Startup> _logger;
 
-        public static LogLevel MinimumLogLevel = LogLevel.Error;
+        public static LogLevel MinimumLogLevel = LogLevel.Trace;
 
         public static bool IsLogLevelOverriddenByCli;
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
@@ -187,6 +187,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
+            services.AddSingleton<HealthCheckHelper>();
+            services.AddSingleton<HttpUtilities>();
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
 

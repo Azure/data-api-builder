@@ -65,6 +65,18 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                             case "connection-string":
                                 dataSource = dataSource with { ConnectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)! };
                                 break;
+                            case "health":
+                                if (reader.TokenType == JsonTokenType.Null)
+                                {
+                                    dataSource = dataSource with { Health = null };
+                                }
+                                else
+                                {
+                                    DatasourceHealthCheckConfig health = JsonSerializer.Deserialize<DatasourceHealthCheckConfig>(ref reader, options) ?? new();
+                                    dataSource = dataSource with { Health = health };
+                                }
+
+                                break;
                             case "options":
                                 if (reader.TokenType == JsonTokenType.Null)
                                 {

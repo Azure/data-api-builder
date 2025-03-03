@@ -336,9 +336,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// </summary>
         /// <param name="entityName">Name of the entity</param>
         /// <param name="entityNode">The entity's ObjectTypeDefinitionNode</param>
-        /// <param name="shouldGenerateAggregationNode">Should aggregation node be generated.</param>
         /// <returns>ObjectTypeDefinitionNode for the GroupBy type</returns>
-        public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode, bool shouldGenerateAggregationNode)
+        public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
         {
             string groupByTypeName = GenerateGroupByTypeName(entityName);
 
@@ -353,19 +352,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     directives: new List<DirectiveNode>()
                 )
             };
-
-            if (shouldGenerateAggregationNode)
-            {
-                string aggregationsTypeName = GenerateObjectAggregationNodeName(entityName);
-                groupByFields.Add(new FieldDefinitionNode(
-                    location: null,
-                    name: new NameNode("aggregations"),
-                    description: new StringValueNode($"Aggregations for {entityName}"),
-                    arguments: new List<InputValueDefinitionNode>(),
-                    type: new NamedTypeNode(new NameNode(aggregationsTypeName)),
-                    directives: new List<DirectiveNode>()
-                ));
-            }
 
             return new ObjectTypeDefinitionNode(
                 location: null,

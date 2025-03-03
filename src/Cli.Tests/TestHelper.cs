@@ -176,6 +176,32 @@ namespace Cli.Tests
           }";
 
         /// <summary>
+        /// Only Runtime section containing both rest and graphql enabled.
+        /// </summary>
+        public const string RUNTIME_SECTION_NONE_AUTHENTICATION = @"
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": true
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""None""
+                  }
+              }
+          }";
+
+        /// <summary>
         /// Configuration with unresolved environment variable references on
         /// properties of various data types (string, enum, bool, int).
         /// </summary>

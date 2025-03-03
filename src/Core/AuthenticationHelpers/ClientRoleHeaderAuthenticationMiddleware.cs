@@ -180,7 +180,8 @@ public class ClientRoleHeaderAuthenticationMiddleware
     private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
     {
         if (string.IsNullOrWhiteSpace(configuredProviderName)
-            || string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(configuredProviderName, SupportedAuthNProviders.NONE, StringComparison.OrdinalIgnoreCase))
         {
             return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
         }
@@ -193,7 +194,8 @@ public class ClientRoleHeaderAuthenticationMiddleware
             return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
         }
         else if (string.Equals(configuredProviderName, SupportedAuthNProviders.AZURE_AD, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase))
+            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(configuredProviderName, SupportedAuthNProviders.OAUTH, StringComparison.OrdinalIgnoreCase))
         {
             return JwtBearerDefaults.AuthenticationScheme;
         }

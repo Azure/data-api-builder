@@ -142,10 +142,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// a correctly configured EasyAuth environment guarantees that only authenticated requests
         /// will contain an EasyAuth header.
         /// </summary>
-        /// <param name="easyAuthType">AppService/StaticWebApps</param>
+        /// <param name="easyAuthType">AppService/StaticWebApps/None</param>
         [DataTestMethod]
         [DataRow(EasyAuthType.AppService)]
         [DataRow(EasyAuthType.StaticWebApps)]
+        [DataRow(EasyAuthType.None)]
         public async Task TestMissingEasyAuthHeader(EasyAuthType easyAuthType)
         {
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token: null, easyAuthType);
@@ -171,6 +172,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
                 generatedToken,
                 EasyAuthType.StaticWebApps,
+                sendAuthorizationHeader);
+            Assert.IsNotNull(postMiddlewareContext.User.Identity);
+            Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);
+            Assert.AreEqual(
+                expected: (int)HttpStatusCode.OK,
+                actual: postMiddlewareContext.Response.StatusCode);
+            Assert.AreEqual(
+                expected: AuthorizationType.Authenticated.ToString(),
+                actual: postMiddlewareContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER],
+                ignoreCase: true);
+        }
+
+        /// <summary>
+        /// Ensures a valid None EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
+        /// 403 is okay, as it indicates authorization level failure, not authentication.
+        /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
+        /// then there is improper JWT validation occurring.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(false, true, DisplayName = "Valid StaticWebApps EasyAuth header only")]
+        [DataRow(true, true, DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
+        [TestMethod]
+        public async Task TestValidNoneEasyAuthToken(bool sendAuthorizationHeader, bool addAuthenticated)
+        {
+            string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
+            HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
+                generatedToken,
+                EasyAuthType.None,
                 sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);

@@ -3267,6 +3267,10 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
         [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Prod - No EnvVars - No Error")]
         [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.None, false, false, DisplayName = "None Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.None, true, false, DisplayName = "None Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.None, false, false, DisplayName = "None Prod - No EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.None, true, false, DisplayName = "None Prod - EnvVars - No Error")]
         public void TestProductionModeAppServiceEnvironmentCheck(HostMode hostMode, EasyAuthType authType, bool setEnvVars, bool expectError)
         {
             // Clears or sets App Service Environment Variables based on test input.

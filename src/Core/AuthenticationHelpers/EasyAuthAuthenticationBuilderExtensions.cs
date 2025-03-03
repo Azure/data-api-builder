@@ -27,7 +27,7 @@ public static class EasyAuthAuthenticationBuilderExtensions
             throw new ArgumentNullException(nameof(builder));
         }
 
-        if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
+        if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps or EasyAuthType.None)
         {
             builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
                 authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,

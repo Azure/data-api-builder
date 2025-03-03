@@ -68,6 +68,7 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
             {
                 EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context, Logger),
                 EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger),
+                EasyAuthType.None => AppServiceAuthentication.Parse(Context, Logger),
                 _ => null
             };
 

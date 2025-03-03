@@ -224,7 +224,7 @@ namespace Cli
             {
                 if (!Enum.TryParse(options.AuthenticationProvider, ignoreCase: true, out EasyAuthType authMode) || authMode is not EasyAuthType.StaticWebApps)
                 {
-                    _logger.LogError("Runtime base-route can only be specified when the authentication provider is Static Web Apps.");
+                    _logger.LogError("Runtime base-route can only be specified when the authentication provider is Static Web Apps or None.");
                     return false;
                 }
             }

@@ -6,5 +6,10 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public enum EasyAuthType
 {
     StaticWebApps,
-    AppService
+    AppService,
+
+    /// <summary>
+    /// A synonym for <see cref="StaticWebApps"/>
+    /// </summary>
+    None
 }

@@ -3609,6 +3609,35 @@
           }
         }
       }
+    },
+    {
+      DateOnlyTable: {
+        Source: {
+          Object: date_only_table,
+          Type: Table,
+          KeyFields: [
+            event_date
+          ]
+        },
+        GraphQL: {
+          Singular: DateOnlyTable,
+          Plural: DateOnlyTables,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

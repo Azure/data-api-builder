@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Azure.DataApiBuilder.Config.ObjectModel
+namespace Azure.DataApiBuilder.Service.HealthCheck
 {
     /// <summary>
     /// The Health Check Entry Object

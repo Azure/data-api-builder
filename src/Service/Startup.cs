@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks()
-                .AddCheck<DabHealthCheck>("DabHealthCheck");
+                .AddCheck<BasicHealthCheck>("DabHealthCheck");
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {

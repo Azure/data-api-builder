@@ -3,8 +3,9 @@
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
-namespace Azure.DataApiBuilder.Config.ObjectModel
+namespace Azure.DataApiBuilder.Service.HealthCheck
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum HealthStatus
@@ -16,7 +17,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     /// <summary>
     /// The health report of the DAB Engine.
     /// </summary>
-    public record DabHealthCheckReport
+    public record ComprehensiveHealthCheckReport
     {
         /// <summary>
         /// The health status of the service.
@@ -40,7 +41,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// The configuration details of the dab service.
         /// </summary>
         [JsonPropertyName("configuration")]
-        public DabConfigurationDetails? ConfigurationDetails { get; set; }
+        public ConfigurationDetails? ConfigurationDetails { get; set; }
 
         /// <summary>
         /// The health check results of the dab service for data source and entities.

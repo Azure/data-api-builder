@@ -72,20 +72,20 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 jsonWriter.WriteStartObject();
                 jsonWriter.WriteString("status", healthReport.Status.ToString());
 
-                if (healthReport.Entries.TryGetValue(key: typeof(DabHealthCheck).Name, out HealthReportEntry healthReportEntry))
+                if (healthReport.Entries.TryGetValue(key: typeof(BasicHealthCheck).Name, out HealthReportEntry healthReportEntry))
                 {
-                    if (healthReportEntry.Data.TryGetValue(DabHealthCheck.DAB_VERSION_KEY, out object? versionValue) && versionValue is string versionNumber)
+                    if (healthReportEntry.Data.TryGetValue(BasicHealthCheck.DAB_VERSION_KEY, out object? versionValue) && versionValue is string versionNumber)
                     {
-                        jsonWriter.WriteString(DabHealthCheck.DAB_VERSION_KEY, versionNumber);
+                        jsonWriter.WriteString(BasicHealthCheck.DAB_VERSION_KEY, versionNumber);
                     }
                     else
                     {
                         LogTrace("DabHealthCheck did not contain the version number in the HealthReport.");
                     }
 
-                    if (healthReportEntry.Data.TryGetValue(DabHealthCheck.DAB_APPNAME_KEY, out object? appNameValue) && appNameValue is string appName)
+                    if (healthReportEntry.Data.TryGetValue(BasicHealthCheck.DAB_APPNAME_KEY, out object? appNameValue) && appNameValue is string appName)
                     {
-                        jsonWriter.WriteString(DabHealthCheck.DAB_APPNAME_KEY, appName);
+                        jsonWriter.WriteString(BasicHealthCheck.DAB_APPNAME_KEY, appName);
                     }
                     else
                     {

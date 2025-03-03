@@ -648,6 +648,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }
         }
 
+        [TestMethod]
+        public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        {
+            await base.TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
+
         #endregion
     }
 }

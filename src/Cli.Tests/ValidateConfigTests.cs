@@ -169,6 +169,33 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// This Test is used to verify that the JWT properties must be added when the authentication scheme is Not easyAuth and not Simulator.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("AzureAD")]
+    [DataRow("EntraID")]
+    [DataRow("OAuth")]
+    public void TestMissingJwtProperties(string authScheme)
+    {
+        string ConfigWithJwtAuthentication = $"{{{SAMPLE_SCHEMA_DATA_SOURCE}, {RUNTIME_SECTION_JWT_AUTHENTICATION_PLACEHOLDER}, \"entities\": {{ }}}}";
+        ConfigWithJwtAuthentication = ConfigWithJwtAuthentication.Replace("<>", authScheme);
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithJwtAuthentication);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// This Test is used to verify that the validate command is able to catch when data source field or entities field is missing.
     /// </summary>
     [TestMethod]

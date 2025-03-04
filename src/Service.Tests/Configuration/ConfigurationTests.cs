@@ -3748,7 +3748,7 @@ type Planet @model(name:""PlanetAlias"") {
             }
 
             // Validate value of 'version' property in response.
-            if (responseProperties.TryGetValue(key: DabHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue))
+            if (responseProperties.TryGetValue(key: BasicHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue))
             {
                 Assert.AreEqual(
                     expected: ProductInfo.GetProductVersion(),
@@ -3761,7 +3761,7 @@ type Planet @model(name:""PlanetAlias"") {
             }
 
             // Validate value of 'app-name' property in response.
-            if (responseProperties.TryGetValue(key: DabHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue))
+            if (responseProperties.TryGetValue(key: BasicHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue))
             {
                 Assert.AreEqual(
                     expected: ProductInfo.GetDataApiBuilderUserAgent(),

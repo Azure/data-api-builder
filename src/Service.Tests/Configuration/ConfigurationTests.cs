@@ -1637,7 +1637,7 @@ type Moon {
         [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
         [DataRow(CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD, DisplayName = "Validates schema of the config file with no Authentication fields.")]
         public async Task TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
-        {                       
+        {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
@@ -1657,6 +1657,10 @@ type Moon {
                 Times.Once);
         }
 
+        /// <summary>
+        /// The config file does not contain any entity fields, which is expected to be invalid according to the schema.
+        /// The test asserts that the validation fails and there are validation errors.
+        /// It also verifies that the expected error message is logged, indicating that the 'entities' property is required.
         [TestMethod]
         public async Task TestBasicConfigSchemaWithNoEntityFieldsIsInValid()
         {
@@ -1667,7 +1671,7 @@ type Moon {
                                     ""connection-string"": ""sample-conn-string""
                                     }
                                 }";
-            
+
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
@@ -1675,16 +1679,10 @@ type Moon {
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
             JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
-            Assert.IsTrue(result.IsValid);
-            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
-            schemaValidatorLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
-                Times.Once);
+            Assert.IsFalse(result.IsValid);
+            Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            Assert.AreEqual(1, result.ErrorCount);
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> PropertyRequired: #/entities"));
         }
 
         /// <summary>

@@ -246,14 +246,37 @@ namespace Azure.DataApiBuilder.Core.Services
 
                             if (_isAggregationEnabled)
                             {
-                                EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
-                                EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
-                                // Generate aggregation type for the entity
-                                ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
-                                if (aggregationType.Fields.Any())
+                                bool isAggregationEnumCreated = EnumTypeBuilder.GenerateAggregationNumericEnumForObjectType(node, enumTypes);
+                                bool isGroupByColumnsEnumCreated = EnumTypeBuilder.GenerateScalarFieldsEnumForObjectType(node, enumTypes);
+                                ObjectTypeDefinitionNode aggregationType;
+                                ObjectTypeDefinitionNode groupByEntityNode;
+
+                                // note: if aggregation enum is created, groupByColumnsEnum is also created as there would be scalar fields to groupby.
+                                if (isAggregationEnumCreated)
                                 {
+                                    // Both aggregation and group by columns enum types are created for the entity. GroupBy should include fields and aggregation subfields.
+                                    aggregationType = SchemaConverter.GenerateAggregationTypeForEntity(node.Name.Value, node);
+                                    groupByEntityNode = SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node);
+                                    IReadOnlyList<FieldDefinitionNode> groupByFields = groupByEntityNode.Fields;
+                                    string aggregationsTypeName = SchemaConverter.GenerateObjectAggregationNodeName(node.Name.Value);
+                                    FieldDefinitionNode aggregationNode = new(
+                                        location: null,
+                                        name: new NameNode(QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME),
+                                        description: new StringValueNode($"Aggregations for {entityName}"),
+                                        arguments: new List<InputValueDefinitionNode>(),
+                                        type: new NamedTypeNode(new NameNode(aggregationsTypeName)),
+                                        directives: new List<DirectiveNode>()
+                                    );
+                                    List<FieldDefinitionNode> fieldDefinitionNodes = new(groupByFields) { aggregationNode };
+                                    groupByEntityNode = groupByEntityNode.WithFields(fieldDefinitionNodes);
                                     objectTypes.Add(SchemaConverter.GenerateObjectAggregationNodeName(entityName), aggregationType);
-                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), SchemaConverter.GenerateGroupByTypeForEntity(node.Name.Value, node));
+                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), groupByEntityNode);
+                                }
+                                else if (isGroupByColumnsEnumCreated)
+                                {
+                                    // only groupBy enum is created for the entity. GroupBy should include fields but not aggregations.
+                                    groupByEntityNode = SchemaConverter.GenerateGroupByTypeForEntity(entityName, node);
+                                    objectTypes.Add(SchemaConverter.GenerateGroupByTypeName(entityName), groupByEntityNode);
                                 }
                             }
                         }

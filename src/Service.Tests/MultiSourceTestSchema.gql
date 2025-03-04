@@ -77,8 +77,6 @@ input StringFilterInput {
   endsWith: String
   "Not Equals"
   neq: String
-  "Case Insensitive"
-  caseInsensitive: Boolean = false
   "Is null test"
   isNull: Boolean
 }

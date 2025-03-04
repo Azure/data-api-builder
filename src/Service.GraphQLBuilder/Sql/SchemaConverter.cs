@@ -340,7 +340,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
         {
             string groupByTypeName = GenerateGroupByTypeName(entityName);
-            string aggregationsTypeName = GenerateObjectAggregationNodeName(entityName);
 
             List<FieldDefinitionNode> groupByFields = new()
             {
@@ -350,14 +349,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     description: new StringValueNode($"Grouped fields from {entityName}"),
                     arguments: new List<InputValueDefinitionNode>(),
                     type: new NamedTypeNode(new NameNode(entityName)),
-                    directives: new List<DirectiveNode>()
-                ),
-                new FieldDefinitionNode(
-                    location: null,
-                    name: new NameNode("aggregations"),
-                    description: new StringValueNode($"Aggregated fields from {entityName}"),
-                    arguments: new List<InputValueDefinitionNode>(),
-                    type: new NamedTypeNode(new NameNode(aggregationsTypeName)),
                     directives: new List<DirectiveNode>()
                 )
             };

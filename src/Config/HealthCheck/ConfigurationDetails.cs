@@ -6,7 +6,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     /// <summary>
     /// The configuration details of the DAB Engine.
     /// </summary>
-    public record DabConfigurationDetails
+    public record ConfigurationDetails
     {
         public bool Rest { get; init; }
         public bool GraphQL { get; init; }

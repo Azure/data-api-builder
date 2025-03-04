@@ -30,33 +30,33 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             _httpUtility = httpUtility;
         }
 
-        public DabHealthCheckReport GetHealthCheckResponse(HttpContext context, RuntimeConfig runtimeConfig)
+        public ComprehensiveHealthCheckReport GetHealthCheckResponse(HttpContext context, RuntimeConfig runtimeConfig)
         {
             // Create a JSON response for the comprehensive health check endpoint using the provided basic health report.
             // If the response has already been created, it will be reused.
             _httpUtility.ConfigureApiRoute(context);
             LogTrace("Comprehensive Health check is enabled in the runtime configuration.");
             // TODO: Update the overall health based on all individual health statuses
-            DabHealthCheckReport dabHealthCheckReport = new()
+            ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport = new()
             {
                 Status = HealthStatus.Healthy,
             };
-            UpdateVersionAndAppName(ref dabHealthCheckReport);
-            UpdateDabConfigurationDetails(ref dabHealthCheckReport, runtimeConfig);
-            UpdateHealthCheckDetails(dabHealthCheckReport, runtimeConfig);
-            return dabHealthCheckReport;
+            UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport);
+            UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
+            UpdateHealthCheckDetails(ComprehensiveHealthCheckReport, runtimeConfig);
+            return ComprehensiveHealthCheckReport;
         }
 
-        private static void UpdateVersionAndAppName(ref DabHealthCheckReport response)
+        private static void UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport response)
         {
             // Update the version and app name to the response.
             response.Version = ProductInfo.GetProductVersion();
             response.AppName = ProductInfo.GetDataApiBuilderUserAgent();
         }
 
-        private static void UpdateDabConfigurationDetails(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        private static void UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
-            dabHealthCheckReport.ConfigurationDetails = new DabConfigurationDetails
+            ComprehensiveHealthCheckReport.ConfigurationDetails = new ConfigurationDetails
             {
                 Rest = runtimeConfig?.Runtime?.Rest != null && runtimeConfig.Runtime.Rest.Enabled,
                 GraphQL = runtimeConfig?.Runtime?.GraphQL != null && runtimeConfig.Runtime.GraphQL.Enabled,
@@ -66,21 +66,21 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             };
         }
 
-        private void UpdateHealthCheckDetails(DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        private void UpdateHealthCheckDetails(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
-            dabHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
-            UpdateDataSourceHealthCheckResults(ref dabHealthCheckReport, runtimeConfig);
-            UpdateEntityHealthCheckResults(dabHealthCheckReport, runtimeConfig);
+            ComprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
+            UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport, runtimeConfig);
+            UpdateEntityHealthCheckResults(ComprehensiveHealthCheckReport, runtimeConfig);
         }
 
-        private void UpdateDataSourceHealthCheckResults(ref DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        private void UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
-            if (dabHealthCheckReport.Checks != null && runtimeConfig.DataSource?.Health != null && runtimeConfig.DataSource.Health.Enabled)
+            if (ComprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource?.Health != null && runtimeConfig.DataSource.Health.Enabled)
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
                 (int, string?) response = ExecuteSqlDBQuery(query, runtimeConfig.DataSource?.ConnectionString);
                 bool thresholdCheck = response.Item1 >= 0 && response.Item1 < runtimeConfig?.DataSource?.Health.ThresholdMs;
-                dabHealthCheckReport.Checks.Add(new HealthCheckResultEntry
+                ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                 {
                     Name = runtimeConfig?.DataSource?.Health?.Name ?? runtimeConfig?.DataSource?.DatabaseType.ToString(),
                     ResponseTimeData = new ResponseTimeData
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return (-1, errorMessage);
         }
 
-        private void UpdateEntityHealthCheckResults(DabHealthCheckReport dabHealthCheckReport, RuntimeConfig runtimeConfig)
+        private void UpdateEntityHealthCheckResults(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Entities != null && runtimeConfig.Entities.Entities.Any())
             {
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     EntityHealthCheckConfig? healthConfig = Entity.Value?.Health;
                     if (healthConfig != null && healthConfig.Enabled)
                     {
-                        PopulateEntityHealth(dabHealthCheckReport, Entity, runtimeConfig);
+                        PopulateEntityHealth(ComprehensiveHealthCheckReport, Entity, runtimeConfig);
                     }
                 }
             }
@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-        private void PopulateEntityHealth(DabHealthCheckReport dabHealthCheckReport, KeyValuePair<string, Entity> entity, RuntimeConfig runtimeConfig)
+        private void PopulateEntityHealth(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, KeyValuePair<string, Entity> entity, RuntimeConfig runtimeConfig)
         {
             // Global Rest and GraphQL Runtime Options
             RestRuntimeOptions? restRuntimeOptions = runtimeConfig?.Runtime?.Rest;
@@ -148,12 +148,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 if (IsFeatureEnabled(restRuntimeOptions) && IsFeatureEnabled(restEntityOptions))
                 {
-                    dabHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
+                    ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
                     string entityPath = restEntityOptions?.Path != null ? restEntityOptions.Path.TrimStart('/') : entityKeyName;
                     (int, string?) response = ExecuteSqlEntityQuery(restRuntimeOptions.Path, entityPath, healthOptions.First);
                     bool thresholdCheck = response.Item1 >= 0 && response.Item1 < healthOptions.ThresholdMs;
 
-                    dabHealthCheckReport.Checks.Add(new HealthCheckResultEntry
+                    ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
                         Name = entityKeyName,
                         ResponseTimeData = new ResponseTimeData
@@ -169,12 +169,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 if (IsFeatureEnabled(graphQLRuntimeOptions) && IsFeatureEnabled(graphqlEntityOptions))
                 {
-                    dabHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
+                    ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
 
                     (int, string?) response = ExecuteSqlGraphQLEntityQuery(graphQLRuntimeOptions.Path, entity.Value, entityKeyName);
                     bool thresholdCheck = response.Item1 >= 0 && response.Item1 < healthOptions.ThresholdMs;
 
-                    dabHealthCheckReport.Checks.Add(new HealthCheckResultEntry
+                    ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
                         Name = entityKeyName,
                         ResponseTimeData = new ResponseTimeData

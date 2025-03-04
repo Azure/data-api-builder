@@ -241,5 +241,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 $"WHERE attrelid = ({schemaParamName} || '.' || {tableParamName})::regclass AND attgenerated = 's';";
             return query;
         }
+
+        public string QuoteTableNameAsDBConnectionParam(string param)
+        {
+            // PostreSQL uses same quoting for table name as DB Connection Param
+            // as when used directly in SQL text.
+            return QuoteIdentifier(param);
+        }
     }
 }

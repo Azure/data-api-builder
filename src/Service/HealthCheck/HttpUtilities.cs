@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             // Extract base URL: scheme + host + port (if present)
-            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";    
+            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
         }
 
         public string? ExecuteDbQuery(string query, string connectionString)
@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     SqlCommand command = new(query, connection);
                     connection.Open();
                     SqlDataReader reader = command.ExecuteReader();
-                    LogTrace("The query executed successfully.");;
+                    LogTrace("The query executed successfully.");
                     reader.Close();
                 }
                 catch (Exception ex)

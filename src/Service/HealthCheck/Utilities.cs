@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Create the payload for the REST HTTP request.
             // "/EntityName?$first=4"
             return $"/{entityName}?$first={First}";
-        }        
+        }
 
         public static string GetServiceRoute(string route, string UriSuffix)
         {

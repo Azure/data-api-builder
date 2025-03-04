@@ -4,11 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Http;
 using System.Linq;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
                     Tags = ["data-source"],
                     Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
-                });             
+                });
             }
         }
 
@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         public bool IsFeatureEnabled<T>(T? featureOptions) where T : class
         {
-            return featureOptions != null && 
+            return featureOptions != null &&
                 typeof(T).GetProperty("Enabled")?.GetValue(featureOptions) as bool? == true;
         }
 
@@ -147,12 +147,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (healthOptions != null && healthOptions.Enabled)
             {
                 if (IsFeatureEnabled(restRuntimeOptions) && IsFeatureEnabled(restEntityOptions))
-                {                
+                {
                     dabHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
                     string entityPath = restEntityOptions?.Path != null ? restEntityOptions.Path.TrimStart('/') : entityKeyName;
                     (int, string?) response = ExecuteSqlEntityQuery(restRuntimeOptions.Path, entityPath, healthOptions.First);
                     bool thresholdCheck = response.Item1 >= 0 && response.Item1 < healthOptions.ThresholdMs;
-                    
+
                     dabHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
                         Name = entityKeyName,
@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         Tags = ["rest", "endpoint"],
                         Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
-                    }); 
+                    });
                 }
 
                 if (IsFeatureEnabled(graphQLRuntimeOptions) && IsFeatureEnabled(graphqlEntityOptions))
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                     (int, string?) response = ExecuteSqlGraphQLEntityQuery(graphQLRuntimeOptions.Path, entity.Value, entityKeyName);
                     bool thresholdCheck = response.Item1 >= 0 && response.Item1 < healthOptions.ThresholdMs;
-                    
+
                     dabHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
                         Name = entityKeyName,

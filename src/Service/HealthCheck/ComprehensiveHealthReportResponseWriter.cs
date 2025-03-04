@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         public Task WriteResponse(HttpContext context, HealthReport healthReport)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
-            
+
             // Global comprehensive Health Check Enabled
             if (config?.Runtime != null && config.Runtime?.Health != null && config.Runtime.Health.Enabled)
             {

@@ -24,6 +24,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private string _apiRoute;
         private IMetadataProviderFactory _metadataProviderFactory;
         private RuntimeConfigProvider _runtimeConfigProvider;
+        public static readonly string Endpoint = "endpoint";
+        public static readonly string DataSource = "data-source";
+        public static readonly string Rest = "rest";
+        public static readonly string GraphQL = "graphql";
 
         /// <summary>
         /// HttpUtility constructor.
@@ -49,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             // Extract base URL: scheme + host + port (if present)
-            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}"; //:{httpContext.Request.Host.Port}";
         }
 
         public string? ExecuteDbQuery(string query, string connectionString)

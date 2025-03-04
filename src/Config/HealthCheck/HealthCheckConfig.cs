@@ -5,7 +5,5 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record HealthCheckConfig
 {
-    public bool Enabled { get; set; } // Default value: true
-
-    public string? Exception { get; set; } // Default value: "Exception"
+    public bool Enabled { get; set; } = true; // Default value: true
 }

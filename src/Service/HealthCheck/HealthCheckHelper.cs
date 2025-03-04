@@ -36,15 +36,27 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // If the response has already been created, it will be reused.
             _httpUtility.ConfigureApiRoute(context);
             LogTrace("Comprehensive Health check is enabled in the runtime configuration.");
+            
             // TODO: Update the overall health based on all individual health statuses
-            ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport = new()
-            {
-                Status = HealthStatus.Healthy,
-            };
+            ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport = new();
             UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport);
             UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
-            UpdateHealthCheckDetails(ComprehensiveHealthCheckReport, runtimeConfig);
+            UpdateHealthCheckDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
+            UpdateOverallHealthStatus(ref ComprehensiveHealthCheckReport);
             return ComprehensiveHealthCheckReport;
+        }
+
+        private static void UpdateOverallHealthStatus(ref ComprehensiveHealthCheckReport comprehensiveHealthCheckReport)
+        {
+            if (comprehensiveHealthCheckReport.Checks == null)
+            {
+                comprehensiveHealthCheckReport.Status = HealthStatus.Healthy;
+                return;
+            }
+
+            comprehensiveHealthCheckReport.Status = comprehensiveHealthCheckReport.Checks?.Any(check => check.Status == HealthStatus.Unhealthy) == true
+                ? HealthStatus.Unhealthy
+                : HealthStatus.Healthy;
         }
 
         private static void UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport response)
@@ -66,11 +78,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             };
         }
 
-        private void UpdateHealthCheckDetails(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
+        private void UpdateHealthCheckDetails(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             ComprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
             UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport, runtimeConfig);
-            UpdateEntityHealthCheckResults(ComprehensiveHealthCheckReport, runtimeConfig);
+            UpdateEntityHealthCheckResults(ref ComprehensiveHealthCheckReport, runtimeConfig);
         }
 
         private void UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
@@ -80,6 +92,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
                 (int, string?) response = ExecuteSqlDBQuery(query, runtimeConfig.DataSource?.ConnectionString);
                 bool thresholdCheck = response.Item1 >= 0 && response.Item1 < runtimeConfig?.DataSource?.Health.ThresholdMs;
+                
+                // Add DataSource Health Check Results
                 ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                 {
                     Name = runtimeConfig?.DataSource?.Health?.Name ?? runtimeConfig?.DataSource?.DatabaseType.ToString(),
@@ -89,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         ThresholdMs = runtimeConfig?.DataSource?.Health?.ThresholdMs
                     },
                     Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
-                    Tags = ["data-source"],
+                    Tags = [HttpUtilities.DataSource],
                     Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                 });
             }
@@ -110,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return (-1, errorMessage);
         }
 
-        private void UpdateEntityHealthCheckResults(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
+        private void UpdateEntityHealthCheckResults(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Entities != null && runtimeConfig.Entities.Entities.Any())
             {
@@ -153,6 +167,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     (int, string?) response = ExecuteSqlEntityQuery(restRuntimeOptions.Path, entityPath, healthOptions.First);
                     bool thresholdCheck = response.Item1 >= 0 && response.Item1 < healthOptions.ThresholdMs;
 
+                    // Add Entity Health Check Results
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
                         Name = entityKeyName,
@@ -161,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             DurationMs = response.Item1,
                             ThresholdMs = healthOptions.ThresholdMs
                         },
-                        Tags = ["rest", "endpoint"],
+                        Tags = [HttpUtilities.Rest, HttpUtilities.Endpoint],
                         Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
@@ -182,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             DurationMs = response.Item1,
                             ThresholdMs = healthOptions.ThresholdMs
                         },
-                        Tags = ["graphql", "endpoint"],
+                        Tags = [HttpUtilities.GraphQL, HttpUtilities.Endpoint],
                         Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });

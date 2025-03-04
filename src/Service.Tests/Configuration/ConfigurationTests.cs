@@ -3734,6 +3734,163 @@ type Planet @model(name:""PlanetAlias"") {
             Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
+            ValidateBasicDetailsHealthCheckResponse(responseProperties);
+        }
+
+        /// <summary>
+        /// Simulates a GET request to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
+        /// The expected format of the response is the comprehensive health check response.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ComprehensiveHealthEndpoint_ValidateContents()
+        {
+            // Arrange
+            // At least one entity is required in the runtime config for the engine to start.
+            // Even though this entity is not under test, it must be supplied enable successfull
+            // config file creation.
+            Entity requiredEntity = new(
+                Health: new(),
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: false),
+                GraphQL: new("book", "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", requiredEntity }
+            };
+
+            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            // Setup and send GET request to root path.
+            HttpRequestMessage getHealthEndpointContents = new(HttpMethod.Get, $"/health");
+
+            // Act - Exercise the health check endpoint code by requesting the health endpoint path '/'.
+            HttpResponseMessage response = await client.SendAsync(getHealthEndpointContents);
+
+            // Assert - Process response body and validate contents.
+            // Validate HTTP return code.
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
+
+            ValidateBasicDetailsHealthCheckResponse(responseProperties);
+            ValidateConfigurationDetailsHealthCheckResponse(responseProperties);
+            ValidateDatasourceHealthCheckResponse(responseProperties);
+            ValidateEntityHealthCheckResponse(responseProperties);
+        }
+
+        private static void ValidateDatasourceHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
+        {
+            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
+            {
+                bool checksTags = checksElement.EnumerateArray().Any(datasourceCheck =>
+                {
+                    if (datasourceCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
+                    {
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == "data-source");
+                    }
+                    
+                    return false;
+                });
+                Assert.IsTrue(checksTags, "Expected 'data-source' tag in 'checks' array.");
+            }
+            else
+            {
+                Assert.Fail("Missing or invalid 'checks' array in response.");
+            }
+        }
+
+        private static void ValidateEntityHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
+        {
+            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
+            {
+                bool checksTags = checksElement.EnumerateArray().Any(entityCheck =>
+                {
+                    if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
+                    {
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == "endpoint");
+                    }
+                    
+                    return false;
+                });
+                Assert.IsTrue(checksTags, "Expected 'endpoint' tag in 'checks' array.");
+            }
+            else
+            {
+                Assert.Fail("Missing or invalid 'checks' array in response.");
+            }
+        }
+        
+        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
+        {
+            if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
+            {
+                if (configElement.TryGetProperty("Rest", out JsonElement restValue))
+                {
+                    Assert.IsTrue(restValue.GetBoolean(), "Expected 'Rest' to be enabled.");
+                }
+                else
+                {
+                    Assert.Fail("Missing 'Rest' configuration.");
+                }
+
+                if (configElement.TryGetProperty("GraphQL", out JsonElement graphQLValue))
+                {
+                    Assert.IsTrue(graphQLValue.GetBoolean(), "Expected 'GraphQL' to be enabled.");
+                }
+                else
+                {
+                    Assert.Fail("Missing 'GraphQL' configuration.");
+                }
+
+                if (configElement.TryGetProperty("Caching", out JsonElement cachingValue))
+                {
+                    Assert.IsFalse(cachingValue.GetBoolean(), "Expected 'Caching' to be disabled.");
+                }
+                else
+                {
+                    Assert.Fail("Missing 'Caching' configuration.");
+                }
+
+                if (configElement.TryGetProperty("Telemetry", out JsonElement telemetryValue))
+                {
+                    Assert.IsFalse(telemetryValue.GetBoolean(), "Expected 'Telemetry' to be disabled.");
+                }
+                else
+                {
+                    Assert.Fail("Missing 'Telemetry' configuration.");
+                }
+
+                if (configElement.TryGetProperty("Mode", out JsonElement modeValue))
+                {
+                    Assert.AreEqual("Production", modeValue.ToString(), "Expected mode to be 'Development'.");
+                }
+                else
+                {
+                    Assert.Fail("Missing 'Mode' configuration.");
+                }
+            }
+            else
+            {
+                Assert.Fail("Missing 'configuration' object in response.");
+            }
+
+        }
+
+        private static void ValidateBasicDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
+        {
             // Validate value of 'status' property in reponse.
             if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
             {
@@ -4211,13 +4368,14 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         private static void CreateCustomConfigFile(bool globalRestEnabled, Dictionary<string, Entity> entityMap)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null, Health: new());
             HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
+                    Health: new(),
                     Rest: new(Enabled: globalRestEnabled),
                     GraphQL: new(),
                     Host: hostOptions

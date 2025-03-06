@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             string graphQLSchema = await File.ReadAllTextAsync("MultiSourceTestSchema.gql");
             ISchemaBuilder schemaBuilder = SchemaBuilder.New().AddDocumentFromString(graphQLSchema)
                 .AddAuthorizeDirectiveType()
-                .AddDirectiveType<ModelDirectiveType>() // Add custom directives used by DAB.
+                .AddType<ModelDirective>() // Add custom directives used by DAB.
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
                 .AddDirectiveType<DefaultValueDirectiveType>()

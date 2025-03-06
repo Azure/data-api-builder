@@ -832,12 +832,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Processes the groupBy field and populates GroupByMetadata.
-        /// 
+        ///
         /// Steps:
         /// 1. Extract the 'fields' argument.
         ///    - For each field argument, add it as a column in the query and to GroupByMetadata.
         /// 2. Process the selections (fields and aggregations).
-        /// 
+        ///
         /// Example:
         /// groupBy(fields: [categoryid]) {
         ///   fields {
@@ -947,11 +947,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IObjectField schemaField = ctx.Selection.Field;
 
             // Get the 'group by' field from the schema's entity type
-            IObjectField groupByField = GraphQLUtils.UnderlyingGraphQLEntityType(schemaField.Type)
+            IObjectField groupByField = schemaField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_FIELD_NAME];
 
             // Get the 'aggregations' field from the 'group by' entity type
-            IObjectField aggregationsObjectField = GraphQLUtils.UnderlyingGraphQLEntityType(groupByField.Type)
+            IObjectField aggregationsObjectField = groupByField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME];
 
             // Iterate through each selection in the aggregation field
@@ -1011,7 +1011,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)havingArg.Value.Value!;
 
                         // Retrieve the corresponding aggregation operation field from the schema
-                        IObjectField operationObjectField = GraphQLUtils.UnderlyingGraphQLEntityType(aggregationsObjectField.Type)
+                        IObjectField operationObjectField = aggregationsObjectField.Type.NamedType<ObjectType>()
                             .Fields[operation.ToString()];
 
                         // Parse the filtering conditions and apply them to the aggregation

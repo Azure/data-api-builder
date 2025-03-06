@@ -299,9 +299,13 @@ namespace Cli.Tests
         /// </summary>
         [DataTestMethod]
         [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
+        [DataRow("None", null, null, DisplayName = "None with no audience and no issuer specified.")]
+        [DataRow("EasyAuth", null, null, DisplayName = "EasyAuth with no audience and no issuer specified.")]
         [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
         [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
+        [DataRow("EntraId", "aud -xxx", "issuer-xxx", DisplayName = "EntraId with both audience and issuer specified.")]
+        [DataRow("OAuth", "aud -xxx", "issuer-xxx", DisplayName = "OAuth with both audience and issuer specified.")]
         public Task EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
             string authenticationProvider,
             string? audience,
@@ -426,7 +430,7 @@ namespace Cli.Tests
         ///
         ///      b. When --graphql.multiple-create.enabled option is not used
         ///           - In this case, fields related to multiple mutation and multiple create operations will NOT be written to the config file.
-        /// 
+        ///
         /// </summary>
         [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSQL database type")]
@@ -453,7 +457,7 @@ namespace Cli.Tests
 
             if (databaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                // A schema file is added since its mandatory for CosmosDB_NoSQL 
+                // A schema file is added since its mandatory for CosmosDB_NoSQL
                 ((MockFileSystem)_fileSystem!).AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
 
                 options = new(

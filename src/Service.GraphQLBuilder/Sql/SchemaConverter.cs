@@ -315,10 +315,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             List<DirectiveNode> objectTypeDirectives = new();
             if (!configEntity.IsLinkingEntity)
             {
-                objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
+                objectTypeDirectives.Add(
+                    new DirectiveNode(ModelDirective.Names.MODEL,
+                        new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, entityName)));
+
                 if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                        rolesAllowedForEntity,
-                        out DirectiveNode? authorizeDirective))
+                    rolesAllowedForEntity,
+                    out DirectiveNode? authorizeDirective))
                 {
                     objectTypeDirectives.Add(authorizeDirective!);
                 }

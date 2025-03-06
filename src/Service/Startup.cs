@@ -276,7 +276,7 @@ namespace Azure.DataApiBuilder.Service
                     graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
-                .AddAuthorization()
+                // .AddAuthorization()
                 .AddAuthorizationHandler<GraphQLAuthorizationHandler>();
 
             // Conditionally adds a maximum depth rule to the GraphQL queries/mutation selection set.

@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         protected override void Configure(IInputObjectTypeDescriptor descriptor)
         {
             descriptor.Name("DefaultValue");
-            descriptor.Directive<OneOfDirectiveType>();
+            descriptor.OneOf();
             descriptor.Field(BYTE_TYPE).Type<ByteType>();
             descriptor.Field(SHORT_TYPE).Type<ShortType>();
             descriptor.Field(INT_TYPE).Type<IntType>();

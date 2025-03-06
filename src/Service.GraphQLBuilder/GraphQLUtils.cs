@@ -44,13 +44,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
-            string modelDirectiveName = ModelDirectiveType.DirectiveName;
+            string modelDirectiveName = ModelDirective.Names.MODEL;
             return objectTypeDefinitionNode.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
         }
 
         public static bool IsModelType(ObjectType objectType)
         {
-            return objectType.Directives.ContainsDirective(ModelDirectiveType.DirectiveName);
+            return objectType.Directives.ContainsDirective(ModelDirective.Names.MODEL);
         }
 
         public static bool IsBuiltInType(ITypeNode typeNode)
@@ -205,19 +205,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static bool TryExtractGraphQLFieldModelName(IDirectiveCollection fieldDirectives,
             [NotNullWhen(true)] out string? modelName)
         {
-            foreach (Directive dir in fieldDirectives[ModelDirectiveType.DirectiveName])
-            {
-                // TODO: this looks wrong ... what do you want to do here?
-                ModelDirectiveType modelDirectiveType = dir.AsValue<ModelDirectiveType>();
-                if (string.IsNullOrEmpty(modelDirectiveType.Name))
-                {
-                    modelName = dir.GetArgumentValue<string>(ModelDirectiveType.ModelNameArgument);
-                    return modelName is not null;
-                }
-            }
-
-            modelName = null;
-            return false;
+            modelName = fieldDirectives.FirstOrDefault<ModelDirective>()?.AsValue<ModelDirective>().Name;
+            return !string.IsNullOrEmpty(modelName);
         }
 
         /// <summary>

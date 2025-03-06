@@ -514,7 +514,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     IsMultipleCreateOperationEnabled: IsMultipleCreateOperationEnabled);
             }
 
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode(ModelDirectiveType.ModelNameArgument, dbEntityName)) };
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new()
+            {
+                new DirectiveNode(
+                    ModelDirective.Names.MODEL,
+                    new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, dbEntityName))
+            };
 
             // Create authorize directive denoting allowed roles
             if (CreateAuthorizationDirectiveIfNecessary(

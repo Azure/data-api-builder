@@ -15,5 +15,6 @@ internal static class SupportedAuthNProviders
     public const string SIMULATOR = "Simulator";
 
     public const string STATIC_WEB_APPS = "StaticWebApps";
+    public const string EASY_AUTH = "EasyAuth";
     public const string NONE = "None";
 }

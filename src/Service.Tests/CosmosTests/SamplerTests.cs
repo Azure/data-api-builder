@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod(displayName: "TopNExtractor Scenarios")]
         [DataRow(1, 0, 1, DisplayName = "Retrieve 1 record when max days are not specified as count is set as 1.")]
         [DataRow(5, null, 5, DisplayName = "Retrieve 5 records when max days are null as count is set as 5")]
-        [DataRow(5, 2, 3, DisplayName = "Retrieve 3 records with max days configured as 2 as we should get 2 records from last 2 days and 1 record from today. Hence 3 records")]
+        [DataRow(5, 2, 3, DisplayName = "Retrieve 3 records when max days configured as 2 as we should get 2 records from last 2 days and 1 record from today. Hence 3 records")]
         public async Task TestTopNExtractor(int count, int? maxDays, int expectedCount)
         {
             Mock<TopNExtractor> topNExtractor = new(_containerWithIdPk, count, maxDays, _mockLogger.Object);
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // We're relying on a delay to create records with different timestamps.
             // However, this can cause the actual result to intermittently vary by one record in some cases, particularly in pipelines.
             // To prevent these tests from becoming flaky, the assertion has been adjusted.
-            Assert.IsTrue(expectedCount == result.Count || (expectedCount + 1) == result.Count, $"Expected result count is {expectedCount} and Actual result count is {result.Count}");
+            Assert.IsTrue(expectedCount == result.Count || (expectedCount - 1) == result.Count, $"Expected result count is {expectedCount} and Actual result count is {result.Count}");
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // We're relying on a delay to create records with different timestamps.
             // However, this can cause the actual result to intermittently vary by one record in some cases, particularly in pipelines.
             // To prevent these tests from becoming flaky, the assertion has been adjusted.
-            Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount + 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
+            Assert.IsTrue(expectedResultCount == result.Count || (expectedResultCount - 1) == result.Count, $"Expected result count is {expectedResultCount} and Actual result count is {result.Count}");
         }
 
         /// <summary>

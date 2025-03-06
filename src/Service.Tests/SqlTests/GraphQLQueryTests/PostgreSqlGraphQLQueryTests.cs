@@ -373,6 +373,230 @@ FROM
                 TestCategory.POSTGRESQL);
         }
 
+        /// <summary>
+        /// Test to check GraphQL support for aggregations with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForAggregationsWithAliases()
+        {
+            string msSqlQuery = @"
+                SELECT 
+                    MAX(categoryid) AS max, 
+                    MAX(price) AS max_price,
+                    MIN(price) AS min_price,
+                    AVG(price) AS avg_price,
+                    SUM(price) AS sum_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForAggregationsWithAliases(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for aggregations with aliases and groupby.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForGroupByAggregationsWithAliases()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    MAX(categoryid) AS max,
+                    MAX(price) AS max_price,
+                    MIN(price) AS min_price,
+                    AVG(price) AS avg_price,
+                    SUM(price) AS sum_price,
+                    COUNT(categoryid) AS count
+                FROM stocks_price
+                GROUP BY categoryid
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByAggregationsWithAliases(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for min aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForMinAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    MIN(price) AS min_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForMinAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for Max aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForMaxAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    MAX(price) AS max_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForMaxAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for avg aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForAvgAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    AVG(price) AS avg_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForAvgAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for sum aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForSumAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    SUM(price) AS sum_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForSumAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForCountAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    COUNT(categoryid) AS count_categoryid
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForCountAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for having filter.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForHavingAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    SUM(price) AS sum_price
+                FROM stocks_price
+                HAVING SUM(price) > 50
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForHavingAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForGroupByHavingAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    SUM(price) AS sum_price
+                FROM stocks_price
+                GROUP BY categoryid, pieceid
+                HAVING SUM(price) > 50
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByHavingAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForGroupByHavingFieldsAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    categoryid,
+                    pieceid,
+                    SUM(price) AS sum_price,
+                    COUNT(pieceid) AS count_piece
+                FROM stocks_price
+                GROUP BY categoryid, pieceid
+                HAVING SUM(price) > 50 AND COUNT(pieceid) <= 100
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByHavingFieldsAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public async Task TestSupportForGroupByNoAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    categoryid,
+                    pieceid
+                FROM stocks_price
+                GROUP BY categoryid, pieceid
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByNoAggregation(msSqlQuery);
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        {
+            await base.TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
         #endregion
     }
 }

@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS authors;
 DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS default_books;
 DROP TABLE IF EXISTS players;
 DROP TABLE IF EXISTS clubs;
 DROP TABLE IF EXISTS publishers;
@@ -48,6 +49,11 @@ CREATE TABLE books(
     id int AUTO_INCREMENT PRIMARY KEY,
     title text NOT NULL,
     publisher_id int NOT NULL
+);
+
+CREATE TABLE default_books (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) DEFAULT 'Placeholder'
 );
 
 CREATE TABLE players(
@@ -376,7 +382,13 @@ INSERT INTO books(id, title, publisher_id)
         (11, 'Policy-Test-04', 1941),
         (12, 'Time to Eat 2', 1941),
         (13, 'Before Sunrise', 1234),
-        (14, 'Before Sunset', 1234);
+        (14, 'Before Sunset', 1234),
+        (15, 'SQL_CONN', 1234),
+        (16, 'SOME%CONN', 1234),
+        (17, 'CONN%_CONN', 1234),
+        (18, '[Special Book]', 1234),
+        (19, 'ME\\YOU', 1234),
+        (20, 'C:\\\\LIFE', 1234);
 INSERT INTO book_website_placements(book_id, price) VALUES (1, 100), (2, 50), (3, 23), (5, 33);
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);

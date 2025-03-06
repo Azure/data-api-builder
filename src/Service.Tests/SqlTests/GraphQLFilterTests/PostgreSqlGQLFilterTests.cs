@@ -169,6 +169,64 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests various string filters with special characters in SQL queries.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(
+            "{ title: { endsWith: \"_CONN\" } }",
+            "%\\_CONN",
+            DisplayName = "EndsWith: '_CONN'"
+        )]
+        [DataRow(
+            "{ title: { contains: \"%_\" } }",
+            "%\\%\\_%",
+            DisplayName = "Contains: '%_'"
+        )]
+        [DataRow(
+            "{ title: { endsWith: \"%_CONN\" } }",
+            "%\\%\\_CONN",
+            DisplayName = "endsWith: '%CONN'"
+        )]
+        [DataRow(
+            "{ title: { startsWith: \"CONN%\" } }",
+            "CONN\\%%",
+            DisplayName = "startsWith: 'CONN%'"
+        )]
+        [DataRow(
+            "{ title: { startsWith: \"[\" } }",
+            "\\[%",
+            DisplayName = "startsWith: '['"
+        )]
+        [DataRow(
+            "{ title: { endsWith: \"]\" } }",
+            "%\\]",
+            DisplayName = "endsWith: ']'"
+        )]
+        [DataRow(
+            "{ title: { contains: \"\\\\\" } }",
+            "%\\\\%",
+            DisplayName = "Contains single backslash: '\\' "
+        )]
+        [DataRow(
+            "{ title: { contains: \"\\\\\\\\\" } }",
+            "%\\\\\\\\%",
+            DisplayName = "Contains double backslash: '\\\\'"
+        )]
+        public new async Task TestStringFiltersWithSpecialCharacters(string dynamicFilter, string dbFilterInput)
+        {
+            string postgresQuery = @$"
+                SELECT json_agg(to_jsonb(table0)) 
+                FROM (
+                    SELECT title 
+                    FROM books 
+                    WHERE title LIKE '{dbFilterInput}'
+                    ORDER BY title ASC
+                ) as table0";
+
+            await base.TestStringFiltersWithSpecialCharacters(dynamicFilter, postgresQuery);
+        }
+
+        /// <summary>
         /// Gets the default schema for
         /// PostgreSql.
         /// </summary>

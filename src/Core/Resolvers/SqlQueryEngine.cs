@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata, structure.GroupByMetadata),
                     structure.PaginationMetadata);
             }
             else
@@ -212,21 +212,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
+
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-            if (parentMetadata.Subqueries.TryGetValue(QueryBuilder.PAGINATION_FIELD_NAME, out PaginationMetadata? paginationObjectMetadata))
+            if (parentMetadata is not null)
             {
-                parentMetadata = paginationObjectMetadata;
+                // Sub objects with items array/subqueries in it are handled by below code.
+                if (parentMetadata.Subqueries.TryGetValue(QueryBuilder.PAGINATION_FIELD_NAME, out PaginationMetadata? paginationObjectMetadata))
+                {
+                    parentMetadata = paginationObjectMetadata;
+                }
+
+                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
+                metadata = currentMetadata;
+
+                if (currentMetadata.IsPaginated)
+                {
+                    return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+                }
             }
 
-            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
-            metadata = currentMetadata;
-
-            if (currentMetadata.IsPaginated)
-            {
-                return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
-            }
-
-            // In certain cirumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
+            // In certain circumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
             // of JsonValueKind.Object. In this case, we need to parse the JSON. This snippet can be removed when DW result is consistent
             // with MSSQL result.
             if (element.ValueKind is JsonValueKind.String)
@@ -257,7 +262,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (metadata is not null)
             {
                 PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
+                parentMetadata.Subqueries.TryGetValue(fieldSchema.Name, out PaginationMetadata? currentMetadata);
                 metadata = currentMetadata;
             }
 

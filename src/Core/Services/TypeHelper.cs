@@ -277,6 +277,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     return value;
                 }
             }
+            else if (baseType.Equals("numeric", StringComparison.OrdinalIgnoreCase))
+            {
+                return typeof(decimal);
+            }
 
             throw new DataApiBuilderException(
                 message: $"Tried to convert unsupported data type: {sqlDbTypeName}",

@@ -227,13 +227,32 @@ type PhoneNumber {
 
         /// <summary>
         /// Tests the <see cref="SchemaGenerator.Generate"/> method with an empty JSON array.
-        /// Ensures that the method correctly handles an empty input by throwing an appropriate exception.
         /// </summary>
         [TestMethod]
         public void TestEmptyJsonArray()
         {
             List<JsonDocument> jsonArray = new();
-            Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
+            Assert.AreEqual(string.Empty, SchemaGenerator.Generate(jsonArray, "containerName"));
+        }
+
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with an empty JSON array.
+        /// Ensures that the method correctly handles an empty input.
+        /// </summary>
+        [TestMethod]
+        public void TestEmptyJsonArrayInPayload()
+        {
+            List<JsonDocument> jsonArray = new() {
+                JsonDocument.Parse(@"{ ""name"": ""John"", ""product"": [], ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" }")};
+            string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
+
+            string expectedSchema = @"type ContainerName @model(name: ""ContainerName"") {
+  name: String!,
+  isStudent: Boolean!,
+  birthDate: Date!
+}
+";
+            Assert.AreEqual(expectedSchema, actualSchema);
         }
 
         /// <summary>

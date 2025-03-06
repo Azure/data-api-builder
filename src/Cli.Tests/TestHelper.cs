@@ -176,7 +176,7 @@ namespace Cli.Tests
           }";
 
         /// <summary>
-        /// Only Runtime section containing both rest and graphql enabled.
+        /// Only Runtime section containing both rest and graphql enabled, with None authentication.
         /// </summary>
         public const string RUNTIME_SECTION_NONE_AUTHENTICATION = @"
           ""runtime"": {
@@ -202,7 +202,33 @@ namespace Cli.Tests
           }";
 
         /// <summary>
-        /// Only Runtime section containing both rest and graphql enabled.
+        /// Only Runtime section containing both rest and graphql enabled, with EasyAuth authentication.
+        /// </summary>
+        public const string RUNTIME_SECTION_EASYAUTH_AUTHENTICATION = @"
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": true
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""EasyAuth""
+                  }
+              }
+          }";
+
+        /// <summary>
+        /// Only Runtime section containing both rest and graphql enabled. The authentication provider can be replaced with <>.
         /// </summary>
         public const string RUNTIME_SECTION_JWT_AUTHENTICATION_PLACEHOLDER = @"
           ""runtime"": {

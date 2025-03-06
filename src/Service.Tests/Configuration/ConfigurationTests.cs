@@ -1336,7 +1336,7 @@ type Moon {
 
         /// <summary>
         /// This method validates that depth-limit outside the valid range should fail validation
-        /// during `dab validate` and `dab start`.     
+        /// during `dab validate` and `dab start`.
         /// </summary>
         /// <param name="depthLimit"></param>
         /// <param name="expectedSuccess"></param>
@@ -3267,6 +3267,10 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
         [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Prod - No EnvVars - No Error")]
         [DataRow(HostMode.Production, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Prod - EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.EasyAuth, false, false, DisplayName = "EasyAuth Dev - No EnvVars - No Error")]
+        [DataRow(HostMode.Development, EasyAuthType.EasyAuth, true, false, DisplayName = "EasyAuth Dev - EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.EasyAuth, false, false, DisplayName = "EasyAuth Prod - No EnvVars - No Error")]
+        [DataRow(HostMode.Production, EasyAuthType.EasyAuth, true, false, DisplayName = "EasyAuth Prod - EnvVars - No Error")]
         [DataRow(HostMode.Development, EasyAuthType.None, false, false, DisplayName = "None Dev - No EnvVars - No Error")]
         [DataRow(HostMode.Development, EasyAuthType.None, true, false, DisplayName = "None Dev - EnvVars - No Error")]
         [DataRow(HostMode.Production, EasyAuthType.None, false, false, DisplayName = "None Prod - No EnvVars - No Error")]
@@ -3942,7 +3946,7 @@ type Planet @model(name:""PlanetAlias"") {
 
         /// <summary>
         /// Tests the enforcement of depth limit restrictions on GraphQL queries and mutations in non-hosted mode.
-        /// Verifies that requests exceeding the specified depth limit result in a BadRequest, 
+        /// Verifies that requests exceeding the specified depth limit result in a BadRequest,
         /// while requests within the limit succeed with the expected status code.
         /// Also verifies that the error message contains the current and allowed max depth limit value.
         /// Example:

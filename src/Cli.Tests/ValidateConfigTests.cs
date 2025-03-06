@@ -149,6 +149,29 @@ public class ValidateConfigTests
     /// This Test is used to verify that the None authentication scheme is valid
     /// </summary>
     [TestMethod]
+    public void TestEasyAuthIsValidAuthenticationProvider()
+    {
+        string ConfigWithNoneAuthentication = $"{{{SAMPLE_SCHEMA_DATA_SOURCE}, {RUNTIME_SECTION_EASYAUTH_AUTHENTICATION}, \"entities\": {{ }}}}";
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithNoneAuthentication);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsTrue(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// This Test is used to verify that the None authentication scheme is valid
+    /// </summary>
+    [TestMethod]
     public void TestNoneIsValidAuthenticationProvider()
     {
         string ConfigWithNoneAuthentication = $"{{{SAMPLE_SCHEMA_DATA_SOURCE}, {RUNTIME_SECTION_NONE_AUTHENTICATION}, \"entities\": {{ }}}}";
@@ -178,7 +201,7 @@ public class ValidateConfigTests
     public void TestMissingJwtProperties(string authScheme)
     {
         string ConfigWithJwtAuthentication = $"{{{SAMPLE_SCHEMA_DATA_SOURCE}, {RUNTIME_SECTION_JWT_AUTHENTICATION_PLACEHOLDER}, \"entities\": {{ }}}}";
-        ConfigWithJwtAuthentication = ConfigWithJwtAuthentication.Replace("<>", authScheme);
+        ConfigWithJwtAuthentication = ConfigWithJwtAuthentication.Replace("<>", authScheme, StringComparison.OrdinalIgnoreCase);
 
         // create an empty config file
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithJwtAuthentication);

@@ -11,5 +11,10 @@ public enum EasyAuthType
     /// <summary>
     /// A synonym for <see cref="StaticWebApps"/>
     /// </summary>
+    EasyAuth,
+
+    /// <summary>
+    /// Another synonym for <see cref="StaticWebApps"/>, like <see cref="EasyAuth"/>
+    /// </summary>
     None
 }

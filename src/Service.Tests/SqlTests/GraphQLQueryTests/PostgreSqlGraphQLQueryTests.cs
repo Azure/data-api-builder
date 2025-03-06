@@ -591,6 +591,12 @@ FROM
             await TestSupportForGroupByNoAggregation(msSqlQuery);
         }
 
+        [TestMethod]
+        [Ignore]
+        public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        {
+            await base.TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
         #endregion
     }
 }

@@ -454,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static IMetadata? GetMetadata(IResolverContext context)
         {
-            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent.IsRoot)
+            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Length == 2)
             {
                 // entering this block means that:
                 // context.Selection.ResponseName: items

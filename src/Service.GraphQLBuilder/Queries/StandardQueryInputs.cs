@@ -109,8 +109,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                [],
                [
                    new(null, _eq, _eqDescription, type, null, []),
-                    new(null, _neq, _neqDescription, type, null, []),
-                    new(null, _isNull, _isNullDescription, _boolean, null, [])
+                   new(null, _neq, _neqDescription, type, null, []),
+                   new(null, _isNull, _isNullDescription, _boolean, null, [])
                ]
            );
 

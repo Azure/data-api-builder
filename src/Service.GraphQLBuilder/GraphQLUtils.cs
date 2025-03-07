@@ -29,22 +29,28 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         // String used as a prefix for the name of a linking entity.
         private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+
         // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
         private const string ENTITY_NAME_DELIMITER = "$";
 
-        public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
-            DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
+        public static HashSet<DatabaseType> RELATIONAL_DBS = new()
+        {
+            DatabaseType.MSSQL,
+            DatabaseType.MySQL,
+            DatabaseType.DWSQL,
+            DatabaseType.PostgreSQL,
+            DatabaseType.CosmosDB_PostgreSQL
+        };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
-            string modelDirectiveName = ModelDirectiveType.DirectiveName;
+            string modelDirectiveName = ModelDirective.Names.MODEL;
             return objectTypeDefinitionNode.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
         }
 
         public static bool IsModelType(ObjectType objectType)
         {
-            string modelDirectiveName = ModelDirectiveType.DirectiveName;
-            return objectType.Directives.Any(d => d.Name.ToString() == modelDirectiveName);
+            return objectType.Directives.ContainsDirective(ModelDirective.Names.MODEL);
         }
 
         public static bool IsBuiltInType(ITypeNode typeNode)
@@ -84,7 +90,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// If no directives present, default to a field named "id" as the primary key.
         /// If even that doesn't exist, throw an exception in initialization.
         /// </summary>
-        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node, DatabaseType databaseType)
+        public static List<FieldDefinitionNode> FindPrimaryKeyFields(ObjectTypeDefinitionNode node,
+            DatabaseType databaseType)
         {
             List<FieldDefinitionNode> fieldDefinitionNodes = new();
 
@@ -110,9 +117,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
             else
             {
-                fieldDefinitionNodes = new(node.Fields.Where(f => f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
+                fieldDefinitionNodes = new(node.Fields.Where(f =>
+                    f.Directives.Any(d => d.Name.Value == PrimaryKeyDirectiveType.DirectiveName)));
 
-                // By convention we look for a `@primaryKey` directive, if that didn't exist
+                // By convention, we look for a `@primaryKey` directive, if that didn't exist
                 // fallback to using an expected field name on the GraphQL object
                 if (fieldDefinitionNodes.Count == 0)
                 {
@@ -126,11 +134,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     {
                         // Nothing explicitly defined nor could we find anything using our conventions, fail out
                         throw new DataApiBuilderException(
-                               message: "No primary key defined and conventions couldn't locate a fallback",
-                               subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
-                               statusCode: HttpStatusCode.ServiceUnavailable);
+                            message: "No primary key defined and conventions couldn't locate a fallback",
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                            statusCode: HttpStatusCode.ServiceUnavailable);
                     }
-
                 }
             }
 
@@ -167,13 +174,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             // If the 'anonymous' role is present in the role list, no @authorize directive will be added
             // because HotChocolate requires an authenticated user when the authorize directive is evaluated.
             if (roles is not null &&
-                roles.Count() > 0 &&
+                roles.Any() &&
                 !roles.Contains(SYSTEM_ROLE_ANONYMOUS))
             {
                 List<IValueNode> roleList = new();
-                foreach (string rolename in roles)
+                foreach (string roleName in roles)
                 {
-                    roleList.Add(new StringValueNode(rolename));
+                    roleList.Add(new StringValueNode(roleName));
                 }
 
                 ListValueNode roleListNode = new(items: roleList);
@@ -195,45 +202,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <param name="fieldDirectives">Collection of directives on GraphQL field.</param>
         /// <param name="modelName">Value of @model directive, if present.</param>
         /// <returns>True when name resolution succeeded, false otherwise.</returns>
-        public static bool TryExtractGraphQLFieldModelName(IDirectiveCollection fieldDirectives, [NotNullWhen(true)] out string? modelName)
+        public static bool TryExtractGraphQLFieldModelName(IDirectiveCollection fieldDirectives,
+            [NotNullWhen(true)] out string? modelName)
         {
-            foreach (Directive dir in fieldDirectives)
-            {
-                if (dir.Name.Value == ModelDirectiveType.DirectiveName)
-                {
-                    ModelDirectiveType modelDirectiveType = dir.ToObject<ModelDirectiveType>();
-
-                    if (modelDirectiveType.Name.HasValue)
-                    {
-                        modelName = dir.GetArgument<string>(ModelDirectiveType.ModelNameArgument).ToString();
-                        return modelName is not null;
-                    }
-
-                }
-            }
-
-            modelName = null;
-            return false;
-        }
-
-        /// <summary>
-        /// UnderlyingGraphQLEntityType is the main GraphQL type that is described by
-        /// this type. This strips all modifiers, such as List and Non-Null.
-        /// So the following GraphQL types would all have the underlyingType Book:
-        /// - Book
-        /// - [Book]
-        /// - Book!
-        /// - [Book]!
-        /// - [Book!]!
-        /// </summary>
-        public static ObjectType UnderlyingGraphQLEntityType(IType type)
-        {
-            if (type is ObjectType underlyingType)
-            {
-                return underlyingType;
-            }
-
-            return UnderlyingGraphQLEntityType(type.InnerType());
+            modelName = fieldDirectives.FirstOrDefault<ModelDirective>()?.AsValue<ModelDirective>().Name;
+            return !string.IsNullOrEmpty(modelName);
         }
 
         /// <summary>
@@ -241,12 +214,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="context">Middleware context.</param>
         /// <returns>Datasource name used to execute request.</returns>
-        public static string GetDataSourceNameFromGraphQLContext(IPureResolverContext context, RuntimeConfig runtimeConfig)
+        public static string GetDataSourceNameFromGraphQLContext(IResolverContext context, RuntimeConfig runtimeConfig)
         {
-            string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
+            string rootNode = context.Selection.Field.Coordinate.Name;
             string dataSourceName;
 
-            if (string.Equals(rootNode, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(rootNode, "query", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(rootNode, "mutation", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(rootNode, "query", StringComparison.OrdinalIgnoreCase))
             {
                 // we are at the root query node - need to determine return type and store on context.
                 // Output type below would be the graphql object return type - Books,BooksConnectionObject.
@@ -280,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Get entity name from context object.
         /// </summary>
-        public static string GetEntityNameFromContext(IPureResolverContext context)
+        public static string GetEntityNameFromContext(IResolverContext context)
         {
             IOutputType type = context.Selection.Field.Type;
             string graphQLTypeName = type.TypeName();
@@ -297,14 +271,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             else
             {
                 // for rest of scenarios get entity name from output object type.
-                ObjectType underlyingFieldType;
-                underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                ObjectType underlyingFieldType = type.NamedType<ObjectType>();
+
                 // Example: CustomersConnectionObject - for get all scenarios.
                 if (QueryBuilder.IsPaginationType(underlyingFieldType))
                 {
-                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+                    IObjectField subField = context.Selection.Type.NamedType<ObjectType>()
+                        .Fields[QueryBuilder.PAGINATION_FIELD_NAME];
                     type = subField.Type;
-                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                    underlyingFieldType = type.NamedType<ObjectType>();
                     entityName = underlyingFieldType.Name;
                 }
 
@@ -319,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return entityName;
         }
 
-        private static string GenerateDataSourceNameKeyFromPath(IPureResolverContext context)
+        private static string GenerateDataSourceNameKeyFromPath(IResolverContext context)
         {
             return $"{context.Path.ToList()[0]}";
         }
@@ -334,8 +309,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static bool IsScalarField(SyntaxKind fieldSyntaxKind)
         {
             return fieldSyntaxKind is SyntaxKind.IntValue || fieldSyntaxKind is SyntaxKind.FloatValue ||
-                fieldSyntaxKind is SyntaxKind.StringValue || fieldSyntaxKind is SyntaxKind.BooleanValue ||
-                fieldSyntaxKind is SyntaxKind.EnumValue;
+                   fieldSyntaxKind is SyntaxKind.StringValue || fieldSyntaxKind is SyntaxKind.BooleanValue ||
+                   fieldSyntaxKind is SyntaxKind.EnumValue;
         }
 
         /// <summary>
@@ -346,7 +321,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <param name="value">Value of the field.</param>
         /// <param name="variables">Collection of variables declared in the GraphQL mutation request.</param>
         /// <returns>A tuple containing a constant field value and the field kind.</returns>
-        public static Tuple<IValueNode?, SyntaxKind> GetFieldDetails(IValueNode? value, IVariableValueCollection variables)
+        public static Tuple<IValueNode?, SyntaxKind> GetFieldDetails(IValueNode? value,
+            IVariableValueCollection variables)
         {
             if (value is null)
             {
@@ -387,7 +363,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 throw new ArgumentException("The provided entity name is an invalid linking entity name.");
             }
 
-            string[] sourceTargetEntityNames = linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+            string[] sourceTargetEntityNames =
+                linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
 
             if (sourceTargetEntityNames.Length != 3)
             {
@@ -398,14 +375,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to extract a hotchocolate field node object with the specified name from all the field node objects belonging to an input type object.  
+        /// Helper method to extract a hotchocolate field node object with the specified name from all the field node objects belonging to an input type object.
         /// </summary>
         /// <param name="objectFieldNodes">List of field node objects belonging to an input type object</param>
         /// <param name="fieldName"> Name of the field node object to extract from the list of all field node objects</param>
         /// <exception cref="ArgumentException"></exception>
         public static IValueNode GetFieldNodeForGivenFieldName(List<ObjectFieldNode> objectFieldNodes, string fieldName)
         {
-            ObjectFieldNode? requiredFieldNode = objectFieldNodes.Where(fieldNode => fieldNode.Name.Value.Equals(fieldName)).FirstOrDefault();
+            ObjectFieldNode? requiredFieldNode = objectFieldNodes.FirstOrDefault(fieldNode => fieldNode.Name.Value.Equals(fieldName));
             if (requiredFieldNode != null)
             {
                 return requiredFieldNode.Value;
@@ -423,8 +400,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static bool IsMToNRelationship(Entity sourceEntity, string relationshipName)
         {
             return sourceEntity.Relationships is not null &&
-                sourceEntity.Relationships.TryGetValue(relationshipName, out EntityRelationship? relationshipInfo) &&
-                !string.IsNullOrWhiteSpace(relationshipInfo.LinkingObject);
+                   sourceEntity.Relationships.TryGetValue(relationshipName, out EntityRelationship? relationshipInfo) &&
+                   !string.IsNullOrWhiteSpace(relationshipInfo.LinkingObject);
         }
 
         /// <summary>
@@ -439,20 +416,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             if (entity.Relationships is null)
             {
                 throw new DataApiBuilderException(message: $"Entity {entityName} has no relationships defined",
-                                                  statusCode: HttpStatusCode.InternalServerError,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             if (entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
-               && entityRelationship is not null)
+                && entityRelationship is not null)
             {
                 return entityRelationship.TargetEntity;
             }
             else
             {
-                throw new DataApiBuilderException(message: $"Entity {entityName} does not have a relationship named {relationshipName}",
-                                                  statusCode: HttpStatusCode.InternalServerError,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
+                throw new DataApiBuilderException(
+                    message: $"Entity {entityName} does not have a relationship named {relationshipName}",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
             }
         }
     }

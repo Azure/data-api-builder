@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 {
                     if (!inputTypes.ContainsKey(fieldTypeName))
                     {
-                        inputTypes.Add(fieldTypeName, StandardQueryInputs.InputTypes[fieldTypeName]);
+                        inputTypes.Add(fieldTypeName, StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName));
                     }
 
                     InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];

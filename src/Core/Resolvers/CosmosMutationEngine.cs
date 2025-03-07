@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             // If authorization fails, an exception will be thrown and request execution halts.
-            string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
+            string graphQLType = context.Selection.Field.Type.NamedType().Name;
             string entityName = metadataProvider.GetEntityName(graphQLType);
             AuthorizeMutation(context, queryArgs, entityName, resolver.OperationType);
 
@@ -472,12 +472,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName)
         {
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-            string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
+            string graphQLType = context.Selection.Field.Type.NamedType().Name;
             string entityName = metadataProvider.GetEntityName(graphQLType);
             string databaseName = metadataProvider.GetSchemaName(entityName);
             string containerName = metadataProvider.GetDatabaseObjectName(entityName);
 
-            string graphqlMutationName = context.Selection.Field.Name.Value;
+            string graphqlMutationName = context.Selection.Field.Name;
             EntityActionOperation mutationOperation =
                 MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 

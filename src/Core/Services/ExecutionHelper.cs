@@ -521,20 +521,20 @@ namespace Azure.DataApiBuilder.Service.Services
                 // When context.Path is "/books/items[0]/authors"
                 // Parent -> "/books/items[0]"
                 // Parent -> "/books/items" -> Depth of this path is used to create the key to get
-                // paginationmetadata from context.ContextData
+                // pagination metadata from context.ContextData
                 // The PaginationMetadata fetched has subquery metadata for "authors" from path "/books/items/authors"
                 string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Parent.Length;
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
-            if (context.Path.Parent.IsRoot && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
+            if (context.Path.Length == 2 && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
             {
                 // This check handles when the current selection is a relationship field because in that case,
                 // there will be no context data entry.
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
-                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Length;
+                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Length;
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 

@@ -483,7 +483,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // { planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) { tags } }
             // where nested entities like the entity 'tags' are not nested within an "items" field
             // like for SQL databases.
-            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Length;
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
 
             if (context.ContextData.TryGetValue(key: metadataKey, out object? paginationMetadata) && paginationMetadata is not null)
             {
@@ -523,7 +523,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // Parent -> "/books/items" -> Depth of this path is used to create the key to get
                 // pagination metadata from context.ContextData
                 // The PaginationMetadata fetched has subquery metadata for "authors" from path "/books/items/authors"
-                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Parent.Length;
+                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Parent.Depth();
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
@@ -578,7 +578,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static void SetNewMetadata(IResolverContext context, IMetadata? metadata)
         {
-            string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Length;
+            string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Depth();
             context.ContextData.Add(metadataKey, metadata);
         }
 
@@ -597,7 +597,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.
-            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Length;
+            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.

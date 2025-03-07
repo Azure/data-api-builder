@@ -461,7 +461,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         private static IMetadata? GetMetadata(IResolverContext context)
         {
-            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Length == 2)
+            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && !context.Path.IsRootField())
             {
                 // entering this block means that:
                 // context.Selection.ResponseName: items
@@ -475,7 +475,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // The nuance here is that HC counts the depth when the path is expanded as
                 // /books/items/items[idx]/authors -> Depth: 3 (0-indexed) which maps to the
                 // pagination metadata for the "authors/items" subquery.
-                string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Length;
+                string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth();
                 return (IMetadata?)context.ContextData[paginationObjectParentName];
             }
 
@@ -527,18 +527,18 @@ namespace Azure.DataApiBuilder.Service.Services
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
-            if (context.Path.Length == 2 && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
+            if (!context.Path.IsRootField() && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
             {
                 // This check handles when the current selection is a relationship field because in that case,
                 // there will be no context data entry.
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
-                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Length;
+                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
-            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Length;
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
             return (IMetadata)context.ContextData[metadataKey]!;
         }
 

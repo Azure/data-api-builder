@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks()
                 .AddCheck<BasicHealthCheck>(nameof(BasicHealthCheck));
-
+                
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Development mode implies support for "Hot Reload". The V2 authentication function
                 // wires up all DAB supported authentication providers (schemes) so that at request time,
-                // the runtime config defined authenitication provider is used to authenticate requests.
+                // the runtime config defined authentication provider is used to authenticate requests.
                 ConfigureAuthenticationV2(services, configProvider);
             }
             else

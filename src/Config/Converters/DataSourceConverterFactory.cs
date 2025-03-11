@@ -47,7 +47,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
         public override DataSource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null);
+            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null, new());
             if (reader.TokenType is JsonTokenType.StartObject)
             {
 
@@ -68,12 +68,19 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                             case "health":
                                 if (reader.TokenType == JsonTokenType.Null)
                                 {
-                                    dataSource = dataSource with { Health = null };
+                                    dataSource = dataSource with { Health = new() };
                                 }
                                 else
                                 {
-                                    DatasourceHealthCheckConfig health = JsonSerializer.Deserialize<DatasourceHealthCheckConfig>(ref reader, options) ?? new();
-                                    dataSource = dataSource with { Health = health };
+                                    try
+                                    {
+                                        DatasourceHealthCheckConfig health = JsonSerializer.Deserialize<DatasourceHealthCheckConfig>(ref reader, options) ?? new();
+                                        dataSource = dataSource with { Health = health };
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        throw new JsonException($"Error while deserializing DataSource health: {e.Message}");
+                                    }
                                 }
 
                                 break;

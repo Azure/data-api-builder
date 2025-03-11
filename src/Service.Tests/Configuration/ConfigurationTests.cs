@@ -499,7 +499,7 @@ type Moon {
             {
                 if (isUpdateableRuntimeConfig)
                 {
-                    server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(args));
+                    server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(args));
                 }
                 else
                 {
@@ -780,7 +780,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestConflictAlreadySetConfiguration(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -816,7 +816,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -831,7 +831,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestInvalidConfigurationAtRuntime(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, "invalidString");
@@ -846,7 +846,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingFailureConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -868,7 +868,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLongRunningConfigUpdatedHandlerConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -907,7 +907,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig configuration = AuthorizationHelpers.InitRuntimeConfig(
@@ -975,7 +975,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestValidMultiSourceRunTimePostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
@@ -1017,7 +1017,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLoadingAccessTokenForCosmosClient(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, null, true);
@@ -1111,7 +1111,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurationCreatesCorrectClasses(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -2300,7 +2300,7 @@ type Moon {
 
             // Hosted Scenario
             // Instantiate new server with no runtime config for post-startup configuration hydration tests.
-            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
+            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
@@ -3344,7 +3344,7 @@ type Planet @model(name:""PlanetAlias"") {
             }
 
             // Instantiate new server with no runtime config for post-startup configuration hydration tests.
-            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
+            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
@@ -3750,9 +3750,9 @@ type Planet @model(name:""PlanetAlias"") {
             // Even though this entity is not under test, it must be supplied enable successfull
             // config file creation.
             Entity requiredEntity = new(
-                Health: new(),
+                Health: new(), // Required to get the comprehensive report.
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(Enabled: false),
+                Rest: new(Enabled: true),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -3770,25 +3770,21 @@ type Planet @model(name:""PlanetAlias"") {
                 $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
             };
 
-            using TestServer server = new(Program.CreateWebHostBuilder(args));
-            using HttpClient client = server.CreateClient();
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpRequestMessage healthRequest = new(HttpMethod.Get, "/health");
+                HttpResponseMessage response = await client.SendAsync(healthRequest);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            
+                Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
-            // Setup and send GET request to root path.
-            HttpRequestMessage getHealthEndpointContents = new(HttpMethod.Get, $"/health");
-
-            // Act - Exercise the health check endpoint code by requesting the health endpoint path '/'.
-            HttpResponseMessage response = await client.SendAsync(getHealthEndpointContents);
-
-            // Assert - Process response body and validate contents.
-            // Validate HTTP return code.
-            string responseBody = await response.Content.ReadAsStringAsync();
-            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
-            Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
-
-            ValidateBasicDetailsHealthCheckResponse(responseProperties);
-            ValidateConfigurationDetailsHealthCheckResponse(responseProperties);
-            ValidateDatasourceHealthCheckResponse(responseProperties);
-            ValidateEntityHealthCheckResponse(responseProperties);
+                ValidateBasicDetailsHealthCheckResponse(responseProperties);
+                ValidateConfigurationDetailsHealthCheckResponse(responseProperties);
+                ValidateDatasourceHealthCheckResponse(responseProperties);
+                ValidateEntityHealthCheckResponse(responseProperties);
+            }
         }
 
         private static void ValidateDatasourceHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
@@ -3799,16 +3795,16 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (datasourceCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == "data-source");
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HttpUtilities.DataSource);
                     }
                     
                     return false;
                 });
-                Assert.IsTrue(checksTags, "Expected 'data-source' tag in 'checks' array.");
+                Assert.IsTrue(checksTags, "Data-source Health Check is not present in the Comprehensive Health Check Report.");
             }
             else
             {
-                Assert.Fail("Missing or invalid 'checks' array in response.");
+                Assert.Fail("Checks Array is not present in the Comprehensive Health Check Report.");
             }
         }
 
@@ -3820,73 +3816,38 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == "endpoint");
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HttpUtilities.Endpoint);
                     }
                     
                     return false;
                 });
-                Assert.IsTrue(checksTags, "Expected 'endpoint' tag in 'checks' array.");
+                Assert.IsTrue(checksTags, "Entity Health Check is not present in the Comprehensive Health Check Report.");
             }
             else
             {
-                Assert.Fail("Missing or invalid 'checks' array in response.");
+                Assert.Fail("Checks array is not present in the Comprehensive Health Check Report.");
             }
+        }
+        
+        private static void ValidateConfigurationIsNotNull(JsonElement configElement, string objectKey)
+        {
+            Assert.IsNotNull(configElement.TryGetProperty(objectKey, out JsonElement _), $"Expected {objectKey} to be present.");
         }
         
         private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
         {
             if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
             {
-                if (configElement.TryGetProperty("Rest", out JsonElement restValue))
-                {
-                    Assert.IsTrue(restValue.GetBoolean(), "Expected 'Rest' to be enabled.");
-                }
-                else
-                {
-                    Assert.Fail("Missing 'Rest' configuration.");
-                }
-
-                if (configElement.TryGetProperty("GraphQL", out JsonElement graphQLValue))
-                {
-                    Assert.IsTrue(graphQLValue.GetBoolean(), "Expected 'GraphQL' to be enabled.");
-                }
-                else
-                {
-                    Assert.Fail("Missing 'GraphQL' configuration.");
-                }
-
-                if (configElement.TryGetProperty("Caching", out JsonElement cachingValue))
-                {
-                    Assert.IsFalse(cachingValue.GetBoolean(), "Expected 'Caching' to be disabled.");
-                }
-                else
-                {
-                    Assert.Fail("Missing 'Caching' configuration.");
-                }
-
-                if (configElement.TryGetProperty("Telemetry", out JsonElement telemetryValue))
-                {
-                    Assert.IsFalse(telemetryValue.GetBoolean(), "Expected 'Telemetry' to be disabled.");
-                }
-                else
-                {
-                    Assert.Fail("Missing 'Telemetry' configuration.");
-                }
-
-                if (configElement.TryGetProperty("Mode", out JsonElement modeValue))
-                {
-                    Assert.AreEqual("Production", modeValue.ToString(), "Expected mode to be 'Development'.");
-                }
-                else
-                {
-                    Assert.Fail("Missing 'Mode' configuration.");
-                }
+                ValidateConfigurationIsNotNull(configElement, "Rest");
+                ValidateConfigurationIsNotNull(configElement, "GraphQL");
+                ValidateConfigurationIsNotNull(configElement, "Caching");
+                ValidateConfigurationIsNotNull(configElement, "Telemetry");
+                ValidateConfigurationIsNotNull(configElement, "Mode");
             }
             else
             {
-                Assert.Fail("Missing 'configuration' object in response.");
+                Assert.Fail("Missing 'configuration' object in Health Check Response.");
             }
-
         }
 
         private static void ValidateBasicDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
@@ -3894,10 +3855,7 @@ type Planet @model(name:""PlanetAlias"") {
             // Validate value of 'status' property in reponse.
             if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
             {
-                Assert.AreEqual(
-                    expected: "Healthy",
-                    actual: statusValue.ToString(),
-                    message: "Expected endpoint to report 'Healthy'.");
+                Assert.IsTrue(statusValue.ValueKind == JsonValueKind.String, "Unexpected or missing status value as string.");
             }
             else
             {

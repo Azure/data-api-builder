@@ -234,6 +234,8 @@ public abstract class RuntimeConfigLoader
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
+        options.Converters.Add(new DatasourceHealthOptionsConvertorFactory());
+        options.Converters.Add(new EntityHealthOptionsConvertorFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));

@@ -36,8 +36,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // If the response has already been created, it will be reused.
             _httpUtility.ConfigureApiRoute(context);
             LogTrace("Comprehensive Health check is enabled in the runtime configuration.");
-            
-            // TODO: Update the overall health based on all individual health statuses
+
             ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport = new();
             UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport);
             UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
@@ -92,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
                 (int, string?) response = ExecuteSqlDBQuery(query, runtimeConfig.DataSource?.ConnectionString);
                 bool thresholdCheck = response.Item1 >= 0 && response.Item1 < runtimeConfig?.DataSource?.Health.ThresholdMs;
-                
+
                 // Add DataSource Health Check Results
                 ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                 {

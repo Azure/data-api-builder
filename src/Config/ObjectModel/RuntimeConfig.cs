@@ -595,7 +595,7 @@ public record RuntimeConfig
 
         if (runtimeConfig.IsDevelopmentMode())
         {
-            return LogLevel.Trace;
+            return LogLevel.Debug;
         }
 
         return LogLevel.Error;

@@ -34,7 +34,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
             {
                 return new EntityHealthCheckConfig() { Enabled = true, First = 100, ThresholdMs = 1000 };
             }
-            
+
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool enabled = true;
@@ -80,7 +80,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                                     throw new JsonException($"Invalid value for first: {parseFirstValue}. Value must be greater than 0.");
                                 }
 
-                                first = parseFirstValue;                              
+                                first = parseFirstValue;
                             }
 
                             break;

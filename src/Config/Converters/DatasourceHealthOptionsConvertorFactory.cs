@@ -75,7 +75,7 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
                             }
                             else
                             {
-                                name = reader.GetString();                            
+                                name = reader.GetString();
                             }
 
                             break;

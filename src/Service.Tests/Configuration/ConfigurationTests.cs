@@ -3777,7 +3777,7 @@ type Planet @model(name:""PlanetAlias"") {
                 HttpResponseMessage response = await client.SendAsync(healthRequest);
                 string responseBody = await response.Content.ReadAsStringAsync();
                 Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
-            
+
                 Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
                 ValidateBasicDetailsHealthCheckResponse(responseProperties);
@@ -3797,7 +3797,7 @@ type Planet @model(name:""PlanetAlias"") {
                     {
                         return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HttpUtilities.DataSource);
                     }
-                    
+
                     return false;
                 });
                 Assert.IsTrue(checksTags, "Data-source Health Check is not present in the Comprehensive Health Check Report.");
@@ -3818,7 +3818,7 @@ type Planet @model(name:""PlanetAlias"") {
                     {
                         return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HttpUtilities.Endpoint);
                     }
-                    
+
                     return false;
                 });
                 Assert.IsTrue(checksTags, "Entity Health Check is not present in the Comprehensive Health Check Report.");
@@ -3828,12 +3828,12 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.Fail("Checks array is not present in the Comprehensive Health Check Report.");
             }
         }
-        
+
         private static void ValidateConfigurationIsNotNull(JsonElement configElement, string objectKey)
         {
             Assert.IsNotNull(configElement.TryGetProperty(objectKey, out JsonElement _), $"Expected {objectKey} to be present.");
         }
-        
+
         private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
         {
             if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)

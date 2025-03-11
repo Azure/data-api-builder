@@ -34,6 +34,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         /// <param name="logger">Logger</param>
         /// <param name="metadataProviderFactory">MetadataProviderFactory</param>
+        /// <param name="runtimeConfigProvider">RuntimeConfigProvider</param>
         public HttpUtilities(
             ILogger<HttpUtilities>? logger,
             IMetadataProviderFactory metadataProviderFactory,
@@ -53,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             // Extract base URL: scheme + host + port (if present)
-            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}"; //:{httpContext.Request.Host.Port}";
+            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
         }
 
         public string? ExecuteDbQuery(string query, string connectionString)
@@ -128,19 +129,20 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             try
             {
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+
+                // Fetch Column Names from Metadata Provider
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 List<string> columnNames = dbObject.SourceDefinition.Columns.Keys.ToList();
                 string databaseObjectName = entity.Source.Object;
 
+                // In case any primitive column names are present, execute the query
                 if (columnNames.Any() && entity?.Health != null)
                 {
                     using (HttpClient client = CreateClient(ApiRoute))
                     {
                         string jsonPayload = Utilities.CreateHttpGraphQLQuery(databaseObjectName, columnNames, entity.Health.First);
                         HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
-                        Console.WriteLine($"API Route: {ApiRoute}");
-                        Console.WriteLine($"JSON Payload: {jsonPayload}");
                         HttpResponseMessage response = client.PostAsync(ApiRoute, content).Result;
                         if (response.IsSuccessStatusCode)
                         {

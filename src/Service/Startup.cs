@@ -121,27 +121,17 @@ namespace Azure.DataApiBuilder.Service
                 .WithMetrics(metrics =>
                 {
                     metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
-                        .AddRuntimeInstrumentation()
                         .AddMeter(TelemetryMetricsHelper.MeterName);
                 })
                 .WithTracing(tracing =>
                 {
                     tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        //.AddAspNetCoreInstrumentation(options =>
-                        //{
-                        //    options.EnrichWithHttpRequest = (activity, httpRequest) =>
-                        //    {
-                        //        activity.DisplayName = httpRequest.Path;
-                        //    };
-                        //})
                         .AddHttpClientInstrumentation()
                         .AddOtlpExporter(configure =>
                         {

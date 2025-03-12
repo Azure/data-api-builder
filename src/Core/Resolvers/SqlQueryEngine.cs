@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -13,7 +12,6 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Resolvers;
@@ -301,15 +299,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName, bool isMultipleCreateOperation = false)
         {
-            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"QUERY {structure.EntityName}");
-
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            string? databaseName = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString
-                .Split(';')
-                .FirstOrDefault(x => x.StartsWith("Database=", StringComparison.OrdinalIgnoreCase))
-                ?.Split('=')[1];
             DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
-            string? tableName = runtimeConfig.GetDataSourceNameFromEntityName(structure.EntityName);
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
 

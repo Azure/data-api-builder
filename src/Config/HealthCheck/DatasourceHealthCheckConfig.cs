@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.HealthCheck;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -15,5 +16,5 @@ public record DatasourceHealthCheckConfig : HealthCheckConfig
     // If the query takes equal or longer than this value, the health check will be considered unhealthy.
     // (Default: 10000ms)
     [JsonPropertyName("threshold-ms")]
-    public int ThresholdMs { get; set; } = 1000;
+    public int ThresholdMs { get; set; } = HealthCheckConstants.DefaultThresholdResponseTimeMs;
 }

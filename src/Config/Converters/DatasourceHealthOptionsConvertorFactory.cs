@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
@@ -32,7 +33,7 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
-                return new DatasourceHealthCheckConfig() { Enabled = true, Name = null, ThresholdMs = 1000 };
+                return new DatasourceHealthCheckConfig() { Enabled = true, Name = null, ThresholdMs = HealthCheckConstants.DefaultThresholdResponseTimeMs };
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
@@ -49,7 +50,12 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new DatasourceHealthCheckConfig() { Enabled = enabled, Name = name, ThresholdMs = threshold_ms ?? 1000 };
+                        return new DatasourceHealthCheckConfig()
+                        {
+                            Enabled = enabled,
+                            Name = name,
+                            ThresholdMs = threshold_ms ?? HealthCheckConstants.DefaultThresholdResponseTimeMs
+                        };
                     }
 
                     string? property = reader.GetString();
@@ -82,7 +88,7 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
                         case "threshold-ms":
                             if (reader.TokenType is JsonTokenType.Null)
                             {
-                                threshold_ms = null;
+                                threshold_ms = HealthCheckConstants.DefaultThresholdResponseTimeMs; // This is the default value for threshold-ms.
                             }
                             else
                             {

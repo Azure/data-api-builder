@@ -1,13 +1,13 @@
 {
-  "status": "Unhealthy",
+  "status": "Healthy",
   "version": "1.5.0",
   "app-name": "dab_oss_1.5.0",
   "configuration": {
-    "Rest": true,
-    "GraphQL": true,
-    "Caching": false,
-    "Telemetry": false,
-    "Mode": "Development"
+    "rest": true,
+    "graphql": true,
+    "caching": false,
+    "telemetry": false,
+    "mode": "Development"
   },
   "checks": [
     {
@@ -17,7 +17,7 @@
         "data-source"
       ],
       "data": {
-        "duration-ms": 2,
+        "response-ms": 1,
         "threshold-ms": 10
       }
     },
@@ -29,20 +29,19 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 171,
+        "response-ms": 137,
         "threshold-ms": 500
       }
     },
     {
-      "status": "Unhealthy",
+      "status": "Healthy",
       "name": "Publisher",
-      "exception": "The threshold for executing the request exceeded",
       "tags": [
         "graphql",
         "endpoint"
       ],
       "data": {
-        "duration-ms": 513,
+        "response-ms": 447,
         "threshold-ms": 500
       }
     },
@@ -54,7 +53,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 10,
+        "response-ms": 9,
         "threshold-ms": 1000
       }
     },
@@ -66,7 +65,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 13,
+        "response-ms": 8,
         "threshold-ms": 1000
       }
     },
@@ -78,7 +77,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 11,
+        "response-ms": 9,
         "threshold-ms": 1000
       }
     },
@@ -90,7 +89,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 7,
         "threshold-ms": 1000
       }
     },
@@ -102,7 +101,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 7,
         "threshold-ms": 1000
       }
     },
@@ -114,7 +113,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 10,
+        "response-ms": 7,
         "threshold-ms": 1000
       }
     },
@@ -126,7 +125,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -138,7 +137,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -150,7 +149,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -162,7 +161,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -174,7 +173,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -186,7 +185,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 7,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -198,7 +197,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 250
       }
     },
@@ -210,7 +209,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 250
       }
     },
@@ -222,7 +221,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 10,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -234,7 +233,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -246,7 +245,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -258,7 +257,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -270,7 +269,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -282,7 +281,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -294,7 +293,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 7,
         "threshold-ms": 1000
       }
     },
@@ -306,7 +305,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -318,7 +317,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -330,7 +329,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -342,7 +341,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 10
       }
     },
@@ -354,7 +353,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -366,7 +365,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -378,7 +377,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -390,7 +389,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 10,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -402,7 +401,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -414,7 +413,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -426,7 +425,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -438,7 +437,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -450,7 +449,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -462,7 +461,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -474,7 +473,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -486,7 +485,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -498,7 +497,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -510,7 +509,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -522,7 +521,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -534,7 +533,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -546,7 +545,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -558,7 +557,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -570,7 +569,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -582,7 +581,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -594,7 +593,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 10,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -606,7 +605,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -618,7 +617,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -630,7 +629,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -642,7 +641,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 145,
+        "response-ms": 59,
         "threshold-ms": 1000
       }
     },
@@ -654,7 +653,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 22,
+        "response-ms": 9,
         "threshold-ms": 1000
       }
     },
@@ -666,7 +665,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 10,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -678,7 +677,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 25,
+        "response-ms": 13,
         "threshold-ms": 1000
       }
     },
@@ -690,7 +689,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -702,7 +701,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -714,7 +713,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 14,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -726,7 +725,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 11,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -738,7 +737,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 12,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -750,7 +749,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 12,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -762,7 +761,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -774,7 +773,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 11,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -786,7 +785,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -798,7 +797,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 11,
+        "response-ms": 7,
         "threshold-ms": 1000
       }
     },
@@ -810,7 +809,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -822,7 +821,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -834,7 +833,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -846,7 +845,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -858,7 +857,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -870,7 +869,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -882,7 +881,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -894,7 +893,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 7,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -906,7 +905,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -918,7 +917,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -930,7 +929,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -942,7 +941,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -954,7 +953,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -966,7 +965,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 0,
+        "response-ms": 0,
         "threshold-ms": 1000
       }
     },
@@ -978,7 +977,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -990,7 +989,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 10,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1002,7 +1001,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1014,7 +1013,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 0,
+        "response-ms": 0,
         "threshold-ms": 1000
       }
     },
@@ -1026,7 +1025,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1038,7 +1037,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 7,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1050,7 +1049,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 7,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1062,7 +1061,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 11,
+        "response-ms": 7,
         "threshold-ms": 1000
       }
     },
@@ -1074,7 +1073,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1086,7 +1085,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 11,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1098,7 +1097,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -1110,7 +1109,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -1122,7 +1121,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 23,
+        "response-ms": 11,
         "threshold-ms": 1000
       }
     },
@@ -1134,7 +1133,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -1146,7 +1145,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -1158,7 +1157,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1170,7 +1169,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -1182,7 +1181,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -1194,7 +1193,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 8,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -1206,7 +1205,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -1218,7 +1217,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -1230,7 +1229,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 12,
+        "response-ms": 7,
         "threshold-ms": 1000
       }
     },
@@ -1242,7 +1241,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 16,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -1254,7 +1253,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1266,7 +1265,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     },
@@ -1278,7 +1277,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 13,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -1290,7 +1289,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 6,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1302,7 +1301,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 11,
+        "response-ms": 4,
         "threshold-ms": 1000
       }
     },
@@ -1314,7 +1313,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 3,
         "threshold-ms": 1000
       }
     },
@@ -1326,7 +1325,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 15,
+        "response-ms": 6,
         "threshold-ms": 1000
       }
     },
@@ -1338,7 +1337,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 9,
+        "response-ms": 5,
         "threshold-ms": 1000
       }
     },
@@ -1350,7 +1349,7 @@
         "endpoint"
       ],
       "data": {
-        "duration-ms": 5,
+        "response-ms": 2,
         "threshold-ms": 1000
       }
     }

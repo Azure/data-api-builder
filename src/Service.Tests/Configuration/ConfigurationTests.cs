@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -3795,7 +3796,7 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (datasourceCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HttpUtilities.DataSource);
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.DataSource);
                     }
 
                     return false;
@@ -3816,7 +3817,7 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HttpUtilities.Endpoint);
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.Endpoint);
                     }
 
                     return false;

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
     /// <summary>
@@ -8,10 +10,19 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     /// </summary>
     public record ConfigurationDetails
     {
+        [JsonPropertyName("rest")]
         public bool Rest { get; init; }
+
+        [JsonPropertyName("graphql")]
         public bool GraphQL { get; init; }
+
+        [JsonPropertyName("caching")]
         public bool Caching { get; init; }
+
+        [JsonPropertyName("telemetry")]
         public bool Telemetry { get; init; }
+
+        [JsonPropertyName("mode")]
         public HostMode Mode { get; init; }
     }
 }

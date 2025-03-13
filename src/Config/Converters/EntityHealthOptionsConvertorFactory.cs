@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
@@ -32,7 +33,12 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
-                return new EntityHealthCheckConfig() { Enabled = true, First = 100, ThresholdMs = 1000 };
+                return new EntityHealthCheckConfig()
+                {
+                    Enabled = true,
+                    First = HealthCheckConstants.DefaultFirstValue,
+                    ThresholdMs = HealthCheckConstants.DefaultThresholdResponseTimeMs
+                };
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
@@ -48,7 +54,12 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new EntityHealthCheckConfig() { Enabled = enabled, First = first ?? 100, ThresholdMs = threshold_ms ?? 1000 };
+                        return new EntityHealthCheckConfig() 
+                        { 
+                            Enabled = enabled,
+                            First = first ?? HealthCheckConstants.DefaultFirstValue,
+                            ThresholdMs = threshold_ms ?? HealthCheckConstants.DefaultThresholdResponseTimeMs
+                        };
                     }
 
                     string? property = reader.GetString();
@@ -70,7 +81,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                         case "first":
                             if (reader.TokenType is JsonTokenType.Null)
                             {
-                                first = 100;
+                                first = HealthCheckConstants.DefaultFirstValue; // This is the default value for first.
                             }
                             else
                             {
@@ -87,7 +98,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                         case "threshold-ms":
                             if (reader.TokenType is JsonTokenType.Null)
                             {
-                                threshold_ms = 1000;
+                                threshold_ms = HealthCheckConstants.DefaultThresholdResponseTimeMs; // This is the default value for threshold-ms.
                             }
                             else
                             {

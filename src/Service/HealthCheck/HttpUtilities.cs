@@ -24,11 +24,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private string _apiRoute;
         private IMetadataProviderFactory _metadataProviderFactory;
         private RuntimeConfigProvider _runtimeConfigProvider;
-        public static readonly string Endpoint = "endpoint";
-        public static readonly string DataSource = "data-source";
-        public static readonly string Rest = "rest";
-        public static readonly string GraphQL = "graphql";
-
+        
         /// <summary>
         /// HttpUtility constructor.
         /// </summary>
@@ -81,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return errorMessage;
         }
 
-        public string? ExecuteEntityRestQuery(string UriSuffix, string EntityName, int First)
+        public string? ExecuteRestQuery(string UriSuffix, string EntityName, int First)
         {
             string? errorMessage = null;
             try
@@ -115,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
-        public string? ExecuteEntityGraphQLQueryAsync(string UriSuffix, string entityName, Entity entity)
+        public string? ExecuteGraphQLQuery(string UriSuffix, string entityName, Entity entity)
         {
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations

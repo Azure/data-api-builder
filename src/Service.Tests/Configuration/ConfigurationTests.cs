@@ -504,6 +504,31 @@ type Moon {
                                     },
                                     ""entities"":{ }
                                 }";
+        public const string CONFIG_FILE_WITH_NO_CORS_FIELD = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""authentication"": {
+                                                ""provider"": ""StaticWebApps""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -1635,7 +1660,8 @@ type Moon {
         /// </summary>
         [DataTestMethod]
         [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
-        [DataRow(CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD, DisplayName = "Validates schema of the config file with no Authentication fields.")]
+        [DataRow(CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD, DisplayName = "Validates schema of the config file with no Authentication field.")]
+        [DataRow(CONFIG_FILE_WITH_NO_CORS_FIELD, DisplayName = "Validates schema of the config file with no Cors field.")]
         public async Task TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
@@ -1662,7 +1688,7 @@ type Moon {
         /// The test asserts that the validation fails and there are validation errors.
         /// It also verifies that the expected error message is logged, indicating that the 'entities' property is required.
         [TestMethod]
-        public async Task TestBasicConfigSchemaWithNoEntityFieldsIsInValid()
+        public async Task TestBasicConfigSchemaWithNoEntityFieldsIsInvalid()
         {
             string jsonData = @"{
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",

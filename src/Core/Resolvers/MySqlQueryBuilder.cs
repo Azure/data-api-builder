@@ -370,7 +370,7 @@ WHERE
 
         public string QuoteTableNameAsDBConnectionParam(string param)
         {
-            // Table names in MSSQL should not be quoted when used as DB Connection Params.
+            // Table names in MySQL should not be quoted when used as DB Connection Params.
             return param;
         }
     }

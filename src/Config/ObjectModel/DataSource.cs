@@ -12,7 +12,12 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="DatabaseType">Type of database to use.</param>
 /// <param name="ConnectionString">Connection string to access the database.</param>
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
-public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, object?>? Options)
+/// <param name="Health">Health check configuration for the datasource.</param>
+public record DataSource(
+    DatabaseType DatabaseType,
+    string ConnectionString,
+    Dictionary<string, object?>? Options,
+    DatasourceHealthCheckConfig? Health = null)
 {
     /// <summary>
     /// Converts the <c>Options</c> dictionary into a typed options object.

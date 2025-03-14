@@ -73,6 +73,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
+        ValidateLoggerFilters(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -130,6 +131,28 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
+    /// Only certain classes can have different log levels, this function ensures that only those classes are used in the config file.
+    /// </summary>
+    public void ValidateLoggerFilters(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
+        {
+            SortedList<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
+
+            for (int i = 0; i < loggerLevelOptions.Count; i++)
+            {
+                if (!IsLoggerFilterValid(loggerLevelOptions.GetKeyAtIndex(i)))
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Log level {loggerLevelOptions.GetKeyAtIndex(i)} needs to be of a valid log class.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// This method runs several validations against the config file such as schema validation,
     /// validation of entities metadata, validation of permissions, validation of entity configuration.
     /// This method is called by the CLI when the user runs `validate` command with `isValidateOnly=true`.
@@ -148,7 +171,7 @@ public class RuntimeConfigValidator : IConfigValidator
             _logger.LogInformation("Failed to parse the config file");
             return false;
         }
-
+        
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);
@@ -1322,5 +1345,24 @@ public class RuntimeConfigValidator : IConfigValidator
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);
         }
+    }
+
+    /// <summary>
+    /// Returns whether the log-level keyword is valid or not.
+    /// </summary>
+    /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>
+    private static bool IsLoggerFilterValid(string loggerFilter)
+    {
+        return loggerFilter == LoggerFilters.RUNTIMECONFIGVALIDATORFILTER ||
+            loggerFilter == LoggerFilters.SQLQUERYENGINEFILTER ||
+            loggerFilter == LoggerFilters.IQUERYEXECUTORFILTER ||
+            loggerFilter == LoggerFilters.ISQLMETADATAPROVIDERFILTER ||
+            loggerFilter == LoggerFilters.HEALTHREPORTRESPONSEWRITERFILTER ||
+            loggerFilter == LoggerFilters.RESTCONTROLLERFILTER ||
+            loggerFilter == LoggerFilters.CLIENTROLEHEADERAUTHENTICATIONMIDDLEWAREFILTER ||
+            loggerFilter == LoggerFilters.CONFIGURATIONCONTROLLERFILTER ||
+            loggerFilter == LoggerFilters.IAUTHORIZATIONHANDLERFILTER ||
+            loggerFilter == LoggerFilters.IAUTHORIZATIONRESOLVERFILTER ||
+            loggerFilter == LoggerFilters.DEFAULTFILTER;
     }
 }

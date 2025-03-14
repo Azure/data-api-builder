@@ -376,9 +376,9 @@
               "type": "object",
               "description": "Global configuration of log level",
               "additionalProperties": false,
-              "properties": {
-                "level": {
-                  "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
+              "patternProperties": {
+                "^.*$": {
+                  "description": "Defines logging severity levels for specific classes, when in null value it will set logging level based on 'host: mode' property",
                   "type": "string",
                   "default": null,
                   "enum": [

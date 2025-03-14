@@ -61,7 +61,6 @@ public class OpenTelemetryTests
             File.Delete(CONFIG_WITHOUT_TELEMETRY);
         }
 
-        Startup.OpenTelemetryOptions = new();
     }
 
     /// <summary>

@@ -169,7 +169,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("caseInsensitive"), new StringValueNode("Case Insensitive"), new BooleanType().ToTypeNode(), new BooleanValueNode(false), new List<DirectiveNode>()),
                     new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );
@@ -232,7 +231,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("caseInsensitive"), new StringValueNode("Case Insensitive"), new BooleanType().ToTypeNode(), new BooleanValueNode(false), new List<DirectiveNode>()),
                     new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
                 }
             );

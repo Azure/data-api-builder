@@ -13,6 +13,7 @@ using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
@@ -48,7 +49,10 @@ namespace Azure.DataApiBuilder.Service
             Console.WriteLine("Starting the runtime engine...");
             try
             {
-                CreateHostBuilder(args).Build().Run();
+                IHostBuilder hostingBuilger = CreateHostBuilder(args);
+                IHost host = hostingBuilger.Build();
+                ILogger<Program> logger = host.Services.GetRequiredService<ILogger<Program>>();
+                host.Run();
                 return true;
             }
             // Catch exception raised by explicit call to IHostApplicationLifetime.StopApplication()
@@ -159,22 +163,6 @@ namespace Azure.DataApiBuilder.Service
                             configureApplicationInsightsLoggerOptions: (options) => { }
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
-                    }
-
-                    if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
-                    {
-                        builder.AddOpenTelemetry(logging =>
-                        {
-                            logging.IncludeFormattedMessage = true;
-                            logging.IncludeScopes = true;
-                            logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
-                            logging.AddOtlpExporter(configure =>
-                            {
-                                configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
-                                configure.Headers = Startup.OpenTelemetryOptions.Headers;
-                                configure.Protocol = OtlpExportProtocol.Grpc;
-                            });
-                        });
                     }
 
                     builder.AddConsole();

@@ -59,7 +59,10 @@
         <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="21.0.2" />
         <PackageVersion Include="Verify.MsTest" Version="23.6.0" />
         <PackageVersion Include="Verify.DiffPlex" Version="2.3.0" />
-        <PackageVersion Include="ZiggyCreatures.FusionCache" Version="1.0.0" />
+        <PackageVersion Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
+        <PackageVersion Include="ZiggyCreatures.FusionCache.Serialization.SystemTextJson" Version="2.1.0" />
+        <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.3" />
+        <PackageVersion Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" Version="2.1.0" />
     </ItemGroup>
     <ItemGroup>
         <GlobalPackageReference Include="StyleCop.Analyzers" Version="1.1.118" />

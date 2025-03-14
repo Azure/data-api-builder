@@ -7,11 +7,11 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
-/// Entity specific cache configuration.
+/// Runtime specific cache configuration.
 /// Properties are nullable to support DAB CLI merge config
 /// expected behavior.
 /// </summary>
-public record EntityCacheOptions
+public record RuntimeCacheOptions
 {
     /// <summary>
     /// Default ttl value for an entity.
@@ -30,10 +30,15 @@ public record EntityCacheOptions
     [JsonPropertyName("ttl-seconds")]
     public int? TtlSeconds { get; init; } = null;
 
+    /// <summary>
+    /// The number of seconds a cache entry is valid before eligible for cache eviction.
+    /// </summary>
+    [JsonPropertyName("level-2")]
+    public RuntimeCacheLevel2Options? Level2 { get; init; } = null;
+
     [JsonConstructor]
-    public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null)
+    public RuntimeCacheOptions(bool? Enabled = null, int? TtlSeconds = null)
     {
-        // TODO: shouldn't we apply the same "UserProvidedXyz" logic to Enabled, too?
         this.Enabled = Enabled;
 
         if (TtlSeconds is not null)

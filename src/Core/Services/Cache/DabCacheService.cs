@@ -27,8 +27,9 @@ public class DabCacheService
 
     // Log Messages
     private const string CACHE_KEY_EMPTY = "The cache key should not be empty.";
-    private const string CACHE_KEY_TOO_LARGE = "The cache key is too large.";
+    //private const string CACHE_KEY_TOO_LARGE = "The cache key is too large.";
     private const string CACHE_KEY_CREATED = "The cache key was created by the cache service.";
+    private const string CACHE_ENTRY_TOO_LARGE = "The cache entry is too large.";
 
     /// <summary>
     /// Create cache service which encapsulates actual caching implementation.
@@ -47,32 +48,34 @@ public class DabCacheService
     /// Attempts to fetch response from cache. If there is a cache miss, call the 'factory method' to get a response
     /// from the backing database.
     /// </summary>
-    /// <typeparam name="JsonElement">Response payload</typeparam>
+    /// <typeparam name="TResult">Response payload</typeparam>
     /// <param name="queryExecutor">Factory method. Only executed after a cache miss.</param>
     /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
     /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
     /// <returns>JSON Response</returns>
     /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
-    public async ValueTask<JsonElement?> GetOrSetAsync<JsonElement>(
+    public async ValueTask<TResult?> GetOrSetAsync<TResult>(
         IQueryExecutor queryExecutor,
         DatabaseQueryMetadata queryMetadata,
         int cacheEntryTtl)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
-        JsonElement? result = await _cache.GetOrSetAsync(
+        TResult? result = await _cache.GetOrSetAsync(
                key: cacheKey,
-               async (FusionCacheFactoryExecutionContext<JsonElement?> ctx, CancellationToken ct) =>
+               async (FusionCacheFactoryExecutionContext<TResult?> ctx, CancellationToken ct) =>
                {
                    // Need to handle undesirable results like db errors or null.
-                   JsonElement? result = await queryExecutor.ExecuteQueryAsync(
+                   TResult? result = await queryExecutor.ExecuteQueryAsync(
                        sqltext: queryMetadata.QueryText,
                        parameters: queryMetadata.QueryParameters,
-                       dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
+                       dataReaderHandler: queryExecutor.GetJsonResultAsync<TResult>,
                        httpContext: _httpContextAccessor.HttpContext!,
                        args: null,
                        dataSourceName: queryMetadata.DataSource);
 
+                   // TODO: check if still needed, probably not (since no SizeLimit has been set on the underlying MemoryCache)
                    ctx.Options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: result?.ToString()));
+
                    ctx.Options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
 
                    return result;
@@ -95,7 +98,6 @@ public class DabCacheService
         DatabaseQueryMetadata queryMetadata,
         int cacheEntryTtl)
     {
-
         string cacheKey = CreateCacheKey(queryMetadata);
         TResult? result = await _cache.GetOrSetAsync(
                key: cacheKey,
@@ -103,7 +105,9 @@ public class DabCacheService
                {
                    TResult result = await executeQueryAsync();
 
+                   // TODO: check if still needed, probably not (since no SizeLimit has been set on the underlying MemoryCache)
                    ctx.Options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: JsonSerializer.Serialize(result?.ToString())));
+
                    ctx.Options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
 
                    return result;
@@ -125,6 +129,10 @@ public class DabCacheService
     /// <returns>Cache key string</returns>
     private string CreateCacheKey(DatabaseQueryMetadata queryMetadata)
     {
+        // TODO: to avoid cache keys being too large, we should consider the use of hashing.
+        // We can hash the query parameters, and maybe even the query text.
+        // I would exclude the datasource, for easier investigations.
+        // The hash algorithm should be deterministic and fast, not cryptographically secure.
         StringBuilder cacheKeyBuilder = new();
         cacheKeyBuilder.Append(queryMetadata.DataSource);
         cacheKeyBuilder.Append(KEY_DELIMITER);
@@ -172,7 +180,7 @@ public class DabCacheService
         {
             if (_logger?.IsEnabled(LogLevel.Trace) ?? false)
             {
-                _logger.LogTrace(message: CACHE_KEY_TOO_LARGE);
+                _logger.LogTrace(message: CACHE_ENTRY_TOO_LARGE);
             }
 
             throw;

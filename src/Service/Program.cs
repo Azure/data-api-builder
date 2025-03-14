@@ -50,10 +50,7 @@ namespace Azure.DataApiBuilder.Service
             Console.WriteLine("Starting the runtime engine...");
             try
             {
-                IHostBuilder hostingBuilger = CreateHostBuilder(args);
-                IHost host = hostingBuilger.Build();
-                ILogger<Program> logger = host.Services.GetRequiredService<ILogger<Program>>();
-                host.Run();
+                CreateHostBuilder(args).Build().Run();
                 return true;
             }
             // Catch exception raised by explicit call to IHostApplicationLifetime.StopApplication()

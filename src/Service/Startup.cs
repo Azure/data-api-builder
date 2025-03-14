@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service
     {
         private ILogger<Startup> _logger;
 
-        public static LogLevel MinimumLogLevel = LogLevel.Error;
+        public static LogLevel MinimumLogLevel = LogLevel.Trace;
 
         public static bool IsLogLevelOverriddenByCli;
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
@@ -187,6 +187,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
+            services.AddSingleton<HealthCheckHelper>();
+            services.AddSingleton<HttpUtilities>();
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
 
@@ -229,7 +231,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Development mode implies support for "Hot Reload". The V2 authentication function
                 // wires up all DAB supported authentication providers (schemes) so that at request time,
-                // the runtime config defined authenitication provider is used to authenticate requests.
+                // the runtime config defined authentication provider is used to authenticate requests.
                 ConfigureAuthenticationV2(services, configProvider);
             }
             else

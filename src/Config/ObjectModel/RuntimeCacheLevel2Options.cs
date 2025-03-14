@@ -7,16 +7,16 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
-/// Entity specific cache configuration.
+/// Runtime specific cache configuration.
 /// Properties are nullable to support DAB CLI merge config
 /// expected behavior.
 /// </summary>
-public record EntityCacheOptions
+public record RuntimeCacheLevel2Options
 {
     /// <summary>
     /// Default ttl value for an entity.
     /// </summary>
-    public const int DEFAULT_TTL_SECONDS = 5;
+    public const int DEFAULT_TTL_SECONDS = 60;
 
     /// <summary>
     /// Whether the cache should be used for the entity.
@@ -30,10 +30,21 @@ public record EntityCacheOptions
     [JsonPropertyName("ttl-seconds")]
     public int? TtlSeconds { get; init; } = null;
 
+    /// <summary>
+    /// The provider for the L2 cache.
+    /// </summary>
+    [JsonPropertyName("provider")]
+    public string? Provider { get; init; } = null;
+
+    /// <summary>
+    /// The connection string for the L2 cache.
+    /// </summary>
+    [JsonPropertyName("connection-string")]
+    public string? ConnectionString { get; init; } = null;
+
     [JsonConstructor]
-    public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null)
+    public RuntimeCacheLevel2Options(bool? Enabled = null, int? TtlSeconds = null, string? Provider = null, string? ConnectionString = null)
     {
-        // TODO: shouldn't we apply the same "UserProvidedXyz" logic to Enabled, too?
         this.Enabled = Enabled;
 
         if (TtlSeconds is not null)
@@ -45,6 +56,10 @@ public record EntityCacheOptions
         {
             this.TtlSeconds = DEFAULT_TTL_SECONDS;
         }
+
+        this.Provider = Provider;
+
+        this.ConnectionString = ConnectionString;
     }
 
     /// <summary>

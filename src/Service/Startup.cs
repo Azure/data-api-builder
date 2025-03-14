@@ -38,6 +38,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -47,7 +48,10 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using StackExchange.Redis;
 using ZiggyCreatures.Caching.Fusion;
+using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
+using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
@@ -250,7 +254,8 @@ namespace Azure.DataApiBuilder.Service
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
             _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
 
-            services.AddFusionCache()
+            // Cache config
+            IFusionCacheBuilder fusionCacheBuilder = services.AddFusionCache()
                 .WithOptions(options =>
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
@@ -258,8 +263,45 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {
-                    Duration = TimeSpan.FromSeconds(5)
+                    Duration = TimeSpan.FromSeconds(RuntimeCacheOptions.DEFAULT_TTL_SECONDS),
+                    DistributedCacheDuration = TimeSpan.FromSeconds(RuntimeCacheLevel2Options.DEFAULT_TTL_SECONDS)
                 });
+
+            // L2 cache config
+            bool useL2 = runtimeConfigAvailable
+                && (runtimeConfig?.Runtime?.IsCachingEnabled ?? false)
+                && (runtimeConfig?.Runtime?.Cache?.Level2?.Enabled ?? false);
+
+            if (useL2)
+            {
+                RuntimeCacheLevel2Options l2CacheOptions = runtimeConfig!.Runtime!.Cache!.Level2!;
+
+                // TODO: pick the best way to handle unknown providers (error? ignore? log? else?)
+
+                if (l2CacheOptions.Provider == "redis" && !string.IsNullOrWhiteSpace(l2CacheOptions.ConnectionString))
+                {
+                    // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
+                    Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(l2CacheOptions.ConnectionString);
+
+                    fusionCacheBuilder
+                        .WithSerializer(new FusionCacheSystemTextJsonSerializer())
+                        .WithDistributedCache(new RedisCache(new RedisCacheOptions
+                        {
+                            //Configuration = l2CacheOptions.ConnectionString
+                            ConnectionMultiplexerFactory = async () =>
+                            {
+                                return await connectionMultiplexerTask;
+                            }
+                        }))
+                        .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
+                        {
+                            ConnectionMultiplexerFactory = async () =>
+                            {
+                                return await connectionMultiplexerTask;
+                            }
+                        }));
+                }
+            }
 
             services.AddSingleton<DabCacheService>();
             services.AddControllers();

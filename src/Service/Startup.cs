@@ -126,7 +126,8 @@ namespace Azure.DataApiBuilder.Service
                 services.AddOpenTelemetry()
                 .WithLogging(logging =>
                 {
-                    logging.AddOtlpExporter(configure =>
+                    logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                    .AddOtlpExporter(configure =>
                     {
                         configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
                         configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;

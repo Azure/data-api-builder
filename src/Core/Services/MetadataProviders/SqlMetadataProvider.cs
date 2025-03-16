@@ -1355,12 +1355,13 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaOrDatabaseName, SourceDefinition sourceDefinition)
         {
             string schemaOrDatabaseParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+            string quotedTableName = SqlQueryBuilder.QuoteTableNameAsDBConnectionParam(tableName);
             string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
             string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns(schemaOrDatabaseParamName, tableParamName);
             Dictionary<string, DbConnectionParam> parameters = new()
             {
                 { schemaOrDatabaseParamName, new(schemaOrDatabaseName, DbType.String) },
-                { tableParamName, new(tableName, DbType.String) }
+                { tableParamName, new(quotedTableName, DbType.String) }
             };
 
             List<string>? readOnlyFields = await QueryExecutor.ExecuteQueryAsync(

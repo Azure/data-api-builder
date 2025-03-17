@@ -290,10 +290,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                if(activity is not null)
-                {
-                    activity.TrackRestControllerActivityFinishedWithWithException(ex, Response.StatusCode);
-                }
+                activity?.TrackRestControllerActivityFinishedWithWithException(ex, Response.StatusCode);
 
                 TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
                 return ErrorResponse(

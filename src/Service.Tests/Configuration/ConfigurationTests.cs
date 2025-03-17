@@ -4396,7 +4396,7 @@ type Planet @model(name:""PlanetAlias"") {
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null,
-                Health: enableDatasourceHealth ? new () { Enabled = enableDatasourceHealth } : null);
+                Health: enableDatasourceHealth ? new() { Enabled = enableDatasourceHealth } : null);
             HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(

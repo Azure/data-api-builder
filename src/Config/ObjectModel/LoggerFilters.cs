@@ -9,7 +9,8 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         public const string SQLQUERYENGINEFILTER = "Azure.DataApiBuilder.Core.Resolvers.SqlQueryEngine";
         public const string IQUERYEXECUTORFILTER = "Azure.DataApiBuilder.Core.Resolvers.IQueryExecutor";
         public const string ISQLMETADATAPROVIDERFILTER = "Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider";
-        public const string HEALTHREPORTRESPONSEWRITERFILTER = "Azure.DataApiBuilder.Service.HealthCheck.HealthReportResponseWriter";
+        public const string BASICHEALTHREPORTRESPONSEWRITERFILTER = "Azure.DataApiBuilder.Service.HealthCheck.BasicHealthReportResponseWriter";
+        public const string COMPREHENSIVEHEALTHREPORTRESPONSEWRITERFILTER = "Azure.DataApiBuilder.Service.HealthCheck.ComprehensiveHealthReportResponseWriter";
         public const string RESTCONTROLLERFILTER = "Azure.DataApiBuilder.Service.Controllers.RestController";
         public const string CLIENTROLEHEADERAUTHENTICATIONMIDDLEWAREFILTER = "Azure.DataApiBuilder.Core.AuthenticationHelpers.ClientRoleHeaderAuthenticationMiddleware";
         public const string CONFIGURATIONCONTROLLERFILTER = "Azure.DataApiBuilder.Service.Controllers.ConfigurationController";

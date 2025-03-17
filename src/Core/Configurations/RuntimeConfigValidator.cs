@@ -1357,7 +1357,8 @@ public class RuntimeConfigValidator : IConfigValidator
             loggerFilter == LoggerFilters.SQLQUERYENGINEFILTER ||
             loggerFilter == LoggerFilters.IQUERYEXECUTORFILTER ||
             loggerFilter == LoggerFilters.ISQLMETADATAPROVIDERFILTER ||
-            loggerFilter == LoggerFilters.HEALTHREPORTRESPONSEWRITERFILTER ||
+            loggerFilter == LoggerFilters.BASICHEALTHREPORTRESPONSEWRITERFILTER ||
+            loggerFilter == LoggerFilters.COMPREHENSIVEHEALTHREPORTRESPONSEWRITERFILTER ||
             loggerFilter == LoggerFilters.RESTCONTROLLERFILTER ||
             loggerFilter == LoggerFilters.CLIENTROLEHEADERAUTHENTICATIONMIDDLEWAREFILTER ||
             loggerFilter == LoggerFilters.CONFIGURATIONCONTROLLERFILTER ||

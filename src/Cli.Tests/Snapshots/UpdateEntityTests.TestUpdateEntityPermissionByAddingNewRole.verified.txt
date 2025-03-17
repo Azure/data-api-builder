@@ -1,6 +1,10 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL
+    DatabaseType: MSSQL,
+    Health: {
+      ThresholdMs: 1000,
+      Enabled: true
+    }
   },
   Runtime: {
     Rest: {
@@ -70,7 +74,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     }
   ]

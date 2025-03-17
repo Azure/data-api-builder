@@ -3759,9 +3759,9 @@ type Planet @model(name:""PlanetAlias"") {
             // Even though this entity is not under test, it must be supplied enable successfull
             // config file creation.
             Entity requiredEntity = new(
-                Health: new() { Enabled = enableEntityHealth }, // Required to get the comprehensive report.
+                Health: enableEntityHealth ? new() { Enabled = enableEntityHealth } : null, // Required to get the comprehensive report.
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(Enabled: enableEntityRest),
+                Rest: enableEntityRest ? new(Enabled: enableEntityRest) : null,
                 GraphQL: new("book", "books", enableEntityGraphQL),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -4392,14 +4392,18 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
         private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null, Health: new() { Enabled = enableDatasourceHealth });
+            DataSource dataSource = new(
+                DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null,
+                Health: enableDatasourceHealth ? new () { Enabled = enableDatasourceHealth } : null);
             HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Health: new() { Enabled = enableGlobalHealth },
+                    Health: enableGlobalHealth ? new() { Enabled = enableGlobalHealth } : null,
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: enableGlobalGraphql),
                     Host: hostOptions

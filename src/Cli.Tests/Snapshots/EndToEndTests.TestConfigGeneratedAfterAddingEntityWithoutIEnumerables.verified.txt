@@ -3,6 +3,10 @@
     DatabaseType: MSSQL,
     Options: {
       set-session-context: true
+    },
+    Health: {
+      ThresholdMs: 1000,
+      Enabled: true
     }
   },
   Runtime: {
@@ -50,7 +54,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     }
   ]

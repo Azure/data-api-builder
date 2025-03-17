@@ -1,6 +1,10 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL
+    DatabaseType: MSSQL,
+    Health: {
+      ThresholdMs: 1000,
+      Enabled: true
+    }
   },
   Runtime: {
     Rest: {
@@ -58,6 +62,11 @@
           r1: {
             TargetEntity: SecondEntity
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -93,6 +102,11 @@
             Cardinality: Many,
             TargetEntity: FirstEntity
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     }

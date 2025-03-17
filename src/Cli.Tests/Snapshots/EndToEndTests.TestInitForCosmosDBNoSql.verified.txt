@@ -4,6 +4,10 @@
       container: planet,
       database: graphqldb,
       schema: test-schema.gql
+    },
+    Health: {
+      ThresholdMs: 1000,
+      Enabled: true
     }
   },
   Runtime: {

@@ -2,8 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
-namespace Azure.DataApiBuilder.Config.ObjectModel
+namespace Azure.DataApiBuilder.Service.HealthCheck
 {
     /// <summary>
     /// The runtime configuration details of the DAB Engine.

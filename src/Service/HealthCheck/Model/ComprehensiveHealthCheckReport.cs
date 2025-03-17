@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {

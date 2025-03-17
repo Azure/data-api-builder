@@ -171,7 +171,7 @@ public class RuntimeConfigValidator : IConfigValidator
             _logger.LogInformation("Failed to parse the config file");
             return false;
         }
-        
+
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);

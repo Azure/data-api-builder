@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 

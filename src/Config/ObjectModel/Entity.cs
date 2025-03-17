@@ -9,6 +9,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <summary>
 /// Defines the Entities that are exposed.
 /// </summary>
+/// <param name="Health">Health check configuration for the entity.</param>
 /// <param name="Source">The underlying database object to which the exposed entity is connected to.</param>
 /// <param name="Rest">The JSON may represent this as a bool or a string and we use a custom <c>JsonConverter</c> to convert that into the .NET type.</param>
 /// <param name="GraphQL">The JSON may represent this as a bool or a string and we use a custom <c>JsonConverter</c> to convert that into the .NET type.</param>

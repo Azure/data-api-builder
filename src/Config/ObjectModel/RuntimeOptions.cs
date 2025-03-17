@@ -8,6 +8,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record RuntimeOptions
 {
+    public RuntimeHealthCheckConfig? Health { get; init; }
     public RestRuntimeOptions? Rest { get; init; }
     public GraphQLRuntimeOptions? GraphQL { get; init; }
     public HostOptions? Host { get; set; }
@@ -28,6 +29,7 @@ public record RuntimeOptions
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null)
     {
+        this.Health = Health;
         this.Rest = Rest;
         this.GraphQL = GraphQL;
         this.Host = Host;

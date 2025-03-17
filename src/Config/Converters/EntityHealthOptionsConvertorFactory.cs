@@ -44,18 +44,19 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool enabled = true;
-                // Defer to EntityHealthCheckConfig record definition to define default first value.
+
+                // Refer to EntityHealthCheckConfig record definition to define default first value.
                 int? first = null;
 
-                // Defer to EntityHealthCheckConfig record definition to define default threshold-ms value.
+                // Refer to EntityHealthCheckConfig record definition to define default threshold-ms value.
                 int? threshold_ms = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new EntityHealthCheckConfig() 
-                        { 
+                        return new EntityHealthCheckConfig()
+                        {
                             Enabled = enabled,
                             First = first ?? HealthCheckConstants.DefaultFirstValue,
                             ThresholdMs = threshold_ms ?? HealthCheckConstants.DefaultThresholdResponseTimeMs

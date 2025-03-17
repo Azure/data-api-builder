@@ -6,7 +6,8 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
     /// <summary>
-    /// The configuration details of the DAB Engine.
+    /// The runtime configuration details of the DAB Engine.
+    /// As taken from the runtime config file. 
     /// </summary>
     public record ConfigurationDetails
     {

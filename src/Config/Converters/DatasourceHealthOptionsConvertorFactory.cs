@@ -25,8 +25,8 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
     private class HealthCheckOptionsConverter : JsonConverter<DatasourceHealthCheckConfig>
     {
         /// <summary>
-        /// Defines how DAB reads an entity's health options and defines which values are
-        /// used to instantiate EntityHealthCheckConfig.
+        /// Defines how DAB reads the data-source's health options and defines which values are
+        /// used to instantiate DatasourceHealthCheckConfig.
         /// </summary>
         /// <exception cref="JsonException">Thrown when improperly formatted health check options are provided.</exception>
         public override DatasourceHealthCheckConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -40,10 +40,10 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
             {
                 bool enabled = true;
 
-                // Defer to DatasourceHealthCheckConfig record definition to define default name value.
+                // Refer to DatasourceHealthCheckConfig record definition to define default name value.
                 string? name = null;
 
-                // Defer to DatasourceHealthCheckConfig record definition to define default threshold-ms value.
+                // Refer to DatasourceHealthCheckConfig record definition to define default threshold-ms value.
                 int? threshold_ms = null;
 
                 while (reader.Read())

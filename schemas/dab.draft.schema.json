@@ -54,9 +54,11 @@
             },
             "threshold-ms": {
               "type": "integer",
-              "description": "Threshold in ms value for health check.",
+              "description": "Health Check maximum time for query to execute (in ms).",
               "default": 1000,
-              "additionalProperties": false
+              "additionalProperties": false,
+              "minimum": 1,
+              "maximum": 2147483647
             }
           }
         }
@@ -425,13 +427,17 @@
                   "type": "integer",
                   "description": "Number of first 'x' rows to be returned in query.",
                   "default": 100,
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "minimum": 1,
+                  "maximum": 500
                 },
                 "threshold-ms": {
                   "type": "integer",
-                  "description": "Threshold in ms value for health check.",
+                  "description": "Health Check maximum time for query to execute (in ms).",
                   "default": 1000,
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "minimum": 1,
+                  "maximum": 2147483647
                 }
               }
             },

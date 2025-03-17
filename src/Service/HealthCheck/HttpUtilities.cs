@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private string _apiRoute;
         private IMetadataProviderFactory _metadataProviderFactory;
         private RuntimeConfigProvider _runtimeConfigProvider;
-        
+
         /// <summary>
         /// HttpUtility constructor.
         /// </summary>

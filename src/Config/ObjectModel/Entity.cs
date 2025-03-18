@@ -9,6 +9,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <summary>
 /// Defines the Entities that are exposed.
 /// </summary>
+/// <param name="Health">Health check configuration for the entity.</param>
 /// <param name="Source">The underlying database object to which the exposed entity is connected to.</param>
 /// <param name="Rest">The JSON may represent this as a bool or a string and we use a custom <c>JsonConverter</c> to convert that into the .NET type.</param>
 /// <param name="GraphQL">The JSON may represent this as a bool or a string and we use a custom <c>JsonConverter</c> to convert that into the .NET type.</param>
@@ -24,6 +25,7 @@ public record Entity
     public const string PROPERTY_PATH = "path";
     public const string PROPERTY_METHODS = "methods";
 
+    public EntityHealthCheckConfig? Health { get; init; }
     public EntitySource Source { get; init; }
     public EntityGraphQLOptions GraphQL { get; init; }
     public EntityRestOptions Rest { get; init; }
@@ -44,8 +46,10 @@ public record Entity
         Dictionary<string, string>? Mappings,
         Dictionary<string, EntityRelationship>? Relationships,
         EntityCacheOptions? Cache = null,
-        bool IsLinkingEntity = false)
+        bool IsLinkingEntity = false,
+        EntityHealthCheckConfig? Health = null)
     {
+        this.Health = Health;
         this.Source = Source;
         this.GraphQL = GraphQL;
         this.Rest = Rest;

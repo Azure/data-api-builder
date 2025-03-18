@@ -33,7 +33,7 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
-                return new DatasourceHealthCheckConfig() { Enabled = true, Name = null, ThresholdMs = HealthCheckConstants.DefaultThresholdResponseTimeMs };
+                return new DatasourceHealthCheckConfig() { Enabled = true, Name = null, ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS };
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
@@ -54,7 +54,7 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
                         {
                             Enabled = enabled,
                             Name = name,
-                            ThresholdMs = threshold_ms ?? HealthCheckConstants.DefaultThresholdResponseTimeMs
+                            ThresholdMs = threshold_ms ?? HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS
                         };
                     }
 
@@ -88,17 +88,17 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
                         case "threshold-ms":
                             if (reader.TokenType is JsonTokenType.Null)
                             {
-                                threshold_ms = HealthCheckConstants.DefaultThresholdResponseTimeMs; // This is the default value for threshold-ms.
+                                threshold_ms = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS; // This is the default value for threshold-ms.
                             }
                             else
                             {
-                                int parseTtlSeconds = reader.GetInt32();
-                                if (parseTtlSeconds <= 0)
+                                int parseThresholdMs = reader.GetInt32();
+                                if (parseThresholdMs <= 0)
                                 {
-                                    throw new JsonException($"Invalid value for ttl-seconds: {parseTtlSeconds}. Value must be greater than 0.");
+                                    throw new JsonException($"Invalid value for ttl-seconds: {parseThresholdMs}. Value must be greater than 0.");
                                 }
 
-                                threshold_ms = parseTtlSeconds;
+                                threshold_ms = parseThresholdMs;
                             }
 
                             break;

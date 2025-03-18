@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         ThresholdMs = runtimeConfig?.DataSource?.Health?.ThresholdMs
                     },
                     Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
-                    Tags = [HealthCheckConstants.DataSource],
+                    Tags = [HealthCheckConstants.DATASOURCE],
                     Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                 });
             }
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ResponseTimeMs = response.Item1,
                             ThresholdMs = healthOptions.ThresholdMs
                         },
-                        Tags = [HealthCheckConstants.Rest, HealthCheckConstants.Endpoint],
+                        Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
                         Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ResponseTimeMs = response.Item1,
                             ThresholdMs = healthOptions.ThresholdMs
                         },
-                        Tags = [HealthCheckConstants.GraphQL, HealthCheckConstants.Endpoint],
+                        Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
                         Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
@@ -215,7 +215,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 stopwatch.Start();
                 errorMessage = _httpUtility.ExecuteRestQuery(UriSuffix, EntityName, First);
                 stopwatch.Stop();
-                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ErrorResponseTimeMs, errorMessage);
+                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
 
             return (-1, errorMessage);
@@ -230,7 +230,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 stopwatch.Start();
                 errorMessage = _httpUtility.ExecuteGraphQLQuery(UriSuffix, entityName, entity);
                 stopwatch.Stop();
-                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ErrorResponseTimeMs, errorMessage);
+                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
 
             return (-1, errorMessage);

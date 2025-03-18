@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service
     {
         private ILogger<Startup> _logger;
 
-        public static LogLevel MinimumLogLevel = LogLevel.Trace;
+        public static LogLevel MinimumLogLevel = LogLevel.Debug;
 
         public static bool IsLogLevelOverriddenByCli;
         public static OpenTelemetryOptions OpenTelemetryOptions = new();

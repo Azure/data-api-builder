@@ -5,12 +5,12 @@ namespace Azure.DataApiBuilder.Config.HealthCheck
 {
     public static class HealthCheckConstants
     {
-        public static string Endpoint = "endpoint";
-        public static string DataSource = "data-source";
-        public static string Rest = "rest";
-        public static string GraphQL = "graphql";
-        public static int ErrorResponseTimeMs = -1;
-        public static int DefaultThresholdResponseTimeMs = 1000;
-        public static int DefaultFirstValue = 100;
+        public const string ENDPOINT = "endpoint";
+        public const string DATASOURCE = "data-source";
+        public const string REST = "rest";
+        public const string GRAPHQL = "graphql";
+        public const int ERROR_RESPONSE_TIME_MS = -1;
+        public const int DEFAULT_THRESHOLD_RESPONSE_TIME_MS = 1000;
+        public const int DEFAULT_FIRST_VALUE = 100;
     }
 }

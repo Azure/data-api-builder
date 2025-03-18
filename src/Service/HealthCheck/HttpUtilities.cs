@@ -77,25 +77,25 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return errorMessage;
         }
 
-        public string? ExecuteRestQuery(string UriSuffix, string EntityName, int First)
+        public string? ExecuteRestQuery(string uriSuffix, string entityName, int first)
         {
             string? errorMessage = null;
             try
             {
                 // Base URL of the API that handles SQL operations
-                string ApiRoute = Utilities.GetServiceRoute(_apiRoute, UriSuffix);
-                if (ApiRoute == string.Empty)
+                string apiRoute = Utilities.GetServiceRoute(_apiRoute, uriSuffix);
+                if (apiRoute == string.Empty)
                 {
                     LogTrace("The API route is not available, hence HealthEndpoint is not available.");
                     return errorMessage;
                 }
 
                 // Create an instance of HttpClient
-                using (HttpClient client = CreateClient(ApiRoute))
+                using (HttpClient client = CreateClient(apiRoute))
                 {
                     // Send a GET request to the API
-                    ApiRoute = $"{ApiRoute}{Utilities.CreateHttpRestQuery(EntityName, First)}";
-                    HttpResponseMessage response = client.GetAsync(ApiRoute).Result;
+                    apiRoute = $"{apiRoute}{Utilities.CreateHttpRestQuery(entityName, first)}";
+                    HttpResponseMessage response = client.GetAsync(apiRoute).Result;
                     if (response.IsSuccessStatusCode)
                     {
                         LogTrace($"The HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
@@ -111,11 +111,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
-        public string? ExecuteGraphQLQuery(string UriSuffix, string entityName, Entity entity)
+        public string? ExecuteGraphQLQuery(string uriSuffix, string entityName, Entity entity)
         {
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations
-            string ApiRoute = Utilities.GetServiceRoute(_apiRoute, UriSuffix);
+            string ApiRoute = Utilities.GetServiceRoute(_apiRoute, uriSuffix);
             if (ApiRoute == string.Empty)
             {
                 LogTrace("The API route is not available, hence HealthEndpoint is not available.");
@@ -159,12 +159,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <summary>
         /// Creates a <see cref="HttpClient" /> for processing HTTP requests/responses with the test server.
         /// </summary>
-        public HttpClient CreateClient(string ApiRoute)
+        public HttpClient CreateClient(string apiRoute)
         {
             return new HttpClient()
             {
                 // Set the base URL for the client
-                BaseAddress = new Uri(ApiRoute),
+                BaseAddress = new Uri(apiRoute),
                 DefaultRequestHeaders =
                 {
                     Accept = { new MediaTypeWithQualityHeaderValue(Utilities.JSON_CONTENT_TYPE) }

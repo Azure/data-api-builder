@@ -3815,7 +3815,7 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (datasourceCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.DataSource);
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.DATASOURCE);
                     }
 
                     return false;
@@ -3844,8 +3844,8 @@ type Planet @model(name:""PlanetAlias"") {
                     // Check if the 'tags' property exists and is of type array
                     if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        hasRestTag = hasRestTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.Rest);
-                        hasGraphQLTag = hasGraphQLTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.GraphQL);
+                        hasRestTag = hasRestTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.REST);
+                        hasGraphQLTag = hasGraphQLTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.GRAPHQL);
                     }
                 });
 
@@ -3881,7 +3881,7 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.Endpoint);
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.ENDPOINT);
                     }
 
                     return false;

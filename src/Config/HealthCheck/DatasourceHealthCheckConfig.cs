@@ -16,5 +16,5 @@ public record DatasourceHealthCheckConfig : HealthCheckConfig
     // If the query takes equal or longer than this value, the health check will be considered unhealthy.
     // (Default: 1000ms)
     [JsonPropertyName("threshold-ms")]
-    public int ThresholdMs { get; set; } = HealthCheckConstants.DefaultThresholdResponseTimeMs;
+    public int ThresholdMs { get; set; } = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
 }

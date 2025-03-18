@@ -32,12 +32,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
-        public static string CreateHttpGraphQLQuery(string entityName, List<string> columnNames, int First)
+        public static string CreateHttpGraphQLQuery(string entityName, List<string> columnNames, int first)
         {
             var payload = new
             {
                 //{"query":"{publishers(first:4) {items {id name} }}"}
-                query = $"{{{entityName.ToLowerInvariant()} (first: {First}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
+                query = $"{{{entityName.ToLowerInvariant()} (first: {first}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
             };
 
             // Serialize the payload to a JSON string
@@ -45,23 +45,23 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return jsonPayload;
         }
 
-        public static string CreateHttpRestQuery(string entityName, int First)
+        public static string CreateHttpRestQuery(string entityName, int first)
         {
             // Create the payload for the REST HTTP request.
             // "/EntityName?$first=4"
-            return $"/{entityName}?$first={First}";
+            return $"/{entityName}?$first={first}";
         }
 
-        public static string GetServiceRoute(string route, string UriSuffix)
+        public static string GetServiceRoute(string route, string uriSuffix)
         {
             // The RuntimeConfigProvider enforces the expectation that the configured REST and GraphQL path starts with a
             // forward slash '/'. This is to ensure that the path is always relative to the base URL.
-            if (UriSuffix == string.Empty)
+            if (uriSuffix == string.Empty)
             {
                 return string.Empty;
             }
 
-            return $"{route}{UriSuffix.ToLowerInvariant()}";
+            return $"{route}{uriSuffix.ToLowerInvariant()}";
         }
     }
 }

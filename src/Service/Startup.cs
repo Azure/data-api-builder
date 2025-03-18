@@ -42,8 +42,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -542,7 +544,55 @@ namespace Azure.DataApiBuilder.Service
 
             TelemetryClient? appTelemetryClient = serviceProvider.GetService<TelemetryClient>();
 
-            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+            return GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+        }
+
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null)
+        {
+            return LoggerFactory
+                .Create(builder =>
+                {
+                    // Category defines the namespace we will log from,
+                    // including all sub-domains. ie: "Azure" includes
+                    // "Azure.DataApiBuilder.Service"
+                    builder.AddFilter(category: "Microsoft", logLevel);
+                    builder.AddFilter(category: "Azure", logLevel);
+                    builder.AddFilter(category: "Default", logLevel);
+
+                    // For Sending all the ILogger logs to Application Insights
+                    if (Startup.AppInsightsOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.AppInsightsOptions.ConnectionString))
+                    {
+                        builder.AddApplicationInsights(configureTelemetryConfiguration: (config) =>
+                        {
+                            config.ConnectionString = Startup.AppInsightsOptions.ConnectionString;
+                            if (Startup.CustomTelemetryChannel is not null)
+                            {
+                                config.TelemetryChannel = Startup.CustomTelemetryChannel;
+                            }
+                        },
+                            configureApplicationInsightsLoggerOptions: (options) => { }
+                        )
+                        .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
+                    }
+
+                    if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))
+                    {
+                        builder.AddOpenTelemetry(logging =>
+                        {
+                            logging.IncludeFormattedMessage = true;
+                            logging.IncludeScopes = true;
+                            logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Startup.OpenTelemetryOptions.ServiceName!));
+                            logging.AddOtlpExporter(configure =>
+                            {
+                                configure.Endpoint = new Uri(Startup.OpenTelemetryOptions.Endpoint);
+                                configure.Headers = Startup.OpenTelemetryOptions.Headers;
+                                configure.Protocol = OtlpExportProtocol.Grpc;
+                            });
+                        });
+                    }
+
+                    builder.AddConsole();
+                });
         }
 
         /// <summary>
@@ -689,7 +739,7 @@ namespace Azure.DataApiBuilder.Service
                 }
 
                 // Updating Startup Logger to Log from Startup Class.
-                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+                ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
                 _logger = loggerFactory.CreateLogger<Startup>();
             }
         }

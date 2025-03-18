@@ -2,7 +2,7 @@
   "profiles": {
     "Cli": {
       "commandName": "Project",
-      "commandLineArgs": "start",
+      "commandLineArgs": "start -c C:\\dab-dev\\dab-config.json",
       "httpPort": 5002
     }
   }

@@ -36,60 +36,18 @@ internal class RuntimeCacheOptionsConverterFactory : JsonConverterFactory
             // Remove the converter so we don't recurse.
             JsonSerializerOptions jsonSerializerOptions = new(options);
             jsonSerializerOptions.Converters.Remove(jsonSerializerOptions.Converters.First(c => c is RuntimeCacheOptionsConverterFactory));
-            return JsonSerializer.Deserialize<RuntimeCacheOptions>(ref reader, jsonSerializerOptions);
 
-            //if (reader.TokenType is JsonTokenType.StartObject)
-            //{
-            //    bool? enabled = false;
+            RuntimeCacheOptions? res = JsonSerializer.Deserialize<RuntimeCacheOptions>(ref reader, jsonSerializerOptions);
 
-            //    // Defer to EntityCacheOptions record definition to define default ttl value.
-            //    int? ttlSeconds = null;
+            if (res is not null)
+            {
+                if (res.TtlSeconds <= 0)
+                {
+                    throw new JsonException($"Invalid value for ttl-seconds: {res.TtlSeconds}. Value must be greater than 0.");
+                }
+            }
 
-            //    while (reader.Read())
-            //    {
-            //        if (reader.TokenType is JsonTokenType.EndObject)
-            //        {
-            //            return new RuntimeCacheOptions(enabled, ttlSeconds);
-            //        }
-
-            //        string? property = reader.GetString();
-            //        reader.Read();
-
-            //        switch (property)
-            //        {
-            //            case "enabled":
-            //                if (reader.TokenType is JsonTokenType.Null)
-            //                {
-            //                    enabled = null;
-            //                }
-            //                else
-            //                {
-            //                    enabled = reader.GetBoolean();
-            //                }
-
-            //                break;
-            //            case "ttl-seconds":
-            //                if (reader.TokenType is JsonTokenType.Null)
-            //                {
-            //                    ttlSeconds = null;
-            //                }
-            //                else
-            //                {
-            //                    int parseTtlSeconds = reader.GetInt32();
-            //                    if (parseTtlSeconds <= 0)
-            //                    {
-            //                        throw new JsonException($"Invalid value for ttl-seconds: {parseTtlSeconds}. Value must be greater than 0.");
-            //                    }
-
-            //                    ttlSeconds = parseTtlSeconds;
-            //                }
-
-            //                break;
-            //        }
-            //    }
-            //}
-
-            //throw new JsonException();
+            return res;
         }
 
         /// <summary>

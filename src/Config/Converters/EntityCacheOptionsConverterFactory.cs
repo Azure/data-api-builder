@@ -90,7 +90,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         /// <summary>
         /// When writing the EntityCacheOptions back to a JSON file, only write the ttl-seconds
         /// property and value when EntityCacheOptions.Enabled is true. This avoids polluting
-        /// the written JSON file with a property the user most likely ommitted when writing the
+        /// the written JSON file with a property the user most likely omitted when writing the
         /// original DAB runtime config file.
         /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.
         /// </summary>

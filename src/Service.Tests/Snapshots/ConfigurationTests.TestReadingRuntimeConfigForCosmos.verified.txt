@@ -4,6 +4,10 @@
       container: planet,
       database: graphqldb,
       schema: schema.gql
+    },
+    Health: {
+      ThresholdMs: 1000,
+      Enabled: true
     }
   },
   Runtime: {
@@ -99,7 +103,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -141,7 +150,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -192,7 +206,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -226,7 +245,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -277,7 +301,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -372,7 +401,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -414,7 +448,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -450,7 +489,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -486,7 +530,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -558,7 +607,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -713,7 +767,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -785,7 +844,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     }
   ]

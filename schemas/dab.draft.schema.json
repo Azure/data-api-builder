@@ -37,7 +37,7 @@
         },
         "health": {
           "description": "Health check configuration",
-          "type": "object",
+          "type": [ "object", "null"],
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -47,7 +47,7 @@
               "additionalProperties": false
             },
             "name": {
-              "type": "string",
+              "type": [ "string", "null" ],
               "description": "Identifier for data source in health check report.",
               "default": null,
               "additionalProperties": false
@@ -391,7 +391,7 @@
         },
         "health": {
           "description": "Health check configuration for runtime properties",
-          "type": "object",
+          "type": [ "object", "null" ],
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -414,7 +414,7 @@
           "properties": {
             "health": {
               "description": "Health check configuration for entity",
-              "type": "object",
+              "type": [ "object", "null" ],
               "additionalProperties": false,
               "properties": {
                 "enabled": {

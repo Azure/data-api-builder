@@ -1,6 +1,10 @@
 ﻿{
   DataSource: {
-    DatabaseType: PostgreSQL
+    DatabaseType: PostgreSQL,
+    Health: {
+      ThresholdMs: 1000,
+      Enabled: true
+    }
   },
   Runtime: {
     Rest: {
@@ -242,6 +246,11 @@
             Cardinality: Many,
             TargetEntity: Book
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -394,6 +403,11 @@
           stocks_price: {
             TargetEntity: stocks_price
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -796,6 +810,11 @@
           websiteplacement: {
             TargetEntity: BookWebsitePlacement
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -831,7 +850,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -884,6 +908,11 @@
           books: {
             TargetEntity: Book
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -934,6 +963,11 @@
             TargetEntity: Book,
             LinkingObject: book_author_link
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -988,6 +1022,11 @@
           books: {
             TargetEntity: Book
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1085,6 +1124,11 @@
           myseries: {
             TargetEntity: series
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1128,7 +1172,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1180,7 +1229,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1235,6 +1289,11 @@
         ],
         Mappings: {
           id: typeid
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1254,6 +1313,14 @@
         },
         Permissions: [
           {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
             Role: authenticated,
             Actions: [
               {
@@ -1267,14 +1334,6 @@
               },
               {
                 Action: Delete
-              }
-            ]
-          },
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: Read
               }
             ]
           },
@@ -1299,7 +1358,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1355,6 +1419,11 @@
         Mappings: {
           region: United State's Region,
           species: Scientific Name
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1422,6 +1491,11 @@
               habitat
             ]
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1495,7 +1569,7 @@
           spores: hazards
         },
         Relationships: {
-          Shrub: {
+          shrub: {
             TargetEntity: Shrub,
             SourceFields: [
               habitat
@@ -1504,6 +1578,11 @@
               species
             ]
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1541,6 +1620,11 @@
               username
             ]
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1567,7 +1651,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1604,6 +1693,11 @@
               profileid
             ]
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1643,6 +1737,11 @@
               username
             ]
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1672,7 +1771,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1704,6 +1808,11 @@
         ],
         Mappings: {
           id: book_id
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -1734,7 +1843,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1764,7 +1878,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1793,7 +1912,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1836,7 +1960,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1879,7 +2008,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -1973,7 +2107,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -2013,6 +2152,11 @@
           NoteNum: ┬─┬ノ( º _ ºノ),
           StrategicAttack: 謀攻,
           WagingWar: 作戰
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -2088,6 +2232,11 @@
             Cardinality: Many,
             TargetEntity: Comic
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -2122,7 +2271,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -2160,6 +2314,11 @@
         Mappings: {
           __column1: column1,
           __column2: column2
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -2194,7 +2353,12 @@
               }
             ]
           }
-        ]
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
       }
     },
     {
@@ -2232,6 +2396,11 @@
         Mappings: {
           bkname: name,
           id: bkid
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -2258,48 +2427,12 @@
               }
             ]
           }
-        ]
-      }
-    },
-    {
-      DefaultBuiltInFunction: {
-        Source: {
-          Object: default_with_function_table,
-          Type: Table
-        },
-        GraphQL: {
-          Singular: DefaultBuiltInFunction,
-          Plural: DefaultBuiltInFunctions,
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
           Enabled: true
-        },
-        Rest: {
-          Enabled: true
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: Create,
-                Fields: {
-                  Exclude: [
-                    current_date,
-                    next_date
-                  ]
-                }
-              },
-              {
-                Action: Read
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
-              }
-            ]
-          }
-        ]
+        }
       }
     },
     {
@@ -2377,6 +2510,11 @@
             Cardinality: Many,
             TargetEntity: BookNF
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -2477,6 +2615,60 @@
           websiteplacement: {
             TargetEntity: BookWebsitePlacement
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
+        }
+      }
+    },
+    {
+      DefaultBuiltInFunction: {
+        Source: {
+          Object: default_with_function_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: DefaultBuiltInFunction,
+          Plural: DefaultBuiltInFunctions,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    current_date,
+                    next_date
+                  ],
+                  Include: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ],
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -2561,6 +2753,11 @@
             TargetEntity: BookNF,
             LinkingObject: book_author_link
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     },
@@ -2583,7 +2780,16 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *
+                Action: Read
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
               }
             ]
           }
@@ -2612,6 +2818,11 @@
               accountkey
             ]
           }
+        },
+        Health: {
+          First: 100,
+          ThresholdMs: 1000,
+          Enabled: true
         }
       }
     }

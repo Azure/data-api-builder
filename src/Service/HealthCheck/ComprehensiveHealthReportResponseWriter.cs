@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
@@ -62,9 +61,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// Function provided to the health check middleware to write the response.
         /// </summary>
         /// <param name="context">HttpContext for writing the response.</param>
-        /// <param name="healthReport">Result of health check(s).</param>
         /// <returns>Writes the http response to the http context.</returns>
-        public Task WriteResponse(HttpContext context, HealthReport healthReport)
+        public Task WriteResponse(HttpContext context)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
@@ -73,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
                 string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-                LogTrace($"Health check response writer writing status as: {healthReport.Status}");
+                LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
                 return context.Response.WriteAsync(response);
             }
             else

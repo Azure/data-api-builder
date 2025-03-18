@@ -1000,7 +1000,7 @@ type Moon {
             Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
             Assert.IsNotNull(configuration, "Config returned should not be null.");
 
-            Assert.IsNotNull(configuration.DataSource, "The base datasource should get populated in case of late hydration of config inspite of invalid multi-db files.");
+            Assert.IsNotNull(configuration.DataSource, "The base datasource should get populated in case of late hydration of config in-spite of invalid multi-db files.");
             Assert.AreEqual(1, configuration.ListAllDataSources().Count(), "There should be only 1 datasource populated for late hydration of config with invalid multi-db files.");
         }
 
@@ -3759,9 +3759,9 @@ type Planet @model(name:""PlanetAlias"") {
             // Even though this entity is not under test, it must be supplied enable successfull
             // config file creation.
             Entity requiredEntity = new(
-                Health: enableEntityHealth ? new() { Enabled = enableEntityHealth } : null, // Required to get the comprehensive report.
+                Health: new() { Enabled = enableEntityHealth }, // Required to get the comprehensive report.
                 Source: new("books", EntitySourceType.Table, null, null),
-                Rest: enableEntityRest ? new(Enabled: enableEntityRest) : null,
+                Rest: new(Enabled: enableEntityRest),
                 GraphQL: new("book", "books", enableEntityGraphQL),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -4396,14 +4396,14 @@ type Planet @model(name:""PlanetAlias"") {
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null,
-                Health: enableDatasourceHealth ? new() { Enabled = enableDatasourceHealth } : null);
+                Health: new() { Enabled = enableDatasourceHealth });
             HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Health: enableGlobalHealth ? new() { Enabled = enableGlobalHealth } : null,
+                    Health: new() { Enabled = enableGlobalHealth },
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: enableGlobalGraphql),
                     Host: hostOptions

@@ -499,11 +499,6 @@ namespace Azure.DataApiBuilder.Service
                 {
                     ResponseWriter = app.ApplicationServices.GetRequiredService<BasicHealthReportResponseWriter>().WriteResponse
                 });
-
-                endpoints.MapHealthChecks("/health", new HealthCheckOptions
-                {
-                    ResponseWriter = app.ApplicationServices.GetRequiredService<ComprehensiveHealthReportResponseWriter>().WriteResponse
-                });
             });
         }
 

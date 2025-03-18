@@ -9,16 +9,16 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.ApplicationInsights;
+//using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Resources;
+//using Microsoft.Extensions.Logging.ApplicationInsights;
+//using OpenTelemetry.Exporter;
+//using OpenTelemetry.Logs;
+//using OpenTelemetry.Resources;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
-                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
+                    ILoggerFactory? loggerFactory = Startup.GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="logLevel">minimum log level.</param>
         /// <param name="appTelemetryClient">Telemetry client</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null)
+        /*public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null)
         {
             return LoggerFactory
                 .Create(builder =>
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service
 
                     builder.AddConsole();
                 });
-        }
+        }*/
 
         /// <summary>
         /// Use CommandLine parser to check for the flag `--no-https-redirect`.

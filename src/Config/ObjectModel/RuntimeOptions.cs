@@ -25,7 +25,7 @@ public record RuntimeOptions
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
         RuntimeCacheOptions? Cache = null,
-        PaginationOptions? Pagination = null)
+        PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null)
     {
         this.Health = Health;

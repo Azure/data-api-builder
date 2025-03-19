@@ -572,11 +572,22 @@ public record RuntimeConfig
     /// <summary>
     /// Checks if the property log-level or its value are null
     /// </summary>
-    public bool IsLogLevelNull() =>
-        Runtime is null ||
-        Runtime.Telemetry is null ||
-        Runtime.Telemetry.LoggerLevel is null ||
-        Runtime.Telemetry.LoggerLevel.Value is null;
+    public bool IsLogLevelNull()
+    {
+        for (int i = 0; i < Runtime?.Telemetry?.LoggerLevel?.Count; i++)
+        {
+            string? keyVal = Runtime?.Telemetry?.LoggerLevel?.GetKeyAtIndex(i);
+            if (keyVal == null)
+            {
+                return true;
+            }
+        }
+
+        return Runtime is null ||
+            Runtime.Telemetry is null ||
+            Runtime.Telemetry.LoggerLevel is null ||
+            Runtime.Telemetry.LoggerLevel.Count == 0;
+    }
 
     /// <summary>
     /// Takes in the RuntimeConfig object and checks the LogLevel.
@@ -585,9 +596,16 @@ public record RuntimeConfig
     /// If host mode is Development, return `LogLevel.Debug`, else
     /// for production returns `LogLevel.Error`.
     /// </summary>
-    public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig)
+    public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig, string loggerFilter = "")
     {
-        LogLevel? value = runtimeConfig.Runtime?.Telemetry?.LoggerLevel?.Value;
+        LogLevel? value = null;
+        runtimeConfig.Runtime?.Telemetry?.LoggerLevel?.TryGetValue(loggerFilter, out value);
+        if (value is not null)
+        {
+            return (LogLevel)value;
+        }
+
+        runtimeConfig.Runtime?.Telemetry?.LoggerLevel?.TryGetValue(LoggerFilters.DEFAULT_FILTER, out value);
         if (value is not null)
         {
             return (LogLevel)value;

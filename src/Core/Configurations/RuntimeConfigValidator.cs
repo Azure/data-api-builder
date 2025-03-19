@@ -73,6 +73,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
+        ValidateLoggerFilters(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -125,6 +126,28 @@ public class RuntimeConfigValidator : IConfigValidator
                     message: "Application Insights connection string cannot be null or empty if enabled.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Only certain classes can have different log levels, this function ensures that only those classes are used in the config file.
+    /// </summary>
+    public void ValidateLoggerFilters(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
+        {
+            SortedList<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
+
+            for (int i = 0; i < loggerLevelOptions.Count; i++)
+            {
+                if (!IsLoggerFilterValid(loggerLevelOptions.GetKeyAtIndex(i)))
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Log level {loggerLevelOptions.GetKeyAtIndex(i)} needs to be of a valid log class.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
             }
         }
     }
@@ -1322,5 +1345,25 @@ public class RuntimeConfigValidator : IConfigValidator
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);
         }
+    }
+
+    /// <summary>
+    /// Returns whether the log-level keyword is valid or not.
+    /// </summary>
+    /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>
+    private static bool IsLoggerFilterValid(string loggerFilter)
+    {
+        return loggerFilter == LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER ||
+            loggerFilter == LoggerFilters.SQL_QUERY_ENGINE_FILTER ||
+            loggerFilter == LoggerFilters.IQUERY_EXECUTOR_FILTER ||
+            loggerFilter == LoggerFilters.ISQL_METADATA_PROVIDER_FILTER ||
+            loggerFilter == LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER ||
+            loggerFilter == LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER ||
+            loggerFilter == LoggerFilters.REST_CONTROLLER_FILTER ||
+            loggerFilter == LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER ||
+            loggerFilter == LoggerFilters.CONFIGURATION_CONTROLLER_FILTER ||
+            loggerFilter == LoggerFilters.IAUTHORIZATION_HANDLER_FILTER ||
+            loggerFilter == LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER ||
+            loggerFilter == LoggerFilters.DEFAULT_FILTER;
     }
 }

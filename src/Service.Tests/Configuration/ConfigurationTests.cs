@@ -3528,12 +3528,12 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(null, DisplayName = "Validates log level Null deserialized correctly")]
         public void TestExistingLogLevels(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
 
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
-            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel.Value);
+            Assert.AreEqual(expectedLevel, deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel["default"]);
         }
 
         /// <summary>
@@ -3546,7 +3546,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(12, DisplayName = "Validates that a bigger positive log level value that does not exist, fails to build")]
         public void TestNonExistingLogLevels(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
 
             // Try should fail and go to catch exception
             try
@@ -3572,7 +3572,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(null)]
         public void LogLevelSerialization(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
@@ -3588,24 +3588,93 @@ type Planet @model(name:""PlanetAlias"") {
                 bool logLevelPropertyExists = telemetryElement.TryGetProperty("log-level", out JsonElement logLevelElement);
                 Assert.AreEqual(expected: true, actual: logLevelPropertyExists);
 
-                //Validate level property inside log-level is of expected value
-                bool levelPropertyExists = logLevelElement.TryGetProperty("level", out JsonElement levelElement);
-                Assert.AreEqual(expected: true, actual: levelPropertyExists);
+                //Validate the dictionary inside the log-level property is of expected value
+                bool dictionaryLogLevelExists = logLevelElement.TryGetProperty("default", out JsonElement levelElement);
+                Assert.AreEqual(expected: true, actual: dictionaryLogLevelExists);
                 Assert.AreEqual(expectedLevel.ToString().ToLower(), levelElement.GetString());
+            }
+        }
+
+        /// <summary>
+        /// Tests different log level filters that are valid and check that they are deserialized correctly
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER)]
+        [DataRow(LoggerFilters.SQL_QUERY_ENGINE_FILTER)]
+        [DataRow(LoggerFilters.IQUERY_EXECUTOR_FILTER)]
+        [DataRow(LoggerFilters.ISQL_METADATA_PROVIDER_FILTER)]
+        [DataRow(LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
+        [DataRow(LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
+        [DataRow(LoggerFilters.REST_CONTROLLER_FILTER)]
+        [DataRow(LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER)]
+        [DataRow(LoggerFilters.CONFIGURATION_CONTROLLER_FILTER)]
+        [DataRow(LoggerFilters.IAUTHORIZATION_HANDLER_FILTER)]
+        [DataRow(LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER)]
+        [DataRow(LoggerFilters.DEFAULT_FILTER)]
+        public void ValidLogLevelFilters(string loggingFilter)
+        {
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(LogLevel.Debug, loggingFilter);
+
+            string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
+
+            SortedList<string, LogLevel?> actualLoggerLevel = deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel;
+            Assert.IsTrue(actualLoggerLevel.ContainsKey(loggingFilter) && actualLoggerLevel.Count == 1);
+        }
+
+        /// <summary>
+        /// Tests log level filters that are not available and checks that they give the correct error.
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow("Azure.DataApiBuilder.Core.Configurations", DisplayName = "Validates that an incomplete log level keyword fails to build")]
+        [DataRow("Azure.DataApiBuilder.Core.Configurations.RuntimeConfigVldtr", DisplayName = "Validates that a wrong name at end of log level keyword fails to build")]
+        [DataRow("Azre.DataApiBuilder.Core.Configurations.RuntimeConfigValidator", DisplayName = "Validates that a wrong name at start of log level keyword fails to build")]
+        [DataRow("Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator.Extra", DisplayName = "Validates that log level keyword with additional path fails to build")]
+        [DataRow("Microsoft.AspNetCore.Authorizatin.IAuthorizationHandler", DisplayName = "Validates that a wrong name inside of log level keyword fails to build")]
+        [DataRow("defult", DisplayName = "Validates that a wrong name for 'default' log level keyword fails to build")]
+        public void InvalidLogLevelFilters(string loggingFilter)
+        {
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(LogLevel.Debug, loggingFilter);
+            IFileSystem fileSystem = new FileSystem();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem)
+            {
+                RuntimeConfig = configWithCustomLogLevel
+            };
+            RuntimeConfigProvider provider = new(loader);
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(provider, fileSystem, logger);
+
+            // Try should fail and go to catch exception
+            try
+            {
+                runtimeConfigValidator.ValidateLoggerFilters(configWithCustomLogLevel);
+                Assert.Fail();
+            }
+            // Catch verifies that the exception is due to LogLevel having a key that is invalid
+            catch (Exception ex)
+            {
+                Assert.AreEqual(typeof(DataApiBuilderException), ex.GetType());
+
+                DataApiBuilderException dabEx = (DataApiBuilderException)ex;
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, dabEx.SubStatusCode);
             }
         }
 
         /// <summary>
         /// Helper method to create RuntimeConfig with specificed LogLevel value
         /// </summary>
-        private static RuntimeConfig InitializeRuntimeWithLogLevel(LogLevel? expectedLevel)
+        private static RuntimeConfig InitializeRuntimeWithLogLevel(LogLevel? expectedLevel, string loggerFilter)
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
 
             FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
             baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig);
 
-            LogLevelOptions logLevelOptions = new(Value: expectedLevel);
+            SortedList<string, LogLevel?> logLevelOptions = new();
+            logLevelOptions.Add(loggerFilter, expectedLevel);
             RuntimeConfig config = new(
                 Schema: baseConfig.Schema,
                 DataSource: baseConfig.DataSource,

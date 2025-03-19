@@ -3528,7 +3528,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(null, DisplayName = "Validates log level Null deserialized correctly")]
         public void TestExistingLogLevels(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULTFILTER);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
 
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
@@ -3546,7 +3546,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(12, DisplayName = "Validates that a bigger positive log level value that does not exist, fails to build")]
         public void TestNonExistingLogLevels(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULTFILTER);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
 
             // Try should fail and go to catch exception
             try
@@ -3572,7 +3572,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(null)]
         public void LogLevelSerialization(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULTFILTER);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
@@ -3596,22 +3596,22 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// 
+        /// Tests different log level filters that are valid and check that they are deserialized correctly
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(LoggerFilters.RUNTIMECONFIGVALIDATORFILTER)]
-        [DataRow(LoggerFilters.SQLQUERYENGINEFILTER)]
-        [DataRow(LoggerFilters.IQUERYEXECUTORFILTER)]
-        [DataRow(LoggerFilters.ISQLMETADATAPROVIDERFILTER)]
-        [DataRow(LoggerFilters.BASICHEALTHREPORTRESPONSEWRITERFILTER)]
-        [DataRow(LoggerFilters.COMPREHENSIVEHEALTHREPORTRESPONSEWRITERFILTER)]
-        [DataRow(LoggerFilters.RESTCONTROLLERFILTER)]
-        [DataRow(LoggerFilters.CLIENTROLEHEADERAUTHENTICATIONMIDDLEWAREFILTER)]
-        [DataRow(LoggerFilters.CONFIGURATIONCONTROLLERFILTER)]
-        [DataRow(LoggerFilters.IAUTHORIZATIONHANDLERFILTER)]
-        [DataRow(LoggerFilters.IAUTHORIZATIONRESOLVERFILTER)]
-        [DataRow(LoggerFilters.DEFAULTFILTER)]
+        [DataRow(LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER)]
+        [DataRow(LoggerFilters.SQL_QUERY_ENGINE_FILTER)]
+        [DataRow(LoggerFilters.IQUERY_EXECUTOR_FILTER)]
+        [DataRow(LoggerFilters.ISQL_METADATA_PROVIDER_FILTER)]
+        [DataRow(LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
+        [DataRow(LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
+        [DataRow(LoggerFilters.REST_CONTROLLER_FILTER)]
+        [DataRow(LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER)]
+        [DataRow(LoggerFilters.CONFIGURATION_CONTROLLER_FILTER)]
+        [DataRow(LoggerFilters.IAUTHORIZATION_HANDLER_FILTER)]
+        [DataRow(LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER)]
+        [DataRow(LoggerFilters.DEFAULT_FILTER)]
         public void ValidLogLevelFilters(string loggingFilter)
         {
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(LogLevel.Debug, loggingFilter);
@@ -3624,7 +3624,7 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// 
+        /// Tests log level filters that are not available and checks that they give the correct error.
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]

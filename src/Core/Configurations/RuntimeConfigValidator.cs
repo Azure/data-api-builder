@@ -1353,17 +1353,17 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>
     private static bool IsLoggerFilterValid(string loggerFilter)
     {
-        return loggerFilter == LoggerFilters.RUNTIMECONFIGVALIDATORFILTER ||
-            loggerFilter == LoggerFilters.SQLQUERYENGINEFILTER ||
-            loggerFilter == LoggerFilters.IQUERYEXECUTORFILTER ||
-            loggerFilter == LoggerFilters.ISQLMETADATAPROVIDERFILTER ||
-            loggerFilter == LoggerFilters.BASICHEALTHREPORTRESPONSEWRITERFILTER ||
-            loggerFilter == LoggerFilters.COMPREHENSIVEHEALTHREPORTRESPONSEWRITERFILTER ||
-            loggerFilter == LoggerFilters.RESTCONTROLLERFILTER ||
-            loggerFilter == LoggerFilters.CLIENTROLEHEADERAUTHENTICATIONMIDDLEWAREFILTER ||
-            loggerFilter == LoggerFilters.CONFIGURATIONCONTROLLERFILTER ||
-            loggerFilter == LoggerFilters.IAUTHORIZATIONHANDLERFILTER ||
-            loggerFilter == LoggerFilters.IAUTHORIZATIONRESOLVERFILTER ||
-            loggerFilter == LoggerFilters.DEFAULTFILTER;
+        return loggerFilter == LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER ||
+            loggerFilter == LoggerFilters.SQL_QUERY_ENGINE_FILTER ||
+            loggerFilter == LoggerFilters.IQUERY_EXECUTOR_FILTER ||
+            loggerFilter == LoggerFilters.ISQL_METADATA_PROVIDER_FILTER ||
+            loggerFilter == LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER ||
+            loggerFilter == LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER ||
+            loggerFilter == LoggerFilters.REST_CONTROLLER_FILTER ||
+            loggerFilter == LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER ||
+            loggerFilter == LoggerFilters.CONFIGURATION_CONTROLLER_FILTER ||
+            loggerFilter == LoggerFilters.IAUTHORIZATION_HANDLER_FILTER ||
+            loggerFilter == LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER ||
+            loggerFilter == LoggerFilters.DEFAULT_FILTER;
     }
 }

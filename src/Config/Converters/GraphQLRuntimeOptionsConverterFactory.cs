@@ -114,6 +114,17 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             }
 
                             break;
+                        case "enable-dwnto1joinopt":
+                           if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { EnableDwNto1JoinOpt = reader.GetBoolean() };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for enable-dwnto1joinopt: {reader.TokenType}");
+                            }
+
+                            break;
                         case "path":
                             if (reader.TokenType is JsonTokenType.String)
                             {

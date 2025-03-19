@@ -11,7 +11,8 @@ public record GraphQLRuntimeOptions(bool Enabled = true,
                                     bool AllowIntrospection = true,
                                     int? DepthLimit = null,
                                     MultipleMutationOptions? MultipleMutationOptions = null,
-                                    bool EnableAggregation = true)
+                                    bool EnableAggregation = true,
+                                    bool EnableDwNto1JoinOpt = false)
 {
     public const string DEFAULT_PATH = "/graphql";
 

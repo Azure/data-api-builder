@@ -555,7 +555,7 @@ namespace Azure.DataApiBuilder.Service
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
         /// </summary>
-        public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelFactory)
+        public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
             if (loggerFilter == null)
             {
@@ -569,15 +569,14 @@ namespace Azure.DataApiBuilder.Service
                 // If runtime config is available, set the loglevel to Error if host.mode is Production,
                 // Debug if it is Development.
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
-                {
-                    MinimumLogLevel = runtimeConfig.GetConfiguredLogLevel(loggerFilter);
-                }
+
+                logLevelInitializer.SetRuntimeConfigProvider(configProvider);
+                logLevelInitializer.SetLogLevel();
             }
 
             TelemetryClient? appTelemetryClient = serviceProvider.GetService<TelemetryClient>();
 
-            return logLevelFactory.GetLoggerFactoryForLogLevel(appTelemetryClient);
+            return Program.GetLoggerFactoryForLogLevel(logLevelInitializer.MinLogLevel, appTelemetryClient, logLevelInitializer);
         }
 
         /// <summary>

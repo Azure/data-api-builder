@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -133,7 +134,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="logLevel">minimum log level.</param>
         /// <param name="appTelemetryClient">Telemetry client</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null)
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null, LogLevelInitializer? logLevelInitializer = null)
         {
             return LoggerFactory
                 .Create(builder =>
@@ -141,9 +142,18 @@ namespace Azure.DataApiBuilder.Service
                     // Category defines the namespace we will log from,
                     // including all sub-domains. ie: "Azure" includes
                     // "Azure.DataApiBuilder.Service"
-                    builder.AddFilter(category: "Microsoft", logLevel);
-                    builder.AddFilter(category: "Azure", logLevel);
-                    builder.AddFilter(category: "Default", logLevel);
+                    if (logLevelInitializer == null)
+                    {
+                        builder.AddFilter(category: "Microsoft", logLevel);
+                        builder.AddFilter(category: "Azure", logLevel);
+                        builder.AddFilter(category: "Default", logLevel);
+                    }
+                    else
+                    {
+                        builder.AddFilter(category: "Microsoft", level => level >= logLevelInitializer.MinLogLevel);
+                        builder.AddFilter(category: "Azure", level => level >= logLevelInitializer.MinLogLevel);
+                        builder.AddFilter(category: "Default", level => level >= logLevelInitializer.MinLogLevel);
+                    }
 
                     // For Sending all the ILogger logs to Application Insights
                     if (Startup.AppInsightsOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.AppInsightsOptions.ConnectionString))
@@ -157,8 +167,15 @@ namespace Azure.DataApiBuilder.Service
                                 }
                             },
                             configureApplicationInsightsLoggerOptions: (options) => { }
-                        )
-                        .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
+                        );
+                        if (logLevelInitializer == null)
+                        {
+                            builder.AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
+                        }
+                        else
+                        {
+                            builder.AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, level => level >= logLevelInitializer.MinLogLevel);
+                        }
                     }
 
                     if (Startup.OpenTelemetryOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.OpenTelemetryOptions.Endpoint))

@@ -234,7 +234,7 @@ public class SourceDefinition
     {
         if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
         {
-            return columnDefinition.Length
+            return columnDefinition.Length;
             ;
         }
 

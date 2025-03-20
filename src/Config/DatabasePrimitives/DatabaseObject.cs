@@ -229,6 +229,17 @@ public class SourceDefinition
 
         return null;
     }
+
+    public virtual int? GetLengthForParam(string paramName)
+    {
+        if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
+        {
+            return columnDefinition.Length
+            ;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>
@@ -264,6 +275,7 @@ public class ColumnDefinition
     public bool IsNullable { get; set; }
     public bool IsReadOnly { get; set; }
     public object? DefaultValue { get; set; }
+    public int? Length { get; set; }
 
     public ColumnDefinition() { }
 

@@ -273,7 +273,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             return false;
         }
 
-        string errorMessage = "Unable to find config file: {path} does not exist.";
+        string errorMessage = $"Unable to find config file: {path} does not exist.";
         if (logger is null)
         {
             Console.Error.WriteLine(errorMessage);

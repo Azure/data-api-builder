@@ -106,7 +106,7 @@ public abstract class RuntimeConfigLoader
         OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
         OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
 
-        OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_FACTORY_ON_CONFIG_CHANGE, message));
+        OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
     }
 
     /// <summary>

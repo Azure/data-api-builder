@@ -18,6 +18,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
@@ -38,6 +39,7 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -3528,7 +3530,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(null, DisplayName = "Validates log level Null deserialized correctly")]
         public void TestExistingLogLevels(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, "default");
 
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
@@ -3546,7 +3548,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(12, DisplayName = "Validates that a bigger positive log level value that does not exist, fails to build")]
         public void TestNonExistingLogLevels(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, "default");
 
             // Try should fail and go to catch exception
             try
@@ -3572,7 +3574,7 @@ type Planet @model(name:""PlanetAlias"") {
         [DataRow(null)]
         public void LogLevelSerialization(LogLevel expectedLevel)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, LoggerFilters.DEFAULT_FILTER);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(expectedLevel, "default");
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
@@ -3600,18 +3602,18 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER)]
-        [DataRow(LoggerFilters.SQL_QUERY_ENGINE_FILTER)]
-        [DataRow(LoggerFilters.IQUERY_EXECUTOR_FILTER)]
-        [DataRow(LoggerFilters.ISQL_METADATA_PROVIDER_FILTER)]
-        [DataRow(LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
-        [DataRow(LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
-        [DataRow(LoggerFilters.REST_CONTROLLER_FILTER)]
-        [DataRow(LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER)]
-        [DataRow(LoggerFilters.CONFIGURATION_CONTROLLER_FILTER)]
-        [DataRow(LoggerFilters.IAUTHORIZATION_HANDLER_FILTER)]
-        [DataRow(LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER)]
-        [DataRow(LoggerFilters.DEFAULT_FILTER)]
+        [DataRow(nameof(RuntimeConfigValidator))]
+        [DataRow(nameof(SqlQueryEngine))]
+        [DataRow(nameof(IQueryExecutor))]
+        [DataRow(nameof(ISqlMetadataProvider))]
+        [DataRow(nameof(BasicHealthReportResponseWriter))]
+        [DataRow(nameof(ComprehensiveHealthReportResponseWriter))]
+        [DataRow(nameof(RestController))]
+        [DataRow(nameof(ClientRoleHeaderAuthenticationMiddleware))]
+        [DataRow(nameof(ConfigurationController))]
+        [DataRow(nameof(IAuthorizationHandler))]
+        [DataRow(nameof(IAuthorizationResolver))]
+        [DataRow("default")]
         public void ValidLogLevelFilters(string loggingFilter)
         {
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(LogLevel.Debug, loggingFilter);
@@ -3619,7 +3621,7 @@ type Planet @model(name:""PlanetAlias"") {
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
-            SortedList<string, LogLevel?> actualLoggerLevel = deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel;
+            Dictionary<string, LogLevel?> actualLoggerLevel = deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel;
             Assert.IsTrue(actualLoggerLevel.ContainsKey(loggingFilter) && actualLoggerLevel.Count == 1);
         }
 
@@ -3673,7 +3675,7 @@ type Planet @model(name:""PlanetAlias"") {
             FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
             baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig);
 
-            SortedList<string, LogLevel?> logLevelOptions = new();
+            Dictionary<string, LogLevel?> logLevelOptions = new();
             logLevelOptions.Add(loggerFilter, expectedLevel);
             RuntimeConfig config = new(
                 Schema: baseConfig.Schema,

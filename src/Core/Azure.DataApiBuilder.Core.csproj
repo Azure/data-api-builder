@@ -43,6 +43,7 @@
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
+    <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
   </ItemGroup>
 
 </Project>

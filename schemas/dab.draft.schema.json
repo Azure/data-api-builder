@@ -378,7 +378,7 @@
               "additionalProperties": false,
               "patternProperties": {
                 "^[a-zA-Z_]\\w{0,}(\\.\\w{1,}){0,}$": {
-                  "description": "Defines logging severity levels for specific classes, when in null value it will set logging level based on 'host: mode' property",
+                  "description": "Defines logging severity levels for specific classes, when 'null' it will set logging level based on 'host: mode' property",
                   "type": "string",
                   "default": null,
                   "enum": [

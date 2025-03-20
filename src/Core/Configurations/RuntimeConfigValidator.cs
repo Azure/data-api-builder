@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.RegularExpressions;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -14,7 +15,10 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.HealthCheck;
+using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -137,16 +141,16 @@ public class RuntimeConfigValidator : IConfigValidator
     {
         if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
         {
-            SortedList<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
+            Dictionary<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
 
-            for (int i = 0; i < loggerLevelOptions.Count; i++)
+            foreach (KeyValuePair<string, LogLevel?> logger in loggerLevelOptions)
             {
-                if (!IsLoggerFilterValid(loggerLevelOptions.GetKeyAtIndex(i)))
+                if (!IsLoggerFilterValid(logger.Key))
                 {
                     HandleOrRecordException(new DataApiBuilderException(
-                    message: $"Log level {loggerLevelOptions.GetKeyAtIndex(i)} needs to be of a valid log class.",
-                    statusCode: HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        message: $"Log level {logger.Key} needs to be of a valid log class.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
             }
         }
@@ -1353,17 +1357,17 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>
     private static bool IsLoggerFilterValid(string loggerFilter)
     {
-        return loggerFilter == LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER ||
-            loggerFilter == LoggerFilters.SQL_QUERY_ENGINE_FILTER ||
-            loggerFilter == LoggerFilters.IQUERY_EXECUTOR_FILTER ||
-            loggerFilter == LoggerFilters.ISQL_METADATA_PROVIDER_FILTER ||
-            loggerFilter == LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER ||
-            loggerFilter == LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER ||
-            loggerFilter == LoggerFilters.REST_CONTROLLER_FILTER ||
-            loggerFilter == LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER ||
-            loggerFilter == LoggerFilters.CONFIGURATION_CONTROLLER_FILTER ||
-            loggerFilter == LoggerFilters.IAUTHORIZATION_HANDLER_FILTER ||
-            loggerFilter == LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER ||
-            loggerFilter == LoggerFilters.DEFAULT_FILTER;
+        return loggerFilter == nameof(RuntimeConfigValidator) ||
+            loggerFilter == nameof(SqlQueryEngine) ||
+            loggerFilter == nameof(IQueryExecutor) ||
+            loggerFilter == nameof(ISqlMetadataProvider) ||
+            loggerFilter == nameof(BasicHealthReportResponseWriter) ||
+            loggerFilter == nameof(ComprehensiveHealthReportResponseWriter) ||
+            loggerFilter == nameof(RestController) ||
+            loggerFilter == nameof(ClientRoleHeaderAuthenticationMiddleware) ||
+            loggerFilter == nameof(ConfigurationController) ||
+            loggerFilter == nameof(IAuthorizationHandler) ||
+            loggerFilter == nameof(IAuthorizationResolver) ||
+            loggerFilter == "default";
     }
 }

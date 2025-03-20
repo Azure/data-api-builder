@@ -574,19 +574,23 @@ public record RuntimeConfig
     /// </summary>
     public bool IsLogLevelNull()
     {
-        for (int i = 0; i < Runtime?.Telemetry?.LoggerLevel?.Count; i++)
+        if (Runtime is null ||
+            Runtime.Telemetry is null ||
+            Runtime.Telemetry.LoggerLevel is null ||
+            Runtime.Telemetry.LoggerLevel.Count == 0)
         {
-            string? keyVal = Runtime?.Telemetry?.LoggerLevel?.GetKeyAtIndex(i);
-            if (keyVal == null)
+            return true;
+        }
+
+        foreach (KeyValuePair<string, LogLevel?> logger in Runtime!.Telemetry.LoggerLevel)
+        {
+            if (logger.Key == null)
             {
                 return true;
             }
         }
 
-        return Runtime is null ||
-            Runtime.Telemetry is null ||
-            Runtime.Telemetry.LoggerLevel is null ||
-            Runtime.Telemetry.LoggerLevel.Count == 0;
+        return false;
     }
 
     /// <summary>
@@ -605,7 +609,7 @@ public record RuntimeConfig
             return (LogLevel)value;
         }
 
-        runtimeConfig.Runtime?.Telemetry?.LoggerLevel?.TryGetValue(LoggerFilters.DEFAULT_FILTER, out value);
+        runtimeConfig.Runtime?.Telemetry?.LoggerLevel?.TryGetValue("default", out value);
         if (value is not null)
         {
             return (LogLevel)value;

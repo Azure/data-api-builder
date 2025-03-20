@@ -1,10 +1,6 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
-    Health: {
-      ThresholdMs: 1000,
-      Enabled: true
-    }
+    DatabaseType: MSSQL
   },
   Runtime: {
     Rest: {
@@ -61,11 +57,6 @@
         Mappings: {
           id: Identity,
           name: Company Name
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     }

@@ -1,10 +1,6 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
-    Health: {
-      ThresholdMs: 10,
-      Enabled: true
-    }
+    DatabaseType: MSSQL
   },
   Runtime: {
     Rest: {
@@ -32,9 +28,6 @@
       Authentication: {
         Provider: StaticWebApps
       }
-    },
-    Health: {
-      Enabled: true
     }
   },
   Entities: [
@@ -277,11 +270,6 @@
             Cardinality: Many,
             TargetEntity: Book
           }
-        },
-        Health: {
-          First: 1,
-          ThresholdMs: 500,
-          Enabled: true
         }
       }
     },
@@ -328,11 +316,6 @@
               publisher_id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -510,11 +493,6 @@
           stocks_price: {
             TargetEntity: stocks_price
           }
-        },
-        Health: {
-          First: 2,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -940,11 +918,6 @@
           websiteplacement: {
             TargetEntity: BookWebsitePlacement
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -980,12 +953,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -1057,11 +1025,6 @@
               book_id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1115,11 +1078,6 @@
           books: {
             TargetEntity: Book
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1170,11 +1128,6 @@
             TargetEntity: Book,
             LinkingObject: book_author_link
           }
-        },
-        Health: {
-          First: 3,
-          ThresholdMs: 250,
-          Enabled: true
         }
       }
     },
@@ -1228,11 +1181,6 @@
               book_id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1270,12 +1218,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -1361,11 +1304,6 @@
               id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1420,11 +1358,6 @@
               id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1522,11 +1455,6 @@
           myseries: {
             TargetEntity: series
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1570,12 +1498,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 4,
-          ThresholdMs: 10,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -1639,11 +1562,6 @@
               websiteuser_id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1690,11 +1608,6 @@
               websiteuser_id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1750,11 +1663,6 @@
         ],
         Mappings: {
           id: typeid
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1841,11 +1749,6 @@
           Stock: {
             TargetEntity: Stock
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1902,11 +1805,6 @@
         Mappings: {
           region: United State's Region,
           species: Scientific Name
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -1974,11 +1872,6 @@
               habitat
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2061,11 +1954,6 @@
               species
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2112,12 +2000,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2149,11 +2032,6 @@
         ],
         Mappings: {
           id: book_id
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2201,12 +2079,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2253,12 +2126,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2288,12 +2156,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2336,12 +2199,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2384,12 +2242,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2483,12 +2336,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2528,11 +2376,6 @@
           NoteNum: ┬─┬ノ( º _ ºノ),
           StrategicAttack: 謀攻,
           WagingWar: 作戰
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2608,11 +2451,6 @@
             Cardinality: Many,
             TargetEntity: Comic
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2647,12 +2485,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2689,11 +2522,6 @@
               username
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2720,12 +2548,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2762,11 +2585,6 @@
               profileid
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2806,11 +2624,6 @@
               username
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2850,11 +2663,6 @@
               username
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2901,11 +2709,6 @@
               id
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -2944,12 +2747,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -2987,12 +2785,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3030,12 +2823,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3077,12 +2865,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3120,12 +2903,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3163,12 +2941,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3210,12 +2983,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3256,12 +3024,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3303,12 +3066,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3346,11 +3104,6 @@
         Mappings: {
           __column1: column1,
           __column2: column2
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -3385,12 +3138,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3428,11 +3176,6 @@
         Mappings: {
           bkname: name,
           id: bkid
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -3459,12 +3202,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3490,12 +3228,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3521,12 +3254,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3567,12 +3295,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     },
     {
@@ -3650,11 +3373,6 @@
             Cardinality: Many,
             TargetEntity: BookNF
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -3755,11 +3473,6 @@
           websiteplacement: {
             TargetEntity: BookWebsitePlacement
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -3844,11 +3557,6 @@
             TargetEntity: BookNF,
             LinkingObject: book_author_link
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -3896,11 +3604,6 @@
               AccountKey
             ]
           }
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     },
@@ -3930,12 +3633,7 @@
               }
             ]
           }
-        ],
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
-        }
+        ]
       }
     }
   ]

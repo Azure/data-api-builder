@@ -1,10 +1,6 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
-    Health: {
-      ThresholdMs: 1000,
-      Enabled: true
-    }
+    DatabaseType: MSSQL
   },
   Runtime: {
     Rest: {
@@ -63,11 +59,6 @@
           Macaroni: Mac & Cheese,
           region: United State's Region,
           russian: русский
-        },
-        Health: {
-          First: 100,
-          ThresholdMs: 1000,
-          Enabled: true
         }
       }
     }

@@ -486,7 +486,7 @@ public class GQLFilterParser
         string schemaName,
         string tableName,
         string tableAlias,
-        Func<object, string?,bool, string> processLiterals,
+        Func<object, string?, bool, string> processLiterals,
         bool isListType = false)
     {
         Column column = new(schemaName, tableName, columnName: fieldName, tableAlias);

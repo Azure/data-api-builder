@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             List<InputValueDefinitionNode> inputFields = GenerateOrderByInputFieldsForBuiltInFields(node);
             string orderByInputName = GenerateObjectInputOrderByName(node);
+
             // OrderBy does not include "and" and "or" input types so we add only the orderByInputName here.
             inputTypes.Add(
                 orderByInputName,

@@ -14,8 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
     /// <summary>
-    /// Creates a JSON response for the health check endpoint using the provided health report.
-    /// If the response has already been created, it will be reused.
+    /// Creates a JSON response of health report by executing the Datasource, Rest and Graphql endpoints.
+    /// Checks the response time with the threshold given to formulate the comprehensive report.
     /// </summary>
     public class HealthCheckHelper
     {
@@ -23,14 +23,26 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private ILogger? _logger;
         private HttpUtilities _httpUtility;
 
-        private string _timeExceededErrorMessage = "The threshold for executing the request exceeded";
+        private string _timeExceededErrorMessage = "The threshold for executing the request has exceeded.";
 
+        /// <summary>
+        /// Constructor to inject the logger and HttpUtility class.
+        /// </summary>
+        /// <param name="logger">Logger to track the log statements.</param>
+        /// <param name="httpUtility">HttpUtility to call methods from the internal class.</param>
         public HealthCheckHelper(ILogger<HealthCheckHelper>? logger, HttpUtilities httpUtility)
         {
             _logger = logger;
             _httpUtility = httpUtility;
         }
 
+        /// <summary>
+        /// GetHealthCheckResponse is the main function which fetches the HttpContext and then creates the comprehensive health check report.
+        /// Serializes the report to JSON and returns the response.  
+        /// </summary>
+        /// <param name="context">HttpContext</param>
+        /// <param name="runtimeConfig">RuntimeConfig</param>
+        /// <returns></returns>
         public ComprehensiveHealthCheckReport GetHealthCheckResponse(HttpContext context, RuntimeConfig runtimeConfig)
         {
             // Create a JSON response for the comprehensive health check endpoint using the provided basic health report.
@@ -46,6 +58,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return ComprehensiveHealthCheckReport;
         }
 
+        // Updates the overall status by comparing all the internal HealthStatuses in the response.
         private static void UpdateOverallHealthStatus(ref ComprehensiveHealthCheckReport comprehensiveHealthCheckReport)
         {
             if (comprehensiveHealthCheckReport.Checks == null)
@@ -59,6 +72,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 : HealthStatus.Healthy;
         }
 
+        // Updates the AppName and Version for the Health report.
         private static void UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport response)
         {
             // Update the version and app name to the response.
@@ -66,6 +80,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             response.AppName = ProductInfo.GetDataApiBuilderUserAgent();
         }
 
+        // Updates the DAB configuration details coming from RuntimeConfig for the Health report.
         private static void UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             ComprehensiveHealthCheckReport.ConfigurationDetails = new ConfigurationDetails
@@ -78,6 +93,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             };
         }
 
+        // Main function to internally call for data source and entities health check.
         private void UpdateHealthCheckDetails(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             ComprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
@@ -85,6 +101,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             UpdateEntityHealthCheckResults(ref ComprehensiveHealthCheckReport, runtimeConfig);
         }
 
+        // Updates the DataSource Health Check Results in the response.
         private void UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             if (ComprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
@@ -109,6 +126,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
+        // Executes the DB Query and keeps track of the response time and error message.
         private (int, string?) ExecuteDBQuery(string query, string? connectionString)
         {
             string? errorMessage = null;
@@ -118,12 +136,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 stopwatch.Start();
                 errorMessage = _httpUtility.ExecuteDbQuery(query, connectionString);
                 stopwatch.Stop();
-                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (-1, errorMessage);
+                return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
 
-            return (-1, errorMessage);
+            return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
         }
 
+        // Updates the Entity Health Check Results in the response. 
+        // Goes through the entities one by one and executes the rest and graphql checks (if enabled).
         private void UpdateEntityHealthCheckResults(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Entities != null && runtimeConfig.Entities.Entities.Any())
@@ -138,6 +158,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
+        // Populates the Entity Health Check Results in the response for a particular entity.
+        // Checks for Rest enabled and executes the rest query.
+        // Checks for GraphQL enabled and executes the graphql query.
         private void PopulateEntityHealth(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, KeyValuePair<string, Entity> entity, RuntimeConfig runtimeConfig)
         {
             // Global Rest and GraphQL Runtime Options
@@ -194,6 +217,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
+        // Executes the Rest Entity Query and keeps track of the response time and error message.
         private (int, string?) ExecuteRestEntityQuery(string restUriSuffix, string entityName, int first)
         {
             string? errorMessage = null;
@@ -206,9 +230,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
 
-            return (-1, errorMessage);
+            return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
         }
 
+        // Executes the GraphQL Entity Query and keeps track of the response time and error message.
         private (int, string?) ExecuteGraphQLEntityQuery(string graphqlUriSuffix, Entity entity, string entityName)
         {
             string? errorMessage = null;
@@ -221,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
 
-            return (-1, errorMessage);
+            return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
         }
 
         // <summary>

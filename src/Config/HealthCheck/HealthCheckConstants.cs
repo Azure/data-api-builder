@@ -3,6 +3,9 @@
 
 namespace Azure.DataApiBuilder.Config.HealthCheck
 {
+    /// <summary>
+    /// HealthCheckConstants is a common place to track all constant values related to health checks.
+    /// </summary>
     public static class HealthCheckConstants
     {
         public const string ENDPOINT = "endpoint";

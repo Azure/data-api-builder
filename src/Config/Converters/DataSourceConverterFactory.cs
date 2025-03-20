@@ -49,7 +49,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
-                return new(DatabaseType.MSSQL, string.Empty, null);
+                return new(DatabaseType.MSSQL, string.Empty);
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)

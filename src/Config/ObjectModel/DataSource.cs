@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record DataSource(
     DatabaseType DatabaseType,
     string ConnectionString,
-    Dictionary<string, object?>? Options,
+    Dictionary<string, object?>? Options = null,
     DatasourceHealthCheckConfig? Health = null)
 {
     [JsonIgnore]

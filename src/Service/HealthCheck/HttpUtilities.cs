@@ -18,6 +18,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
+    /// <summary>
+    /// HttpUtilities creates and executes the HTTP requests for HealthEndpoint.
+    /// </summary>
     public class HttpUtilities
     {
         private readonly ILogger? _logger;
@@ -42,6 +45,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             _runtimeConfigProvider = runtimeConfigProvider;
         }
 
+        /// <summary>
+        /// Fetches the Http Base URI from the Context information to execute the REST and GraphQL queries.
+        /// </summary>
+        /// <param name="httpContext">HttpContext</param>
         public void ConfigureApiRoute(HttpContext httpContext)
         {
             if (httpContext == null || httpContext.Request == null)
@@ -53,6 +60,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
         }
 
+        // Executes the DB query by establishing a connection to the DB.
         public string? ExecuteDbQuery(string query, string connectionString)
         {
             string? errorMessage = null;
@@ -77,6 +85,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return errorMessage;
         }
 
+        // Executes the REST query by sending a GET request to the API.
         public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first)
         {
             string? errorMessage = null;
@@ -111,6 +120,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
+        // Executes the GraphQL query by sending a POST request to the API.
+        // Internally calls the metadata provider to fetch the column names to create the graphql payload.
         public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity)
         {
             string? errorMessage = null;

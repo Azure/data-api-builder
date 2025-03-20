@@ -28,7 +28,6 @@ public record RuntimeOptions
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null)
     {
-        this.Health = Health ?? new();
         this.Rest = Rest;
         this.GraphQL = GraphQL;
         this.Host = Host;
@@ -50,4 +49,23 @@ public record RuntimeOptions
             Cache is not null &&
             Cache.Enabled is not null &&
             Cache.Enabled is true;
+
+    [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Rest))]
+    public bool IsRestEnabled =>
+        Rest is null ||
+        Rest?.Enabled is null ||
+        Rest?.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsGraphQLEnabled =>
+        GraphQL is null ||
+        GraphQL?.Enabled is null ||
+        GraphQL?.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsHealthCheckEnabled =>
+        Health is null ||
+        Health?.Enabled is null ||
+        Health?.Enabled is true;
 }

@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
@@ -33,29 +32,20 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
-                return new DatasourceHealthCheckConfig() { Enabled = true, Name = null, ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS };
+                return new DatasourceHealthCheckConfig();
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                bool enabled = true;
-
-                // Refer to DatasourceHealthCheckConfig record definition to define default name value.
+                bool? enabled = null;
                 string? name = null;
-
-                // Refer to DatasourceHealthCheckConfig record definition to define default threshold-ms value.
                 int? threshold_ms = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new DatasourceHealthCheckConfig()
-                        {
-                            Enabled = enabled,
-                            Name = name,
-                            ThresholdMs = threshold_ms ?? HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS
-                        };
+                        return new DatasourceHealthCheckConfig(enabled, name, threshold_ms);
                     }
 
                     string? property = reader.GetString();
@@ -64,33 +54,21 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
                     switch (property)
                     {
                         case "enabled":
-                            if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                enabled = true; // This is true because the default value for Data source check in Comprehensive Health Endpoint is true.
-                            }
-                            else
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 enabled = reader.GetBoolean();
                             }
 
                             break;
                         case "name":
-                            if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                name = null;
-                            }
-                            else
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 name = reader.GetString();
                             }
 
                             break;
                         case "threshold-ms":
-                            if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                threshold_ms = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS; // This is the default value for threshold-ms.
-                            }
-                            else
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 int parseThresholdMs = reader.GetInt32();
                                 if (parseThresholdMs <= 0)
@@ -111,11 +89,29 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, DatasourceHealthCheckConfig value, JsonSerializerOptions options)
         {
-            writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value.Enabled);
-            writer.WriteString("name", value.Name);
-            writer.WriteNumber("threshold-ms", value.ThresholdMs);
-            writer.WriteEndObject();
+            if (value?.UserProvidedEnabled is true)
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("enabled");
+                JsonSerializer.Serialize(writer, value.Enabled, options);
+                if (value?.Name is not null)
+                {
+                    writer.WritePropertyName("name");
+                    JsonSerializer.Serialize(writer, value.Name, options);
+                }
+
+                if (value?.UserProvidedThresholdMs is true)
+                {
+                    writer.WritePropertyName("threshold-ms");
+                    JsonSerializer.Serialize(writer, value.ThresholdMs, options);
+                }
+
+                writer.WriteEndObject();
+            }
+            else
+            {
+                writer.WriteNullValue();
+            }
         }
     }
 }

@@ -77,13 +77,13 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return errorMessage;
         }
 
-        public string? ExecuteRestQuery(string uriSuffix, string entityName, int first)
+        public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first)
         {
             string? errorMessage = null;
             try
             {
                 // Base URL of the API that handles SQL operations
-                string apiRoute = Utilities.GetServiceRoute(_apiRoute, uriSuffix);
+                string apiRoute = Utilities.GetServiceRoute(_apiRoute, restUriSuffix);
                 if (apiRoute == string.Empty)
                 {
                     LogTrace("The API route is not available, hence HealthEndpoint is not available.");
@@ -111,11 +111,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
-        public string? ExecuteGraphQLQuery(string uriSuffix, string entityName, Entity entity)
+        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity)
         {
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations
-            string ApiRoute = Utilities.GetServiceRoute(_apiRoute, uriSuffix);
+            string ApiRoute = Utilities.GetServiceRoute(_apiRoute, graphqlUriSuffix);
             if (ApiRoute == string.Empty)
             {
                 LogTrace("The API route is not available, hence HealthEndpoint is not available.");
@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     using (HttpClient client = CreateClient(ApiRoute))
                     {
-                        string jsonPayload = Utilities.CreateHttpGraphQLQuery(databaseObjectName, columnNames, entity.Health.First);
+                        string jsonPayload = Utilities.CreateHttpGraphQLQuery(databaseObjectName, columnNames, entity.EntityFirst);
                         HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
                         HttpResponseMessage response = client.PostAsync(ApiRoute, content).Result;
                         if (response.IsSuccessStatusCode)

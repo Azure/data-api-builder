@@ -87,11 +87,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         private void UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
-            if (ComprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource?.Health != null && runtimeConfig.DataSource.Health.Enabled)
+            if (ComprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
-                (int, string?) response = ExecuteDBQuery(query, runtimeConfig.DataSource?.ConnectionString);
-                bool thresholdCheck = response.Item1 >= 0 && response.Item1 < runtimeConfig?.DataSource?.Health.ThresholdMs;
+                (int, string?) response = ExecuteDBQuery(query, runtimeConfig.DataSource.ConnectionString);
+                bool thresholdCheck = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
 
                 // Add DataSource Health Check Results
                 ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     ResponseTimeData = new ResponseTimeData
                     {
                         ResponseTimeMs = response.Item1,
-                        ThresholdMs = runtimeConfig?.DataSource?.Health?.ThresholdMs
+                        ThresholdMs = runtimeConfig?.DataSource.DatasourceThresholdMs
                     },
                     Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
                     Tags = [HealthCheckConstants.DATASOURCE],
@@ -130,8 +130,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 foreach (KeyValuePair<string, Entity> Entity in runtimeConfig.Entities.Entities)
                 {
-                    EntityHealthCheckConfig? healthConfig = Entity.Value?.Health;
-                    if (healthConfig != null && healthConfig.Enabled)
+                    if (Entity.Value.IsEntityHealthEnabled)
                     {
                         PopulateEntityHealth(ComprehensiveHealthCheckReport, Entity, runtimeConfig);
                     }
@@ -139,33 +138,23 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
         }
 
-        public bool IsFeatureEnabled<T>(T? featureOptions) where T : class
-        {
-            return featureOptions != null &&
-                typeof(T).GetProperty("Enabled")?.GetValue(featureOptions) as bool? == true;
-        }
-
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
         private void PopulateEntityHealth(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, KeyValuePair<string, Entity> entity, RuntimeConfig runtimeConfig)
         {
             // Global Rest and GraphQL Runtime Options
-            RestRuntimeOptions? restRuntimeOptions = runtimeConfig?.Runtime?.Rest;
-            GraphQLRuntimeOptions? graphQLRuntimeOptions = runtimeConfig?.Runtime?.GraphQL;
+            RuntimeOptions? runtimeOptions = runtimeConfig.Runtime;
 
             string entityKeyName = entity.Key;
             // Entity Health Check and Runtime Options
-            EntityHealthCheckConfig? healthOptions = entity.Value.Health;
-            EntityRestOptions? restEntityOptions = entity.Value.Rest;
-            EntityGraphQLOptions? graphqlEntityOptions = entity.Value.GraphQL;
+            Entity entityValue = entity.Value;
 
-            if (healthOptions != null && healthOptions.Enabled)
+            if (runtimeOptions != null && entityValue != null)
             {
-                if (IsFeatureEnabled(restRuntimeOptions) && IsFeatureEnabled(restEntityOptions))
+                if (runtimeOptions.IsRestEnabled && entityValue.IsRestEnabled)
                 {
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
-                    string entityPath = restEntityOptions?.Path != null ? restEntityOptions.Path.TrimStart('/') : entityKeyName;
-                    (int, string?) response = ExecuteRestEntityQuery(restRuntimeOptions.Path, entityPath, healthOptions.First);
-                    bool thresholdCheck = response.Item1 >= 0 && response.Item1 < healthOptions.ThresholdMs;
+                    string entityPath = entityValue.Rest.Path != null ? entityValue.Rest.Path.TrimStart('/') : entityKeyName;
+                    (int, string?) response = ExecuteRestEntityQuery(runtimeConfig.RestPath, entityPath, entityValue.EntityFirst);
+                    bool thresholdCheck = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     // Add Entity Health Check Results
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -174,7 +163,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         ResponseTimeData = new ResponseTimeData
                         {
                             ResponseTimeMs = response.Item1,
-                            ThresholdMs = healthOptions.ThresholdMs
+                            ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
                         Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
@@ -182,12 +171,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     });
                 }
 
-                if (IsFeatureEnabled(graphQLRuntimeOptions) && IsFeatureEnabled(graphqlEntityOptions))
+                if (runtimeOptions.IsGraphQLEnabled && entityValue.IsGraphQLEnabled)
                 {
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
 
-                    (int, string?) response = ExecuteGraphQLEntityQuery(graphQLRuntimeOptions.Path, entity.Value, entityKeyName);
-                    bool thresholdCheck = response.Item1 >= 0 && response.Item1 < healthOptions.ThresholdMs;
+                    (int, string?) response = ExecuteGraphQLEntityQuery(runtimeConfig.GraphQLPath, entityValue, entityKeyName);
+                    bool thresholdCheck = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
@@ -195,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         ResponseTimeData = new ResponseTimeData
                         {
                             ResponseTimeMs = response.Item1,
-                            ThresholdMs = healthOptions.ThresholdMs
+                            ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
                         Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
@@ -204,16 +193,15 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 }
             }
         }
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
-        private (int, string?) ExecuteRestEntityQuery(string UriSuffix, string EntityName, int First)
+        private (int, string?) ExecuteRestEntityQuery(string restUriSuffix, string entityName, int first)
         {
             string? errorMessage = null;
-            if (!string.IsNullOrEmpty(EntityName))
+            if (!string.IsNullOrEmpty(entityName))
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteRestQuery(UriSuffix, EntityName, First);
+                errorMessage = _httpUtility.ExecuteRestQuery(restUriSuffix, entityName, first);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
@@ -221,14 +209,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return (-1, errorMessage);
         }
 
-        private (int, string?) ExecuteGraphQLEntityQuery(string UriSuffix, Entity entity, string entityName)
+        private (int, string?) ExecuteGraphQLEntityQuery(string graphqlUriSuffix, Entity entity, string entityName)
         {
             string? errorMessage = null;
             if (entity != null)
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteGraphQLQuery(UriSuffix, entityName, entity);
+                errorMessage = _httpUtility.ExecuteGraphQLQuery(graphqlUriSuffix, entityName, entity);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }

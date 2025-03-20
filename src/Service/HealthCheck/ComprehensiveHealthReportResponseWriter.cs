@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
             // Global comprehensive Health Check Enabled
-            if (config?.Runtime != null && config.Runtime?.Health != null && config.Runtime.Health.Enabled)
+            if (config.IsHealthEnabled)
             {
                 ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
                 string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });

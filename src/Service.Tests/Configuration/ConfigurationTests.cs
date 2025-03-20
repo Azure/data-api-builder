@@ -3759,7 +3759,7 @@ type Planet @model(name:""PlanetAlias"") {
             // Even though this entity is not under test, it must be supplied enable successfull
             // config file creation.
             Entity requiredEntity = new(
-                Health: new() { Enabled = enableEntityHealth }, // Required to get the comprehensive report.
+                Health: new(Enabled: enableEntityHealth),
                 Source: new("books", EntitySourceType.Table, null, null),
                 Rest: new(Enabled: enableEntityRest),
                 GraphQL: new("book", "books", enableEntityGraphQL),
@@ -4396,14 +4396,14 @@ type Planet @model(name:""PlanetAlias"") {
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null,
-                Health: new() { Enabled = enableDatasourceHealth });
+                Health: new(enableDatasourceHealth));
             HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Health: new() { Enabled = enableGlobalHealth },
+                    Health: new(Enabled: enableGlobalHealth),
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: enableGlobalGraphql),
                     Host: hostOptions

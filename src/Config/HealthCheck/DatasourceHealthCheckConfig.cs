@@ -1,11 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.HealthCheck;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+[JsonConverter(typeof(DatasourceHealthOptionsConvertorFactory))]
 public record DatasourceHealthCheckConfig : HealthCheckConfig
 {
     // The identifier or simple name of the data source to be checked.
@@ -16,5 +19,29 @@ public record DatasourceHealthCheckConfig : HealthCheckConfig
     // If the query takes equal or longer than this value, the health check will be considered unhealthy.
     // (Default: 1000ms)
     [JsonPropertyName("threshold-ms")]
-    public int ThresholdMs { get; set; } = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
+    public int ThresholdMs { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(ThresholdMs))]
+    public bool UserProvidedThresholdMs { get; set; } = false;
+
+    public DatasourceHealthCheckConfig() : base()
+    {
+        ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
+    }
+
+    public DatasourceHealthCheckConfig(bool? Enabled, string? Name = null, int? ThresholdMs = null) : base(Enabled)
+    {
+        this.Name = Name;
+
+        if (ThresholdMs is not null)
+        {
+            this.ThresholdMs = (int)ThresholdMs;
+            UserProvidedThresholdMs = true;
+        }
+        else
+        {
+            this.ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
+        }
+    }
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -19,6 +20,26 @@ public record DataSource(
     Dictionary<string, object?>? Options,
     DatasourceHealthCheckConfig? Health = null)
 {
+    [JsonIgnore]
+    public bool IsDatasourceHealthEnabled =>
+        Health is null || Health.Enabled;
+
+    [JsonIgnore]
+    public int DatasourceThresholdMs
+    {
+        get
+        {
+            if (Health == null || Health?.ThresholdMs == null)
+            {
+                return HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
+            }
+            else
+            {
+                return Health.ThresholdMs;
+            }
+        }
+    }
+
     /// <summary>
     /// Converts the <c>Options</c> dictionary into a typed options object.
     /// May return null if the dictionary is null.

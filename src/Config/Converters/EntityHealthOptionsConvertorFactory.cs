@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
@@ -33,34 +32,20 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
-                return new EntityHealthCheckConfig()
-                {
-                    Enabled = true,
-                    First = HealthCheckConstants.DEFAULT_FIRST_VALUE,
-                    ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS
-                };
+                return new EntityHealthCheckConfig();
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool enabled = true;
-
-                // Refer to EntityHealthCheckConfig record definition to define default first value.
                 int? first = null;
-
-                // Refer to EntityHealthCheckConfig record definition to define default threshold-ms value.
                 int? threshold_ms = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new EntityHealthCheckConfig()
-                        {
-                            Enabled = enabled,
-                            First = first ?? HealthCheckConstants.DEFAULT_FIRST_VALUE,
-                            ThresholdMs = threshold_ms ?? HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS
-                        };
+                        return new EntityHealthCheckConfig(enabled, first, threshold_ms);
                     }
 
                     string? property = reader.GetString();
@@ -69,22 +54,14 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                     switch (property)
                     {
                         case "enabled":
-                            if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                enabled = true; // This is true because the default value for entity check in Comprehensive Health End point is true.
-                            }
-                            else
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 enabled = reader.GetBoolean();
                             }
 
                             break;
                         case "first":
-                            if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                first = HealthCheckConstants.DEFAULT_FIRST_VALUE; // This is the default value for first.
-                            }
-                            else
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 int parseFirstValue = reader.GetInt32();
                                 if (parseFirstValue <= 0)
@@ -97,11 +74,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
 
                             break;
                         case "threshold-ms":
-                            if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                threshold_ms = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS; // This is the default value for threshold-ms.
-                            }
-                            else
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 int parseThresholdMs = reader.GetInt32();
                                 if (parseThresholdMs <= 0)
@@ -122,11 +95,29 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, EntityHealthCheckConfig value, JsonSerializerOptions options)
         {
-            writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value.Enabled);
-            writer.WriteNumber("first", value.First);
-            writer.WriteNumber("threshold-ms", value.ThresholdMs);
-            writer.WriteEndObject();
+            if (value?.UserProvidedEnabled is true)
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("enabled");
+                JsonSerializer.Serialize(writer, value.Enabled, options);
+                if (value.UserProvidedFirst)
+                {
+                    writer.WritePropertyName("first");
+                    JsonSerializer.Serialize(writer, value.First, options);
+                }
+
+                if (value.UserProvidedThresholdMs)
+                {
+                    writer.WritePropertyName("threshold-ms");
+                    JsonSerializer.Serialize(writer, value.ThresholdMs, options);
+                }
+
+                writer.WriteEndObject();
+            }
+            else
+            {
+                writer.WriteNullValue();
+            }
         }
     }
 }

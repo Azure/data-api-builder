@@ -1,6 +1,9 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL
+    DatabaseType: MSSQL,
+    Options: {
+      set-session-context: true
+    }
   },
   Runtime: {
     Rest: {

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.HealthCheck;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -34,7 +35,7 @@ public record Entity
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
 
-    public EntityHealthCheckConfig? Health { get; init; } = new();
+    public EntityHealthCheckConfig? Health { get; init; }
 
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
@@ -51,7 +52,7 @@ public record Entity
         bool IsLinkingEntity = false,
         EntityHealthCheckConfig? Health = null)
     {
-        this.Health = Health ?? new();
+        this.Health = Health;
         this.Source = Source;
         this.GraphQL = GraphQL;
         this.Rest = Rest;
@@ -73,4 +74,48 @@ public record Entity
         Cache is not null &&
         Cache.Enabled is not null &&
         Cache.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsEntityHealthEnabled =>
+        Health is null || Health.Enabled;
+
+    [JsonIgnore]
+    public bool IsRestEnabled =>
+        Rest is null || Rest.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsGraphQLEnabled =>
+        GraphQL is null || GraphQL.Enabled is true;
+
+    [JsonIgnore]
+    public int EntityThresholdMs
+    {
+        get
+        {
+            if (Health == null || Health?.ThresholdMs == null)
+            {
+                return HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
+            }
+            else
+            {
+                return Health.ThresholdMs;
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public int EntityFirst
+    {
+        get
+        {
+            if (Health == null || Health?.First == null)
+            {
+                return HealthCheckConstants.DEFAULT_FIRST_VALUE;
+            }
+            else
+            {
+                return Health.First;
+            }
+        }
+    }
 }

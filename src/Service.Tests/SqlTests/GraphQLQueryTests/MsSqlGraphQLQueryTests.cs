@@ -193,6 +193,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
+
+        /// <sumary>
+        /// Test if filter param successfully filters when string filter results in a value longer than the column
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("contains")]
+        [DataRow("startsWith")]
+        [DataRow("endsWith")]
+        public virtual async Task TestFilterParamForStringFilterWorkWithComplexOp(string op)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: {" + op + @":""Great wall of china explained]""}}) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            string expected = @"
+[
+  {
+    ""id"": 3,
+    ""title"": ""Great wall of china explained]""
+  }
+]";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <sumary>
+        /// Test if filter param successfully filters when string filter results in a value longer than the column
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestFilterParamForStringFilterWorkWithNotContains(string op)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: { notContains:""Great wall of china explained]""},id:{eq:3} }) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            string expected = @"
+[
+]";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+
         [TestMethod]
         public async Task QueryWithNullableForeignKey()
         {

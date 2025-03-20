@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc/>
-        public override string MakeDbConnectionParam(object? value, string? columnName = null)
+        public override string MakeDbConnectionParam(object? value, string? columnName = null, bool lengthOverride=false)
         {
             string encodedParamName = $"{PARAM_NAME_PREFIX}param{Counter.Next()}";
             Parameters.Add(encodedParamName, new(value));

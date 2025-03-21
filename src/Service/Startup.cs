@@ -27,7 +27,6 @@ using Azure.DataApiBuilder.Service.HealthCheck;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
-using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -43,6 +42,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -52,10 +52,8 @@ using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
 {
-    public class Startup
+    public class Startup(IConfiguration configuration, ILogger<Startup> logger)
     {
-        private ILogger<Startup> _logger;
-
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
         public static bool IsLogLevelOverriddenByCli;
@@ -63,16 +61,11 @@ namespace Azure.DataApiBuilder.Service
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
-        private HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
+        private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
+        private ILogger<Startup> _logger = logger;
 
-        public Startup(IConfiguration configuration, ILogger<Startup> logger)
-        {
-            Configuration = configuration;
-            _logger = logger;
-        }
-
-        public IConfiguration Configuration { get; }
+        public IConfiguration Configuration { get; } = configuration;
 
         /// <summary>
         /// Useful in cases where we need to:
@@ -117,36 +110,37 @@ namespace Azure.DataApiBuilder.Service
                 && runtimeConfig.Runtime.Telemetry.OpenTelemetry.Enabled)
             {
                 services.AddOpenTelemetry()
-                .WithMetrics(metrics =>
-                {
-                    metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddOtlpExporter(configure =>
-                        {
-                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
-                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
-                        })
-                        .AddRuntimeInstrumentation();
-                })
-                .WithTracing(tracing =>
-                {
-                    tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddOtlpExporter(configure =>
-                        {
-                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
-                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
-                        });
-                });
+                    .WithMetrics(metrics =>
+                    {
+                        metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                            .AddAspNetCoreInstrumentation()
+                            .AddHttpClientInstrumentation()
+                            .AddOtlpExporter(configure =>
+                            {
+                                configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                                configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                                configure.Protocol = OtlpExportProtocol.Grpc;
+                            })
+                            .AddRuntimeInstrumentation();
+                    })
+                    .WithTracing(tracing =>
+                    {
+                        tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                            .AddAspNetCoreInstrumentation()
+                            .AddHttpClientInstrumentation()
+                            .AddHotChocolateInstrumentation()
+                            .AddOtlpExporter(configure =>
+                            {
+                                configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                                configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                                configure.Protocol = OtlpExportProtocol.Grpc;
+                            });
+                    });
             }
 
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            services.AddSingleton(implementationFactory: serviceProvider =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<RuntimeConfigValidator>();
             });
             services.AddSingleton<RuntimeConfigValidator>();
@@ -157,19 +151,19 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<SqlQueryEngine>();
             });
 
             services.AddSingleton<ILogger<IQueryExecutor>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IQueryExecutor>();
             });
 
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<ISqlMetadataProvider>();
             });
 
@@ -193,32 +187,32 @@ namespace Azure.DataApiBuilder.Service
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<BasicHealthReportResponseWriter>();
             });
 
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<ComprehensiveHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
             });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<RestController>();
             });
 
             services.AddSingleton<ILogger<ClientRoleHeaderAuthenticationMiddleware>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<ClientRoleHeaderAuthenticationMiddleware>();
             });
 
             services.AddSingleton<ILogger<ConfigurationController>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<ConfigurationController>();
             });
 
@@ -240,12 +234,12 @@ namespace Azure.DataApiBuilder.Service
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IAuthorizationHandler>();
             });
             services.AddSingleton<ILogger<IAuthorizationResolver>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IAuthorizationResolver>();
             });
 
@@ -256,7 +250,9 @@ namespace Azure.DataApiBuilder.Service
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
 
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
-            _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
+            _hotReloadEventHandler.Subscribe(
+                DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED,
+                (_, _) => RefreshGraphQLSchema(services));
 
             services.AddFusionCache()
                 .WithOptions(options =>
@@ -281,9 +277,13 @@ namespace Azure.DataApiBuilder.Service
         /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
+        /// <param name="graphQLRuntimeOptions">
+        /// The GraphQL runtime options.
+        /// </param>
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
+                .AddInstrumentation()
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
@@ -291,24 +291,24 @@ namespace Azure.DataApiBuilder.Service
                     graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
-                .AddAuthorization()
-                .AllowIntrospection(false)
-                .AddAuthorizationHandler<GraphQLAuthorizationHandler>();
+                .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
+                .BindRuntimeType<TimeOnly, HotChocolate.Types.NodaTime.LocalTimeType>()
+                .BindScalarType<HotChocolate.Types.NodaTime.LocalTimeType>("LocalTime")
+                .AddTypeConverter<LocalTime, TimeOnly>(
+                    from => new TimeOnly(from.Hour, from.Minute, from.Second, from.Millisecond))
+                .AddTypeConverter<TimeOnly, LocalTime>(
+                    from => new LocalTime(from.Hour, from.Minute, from.Second, from.Millisecond));
+
 
             // Conditionally adds a maximum depth rule to the GraphQL queries/mutation selection set.
             // This rule is only added if a positive depth limit is specified, ensuring that the server
             // enforces a limit on the depth of incoming GraphQL queries/mutation to prevent extremely deep queries
             // that could potentially lead to performance issues.
             // Additionally, the skipIntrospectionFields parameter is set to true to skip depth limit enforcement on introspection queries.
-            if (graphQLRuntimeOptions is not null && graphQLRuntimeOptions.DepthLimit.HasValue && graphQLRuntimeOptions.DepthLimit.Value > 0)
+            if (graphQLRuntimeOptions is not null && graphQLRuntimeOptions.DepthLimit is > 0)
             {
                 server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
-
-            // Allows DAB to override the HTTP error code set by HotChocolate.
-            // This is used to ensure HTTP code 4XX is set when the datatbase
-            // returns a "bad request" error such as stored procedure params missing.
-            services.AddHttpResultSerializer<DabGraphQLResultSerializer>();
 
             server.AddErrorFilter(error =>
                 {
@@ -330,15 +330,17 @@ namespace Azure.DataApiBuilder.Service
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
                     {
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
-                                .WithMessage(thrownException.Message)
-                                .WithCode($"{thrownException.SubStatusCode}");
+                        return error.WithException(null)
+                            .WithMessage(thrownException.Message)
+                            .WithCode($"{thrownException.SubStatusCode}");
                     }
 
                     return error;
                 })
+                // Allows DAB to override the HTTP error code set by HotChocolate.
+                // This is used to ensure HTTP code 4XX is set when the datatbase
+                // returns a "bad request" error such as stored procedure params missing.
+                .UseRequest<DetermineStatusCodeMiddleware>()
                 .UseRequest<BuildRequestStateMiddleware>()
                 .UseDefaultPipeline();
         }
@@ -351,7 +353,7 @@ namespace Azure.DataApiBuilder.Service
             // Re-add GraphQL services with updated config.
             RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
             Console.WriteLine("Updating GraphQL service.");
-            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
+            AddGraphQLService(services, runtimeConfig.Runtime?.GraphQL);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -369,14 +371,9 @@ namespace Azure.DataApiBuilder.Service
 
                 if (!isRuntimeReady)
                 {
-                    // Exiting if config provided is Invalid.
-                    if (_logger is not null)
-                    {
-                        _logger.LogError(
-                            message: "Could not initialize the engine with the runtime config file: {configFilePath}",
-                            runtimeConfigProvider.ConfigFilePath);
-                    }
-
+                    _logger.LogError(
+                        message: "Could not initialize the engine with the runtime config file: {configFilePath}",
+                        runtimeConfigProvider.ConfigFilePath);
                     hostLifetime.StopApplication();
                 }
             }
@@ -384,7 +381,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Config provided during runtime.
                 runtimeConfigProvider.IsLateConfigured = true;
-                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (sender, newConfig) =>
+                runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
                 {
                     isRuntimeReady = await PerformOnConfigChangeAsync(app);
                     return isRuntimeReady;
@@ -422,10 +419,10 @@ namespace Azure.DataApiBuilder.Service
             // Adding CORS Middleware
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Cors is not null)
             {
-                app.UseCors(CORSPolicyBuilder =>
+                app.UseCors(corsPolicyBuilder =>
                 {
                     CorsOptions corsConfig = runtimeConfig.Runtime.Host.Cors;
-                    ConfigureCors(CORSPolicyBuilder, corsConfig);
+                    ConfigureCors(corsPolicyBuilder, corsConfig);
                 });
             }
 
@@ -470,28 +467,34 @@ namespace Azure.DataApiBuilder.Service
             app.UseClientRoleHeaderAuthorizationMiddleware();
 
             IRequestExecutorResolver requestExecutorResolver = app.ApplicationServices.GetRequiredService<IRequestExecutorResolver>();
-            _hotReloadEventHandler.Subscribe("GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED", (sender, args) => EvictGraphQLSchema(requestExecutorResolver));
+            _hotReloadEventHandler.Subscribe(
+                "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED",
+                (_, _) => EvictGraphQLSchema(requestExecutorResolver));
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL(GraphQLRuntimeOptions.DEFAULT_PATH).WithOptions(new GraphQLServerOptions
-                {
-                    Tool = {
-                        // Determines if accessing the endpoint from a browser
-                        // will load the GraphQL Banana Cake Pop IDE.
-                        Enable = IsUIEnabled(runtimeConfig, env)
-                    }
-                });
+                endpoints
+                    .MapGraphQL()
+                    .WithOptions(new GraphQLServerOptions
+                    {
+                        Tool = {
+                            // Determines if accessing the endpoint from a browser
+                            // will load the GraphQL Banana Cake Pop IDE.
+                            Enable = IsUIEnabled(runtimeConfig, env)
+                        }
+                    });
 
-                // In development mode, BCP is enabled at /graphql endpoint by default.
-                // Need to disable mapping BCP explicitly as well to avoid ability to query
+                // In development mode, Nitro is enabled at /graphql endpoint by default.
+                // Need to disable mapping Nitro explicitly as well to avoid ability to query
                 // at an additional endpoint: /graphql/ui.
-                endpoints.MapBananaCakePop().WithOptions(new GraphQLToolOptions
-                {
-                    Enable = false
-                });
+                endpoints
+                    .MapNitroApp()
+                    .WithOptions(new GraphQLToolOptions
+                    {
+                        Enable = false
+                    });
 
                 endpoints.MapHealthChecks("/", new HealthCheckOptions
                 {
@@ -622,9 +625,9 @@ namespace Azure.DataApiBuilder.Service
         /// Registers all DAB supported authentication providers (schemes) so that at request time,
         /// DAB can use the runtime config's defined provider to authenticate requests.
         /// The function includes JWT specific configuration handling:
-        /// - IOptionsChangeTokenSource<JwtBearerOptions> : Registers a change token source for dynamic config updates which
+        /// - IOptionsChangeTokenSource{JwtBearerOptions} : Registers a change token source for dynamic config updates which
         /// is used internally by JwtBearerHandler's OptionsMonitor to listen for changes in JwtBearerOptions.
-        /// - IConfigureOptions<JwtBearerOptions> : Registers named JwtBearerOptions whose "Configure(...)" function is
+        /// - IConfigureOptions{JwtBearerOptions} : Registers named JwtBearerOptions whose "Configure(...)" function is
         /// called by OptionsFactory internally by .NET to fetch the latest configuration from the RuntimeConfigProvider.
         /// </summary>
         /// <seealso cref="https://github.com/dotnet/aspnetcore/issues/49586#issuecomment-1671838595">Guidance for registering IOptionsChangeTokenSource</seealso>
@@ -643,7 +646,8 @@ namespace Azure.DataApiBuilder.Service
         /// Configure Application Insights Telemetry based on the loaded runtime configuration. If Application Insights
         /// is enabled, we can track different events and metrics.
         /// </summary>
-        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
+        /// <param name="app">The application builder.</param>
+        /// <param name="runtimeConfig">The provider used to load runtime configuration.</param>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
         private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
         {
@@ -683,7 +687,7 @@ namespace Azure.DataApiBuilder.Service
                 }
 
                 // Updating Startup Logger to Log from Startup Class.
-                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+                ILoggerFactory loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
                 _logger = loggerFactory.CreateLogger<Startup>();
             }
         }
@@ -725,11 +729,7 @@ namespace Azure.DataApiBuilder.Service
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =
                     app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
-
-                if (sqlMetadataProviderFactory is not null)
-                {
-                    await sqlMetadataProviderFactory.InitializeAsync();
-                }
+                await sqlMetadataProviderFactory.InitializeAsync();
 
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
                 // to attempt to reduce chances that the first received client request
@@ -793,26 +793,23 @@ namespace Azure.DataApiBuilder.Service
         /// <returns> The built cors policy </returns>
         public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, CorsOptions corsConfig)
         {
-            string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : Array.Empty<string>();
             if (corsConfig.AllowCredentials)
             {
                 return builder
-                    .WithOrigins(Origins)
+                    .WithOrigins(corsConfig.Origins)
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .SetIsOriginAllowedToAllowWildcardSubdomains()
                     .AllowCredentials()
                     .Build();
             }
-            else
-            {
-                return builder
-                    .WithOrigins(Origins)
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .SetIsOriginAllowedToAllowWildcardSubdomains()
-                    .Build();
-            }
+
+            return builder
+                .WithOrigins(corsConfig.Origins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowedToAllowWildcardSubdomains()
+                .Build();
         }
 
         /// <summary>

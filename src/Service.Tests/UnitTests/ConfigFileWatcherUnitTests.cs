@@ -11,7 +11,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataApiBuilder.Service.Tests.Unittests;
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 
 [TestClass]
 public class ConfigFileWatcherUnitTests
@@ -209,7 +209,7 @@ public class ConfigFileWatcherUnitTests
         fileWatcher.NewFileContentsDetected += (sender, e) =>
         {
             // For testing, modification of fileChangeNotificationsRecieved
-            // should be atomic. 
+            // should be atomic.
             Interlocked.Increment(ref fileChangeNotificationsReceived);
         };
 
@@ -288,7 +288,7 @@ public class ConfigFileWatcherUnitTests
         fileWatcher.NewFileContentsDetected += (sender, e) =>
         {
             // For testing, modification of fileChangeNotificationsRecieved
-            // should be atomic. 
+            // should be atomic.
             Interlocked.Increment(ref fileChangeNotificationsReceived);
         };
 

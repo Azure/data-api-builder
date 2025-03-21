@@ -35,6 +35,7 @@
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="System.IO.Abstractions" />
+    <PackageReference Include="HotChocolate.Utilities.Introspection" />
   </ItemGroup>
 
   <ItemGroup>

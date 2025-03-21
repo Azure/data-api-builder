@@ -115,8 +115,8 @@ public interface IAuthorizationResolver
     /// Returns a list of roles which define permissions for the provided operation.
     /// i.e. list of roles which allow the operation 'Read' on entityName.
     /// </summary>
-    /// <param name="entityName">Entity to lookup permissions</param>
-    /// <param name="operation">Operation to lookup applicable roles</param>
+    /// <param name="entityName">Entity to lookup permissions.</param>
+    /// <param name="operation">Operation to lookup applicable roles.</param>
     /// <returns>Collection of roles. Empty list if entityPermissionsMap is null.</returns>
     public static IEnumerable<string> GetRolesForOperation(
         string entityName,

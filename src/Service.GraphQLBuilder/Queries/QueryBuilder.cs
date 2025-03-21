@@ -242,12 +242,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 .Cast<ObjectType>()
                 .Where(IsModelType);
 
-            return modelTypes.First(t => t.Name.Value == underlyingFieldType.Name.Value.Replace(PAGINATION_OBJECT_TYPE_SUFFIX, ""));
+            return modelTypes.First(t => t.Name == underlyingFieldType.Name.Replace(PAGINATION_OBJECT_TYPE_SUFFIX, ""));
         }
 
         public static bool IsPaginationType(ObjectType objectType)
         {
-            return objectType.Name.Value.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
+            return objectType.Name.EndsWith(PAGINATION_OBJECT_TYPE_SUFFIX);
         }
 
         public static bool IsPaginationType(NamedTypeNode objectType)

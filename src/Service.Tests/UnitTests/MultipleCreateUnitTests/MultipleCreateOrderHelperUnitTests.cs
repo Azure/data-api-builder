@@ -12,7 +12,7 @@ using HotChocolate.Resolvers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataApiBuilder.Service.Tests.Unittests
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     [TestClass]
     public abstract class MultipleCreateOrderHelperUnitTests : SqlTestBase
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             //              userid: 10
             //            }
             //          }){
-            //            <selection_set>   
+            //            <selection_set>
             //          }
             //      }
 
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             //              username: "DAB"
             //            }
             //          }){
-            //            <selection_set>   
+            //            <selection_set>
             //          }
             //      }
 

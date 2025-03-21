@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     // For eg. POST Request LocalPath: /api/Review
                     // 201 Created Response LocalPath: /api/Review/book_id/1/id/5001
                     // therefore, actualLocation = book_id/1/id/5001
-                    string responseLocalPath = (response.Headers.Location.LocalPath);
+                    string responseLocalPath = response.Headers.Location.LocalPath;
                     string requestLocalPath = request.RequestUri.LocalPath;
                     string actualLocationPath = responseLocalPath.Substring(requestLocalPath.Length + 1);
                     Assert.AreEqual(expectedLocationHeader, actualLocationPath);

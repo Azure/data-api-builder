@@ -27,7 +27,6 @@ using Azure.DataApiBuilder.Service.HealthCheck;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
-using HotChocolate.Types.NodaTime;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -147,7 +146,7 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<CosmosClientProvider>();
             services.AddHealthChecks()
-                .AddCheck<DabHealthCheck>("DabHealthCheck");
+                .AddCheck<BasicHealthCheck>(nameof(BasicHealthCheck));
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
@@ -181,13 +180,21 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
-            services.AddSingleton<HealthReportResponseWriter>();
+            services.AddSingleton<BasicHealthReportResponseWriter>();
+            services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
 
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
-            services.AddSingleton<ILogger<HealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
+            services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
-                return loggerFactory.CreateLogger<HealthReportResponseWriter>();
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<BasicHealthReportResponseWriter>();
+            });
+
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<ComprehensiveHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
             });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
@@ -489,7 +496,12 @@ namespace Azure.DataApiBuilder.Service
 
                 endpoints.MapHealthChecks("/", new HealthCheckOptions
                 {
-                    ResponseWriter = app.ApplicationServices.GetRequiredService<HealthReportResponseWriter>().WriteResponse
+                    ResponseWriter = app.ApplicationServices.GetRequiredService<BasicHealthReportResponseWriter>().WriteResponse
+                });
+
+                endpoints.MapHealthChecks("/health", new HealthCheckOptions
+                {
+                    ResponseWriter = app.ApplicationServices.GetRequiredService<ComprehensiveHealthReportResponseWriter>().WriteResponse
                 });
             });
         }

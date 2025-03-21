@@ -144,6 +144,15 @@ public record RuntimeConfig
         Runtime.GraphQL is not null &&
         Runtime.GraphQL.EnableAggregation;
 
+    /// <summary>
+    /// Retrieves the value of runtime.graphql.dwnto1joinopt.enabled property if present, default is false.
+    /// </summary>
+    [JsonIgnore]
+    public bool EnableDwNto1JoinOpt =>
+        Runtime is not null &&
+        Runtime.GraphQL is not null &&
+        Runtime.GraphQL.EnableDwNto1JoinOpt;
+
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();

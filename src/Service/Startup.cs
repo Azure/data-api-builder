@@ -128,6 +128,7 @@ namespace Azure.DataApiBuilder.Service
                         tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                             .AddAspNetCoreInstrumentation()
                             .AddHttpClientInstrumentation()
+                            .AddHotChocolateInstrumentation()
                             .AddOtlpExporter(configure =>
                             {
                                 configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
@@ -186,14 +187,14 @@ namespace Azure.DataApiBuilder.Service
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<BasicHealthReportResponseWriter>();
             });
 
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<ComprehensiveHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
             });
 
@@ -282,6 +283,7 @@ namespace Azure.DataApiBuilder.Service
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
+                .AddInstrumentation()
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
@@ -727,11 +729,7 @@ namespace Azure.DataApiBuilder.Service
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =
                     app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
-
-                if (sqlMetadataProviderFactory is not null)
-                {
-                    await sqlMetadataProviderFactory.InitializeAsync();
-                }
+                await sqlMetadataProviderFactory.InitializeAsync();
 
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
                 // to attempt to reduce chances that the first received client request

@@ -57,6 +57,7 @@
         <PackageReference Include="HotChocolate" />
         <PackageReference Include="HotChocolate.AspNetCore" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
+        <PackageReference Include="HotChocolate.Diagnostics" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
         <PackageReference Include="Microsoft.ApplicationInsights" />
         <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />

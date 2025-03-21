@@ -16,7 +16,8 @@
     "graphql": {
       "enabled": true,
       "path": "/graphql",
-      "allow-introspection": true
+      "allow-introspection": true,
+      "enable-dw-nto1joinopt": true
     },
     "host": {
       "cors": {

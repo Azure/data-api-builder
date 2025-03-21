@@ -341,7 +341,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     break;
                 case TestCategory.DWSQL:
                     Mock<ILogger<MsSqlQueryExecutor>> DwSqlQueryExecutorLogger = new();
-                    _queryBuilder = new DwSqlQueryBuilder();
+                    // enable the feature by default for testing purpose. 
+                    _queryBuilder = new DwSqlQueryBuilder(enableNto1JoinOpt: true);
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
                     _queryExecutor = new MsSqlQueryExecutor(

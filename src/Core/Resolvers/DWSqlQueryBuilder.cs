@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
         private readonly bool _enableNto1JoinOpt;
         private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
+        private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
 
         public DwSqlQueryBuilder(bool enableNto1JoinOpt = false)
@@ -93,6 +94,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 query = BuildWithJsonFunc(structure);
                 query += FOR_JSON_SUFFIX;
+                if (!structure.IsListQuery)
+                {
+                    query += "," + WITHOUT_ARRAY_WRAPPER_SUFFIX;
+                }
             }
 
             return query;

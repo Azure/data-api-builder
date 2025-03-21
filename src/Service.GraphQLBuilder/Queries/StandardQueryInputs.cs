@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         private static readonly StringValueNode _caseInsensitiveDescription = new("Case Insensitive");
 
         private static InputObjectTypeDefinitionNode IdInputType() =>
-            CreateSimpleEqualsFilter("IDFilterInput", "Input type for adding ID filters", _id);
+            CreateSimpleEqualsFilter("IdFilterInput", "Input type for adding ID filters", _id);
 
         private static InputObjectTypeDefinitionNode BooleanInputType() =>
             CreateSimpleEqualsFilter("BooleanFilterInput", "Input type for adding Boolean filters", _boolean);

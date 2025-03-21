@@ -77,8 +77,8 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
-                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
-                    ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
+                    ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
+                    ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
                 });
@@ -99,8 +99,8 @@ namespace Azure.DataApiBuilder.Service
             cmd.AddOption(logLevelOption);
             ParseResult result = GetParseResult(cmd, args);
             bool matchedToken = result.Tokens.Count - result.UnmatchedTokens.Count - result.UnparsedTokens.Count > 1;
-            LogLevel logLevel = matchedToken ? result.GetValueForOption<LogLevel>(logLevelOption) : LogLevel.Error;
-            isLogLevelOverridenByCli = matchedToken ? true : false;
+            LogLevel logLevel = matchedToken ? result.GetValueForOption(logLevelOption) : LogLevel.Error;
+            isLogLevelOverridenByCli = matchedToken;
 
             if (logLevel is > LogLevel.None or < LogLevel.Trace)
             {
@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service
         private static ParseResult GetParseResult(Command cmd, string[] args)
         {
             CommandLineConfiguration cmdConfig = new(cmd);
-            System.CommandLine.Parsing.Parser parser = new(cmdConfig);
+            Parser parser = new(cmdConfig);
             return parser.Parse(args);
         }
 
@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service
                 .Create(builder =>
                 {
                     // Category defines the namespace we will log from,
-                    // including all sub-domains. ie: "Azure" includes
+                    // including all subdomains. ie: "Azure" includes
                     // "Azure.DataApiBuilder.Service"
                     builder.AddFilter(category: "Microsoft", logLevel);
                     builder.AddFilter(category: "Azure", logLevel);
@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service
                                     config.TelemetryChannel = Startup.CustomTelemetryChannel;
                                 }
                             },
-                            configureApplicationInsightsLoggerOptions: (options) => { }
+                            configureApplicationInsightsLoggerOptions: _ => { }
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
                     }
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Use CommandLine parser to check for the flag `--no-https-redirect`.
         /// If it is present, https redirection is disabled.
-        /// By Default it is enabled.
+        /// By Default, it is enabled.
         /// </summary>
         /// <param name="args">array that may contain flag to disable https redirection.</param>
         private static void DisableHttpsRedirectionIfNeeded(string[] args)
@@ -206,19 +206,19 @@ namespace Azure.DataApiBuilder.Service
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((hostingContext, builder) =>
-            {
-                AddConfigurationProviders(builder, args);
-                DisableHttpsRedirectionIfNeeded(args);
-            })
-            .UseStartup<Startup>();
+            WebHost
+                .CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((_, builder) =>
+                {
+                    AddConfigurationProviders(builder, args);
+                    DisableHttpsRedirectionIfNeeded(args);
+                })
+                .UseStartup<Startup>();
 
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostBuilder, instead of a IHostBuilder.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-            .UseStartup<Startup>();
+            WebHost.CreateDefaultBuilder(args).UseStartup<Startup>();
 
         /// <summary>
         /// Adds the various configuration providers.
@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         internal static bool ValidateAspNetCoreUrls()
         {
-            if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is not string urls)
+            if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is not { } urls)
             {
                 return true; // If the environment variable is missing, then it cannot be invalid.
             }
@@ -250,7 +250,7 @@ namespace Azure.DataApiBuilder.Service
                 return false;
             }
 
-            char[] separators = new[] { ';', ',', ' ' };
+            char[] separators = [';', ',', ' '];
             string[] urlList = urls.Split(separators, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (string url in urlList)

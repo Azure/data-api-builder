@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         public static ObjectTypeDefinitionNode GenerateObjectTypeDefinitionForDatabaseObject(
             string entityName,
             DatabaseObject databaseObject,
-            [NotNull] Entity configEntity,
+            Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 // A field is added to the ObjectTypeDefinition when:
                 // 1. The entity is a linking entity. A linking entity is not exposed by DAB for query/mutation but the fields are required to generate
                 // object definitions of directional linking entities from source to target.
-                // 2. The entity is not a linking entity and there is atleast one role allowed to access the field.
+                // 2. The entity is not a linking entity and there is at least one role allowed to access the field.
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles) || configEntity.IsLinkingEntity)
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
@@ -395,9 +395,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// <returns>Generated field definition node for the column to be used in the entity's object type definition.</returns>
         private static FieldDefinitionNode GenerateFieldForColumn(Entity configEntity, string columnName, ColumnDefinition column, List<DirectiveNode> directives, IEnumerable<string>? roles)
         {
-            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                                            roles,
-                                            out DirectiveNode? authZDirective))
+            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(roles, out DirectiveNode? authZDirective))
             {
                 directives.Add(authZDirective!);
             }
@@ -595,23 +593,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 // invalid entries. Non-zero referenced columns indicate valid matching foreign key definition in the
                 // database and hence only those can be used to determine the directionality.
 
-                // Find the foreignkeys in which the source entity is the referencing object.
-                IEnumerable<ForeignKeyDefinition> referencingForeignKeyInfo =
+                // Find the foreign keys in which the source entity is the referencing object.
+                ForeignKeyDefinition[] referencingForeignKeyInfo =
                     listOfForeignKeys.Where(fk =>
                         fk.ReferencingColumns.Count > 0
                         && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencingDbTable.Equals(databaseObject));
+                        && fk.Pair.ReferencingDbTable.Equals(databaseObject))
+                        .ToArray();
 
-                // Find the foreignkeys in which the source entity is the referenced object.
-                IEnumerable<ForeignKeyDefinition> referencedForeignKeyInfo =
+                // Find the foreign keys in which the source entity is the referenced object.
+                ForeignKeyDefinition[] referencedForeignKeyInfo =
                     listOfForeignKeys.Where(fk =>
                         fk.ReferencingColumns.Count > 0
                         && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencedDbTable.Equals(databaseObject));
+                        && fk.Pair.ReferencedDbTable.Equals(databaseObject))
+                        .ToArray();
 
                 // The source entity should at least be a referencing or referenced db object or both
                 // in the foreign key relationship.
-                if (referencingForeignKeyInfo.Count() > 0 || referencedForeignKeyInfo.Count() > 0)
+                if (referencingForeignKeyInfo.Length != 0 || referencedForeignKeyInfo.Length != 0)
                 {
                     // The source entity could be both the referencing and referenced entity
                     // in case of missing foreign keys in the db or self referencing relationships.
@@ -621,9 +621,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     // DAB doesn't support multiple relationships at the moment.
                     // and
                     // 2. when the source is not a referenced entity in any of the relationships.
-                    if (referencingForeignKeyInfo.Count() == 1 && referencedForeignKeyInfo.Count() == 0)
+                    if (referencingForeignKeyInfo.Length == 1 && referencedForeignKeyInfo.Length == 0)
                     {
-                        ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo.First();
+                        ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo[0];
                         isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
                     }
                     else

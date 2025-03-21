@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public DwSqlQueryBuilder(bool enableNto1JoinOpt = false)
         {
+            // flag to enable the optimization for N to 1 join queries
             this._enableNto1JoinOpt = enableNto1JoinOpt;
         }
 
@@ -43,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string Build(SqlQueryStructure structure)
         {
-            if (this._enableNto1JoinOpt && HasToOneRelationsOnly(structure, false))
+            if (this._enableNto1JoinOpt && HasToOneOrNoRelation(structure, false))
             {
                 return BuildWithJsonFunc(structure, isSubQuery: false);
             }
@@ -53,7 +54,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        private static bool HasToOneRelationsOnly(SqlQueryStructure structure, bool isSubQuery)
+        /// <summary>
+        /// Recursively checks the structure to see if
+        /// 1. It only has to-1 relations
+        /// 2. It does not have any relations, which means it is a simple query against one table
+        /// We should apply the json funcs instead of string_agg for both cases
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <param name="isSubQuery"></param>
+        /// <returns></returns>
+        private static bool HasToOneOrNoRelation(SqlQueryStructure structure, bool isSubQuery)
         {
             if (structure?.JoinQueries?.Values == null)
             {
@@ -69,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (SqlQueryStructure subQueries in structure.JoinQueries.Values)
             {
-                if (!HasToOneRelationsOnly(subQueries, true))
+                if (!HasToOneOrNoRelation(subQueries, true))
                 {
                     return false;
                 }
@@ -78,6 +88,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return true;
         }
 
+        /// <summary>
+        /// Build the query recursively with
+        /// 1. JSON PATH for outer query
+        /// 2. JSON OBJECT for inner query
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <param name="isSubQuery"></param>
+        /// <returns></returns>
         private string BuildWithJsonFunc(SqlQueryStructure structure, bool isSubQuery)
         {
             string query;
@@ -103,6 +121,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return query;
         }
 
+        /// <summary>
+        /// Helper function for BuildWithJsonFunc that generates "FROM" portion of the query
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <returns></returns>
         private string BuildWithJsonFunc(SqlQueryStructure structure)
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
@@ -164,7 +187,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Builds the sql query that will return the json result for the sql query.
+        /// Builds the sql query that will return the json result for the sql query using string_agg
         /// </summary>
         /// <param name="structure">Sql query structure to build query on.</param>
         /// <param name="subQueryStructure">if this is a sub query executed under outerapply.</param>
@@ -254,6 +277,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return query;
         }
 
+        /// <summary>
+        /// Generate the columns selected and wrap them with JSON_OBJECT
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <returns></returns>
         private static string GenerateColumnsAsJsonObject(SqlQueryStructure structure)
         {
             List<string> columns = new();

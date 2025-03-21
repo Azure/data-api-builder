@@ -67,7 +67,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
         /// <summary>
         /// For nested queries results from direct db call, it will append a whitespace for each item in an array
-        /// e.g. [{address: 1}, {address: 2}]
+        /// e.g. [{address: 1},<whitespace>{address: 2}]
+        /// Removing all whitespaces when comparing with results from GraphQL
         /// </summary>
         /// <param name="expected"></param>
         /// <param name="actual"></param>
@@ -167,8 +168,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
         /// <summary>
         /// For the results from GraphQL execution response, it will contains the Items key for 1-Many relations
-        /// However for direct db query execution response, it will not the Item key.
-        /// This function will remove the Item key and aggregate child objs to parent
+        /// However for direct db query execution response, it will not have the Item key.
+        /// This function will remove the Item key and aggregate child objs to parent which makes it easier to compare two results
+        /// books {                    books {
+        ///     items: {
+        ///         authors {    ==>  
+        ///               id                  authors {
+        ///                                     id
+        ///                                 }
+        ///                             }
+        ///     }
+        /// }
+        /// }
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>

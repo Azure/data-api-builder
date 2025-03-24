@@ -601,5 +601,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
         }
+
+        public string QuoteTableNameAsDBConnectionParam(string param)
+        {
+            // Table names in DWSql should not be quoted when used as DB Connection Params.
+            return param;
+        }
     }
 }

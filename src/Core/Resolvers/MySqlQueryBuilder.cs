@@ -367,5 +367,11 @@ WHERE
         {
             throw new NotImplementedException();
         }
+
+        public string QuoteTableNameAsDBConnectionParam(string param)
+        {
+            // Table names in MySQL should not be quoted when used as DB Connection Params.
+            return param;
+        }
     }
 }

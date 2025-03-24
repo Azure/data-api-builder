@@ -150,9 +150,11 @@ public record RuntimeConfig
         Runtime.GraphQL is not null &&
         Runtime.GraphQL.EnableAggregation;
 
+    [JsonIgnore]
     public List<string> AllowedRolesForHealth =>
         Runtime?.Health?.Roles ?? new List<string>();
 
+    [JsonIgnore]
     public HostMode HostMode =>
         Runtime?.Host?.Mode ?? HostMode.Production;
 

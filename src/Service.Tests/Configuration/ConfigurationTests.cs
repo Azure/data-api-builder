@@ -3602,27 +3602,36 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(nameof(RuntimeConfigValidator))]
-        [DataRow(nameof(SqlQueryEngine))]
-        [DataRow(nameof(IQueryExecutor))]
-        [DataRow(nameof(ISqlMetadataProvider))]
-        [DataRow(nameof(BasicHealthReportResponseWriter))]
-        [DataRow(nameof(ComprehensiveHealthReportResponseWriter))]
-        [DataRow(nameof(RestController))]
-        [DataRow(nameof(ClientRoleHeaderAuthenticationMiddleware))]
-        [DataRow(nameof(ConfigurationController))]
-        [DataRow(nameof(IAuthorizationHandler))]
-        [DataRow(nameof(IAuthorizationResolver))]
-        [DataRow("default")]
-        public void ValidLogLevelFilters(string loggingFilter)
+        [DataRow(LogLevel.Trace, nameof(RuntimeConfigValidator))]
+        [DataRow(LogLevel.Debug, nameof(SqlQueryEngine))]
+        [DataRow(LogLevel.Information, nameof(IQueryExecutor))]
+        [DataRow(LogLevel.Warning, nameof(ISqlMetadataProvider))]
+        [DataRow(LogLevel.Error, nameof(BasicHealthReportResponseWriter))]
+        [DataRow(LogLevel.Critical, nameof(ComprehensiveHealthReportResponseWriter))]
+        [DataRow(LogLevel.None, nameof(RestController))]
+        [DataRow(LogLevel.Trace, nameof(ClientRoleHeaderAuthenticationMiddleware))]
+        [DataRow(LogLevel.Debug, nameof(ConfigurationController))]
+        [DataRow(LogLevel.Information, nameof(IAuthorizationHandler))]
+        [DataRow(LogLevel.Warning, nameof(IAuthorizationResolver))]
+        [DataRow(LogLevel.Error, "default")]
+        public void ValidLogLevelFilters(LogLevel logLevel, string loggingFilter)
         {
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(LogLevel.Debug, loggingFilter);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(logLevel, loggingFilter);
+            try
+            {
+                RuntimeConfigValidator.ValidateLoggerFilters(configWithCustomLogLevel);
+            }
+            catch
+            {
+                Assert.Fail();
+            }
 
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 
             Dictionary<string, LogLevel?> actualLoggerLevel = deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel;
             Assert.IsTrue(actualLoggerLevel.ContainsKey(loggingFilter) && actualLoggerLevel.Count == 1);
+            Assert.IsTrue(actualLoggerLevel[loggingFilter] == logLevel);
         }
 
         /// <summary>
@@ -3639,20 +3648,11 @@ type Planet @model(name:""PlanetAlias"") {
         public void InvalidLogLevelFilters(string loggingFilter)
         {
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(LogLevel.Debug, loggingFilter);
-            IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem)
-            {
-                RuntimeConfig = configWithCustomLogLevel
-            };
-            RuntimeConfigProvider provider = new(loader);
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
-            RuntimeConfigValidator runtimeConfigValidator = new(provider, fileSystem, logger);
 
             // Try should fail and go to catch exception
             try
             {
-                runtimeConfigValidator.ValidateLoggerFilters(configWithCustomLogLevel);
+                RuntimeConfigValidator.ValidateLoggerFilters(configWithCustomLogLevel);
                 Assert.Fail();
             }
             // Catch verifies that the exception is due to LogLevel having a key that is invalid

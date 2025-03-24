@@ -4,7 +4,7 @@
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.RegularExpressions;
-using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -15,10 +15,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.HealthCheck;
-using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -37,6 +34,9 @@ public class RuntimeConfigValidator : IConfigValidator
 
     private bool _isValidateOnly;
     public List<Exception> ConfigValidationExceptions { get; private set; }
+
+    // Valid log filters
+    public LoggerFilters LoggerFilters { get; set; }
 
     // Regex to check occurrence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
     // The claimType is invalid if there is a match found.
@@ -60,6 +60,7 @@ public class RuntimeConfigValidator : IConfigValidator
         _logger = logger;
         _isValidateOnly = isValidateOnly;
         ConfigValidationExceptions = new();
+        LoggerFilters = new();
     }
 
     /// <summary>
@@ -139,18 +140,15 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     public void ValidateLoggerFilters(RuntimeConfig runtimeConfig)
     {
-        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
+        if (runtimeConfig.Runtime?.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
         {
             Dictionary<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
 
             foreach (KeyValuePair<string, LogLevel?> logger in loggerLevelOptions)
             {
-                if (!IsLoggerFilterValid(logger.Key))
+                if (!LoggerFilters.IsLoggerFilterValid(logger.Key))
                 {
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Log level {logger.Key} needs to be of a valid log class.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    throw new NotSupportedException($"Log level {logger.Key} needs to be of a valid log class.");
                 }
             }
         }
@@ -1349,25 +1347,5 @@ public class RuntimeConfigValidator : IConfigValidator
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);
         }
-    }
-
-    /// <summary>
-    /// Returns whether the log-level keyword is valid or not.
-    /// </summary>
-    /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>
-    private static bool IsLoggerFilterValid(string loggerFilter)
-    {
-        return loggerFilter == nameof(RuntimeConfigValidator) ||
-            loggerFilter == nameof(SqlQueryEngine) ||
-            loggerFilter == nameof(IQueryExecutor) ||
-            loggerFilter == nameof(ISqlMetadataProvider) ||
-            loggerFilter == nameof(BasicHealthReportResponseWriter) ||
-            loggerFilter == nameof(ComprehensiveHealthReportResponseWriter) ||
-            loggerFilter == nameof(RestController) ||
-            loggerFilter == nameof(ClientRoleHeaderAuthenticationMiddleware) ||
-            loggerFilter == nameof(ConfigurationController) ||
-            loggerFilter == nameof(IAuthorizationHandler) ||
-            loggerFilter == nameof(IAuthorizationResolver) ||
-            loggerFilter == "default";
     }
 }

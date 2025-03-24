@@ -57,6 +57,7 @@ namespace Azure.DataApiBuilder.Service
         private ILogger<Startup> _logger;
 
         public static LogLevel MinimumLogLevel = LogLevel.Error;
+        public LoggerFilters LoggerFilters = new();
 
         public static bool IsLogLevelOverriddenByCli;
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
@@ -146,6 +147,7 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(RuntimeConfigValidator));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(RuntimeConfigValidator));
                 return loggerFactory.CreateLogger<RuntimeConfigValidator>();
             });
@@ -157,18 +159,21 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(SqlQueryEngine));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(SqlQueryEngine));
                 return loggerFactory.CreateLogger<SqlQueryEngine>();
             });
 
             services.AddSingleton<ILogger<IQueryExecutor>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(IQueryExecutor));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(IQueryExecutor));
                 return loggerFactory.CreateLogger<IQueryExecutor>();
             });
 
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(ISqlMetadataProvider));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(ISqlMetadataProvider));
                 return loggerFactory.CreateLogger<ISqlMetadataProvider>();
             });
@@ -193,6 +198,7 @@ namespace Azure.DataApiBuilder.Service
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(BasicHealthReportResponseWriter));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(BasicHealthReportResponseWriter));
                 return loggerFactory.CreateLogger<BasicHealthReportResponseWriter>();
             });
@@ -200,24 +206,28 @@ namespace Azure.DataApiBuilder.Service
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<ComprehensiveHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(ComprehensiveHealthCheckReport));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(ComprehensiveHealthCheckReport));
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
             });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(RestController));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(RestController));
                 return loggerFactory.CreateLogger<RestController>();
             });
 
             services.AddSingleton<ILogger<ClientRoleHeaderAuthenticationMiddleware>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(ClientRoleHeaderAuthenticationMiddleware));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(ClientRoleHeaderAuthenticationMiddleware));
                 return loggerFactory.CreateLogger<ClientRoleHeaderAuthenticationMiddleware>();
             });
 
             services.AddSingleton<ILogger<ConfigurationController>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(ConfigurationController));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(ConfigurationController));
                 return loggerFactory.CreateLogger<ConfigurationController>();
             });
@@ -240,11 +250,13 @@ namespace Azure.DataApiBuilder.Service
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(IAuthorizationHandler));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(IAuthorizationHandler));
                 return loggerFactory.CreateLogger<IAuthorizationHandler>();
             });
             services.AddSingleton<ILogger<IAuthorizationResolver>>(implementationFactory: (serviceProvider) =>
             {
+                LoggerFilters.AddLogFilter(nameof(IAuthorizationResolver));
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, nameof(IAuthorizationResolver));
                 return loggerFactory.CreateLogger<IAuthorizationResolver>();
             });

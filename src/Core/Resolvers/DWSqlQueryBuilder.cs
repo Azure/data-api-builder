@@ -288,7 +288,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (LabelledColumn column in structure.Columns)
             {
                 string col_value = $"\'{column.Label}\': [{column.Label}]";
-                columns.Add( col_value );
+                columns.Add(col_value);
             }
 
             string? joinedColumns = columns.Count > 1 ?

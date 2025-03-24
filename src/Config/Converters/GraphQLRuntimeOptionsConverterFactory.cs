@@ -115,7 +115,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 
                             break;
                         case "enable-dw-nto1joinopt":
-                           if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
                             {
                                 graphQLRuntimeOptions = graphQLRuntimeOptions with { EnableDwNto1JoinOpt = reader.GetBoolean() };
                             }

@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
@@ -21,15 +23,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private readonly ILogger<ComprehensiveHealthReportResponseWriter> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly HealthCheckHelper _healthCheckHelper;
+        private readonly IMemoryCache _cache;
+        private const string CACHE_KEY = "HealthCheckResponse";
 
         public ComprehensiveHealthReportResponseWriter(
             ILogger<ComprehensiveHealthReportResponseWriter> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            HealthCheckHelper healthCheckHelper)
+            HealthCheckHelper healthCheckHelper,
+            IMemoryCache cache)
         {
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
             _healthCheckHelper = healthCheckHelper;
+            _cache = cache;
         }
 
         /* {
@@ -62,31 +68,71 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         /// <param name="context">HttpContext for writing the response.</param>
         /// <returns>Writes the http response to the http context.</returns>
-        public Task WriteResponse(HttpContext context)
+        public async Task WriteResponse(HttpContext context)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
             // Global comprehensive Health Check Enabled
-            if (config.IsHealthEnabled)
+            if (config != null && config.IsHealthEnabled)
             {
                 if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.HostMode, config.AllowedRolesForHealth))
                 {
                     LogTrace("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                    return context.Response.CompleteAsync();
+                    await context.Response.CompleteAsync();
+                    return;
                 }
 
-                ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
-                string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-                LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
-                return context.Response.WriteAsync(response);
+                string? response;
+                // Check if the cache is enabled 
+                if (config.CacheTtlSeconds != null && config.CacheTtlSeconds > 0)
+                {
+                    if (!_cache.TryGetValue(CACHE_KEY, out response))
+                    {
+                        ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
+
+                        response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+                        LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+
+                        // Cache the response for 5 minutes (or any other duration you prefer)
+                        MemoryCacheEntryOptions cacheEntryOptions = new MemoryCacheEntryOptions()
+                            .SetAbsoluteExpiration(TimeSpan.FromSeconds((double)config.CacheTtlSeconds));
+
+                        _cache.Set(CACHE_KEY, response, cacheEntryOptions);
+                        LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                    }
+                    
+                    // Ensure cachedResponse is not null before calling WriteAsync
+                    if (response != null)
+                    {
+                        // Return the cached or newly generated response
+                        await context.Response.WriteAsync(response);
+                    }
+                    else
+                    {
+                        // Handle the case where cachedResponse is still null
+                        LogTrace("Error: The cached health check response is null.");
+                        context.Response.StatusCode = 500; // Internal Server Error
+                        await context.Response.WriteAsync("Failed to generate health check response.");
+                    }
+                }
+                else
+                {
+                    ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
+                    response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+                    LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                    await context.Response.WriteAsync(response);
+
+                }                
             }
             else
             {
                 LogTrace("Comprehensive Health Check Report Not Found: 404 Not Found.");
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return context.Response.CompleteAsync();
+                await context.Response.CompleteAsync();
             }
+
+            return;
         }
 
         /// <summary>

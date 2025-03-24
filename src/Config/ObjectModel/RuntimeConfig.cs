@@ -156,6 +156,9 @@ public record RuntimeConfig
     public HostMode HostMode =>
         Runtime?.Host?.Mode ?? HostMode.Production;
 
+    public int? CacheTtlSeconds =>
+        Runtime?.Health?.CacheTtlSeconds;
+
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();

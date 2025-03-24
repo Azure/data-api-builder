@@ -1,13 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record RuntimeHealthCheckConfig : HealthCheckConfig
 {
-    // TODO: Add support for caching in upcoming PRs
-    // public int cache-ttl-seconds { get; set; };
-
+    [JsonPropertyName("cache-ttl-seconds")]
+    public int? CacheTtlSeconds { get; set; }
+    
+    [JsonPropertyName("roles")]
     public List<string>? Roles { get; set; }
 
     // TODO: Add support for parallel stream to run the health check query in upcoming PRs
@@ -17,8 +20,9 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     {
     }
 
-    public RuntimeHealthCheckConfig(bool? Enabled, List<string>? Roles = null) : base(Enabled)
+    public RuntimeHealthCheckConfig(bool? Enabled, List<string>? Roles = null, int? CacheTtlSeconds = null) : base(Enabled)
     {
         this.Roles = Roles;
+        this.CacheTtlSeconds = CacheTtlSeconds;
     }
 }

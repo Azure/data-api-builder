@@ -38,13 +38,14 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool? enabled = null;
+                int? cacheTtlSeconds = null;
                 List<string>? roles = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new RuntimeHealthCheckConfig(enabled, roles);
+                        return new RuntimeHealthCheckConfig(enabled, roles, cacheTtlSeconds);
                     }
 
                     string? property = reader.GetString();
@@ -56,6 +57,19 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 enabled = reader.GetBoolean();
+                            }
+
+                            break;
+                        case "cache-ttl-seconds":
+                            if (reader.TokenType is not JsonTokenType.Null)
+                            {
+                                int parseTtlSeconds = reader.GetInt32();
+                                if (parseTtlSeconds <= 0)
+                                {
+                                    throw new JsonException($"Invalid value for ttl-seconds: {parseTtlSeconds}. Value must be greater than 0.");
+                                }
+
+                                cacheTtlSeconds = parseTtlSeconds;
                             }
 
                             break;
@@ -118,6 +132,12 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                 writer.WriteStartObject();
                 writer.WritePropertyName("enabled");
                 JsonSerializer.Serialize(writer, value.Enabled, options);
+                if (value?.CacheTtlSeconds is not null)
+                {
+                    writer.WritePropertyName("cache-ttl-seconds");
+                    JsonSerializer.Serialize(writer, value.CacheTtlSeconds, options);
+                }
+
                 if (value?.Roles is not null)
                 {
                     writer.WritePropertyName("roles");

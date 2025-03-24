@@ -111,10 +111,6 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
 
                 writer.WriteEndObject();
             }
-            else
-            {
-                writer.WriteNullValue();
-            }
         }
     }
 }

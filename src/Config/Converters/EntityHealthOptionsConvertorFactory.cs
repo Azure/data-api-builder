@@ -117,10 +117,6 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
 
                 writer.WriteEndObject();
             }
-            else
-            {
-                writer.WriteNullValue();
-            }
         }
     }
 }

@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             // Extract base URL: scheme + host + port (if present)
-            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}"; 
+            _apiRoute = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
         }
 
         // Executes the DB query by establishing a connection to the DB.

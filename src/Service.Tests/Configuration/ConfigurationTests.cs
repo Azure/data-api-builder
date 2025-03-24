@@ -3889,7 +3889,7 @@ type Planet @model(name:""PlanetAlias"") {
         {
             if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
             {
-                Dictionary<string, JsonElement> configPropertyValues = new ();
+                Dictionary<string, JsonElement> configPropertyValues = new();
 
                 // Enumerate through the configProperty's object properties and add them to the dictionary
                 foreach (JsonProperty property in configElement.EnumerateObject().ToList())

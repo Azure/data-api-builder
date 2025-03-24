@@ -66,7 +66,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                         if (databaseType != null && connectionString != null)
                         {
                             return new DataSource((DatabaseType)databaseType, connectionString, datasourceOptions, health);
-                            
+
                         }
 
                         throw new JsonException("Database-type and connection string are required fields and can't be null values.");
@@ -88,7 +88,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                     }
                                     catch (Exception)
                                     {
-                                        throw ;
+                                        throw;
                                     }
                                 }
 
@@ -102,8 +102,8 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                     }
                                     catch (Exception)
                                     {
-                                        throw ;
-                                    }                                    
+                                        throw;
+                                    }
                                 }
 
                                 break;

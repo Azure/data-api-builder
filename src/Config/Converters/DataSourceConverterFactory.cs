@@ -54,8 +54,8 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                DatabaseType? databaseType = null;
-                string? connectionString = null;
+                DatabaseType databaseType = DatabaseType.MSSQL;
+                string connectionString = string.Empty;
                 DatasourceHealthCheckConfig? health = null;
                 Dictionary<string, object?>? datasourceOptions = null;
 
@@ -63,13 +63,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        if (databaseType != null && connectionString != null)
-                        {
-                            return new DataSource((DatabaseType)databaseType, connectionString, datasourceOptions, health);
-
-                        }
-
-                        throw new JsonException("Database-type and connection string are required fields and can't be null values.");
+                        return new DataSource(databaseType, connectionString, datasourceOptions, health);
                     }
 
                     if (reader.TokenType is JsonTokenType.PropertyName)
@@ -80,33 +74,13 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                         switch (propertyName)
                         {
                             case "database-type":
-                                if (reader.TokenType is not JsonTokenType.Null)
-                                {
-                                    try
-                                    {
-                                        databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
-                                    }
-                                    catch (Exception)
-                                    {
-                                        throw;
-                                    }
-                                }
-
+                                databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
                                 break;
+                                
                             case "connection-string":
-                                if (reader.TokenType is not JsonTokenType.Null)
-                                {
-                                    try
-                                    {
-                                        connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
-                                    }
-                                    catch (Exception)
-                                    {
-                                        throw;
-                                    }
-                                }
-
+                                connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
                                 break;
+
                             case "health":
                                 if (reader.TokenType == JsonTokenType.Null)
                                 {

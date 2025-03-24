@@ -158,6 +158,7 @@ public record RuntimeConfig
     public HostMode HostMode =>
         Runtime?.Host?.Mode ?? HostMode.Production;
 
+    [JsonIgnore]
     public int? CacheTtlSeconds =>
         Runtime?.Health?.CacheTtlSeconds;
 

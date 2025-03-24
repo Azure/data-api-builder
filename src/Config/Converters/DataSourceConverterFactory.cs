@@ -76,7 +76,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                             case "database-type":
                                 databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
                                 break;
-                                
+
                             case "connection-string":
                                 connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
                                 break;

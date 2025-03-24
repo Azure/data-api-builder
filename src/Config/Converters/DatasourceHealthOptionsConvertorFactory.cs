@@ -7,7 +7,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
-internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
+internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
 {
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -80,11 +80,14 @@ internal class DatasourceHealthOptionsConvertorFactory : JsonConverterFactory
                             }
 
                             break;
+
+                        default:
+                            throw new JsonException($"Unexpected property {property}");
                     }
                 }
             }
 
-            throw new JsonException();
+            throw new JsonException("Datasource HealthOptions must be a proper object.");
         }
 
         public override void Write(Utf8JsonWriter writer, DatasourceHealthCheckConfig value, JsonSerializerOptions options)

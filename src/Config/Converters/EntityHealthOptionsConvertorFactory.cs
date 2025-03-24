@@ -37,7 +37,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
 
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                bool enabled = true;
+                bool? enabled = null;
                 int? first = null;
                 int? threshold_ms = null;
 
@@ -86,11 +86,14 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                             }
 
                             break;
+
+                        default:
+                            throw new JsonException($"Unexpected property {property}");
                     }
                 }
             }
 
-            throw new JsonException();
+            throw new JsonException("EntityHealth Options must be a proper object.");
         }
 
         public override void Write(Utf8JsonWriter writer, EntityHealthCheckConfig value, JsonSerializerOptions options)

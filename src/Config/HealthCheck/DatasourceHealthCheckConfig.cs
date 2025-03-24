@@ -8,7 +8,7 @@ using Azure.DataApiBuilder.Config.HealthCheck;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
-[JsonConverter(typeof(DatasourceHealthOptionsConvertorFactory))]
+[JsonConverter(typeof(DataSourceHealthOptionsConvertorFactory))]
 public record DatasourceHealthCheckConfig : HealthCheckConfig
 {
     // The identifier or simple name of the data source to be checked.

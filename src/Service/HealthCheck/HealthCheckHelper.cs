@@ -7,9 +7,11 @@ using System.Diagnostics;
 using System.Linq;
 using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Product;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -56,6 +58,50 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             UpdateHealthCheckDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
             UpdateOverallHealthStatus(ref ComprehensiveHealthCheckReport);
             return ComprehensiveHealthCheckReport;
+        }
+
+        /// <summary>
+        /// Checks if the incoming request is allowed to access the health check endpoint.
+        /// Anonymous requests are only allowed in Development Mode.
+        /// </summary>
+        /// <param name="httpContext">HttpContext to get the headers.</param>
+        /// <param name="hostMode">Compare with the HostMode of DAB</param>
+        /// <param name="allowedRoles">AllowedRoles in the Runtime.Health config</param>
+        /// <returns></returns>
+        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, HostMode hostMode, List<string> allowedRoles)
+        {
+            StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+
+            if (clientRoleHeader.Count > 1)
+            {
+                // When count > 1, multiple header fields with the same field-name
+                // are present in a message, but are NOT supported, specifically for the client role header.
+                // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+                // Discussion: https://stackoverflow.com/a/3097052/18174950
+                return false;
+            }
+
+            if (clientRoleHeader.Count == 0)
+            {
+                // When count = 0, the clientRoleHeader is absent on requests.
+                // Consequentially, anonymous requests are only allowed in Development Mode.
+                return hostMode == HostMode.Development;
+            }
+
+            string clientRoleHeaderValue = clientRoleHeader.ToString().ToLowerInvariant();
+
+            switch (hostMode)
+            {
+                // In case Mode is Development, then we consider the anonymous role and NA as a valid role.
+                case HostMode.Development:
+                    return string.IsNullOrEmpty(clientRoleHeaderValue) ||
+                    clientRoleHeaderValue == AuthorizationResolver.ROLE_ANONYMOUS ||
+                    allowedRoles.Contains(clientRoleHeaderValue);
+                case HostMode.Production:
+                    return allowedRoles.Contains(clientRoleHeaderValue);
+            }
+
+            return false;
         }
 
         // Updates the overall status by comparing all the internal HealthStatuses in the response.

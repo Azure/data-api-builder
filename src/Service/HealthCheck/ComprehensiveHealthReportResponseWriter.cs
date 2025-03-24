@@ -69,6 +69,13 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Global comprehensive Health Check Enabled
             if (config.IsHealthEnabled)
             {
+                if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.HostMode, config.AllowedRolesForHealth))
+                {
+                    LogTrace("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return context.Response.CompleteAsync();
+                }
+
                 ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
                 string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
                 LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");

@@ -235,6 +235,7 @@ public abstract class RuntimeConfigLoader
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new DatasourceHealthOptionsConvertorFactory());
+        options.Converters.Add(new RuntimeHealthOptionsConvertorFactory());
         options.Converters.Add(new EntityHealthOptionsConvertorFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replaceEnvVar));

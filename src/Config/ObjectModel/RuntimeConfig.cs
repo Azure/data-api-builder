@@ -150,6 +150,12 @@ public record RuntimeConfig
         Runtime.GraphQL is not null &&
         Runtime.GraphQL.EnableAggregation;
 
+    public List<string> AllowedRolesForHealth =>
+        Runtime?.Health?.Roles ?? new List<string>();
+
+    public HostMode HostMode =>
+        Runtime?.Host?.Mode ?? HostMode.Production;
+
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();

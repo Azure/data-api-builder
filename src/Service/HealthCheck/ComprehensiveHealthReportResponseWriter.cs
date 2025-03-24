@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         _cache.Set(CACHE_KEY, response, cacheEntryOptions);
                         LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
                     }
-                    
+
                     // Ensure cachedResponse is not null before calling WriteAsync
                     if (response != null)
                     {
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
                     await context.Response.WriteAsync(response);
 
-                }                
+                }
             }
             else
             {

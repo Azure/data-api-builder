@@ -90,7 +90,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                                             if (!string.IsNullOrEmpty(currentRole))
                                             {
                                                 stringList.Add(currentRole);
-                                                
+
                                             }
                                             /*
                                             else
@@ -98,7 +98,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                                                 Handle case where the string is empty (e.g., throw an exception or handle differently)
                                                 throw new JsonException("Empty string found in array of roles while deserialization.");
                                             }
-                                            */                                            
+                                            */
                                         }
                                         else
                                         {

@@ -9,7 +9,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
 {
     [JsonPropertyName("cache-ttl-seconds")]
     public int? CacheTtlSeconds { get; set; }
-    
+
     [JsonPropertyName("roles")]
     public List<string>? Roles { get; set; }
 

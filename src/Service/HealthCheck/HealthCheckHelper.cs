@@ -24,6 +24,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Dependencies
         private ILogger? _logger;
         private HttpUtilities _httpUtility;
+        private string _incomingRoleHeader = string.Empty;
+        private string _incomingRoleToken = string.Empty;
 
         private string _timeExceededErrorMessage = "The threshold for executing the request has exceeded.";
 
@@ -60,6 +62,22 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return ComprehensiveHealthCheckReport;
         }
 
+        public void UpdateIncomingRoleHeader(HttpContext httpContext)
+        {
+            StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+            StringValues clientTokenHeader = httpContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER];
+
+            if (clientRoleHeader.Count == 1)
+            {
+                _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
+            }            
+
+            if (clientRoleHeader.Count == 1)
+            {
+                _incomingRoleToken = clientTokenHeader.ToString();
+            }
+        }
+
         /// <summary>
         /// Checks if the incoming request is allowed to access the health check endpoint.
         /// Anonymous requests are only allowed in Development Mode.
@@ -70,35 +88,17 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <returns></returns>
         public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, HostMode hostMode, List<string> allowedRoles)
         {
-            StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-
-            if (clientRoleHeader.Count > 1)
+            if (allowedRoles == null || allowedRoles.Count == 0)
             {
-                // When count > 1, multiple header fields with the same field-name
-                // are present in a message, but are NOT supported, specifically for the client role header.
-                // Valid scenario per HTTP Spec: http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-                // Discussion: https://stackoverflow.com/a/3097052/18174950
-                return false;
-            }
-
-            if (clientRoleHeader.Count == 0)
-            {
-                // When count = 0, the clientRoleHeader is absent on requests.
-                // Consequentially, anonymous requests are only allowed in Development Mode.
+                // When allowedRoles is null or empty, all roles are allowed if Mode = Development.
                 return hostMode == HostMode.Development;
             }
 
-            string clientRoleHeaderValue = clientRoleHeader.ToString().ToLowerInvariant();
-
             switch (hostMode)
             {
-                // In case Mode is Development, then we consider the anonymous role and NA as a valid role.
                 case HostMode.Development:
-                    return string.IsNullOrEmpty(clientRoleHeaderValue) ||
-                    clientRoleHeaderValue == AuthorizationResolver.ROLE_ANONYMOUS ||
-                    allowedRoles.Contains(clientRoleHeaderValue);
                 case HostMode.Production:
-                    return allowedRoles.Contains(clientRoleHeaderValue);
+                    return allowedRoles.Contains(_incomingRoleHeader);
             }
 
             return false;
@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
-                        Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
+                        Exception = response.Item2 ?? (!thresholdCheck  ? _timeExceededErrorMessage : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
-                        Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
+                        Exception = response.Item2 ?? (!thresholdCheck  ? _timeExceededErrorMessage : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteRestQuery(restUriSuffix, entityName, first);
+                errorMessage = _httpUtility.ExecuteRestQuery(restUriSuffix, entityName, first, _incomingRoleHeader, _incomingRoleToken);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
@@ -287,7 +287,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteGraphQLQuery(graphqlUriSuffix, entityName, entity);
+                errorMessage = _httpUtility.ExecuteGraphQLQuery(graphqlUriSuffix, entityName, entity, _incomingRoleHeader, _incomingRoleToken);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }

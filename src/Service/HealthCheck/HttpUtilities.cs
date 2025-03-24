@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -86,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the REST query by sending a GET request to the API.
-        public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first)
+        public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first, string _incomingRoleHeader, string _incomingRoleToken)
         {
             string? errorMessage = null;
             try
@@ -104,10 +105,21 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     // Send a GET request to the API
                     apiRoute = $"{apiRoute}{Utilities.CreateHttpRestQuery(entityName, first)}";
-                    HttpResponseMessage response = client.GetAsync(apiRoute).Result;
+                    HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: apiRoute);
+                    if (string.IsNullOrEmpty(_incomingRoleToken) && string.IsNullOrEmpty(_incomingRoleHeader))
+                    {
+                        message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, _incomingRoleToken);
+                        message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, _incomingRoleHeader);
+                    }
+
+                    HttpResponseMessage response = client.SendAsync(message).Result;
                     if (response.IsSuccessStatusCode)
                     {
                         LogTrace($"The HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
+                    }
+                    else
+                    {
+                        errorMessage = $"The HealthEndpoint REST query failed with code: {response.StatusCode}.";
                     }
                 }
 
@@ -122,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Executes the GraphQL query by sending a POST request to the API.
         // Internally calls the metadata provider to fetch the column names to create the graphql payload.
-        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity)
+        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string _incomingRoleHeader, string _incomingRoleToken)
         {
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations
@@ -144,16 +156,33 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 string databaseObjectName = entity.Source.Object;
 
                 // In case any primitive column names are present, execute the query
-                if (columnNames.Any() && entity?.Health != null)
+                if (columnNames.Any())
                 {
                     using (HttpClient client = CreateClient(ApiRoute))
                     {
                         string jsonPayload = Utilities.CreateHttpGraphQLQuery(databaseObjectName, columnNames, entity.EntityFirst);
                         HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
-                        HttpResponseMessage response = client.PostAsync(ApiRoute, content).Result;
+
+                        HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: ApiRoute)
+                        {
+                            Content = content
+                        };
+
+                        if (string.IsNullOrEmpty(_incomingRoleToken) && string.IsNullOrEmpty(_incomingRoleHeader))
+                        {
+                            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, _incomingRoleToken);
+                            message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, _incomingRoleHeader);
+                        }
+
+                        HttpResponseMessage response = client.SendAsync(message).Result;
+                        
                         if (response.IsSuccessStatusCode)
                         {
                             LogTrace("The HealthEndpoint query executed successfully.");
+                        }
+                        else
+                        {
+                            errorMessage = $"The HealthEndpoint GraphQL query failed with code: {response.StatusCode}.";
                         }
                     }
                 }

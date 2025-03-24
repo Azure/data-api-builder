@@ -55,7 +55,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 DatabaseType? databaseType = null;
-                string connectionString = string.Empty;
+                string? connectionString = null;
                 DatasourceHealthCheckConfig? health = null;
                 Dictionary<string, object?>? datasourceOptions = null;
 
@@ -63,7 +63,13 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new DataSource(databaseType ?? DatabaseType.MSSQL, connectionString, datasourceOptions, health);
+                        if (databaseType != null && connectionString != null)
+                        {
+                            return new DataSource((DatabaseType)databaseType, connectionString, datasourceOptions, health);
+                            
+                        }
+
+                        throw new JsonException("Database-type and connection string are required fields and can't be null values.");
                     }
 
                     if (reader.TokenType is JsonTokenType.PropertyName)
@@ -76,14 +82,28 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                             case "database-type":
                                 if (reader.TokenType is not JsonTokenType.Null)
                                 {
-                                    databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
+                                    try
+                                    {
+                                        databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
+                                    }
+                                    catch (Exception)
+                                    {
+                                        throw ;
+                                    }
                                 }
 
                                 break;
                             case "connection-string":
                                 if (reader.TokenType is not JsonTokenType.Null)
                                 {
-                                    connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
+                                    try
+                                    {
+                                        connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
+                                    }
+                                    catch (Exception)
+                                    {
+                                        throw ;
+                                    }                                    
                                 }
 
                                 break;
@@ -157,7 +177,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException();
+            throw new JsonException("Datasource is a mandatory field and cannot be null.");
         }
 
         public override void Write(Utf8JsonWriter writer, DataSource value, JsonSerializerOptions options)

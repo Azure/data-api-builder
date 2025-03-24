@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         }
 
                         HttpResponseMessage response = client.SendAsync(message).Result;
-                        
+
                         if (response.IsSuccessStatusCode)
                         {
                             LogTrace("The HealthEndpoint query executed successfully.");

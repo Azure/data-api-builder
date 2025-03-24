@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (clientRoleHeader.Count == 1)
             {
                 _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
-            }            
+            }
 
             if (clientRoleHeader.Count == 1)
             {
@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!thresholdCheck  ? _timeExceededErrorMessage : null),
+                        Exception = response.Item2 ?? (!thresholdCheck ? _timeExceededErrorMessage : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!thresholdCheck  ? _timeExceededErrorMessage : null),
+                        Exception = response.Item2 ?? (!thresholdCheck ? _timeExceededErrorMessage : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }

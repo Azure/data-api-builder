@@ -572,17 +572,17 @@ public record RuntimeConfig
     /// <summary>
     /// Checks if the property log-level or its value are null
     /// </summary>
-    public bool IsLogLevelNull()
+    public static bool IsLogLevelNull(RuntimeConfig runtimeConfig)
     {
-        if (Runtime is null ||
-            Runtime.Telemetry is null ||
-            Runtime.Telemetry.LoggerLevel is null ||
-            Runtime.Telemetry.LoggerLevel.Count == 0)
+        if (runtimeConfig.Runtime is null ||
+            runtimeConfig.Runtime.Telemetry is null ||
+            runtimeConfig.Runtime.Telemetry.LoggerLevel is null ||
+            runtimeConfig.Runtime.Telemetry.LoggerLevel.Count == 0)
         {
             return true;
         }
 
-        foreach (KeyValuePair<string, LogLevel?> logger in Runtime!.Telemetry.LoggerLevel)
+        foreach (KeyValuePair<string, LogLevel?> logger in runtimeConfig.Runtime!.Telemetry.LoggerLevel)
         {
             if (logger.Key == null)
             {
@@ -602,17 +602,31 @@ public record RuntimeConfig
     /// </summary>
     public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig, string loggerFilter = "")
     {
-        LogLevel? value = null;
-        runtimeConfig.Runtime?.Telemetry?.LoggerLevel?.TryGetValue(loggerFilter, out value);
-        if (value is not null)
-        {
-            return (LogLevel)value;
-        }
 
-        runtimeConfig.Runtime?.Telemetry?.LoggerLevel?.TryGetValue("default", out value);
-        if (value is not null)
+        if (!IsLogLevelNull(runtimeConfig))
         {
-            return (LogLevel)value;
+            int max = 0;
+            string currentFilter = string.Empty;
+            foreach (KeyValuePair<string, LogLevel?> logger in runtimeConfig.Runtime!.Telemetry!.LoggerLevel!)
+            {
+                if (logger.Key.Length > max && loggerFilter.StartsWith(logger.Key))
+                {
+                    max = logger.Key.Length;
+                    currentFilter = logger.Key;
+                }
+            }
+
+            runtimeConfig.Runtime!.Telemetry!.LoggerLevel!.TryGetValue(currentFilter, out LogLevel? value);
+            if (value is not null)
+            {
+                return (LogLevel)value;
+            }
+
+            runtimeConfig.Runtime!.Telemetry!.LoggerLevel!.TryGetValue("default", out value);
+            if (value is not null)
+            {
+                return (LogLevel)value;
+            }
         }
 
         if (runtimeConfig.IsDevelopmentMode())

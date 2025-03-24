@@ -299,7 +299,6 @@ namespace Azure.DataApiBuilder.Service
                 .AddTypeConverter<TimeOnly, LocalTime>(
                     from => new LocalTime(from.Hour, from.Minute, from.Second, from.Millisecond));
 
-
             // Conditionally adds a maximum depth rule to the GraphQL queries/mutation selection set.
             // This rule is only added if a positive depth limit is specified, ensuring that the server
             // enforces a limit on the depth of incoming GraphQL queries/mutation to prevent extremely deep queries

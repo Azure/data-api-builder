@@ -122,17 +122,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 new(Provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION, null);
             RuntimeConfig configWithCustomHostMode = config
                 with
+            {
+                Runtime = config.Runtime with
                 {
-                    Runtime = config.Runtime
-                        with
-                        {
-                            Host = config.Runtime.Host
-                                with
-                                {
-                                    Authentication = authenticationOptions
-                                }
-                        }
-                };
+                    Host = config.Runtime.Host with
+                    {
+                        Authentication = authenticationOptions
+                    }
+                }
+            };
 
             File.WriteAllText(
                 SIMULATOR_CONFIG,

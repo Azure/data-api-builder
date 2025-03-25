@@ -245,7 +245,7 @@
             },
             "mode": {
               "description": "Set if running in Development or Production mode",
-              "type": "string",
+              "type": ["string", "null"],
               "default": "production",
               "enum": [
                 "production",
@@ -253,7 +253,7 @@
               ]
             },
             "cors": {
-              "type": "object",
+              "type": ["object", "null"],
               "description": "Configure CORS",
               "additionalProperties": false,
               "properties": {
@@ -273,7 +273,7 @@
               }
             },
             "authentication": {
-              "type": "object",
+              "type": ["object", "null"],
               "additionalProperties": false,
               "properties": {
                 "provider": {

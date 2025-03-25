@@ -56,6 +56,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
             ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport = new();
             UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport);
+            UpdateTimestampOfResponse(ref ComprehensiveHealthCheckReport);
             UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
             UpdateHealthCheckDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
             UpdateOverallHealthStatus(ref ComprehensiveHealthCheckReport);
@@ -124,6 +125,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Update the version and app name to the response.
             response.Version = ProductInfo.GetProductVersion();
             response.AppName = ProductInfo.GetDataApiBuilderUserAgent();
+        }
+
+        // Updates the timestamp for the Health report.
+        private static void UpdateTimestampOfResponse(ref ComprehensiveHealthCheckReport response)
+        {
+            response.TimeStamp = DateTime.UtcNow;
         }
 
         // Updates the DAB configuration details coming from RuntimeConfig for the Health report.

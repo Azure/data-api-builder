@@ -64,7 +64,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 int parseTtlSeconds = reader.GetInt32();
-                                if (parseTtlSeconds <= 0)
+                                if (parseTtlSeconds < 0)
                                 {
                                     throw new JsonException($"Invalid value for ttl-seconds: {parseTtlSeconds}. Value must be greater than 0.");
                                 }
@@ -132,7 +132,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                 writer.WriteStartObject();
                 writer.WritePropertyName("enabled");
                 JsonSerializer.Serialize(writer, value.Enabled, options);
-                if (value?.CacheTtlSeconds is not null)
+                if (value?.UserProvidedTtlOptions is true)
                 {
                     writer.WritePropertyName("cache-ttl-seconds");
                     JsonSerializer.Serialize(writer, value.CacheTtlSeconds, options);

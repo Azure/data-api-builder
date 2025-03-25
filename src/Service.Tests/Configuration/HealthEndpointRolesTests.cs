@@ -85,13 +85,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         break;
                     case "temp-role":
                         Assert.AreEqual(expected: HttpStatusCode.Forbidden, actual: authorizedResponse.StatusCode);
-                        break;    
+                        break;
 
                     default:
                         Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
                         break;
                 }
-                
+
             }
         }
 

@@ -239,6 +239,9 @@ namespace Azure.DataApiBuilder.Service
                 ConfigureAuthentication(services, configProvider);
             }
 
+            // Register IMemoryCache
+            services.AddMemoryCache();
+
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
             {

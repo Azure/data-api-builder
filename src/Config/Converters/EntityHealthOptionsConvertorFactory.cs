@@ -30,7 +30,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
         /// <exception cref="JsonException">Thrown when improperly formatted health check options are provided.</exception>
         public override EntityHealthCheckConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.Null)
+            if (reader.TokenType is JsonTokenType.Null)
             {
                 return new EntityHealthCheckConfig();
             }
@@ -103,13 +103,13 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                 writer.WriteStartObject();
                 writer.WritePropertyName("enabled");
                 JsonSerializer.Serialize(writer, value.Enabled, options);
-                if (value.UserProvidedFirst)
+                if (value.UserProvidedFirst is true)
                 {
                     writer.WritePropertyName("first");
                     JsonSerializer.Serialize(writer, value.First, options);
                 }
 
-                if (value.UserProvidedThresholdMs)
+                if (value.UserProvidedThresholdMs is true)
                 {
                     writer.WritePropertyName("threshold-ms");
                     JsonSerializer.Serialize(writer, value.ThresholdMs, options);

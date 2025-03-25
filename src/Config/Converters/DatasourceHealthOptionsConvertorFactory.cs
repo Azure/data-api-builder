@@ -30,7 +30,7 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
         /// <exception cref="JsonException">Thrown when improperly formatted health check options are provided.</exception>
         public override DatasourceHealthCheckConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.Null)
+            if (reader.TokenType is JsonTokenType.Null)
             {
                 return new DatasourceHealthCheckConfig();
             }

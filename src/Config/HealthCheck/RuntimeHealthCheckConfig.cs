@@ -20,7 +20,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(CacheTtlSeconds))]
     public bool UserProvidedTtlOptions { get; init; } = false;
-    
+
     public RuntimeHealthCheckConfig() : base()
     {
     }
@@ -28,7 +28,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     public RuntimeHealthCheckConfig(bool? Enabled, List<string>? Roles = null, int? CacheTtlSeconds = null) : base(Enabled)
     {
         this.Roles = Roles;
-        
+
         if (CacheTtlSeconds is not null)
         {
             this.CacheTtlSeconds = CacheTtlSeconds;

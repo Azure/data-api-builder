@@ -88,7 +88,7 @@ public class HealthEndpointCachingTests
             {
                 Assert.AreEqual(responseContent2, responseContent1);
             }
-        }        
+        }
     }
 
     /// <summary>

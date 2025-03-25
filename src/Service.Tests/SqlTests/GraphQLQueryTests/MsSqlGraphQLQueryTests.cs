@@ -197,6 +197,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <sumary>
         /// Test if filter param successfully filters when string filter results in a value longer than the column
         /// </summary>
+        /// <remarks>
+        /// When using complex operators i.e. NotContains due to wildcards being added or special characters being escaped
+        /// the string being passed as a parameter maybe longer than the length of the column. The parameter data type
+        /// can't be fixed to the length of the underlying column, otherwise the parameter value would be truncated and
+        /// we'd get incorret results
+        /// </remarks>
         [DataTestMethod]
         [DataRow("contains")]
         [DataRow("startsWith")]
@@ -204,6 +210,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public virtual async Task TestFilterParamForStringFilterWorkWithComplexOp(string op)
         {
             string graphQLQueryName = "books";
+
+            //using a lookup value that is the length of the title column AND includes special characters
             string graphQLQuery = @"{
                 books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: {" + op + @":""Great wall of china explained]""}}) {
                     items {
@@ -229,10 +237,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <sumary>
         /// Test if filter param successfully filters when string filter results in a value longer than the column
         /// </summary>
+        /// <remarks>
+        /// When using complex operators i.e. NotContains due to wildcards being added or special characters being escaped
+        /// the string being passed as a parameter maybe longer than the length of the column. The parameter data type
+        /// can't be fixed to the length of the underlying column, otherwise the parameter value would be truncated and
+        /// we'd get incorret results
+        /// </remarks>
         [TestMethod]
         public virtual async Task TestFilterParamForStringFilterWorkWithNotContains(string op)
         {
             string graphQLQueryName = "books";
+            //using a lookup value that is the length of the title column AND includes special characters
             string graphQLQuery = @"{
                 books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: { notContains:""Great wall of china explained]""},id:{eq:3} }) {
                     items {

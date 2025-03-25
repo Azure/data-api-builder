@@ -623,7 +623,7 @@ public record RuntimeConfig
                 return (LogLevel)value;
             }
 
-            runtimeConfig.Runtime!.Telemetry!.LoggerLevel!.TryGetValue("default", out value);
+            runtimeConfig.Runtime!.Telemetry!.LoggerLevel!.TryGetValue(LoggerFilters.DEFAULT_FILTER, out value);
             if (value is not null)
             {
                 return (LogLevel)value;

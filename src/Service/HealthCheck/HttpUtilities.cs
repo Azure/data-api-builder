@@ -73,12 +73,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     SqlCommand command = new(query, connection);
                     connection.Open();
                     SqlDataReader reader = command.ExecuteReader();
-                    LogTrace("The query executed successfully.");
+                    LogTrace("The health check query for datasource executed successfully.");
                     reader.Close();
                 }
                 catch (Exception ex)
                 {
-                    LogTrace($"An exception occurred while executing the query: {ex.Message}");
+                    LogTrace($"An exception occurred while executing the health check query: {ex.Message}");
                     errorMessage = ex.Message;
                 }
             }
@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     HttpResponseMessage response = client.SendAsync(message).Result;
                     if (response.IsSuccessStatusCode)
                     {
-                        LogTrace($"The HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
+                        LogTrace($"The REST HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
                     }
                     else
                     {
@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the health check rest query: {ex.Message}");
                 return ex.Message;
             }
         }
@@ -138,8 +138,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations
-            string ApiRoute = Utilities.GetServiceRoute(_apiRoute, graphqlUriSuffix);
-            if (ApiRoute == string.Empty)
+            string apiRoute = Utilities.GetServiceRoute(_apiRoute, graphqlUriSuffix);
+            if (apiRoute == string.Empty)
             {
                 LogTrace("The API route is not available, hence HealthEndpoint is not available.");
                 return errorMessage;
@@ -158,12 +158,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 // In case any primitive column names are present, execute the query
                 if (columnNames.Any())
                 {
-                    using (HttpClient client = CreateClient(ApiRoute))
+                    using (HttpClient client = CreateClient(apiRoute))
                     {
                         string jsonPayload = Utilities.CreateHttpGraphQLQuery(databaseObjectName, columnNames, entity.EntityFirst);
                         HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
 
-                        HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: ApiRoute)
+                        HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: apiRoute)
                         {
                             Content = content
                         };
@@ -178,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                         if (response.IsSuccessStatusCode)
                         {
-                            LogTrace("The HealthEndpoint query executed successfully.");
+                            LogTrace("The GraphQL HealthEndpoint query executed successfully.");
                         }
                         else
                         {
@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the Graphql health check query: {ex.Message}");
                 return ex.Message;
             }
         }

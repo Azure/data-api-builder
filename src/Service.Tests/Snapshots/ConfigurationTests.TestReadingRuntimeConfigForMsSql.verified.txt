@@ -1948,7 +1948,7 @@
           spores: hazards
         },
         Relationships: {
-          shrub: {
+          Shrub: {
             TargetEntity: Shrub,
             SourceFields: [
               habitat

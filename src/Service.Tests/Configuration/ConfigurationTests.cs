@@ -3756,7 +3756,7 @@ type Planet @model(name:""PlanetAlias"") {
         {
             // Arrange
             // At least one entity is required in the runtime config for the engine to start.
-            // Even though this entity is not under test, it must be supplied enable successfull
+            // Even though this entity is not under test, it must be supplied enable successful
             // config file creation.
             Entity requiredEntity = new(
                 Health: new(Enabled: enableEntityHealth),
@@ -3796,36 +3796,14 @@ type Planet @model(name:""PlanetAlias"") {
                     Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
                     ValidateBasicDetailsHealthCheckResponse(responseProperties);
-                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties);
-                    ValidateDatasourceHealthCheckResponse(responseProperties, enableDatasourceHealth);
-                    ValidateEntityHealthCheckResponse(responseProperties, enableEntityHealth);
+                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties, enableGlobalRest, enableGlobalGraphql);
+                    ValidateIfAttributePresentInResponse(responseProperties, enableDatasourceHealth, HealthCheckConstants.DATASOURCE);
+                    ValidateIfAttributePresentInResponse(responseProperties, enableEntityHealth, HealthCheckConstants.ENDPOINT);
                     if (enableEntityHealth)
                     {
                         ValidateEntityRestAndGraphQLResponse(responseProperties, enableEntityRest, enableEntityGraphQL, enableGlobalRest, enableGlobalGraphql);
                     }
                 }
-            }
-        }
-
-        private static void ValidateDatasourceHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableDatasourceHealth)
-        {
-            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
-            {
-                bool checksTags = checksElement.EnumerateArray().Any(datasourceCheck =>
-                {
-                    if (datasourceCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
-                    {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.DATASOURCE);
-                    }
-
-                    return false;
-                });
-
-                Assert.AreEqual(enableDatasourceHealth, checksTags);
-            }
-            else
-            {
-                Assert.Fail("Checks Array is not present in the Comprehensive Health Check Report.");
             }
         }
 
@@ -3871,9 +3849,10 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
-        private static void ValidateEntityHealthCheckResponse(
+        private static void ValidateIfAttributePresentInResponse(
             Dictionary<string, JsonElement> responseProperties,
-            bool enableEntityHealth)
+            bool enableFlag,
+            string checkString)
         {
             if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
             {
@@ -3881,13 +3860,13 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.ENDPOINT);
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == checkString);
                     }
 
                     return false;
                 });
 
-                Assert.AreEqual(enableEntityHealth, checksTags);
+                Assert.AreEqual(enableFlag, checksTags);
             }
             else
             {
@@ -3895,20 +3874,36 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
-        private static void ValidateConfigurationIsNotNull(JsonElement configElement, string objectKey)
+        private static void ValidateConfigurationIsNotNull(Dictionary<string, JsonElement> configPropertyValues, string objectKey)
         {
-            Assert.IsNotNull(configElement.TryGetProperty(objectKey, out JsonElement _), $"Expected {objectKey} to be present.");
+            Assert.IsTrue(configPropertyValues.ContainsKey(objectKey), $"Expected {objectKey} to be present in the configuration object.");
+            Assert.IsNotNull(configPropertyValues[objectKey], $"Expected {objectKey} to be non-null.");
         }
 
-        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
+        private static void ValidateConfigurationIsCorrectFlag(Dictionary<string, JsonElement> configElement, string objectKey, bool enableFlag)
+        {
+            Assert.AreEqual(enableFlag, configElement[objectKey].GetBoolean(), $"Expected {objectKey} to be set to {enableFlag}.");
+        }
+
+        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableGlobalRest, bool enableGlobalGraphQL)
         {
             if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
             {
-                ValidateConfigurationIsNotNull(configElement, "Rest");
-                ValidateConfigurationIsNotNull(configElement, "GraphQL");
-                ValidateConfigurationIsNotNull(configElement, "Caching");
-                ValidateConfigurationIsNotNull(configElement, "Telemetry");
-                ValidateConfigurationIsNotNull(configElement, "Mode");
+                Dictionary<string, JsonElement> configPropertyValues = new();
+
+                // Enumerate through the configProperty's object properties and add them to the dictionary
+                foreach (JsonProperty property in configElement.EnumerateObject().ToList())
+                {
+                    configPropertyValues[property.Name] = property.Value;
+                }
+
+                ValidateConfigurationIsNotNull(configPropertyValues, "rest");
+                ValidateConfigurationIsCorrectFlag(configPropertyValues, "rest", enableGlobalRest);
+                ValidateConfigurationIsNotNull(configPropertyValues, "graphql");
+                ValidateConfigurationIsCorrectFlag(configPropertyValues, "graphql", enableGlobalGraphQL);
+                ValidateConfigurationIsNotNull(configPropertyValues, "caching");
+                ValidateConfigurationIsNotNull(configPropertyValues, "telemetry");
+                ValidateConfigurationIsNotNull(configPropertyValues, "mode");
             }
             else
             {

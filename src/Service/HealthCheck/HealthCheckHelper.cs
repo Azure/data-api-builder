@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private string _incomingRoleHeader = string.Empty;
         private string _incomingRoleToken = string.Empty;
 
-        private string _timeExceededErrorMessage = "The threshold for executing the request has exceeded.";
+        private const string TIME_EXCEEDED_ERROR_MESSAGE = "The threshold for executing the request has exceeded.";
 
         /// <summary>
         /// Constructor to inject the logger and HttpUtility class.
@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         /// <param name="context">HttpContext</param>
         /// <param name="runtimeConfig">RuntimeConfig</param>
-        /// <returns></returns>
+        /// <returns>This function returns the comprehensive health report after calculating the response time of each datasource, rest and graphql health queries.</returns>
         public ComprehensiveHealthCheckReport GetHealthCheckResponse(HttpContext context, RuntimeConfig runtimeConfig)
         {
             // Create a JSON response for the comprehensive health check endpoint using the provided basic health report.
@@ -131,11 +131,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             ComprehensiveHealthCheckReport.ConfigurationDetails = new ConfigurationDetails
             {
-                Rest = runtimeConfig?.Runtime?.Rest != null && runtimeConfig.Runtime.Rest.Enabled,
-                GraphQL = runtimeConfig?.Runtime?.GraphQL != null && runtimeConfig.Runtime.GraphQL.Enabled,
-                Caching = runtimeConfig?.Runtime?.IsCachingEnabled ?? false,
+                Rest = runtimeConfig.IsRestEnabled,
+                GraphQL = runtimeConfig.IsGraphQLEnabled,
+                Caching = runtimeConfig.IsCachingEnabled,
                 Telemetry = runtimeConfig?.Runtime?.Telemetry != null,
-                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Development,
+                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Production, // Modify to runtimeConfig.HostMode in Roles PR
             };
         }
 
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         ResponseTimeMs = response.Item1,
                         ThresholdMs = runtimeConfig?.DataSource.DatasourceThresholdMs
                     },
-                    Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
+                    Exception = !thresholdCheck ? TIME_EXCEEDED_ERROR_MESSAGE : response.Item2,
                     Tags = [HealthCheckConstants.DATASOURCE],
                     Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                 });
@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!thresholdCheck ? _timeExceededErrorMessage : null),
+                        Exception = response.Item2 ?? (!thresholdCheck ? TIME_EXCEEDED_ERROR_MESSAGE : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!thresholdCheck ? _timeExceededErrorMessage : null),
+                        Exception = response.Item2 ?? (!thresholdCheck ? TIME_EXCEEDED_ERROR_MESSAGE : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }

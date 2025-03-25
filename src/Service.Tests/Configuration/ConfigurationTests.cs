@@ -18,7 +18,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
@@ -39,7 +38,6 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -3602,18 +3600,21 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(LogLevel.Trace, nameof(RuntimeConfigValidator))]
-        [DataRow(LogLevel.Debug, nameof(SqlQueryEngine))]
-        [DataRow(LogLevel.Information, nameof(IQueryExecutor))]
-        [DataRow(LogLevel.Warning, nameof(ISqlMetadataProvider))]
-        [DataRow(LogLevel.Error, nameof(BasicHealthReportResponseWriter))]
-        [DataRow(LogLevel.Critical, nameof(ComprehensiveHealthReportResponseWriter))]
-        [DataRow(LogLevel.None, nameof(RestController))]
-        [DataRow(LogLevel.Trace, nameof(ClientRoleHeaderAuthenticationMiddleware))]
-        [DataRow(LogLevel.Debug, nameof(ConfigurationController))]
-        [DataRow(LogLevel.Information, nameof(IAuthorizationHandler))]
-        [DataRow(LogLevel.Warning, nameof(IAuthorizationResolver))]
-        [DataRow(LogLevel.Error, "default")]
+        [DataRow(LogLevel.Trace, LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER )]
+        [DataRow(LogLevel.Debug, LoggerFilters.SQL_QUERY_ENGINE_FILTER )]
+        [DataRow(LogLevel.Information, LoggerFilters.IQUERY_EXECUTOR_FILTER )]
+        [DataRow(LogLevel.Warning, LoggerFilters.ISQL_METADATA_PROVIDER_FILTER )]
+        [DataRow(LogLevel.Error, LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER )]
+        [DataRow(LogLevel.Critical, LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
+        [DataRow(LogLevel.None, LoggerFilters.REST_CONTROLLER_FILTER )]
+        [DataRow(LogLevel.Trace, LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER )]
+        [DataRow(LogLevel.Debug, LoggerFilters.CONFIGURATION_CONTROLLER_FILTER )]
+        [DataRow(LogLevel.Information, LoggerFilters.IAUTHORIZATION_HANDLER_FILTER )]
+        [DataRow(LogLevel.Warning, LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER)]
+        [DataRow(LogLevel.Error, LoggerFilters.DEFAULT_FILTER)]
+        [DataRow(LogLevel.Critical, "Azure")]
+        [DataRow(LogLevel.None, "Azure.DataApiBuilder")]
+        [DataRow(LogLevel.Trace, "Microsoft.AspNetCore.Authorization")]
         public void ValidLogLevelFilters(LogLevel logLevel, string loggingFilter)
         {
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(logLevel, loggingFilter);
@@ -3639,7 +3640,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow("Azure.DataApiBuilder.Core.Configurations", DisplayName = "Validates that an incomplete log level keyword fails to build")]
+        [DataRow("Azure.DataApiBuilder.Core.Configur", DisplayName = "Validates that an incomplete log level keyword fails to build")]
         [DataRow("Azure.DataApiBuilder.Core.Configurations.RuntimeConfigVldtr", DisplayName = "Validates that a wrong name at end of log level keyword fails to build")]
         [DataRow("Azre.DataApiBuilder.Core.Configurations.RuntimeConfigValidator", DisplayName = "Validates that a wrong name at start of log level keyword fails to build")]
         [DataRow("Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator.Extra", DisplayName = "Validates that log level keyword with additional path fails to build")]
@@ -3658,10 +3659,7 @@ type Planet @model(name:""PlanetAlias"") {
             // Catch verifies that the exception is due to LogLevel having a key that is invalid
             catch (Exception ex)
             {
-                Assert.AreEqual(typeof(DataApiBuilderException), ex.GetType());
-
-                DataApiBuilderException dabEx = (DataApiBuilderException)ex;
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, dabEx.SubStatusCode);
+                Assert.AreEqual(typeof(NotSupportedException), ex.GetType());
             }
         }
 

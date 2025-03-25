@@ -609,6 +609,7 @@ public record RuntimeConfig
             string currentFilter = string.Empty;
             foreach (KeyValuePair<string, LogLevel?> logger in runtimeConfig.Runtime!.Telemetry!.LoggerLevel!)
             {
+                // Checks if the new key that is valid has more priority than the current key
                 if (logger.Key.Length > max && loggerFilter.StartsWith(logger.Key))
                 {
                     max = logger.Key.Length;

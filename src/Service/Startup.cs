@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
+using Azure.DataApiBuilder.Service.Telemetry;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
@@ -44,6 +45,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -147,7 +149,8 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(RuntimeConfigValidator).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(RuntimeConfigValidator).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<RuntimeConfigValidator>();
             });
             services.AddSingleton<RuntimeConfigValidator>();
@@ -158,19 +161,22 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(SqlQueryEngine).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(SqlQueryEngine).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<SqlQueryEngine>();
             });
 
             services.AddSingleton<ILogger<IQueryExecutor>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(IQueryExecutor).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(IQueryExecutor).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<IQueryExecutor>();
             });
 
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(ISqlMetadataProvider).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(ISqlMetadataProvider).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<ISqlMetadataProvider>();
             });
 
@@ -194,32 +200,37 @@ namespace Azure.DataApiBuilder.Service
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(BasicHealthReportResponseWriter).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(BasicHealthReportResponseWriter).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<BasicHealthReportResponseWriter>();
             });
 
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<ComprehensiveHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(ComprehensiveHealthReportResponseWriter).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(ComprehensiveHealthReportResponseWriter).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
             });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(RestController).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(RestController).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<RestController>();
             });
 
             services.AddSingleton<ILogger<ClientRoleHeaderAuthenticationMiddleware>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(ClientRoleHeaderAuthenticationMiddleware).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(ClientRoleHeaderAuthenticationMiddleware).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<ClientRoleHeaderAuthenticationMiddleware>();
             });
 
             services.AddSingleton<ILogger<ConfigurationController>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(ConfigurationController).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(ConfigurationController).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<ConfigurationController>();
             });
 
@@ -241,12 +252,14 @@ namespace Azure.DataApiBuilder.Service
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(IAuthorizationHandler).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(IAuthorizationHandler).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<IAuthorizationHandler>();
             });
             services.AddSingleton<ILogger<IAuthorizationResolver>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(IAuthorizationResolver).FullName);
+                LogLevelInitializer logLevelRuntime = new(MinimumLogLevel, typeof(IAuthorizationResolver).FullName, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelRuntime);
                 return loggerFactory.CreateLogger<IAuthorizationResolver>();
             });
 
@@ -520,13 +533,8 @@ namespace Azure.DataApiBuilder.Service
         /// minimum log level based on host.mode in the runtime config if available.
         /// Creates a logger factory with the minimum log level.
         /// </summary>
-        public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, string? loggerFilter)
+        public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
-            if (loggerFilter == null)
-            {
-                loggerFilter = string.Empty;
-            }
-
             if (!IsLogLevelOverriddenByCli)
             {
                 // If the log level is not overridden by command line arguments specified through CLI,
@@ -534,15 +542,14 @@ namespace Azure.DataApiBuilder.Service
                 // If runtime config is available, set the loglevel to Error if host.mode is Production,
                 // Debug if it is Development.
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
-                {
-                    MinimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig, loggerFilter);
-                }
+
+                logLevelInitializer.SetRuntimeConfigProvider(configProvider);
+                logLevelInitializer.SetLogLevel();
             }
 
             TelemetryClient? appTelemetryClient = serviceProvider.GetService<TelemetryClient>();
 
-            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+            return Program.GetLoggerFactoryForLogLevel(logLevelInitializer.MinLogLevel, appTelemetryClient, logLevelInitializer);
         }
 
         /// <summary>

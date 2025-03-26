@@ -16,11 +16,18 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         public LogLevel MinLogLevel { get; private set; }
 
-        public LogLevelInitializer(LogLevel logLevel, string loggerFilter, HotReloadEventHandler<HotReloadEventArgs>? handler)
+        public LogLevelInitializer(LogLevel logLevel, string? loggerFilter, HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
             handler?.Subscribe(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, OnConfigChanged);
             MinLogLevel = logLevel;
-            _loggerFilter = loggerFilter;
+            if (loggerFilter != null)
+            {
+                _loggerFilter = loggerFilter;
+            }
+            else
+            {
+                _loggerFilter = string.Empty;
+            }
         }
 
         public void SetLogLevel()

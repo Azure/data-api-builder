@@ -2,10 +2,18 @@
 // Licensed under the MIT License.
 
 using System.IO.Abstractions;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service.Controllers;
+using Azure.DataApiBuilder.Service.HealthCheck;
 using Cli.Constants;
 using CommandLine;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
 
@@ -28,6 +36,7 @@ namespace Cli.Commands
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
+            ValidateOptions.AddValidFilters();
             bool isValidConfig = ConfigGenerator.IsConfigValid(this, loader, fileSystem);
 
             if (isValidConfig)
@@ -40,6 +49,25 @@ namespace Cli.Commands
             }
 
             return isValidConfig ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;
+        }
+
+        /// <summary>
+        /// Adds all of the class namespaces that have loggers that the user is able to change
+        /// </summary>
+        private static void AddValidFilters()
+        {
+            LoggerFilters.AddFilter(typeof(RuntimeConfigValidator).FullName);
+            LoggerFilters.AddFilter(typeof(SqlQueryEngine).FullName);
+            LoggerFilters.AddFilter(typeof(IQueryExecutor).FullName);
+            LoggerFilters.AddFilter(typeof(ISqlMetadataProvider).FullName);
+            LoggerFilters.AddFilter(typeof(BasicHealthReportResponseWriter).FullName);
+            LoggerFilters.AddFilter(typeof(ComprehensiveHealthReportResponseWriter).FullName);
+            LoggerFilters.AddFilter(typeof(RestController).FullName);
+            LoggerFilters.AddFilter(typeof(ClientRoleHeaderAuthenticationMiddleware).FullName);
+            LoggerFilters.AddFilter(typeof(ConfigurationController).FullName);
+            LoggerFilters.AddFilter(typeof(IAuthorizationHandler).FullName);
+            LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
+            LoggerFilters.AddFilter("default");
         }
     }
 }

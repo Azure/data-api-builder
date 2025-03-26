@@ -18,6 +18,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
@@ -38,6 +39,7 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -3721,23 +3723,60 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(LogLevel.Trace, LoggerFilters.RUNTIME_CONFIG_VALIDATOR_FILTER)]
-        [DataRow(LogLevel.Debug, LoggerFilters.SQL_QUERY_ENGINE_FILTER)]
-        [DataRow(LogLevel.Information, LoggerFilters.IQUERY_EXECUTOR_FILTER)]
-        [DataRow(LogLevel.Warning, LoggerFilters.ISQL_METADATA_PROVIDER_FILTER)]
-        [DataRow(LogLevel.Error, LoggerFilters.BASIC_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
-        [DataRow(LogLevel.Critical, LoggerFilters.COMPREHENSIVE_HEALTH_REPORT_RESPONSE_WRITER_FILTER)]
-        [DataRow(LogLevel.None, LoggerFilters.REST_CONTROLLER_FILTER)]
-        [DataRow(LogLevel.Trace, LoggerFilters.CLIENT_ROLE_HEADER_AUTHENTICATION_MIDDLEWARE_FILTER)]
-        [DataRow(LogLevel.Debug, LoggerFilters.CONFIGURATION_CONTROLLER_FILTER)]
-        [DataRow(LogLevel.Information, LoggerFilters.IAUTHORIZATION_HANDLER_FILTER)]
-        [DataRow(LogLevel.Warning, LoggerFilters.IAUTHORIZATION_RESOLVER_FILTER)]
-        [DataRow(LogLevel.Error, LoggerFilters.DEFAULT_FILTER)]
-        [DataRow(LogLevel.Critical, "Azure")]
-        [DataRow(LogLevel.None, "Azure.DataApiBuilder")]
-        [DataRow(LogLevel.Trace, "Microsoft.AspNetCore.Authorization")]
-        public void ValidLogLevelFilters(LogLevel logLevel, string loggingFilter)
+        [DataRow(LogLevel.Trace, typeof(RuntimeConfigValidator))]
+        [DataRow(LogLevel.Debug, typeof(SqlQueryEngine))]
+        [DataRow(LogLevel.Information, typeof(IQueryExecutor))]
+        [DataRow(LogLevel.Warning, typeof(ISqlMetadataProvider))]
+        [DataRow(LogLevel.Error, typeof(BasicHealthReportResponseWriter))]
+        [DataRow(LogLevel.Critical, typeof(ComprehensiveHealthReportResponseWriter))]
+        [DataRow(LogLevel.None, typeof(RestController))]
+        [DataRow(LogLevel.Trace, typeof(ClientRoleHeaderAuthenticationMiddleware))]
+        [DataRow(LogLevel.Debug, typeof(ConfigurationController))]
+        [DataRow(LogLevel.Information, typeof(IAuthorizationHandler))]
+        [DataRow(LogLevel.Warning, typeof(IAuthorizationResolver))]
+        public void ValidLogLevelFilters(LogLevel logLevel, Type loggingType)
         {
+            string loggingFilter = loggingType.FullName;
+            TestHelper.AddValidFilters();
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(logLevel, loggingFilter);
+            try
+            {
+                RuntimeConfigValidator.ValidateLoggerFilters(configWithCustomLogLevel);
+            }
+            catch
+            {
+                Assert.Fail();
+            }
+
+            string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
+
+            Dictionary<string, LogLevel?> actualLoggerLevel = deserializedRuntimeConfig.Runtime.Telemetry.LoggerLevel;
+            Assert.IsTrue(actualLoggerLevel.ContainsKey(loggingFilter) && actualLoggerLevel.Count == 1);
+            Assert.IsTrue(actualLoggerLevel[loggingFilter] == logLevel);
+        }
+
+        /// <summary>
+        /// Tests different log level filters that are valid and check that they are deserialized correctly
+        /// This test uses strings as we are checking for values that are not avaliable using the typeof() function
+        /// It is the same test as ValidLogLevelFilters.
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(LogLevel.Trace, "default")]
+        [DataRow(LogLevel.Debug, "Azure")]
+        [DataRow(LogLevel.Information, "Azure.DataApiBuilder")]
+        [DataRow(LogLevel.Warning, "Azure.DataApiBuilder.Core")]
+        [DataRow(LogLevel.Error, "Azure.DataApiBuilder.Core.Configurations")]
+        [DataRow(LogLevel.Critical, "Azure.DataApiBuilder.Core.Resolvers")]
+        [DataRow(LogLevel.None, "Azure.DataApiBuilder.Core.Services")]
+        [DataRow(LogLevel.Trace, "Azure.DataApiBuilder.Service")]
+        [DataRow(LogLevel.Debug, "Azure.DataApiBuilder.Service.HealthCheck")]
+        [DataRow(LogLevel.Information, "Azure.DataApiBuilder.Service.Controllers")]
+        [DataRow(LogLevel.Warning, "Microsoft.AspNetCore")]
+        public void ValidStringLogLevelFilters(LogLevel logLevel, string loggingFilter)
+        {
+            TestHelper.AddValidFilters();
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(logLevel, loggingFilter);
             try
             {

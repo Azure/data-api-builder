@@ -138,7 +138,6 @@ public class RuntimeConfigValidator : IConfigValidator
     {
         if (runtimeConfig.Runtime?.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
         {
-            LoggerFilters.AddValidFilters();
             Dictionary<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
 
             foreach (KeyValuePair<string, LogLevel?> logger in loggerLevelOptions)

@@ -89,22 +89,25 @@ public abstract class RuntimeConfigLoader
         // Signal that a change has occurred to all change token listeners.
         RaiseChanged();
 
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+        if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+        {
+            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
 
-        // Order of event firing matters: Authorization rules can only be updated after the
-        // MetadataProviderFactory has been updated with latest database object metadata.
-        // RuntimeConfig must already be updated and is implied to have been updated by the time
-        // this function is called.
-        OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
+            // Order of event firing matters: Authorization rules can only be updated after the
+            // MetadataProviderFactory has been updated with latest database object metadata.
+            // RuntimeConfig must already be updated and is implied to have been updated by the time
+            // this function is called.
+            OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
 
-        // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
-        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+            // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+        }
 
         OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
     }

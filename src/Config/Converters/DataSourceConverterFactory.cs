@@ -47,11 +47,6 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
         public override DataSource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType is JsonTokenType.Null)
-            {
-                return new(DatabaseType.MSSQL, string.Empty);
-            }
-
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 DatabaseType databaseType = DatabaseType.MSSQL;
@@ -151,7 +146,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException("Datasource is a mandatory field and cannot be null.");
+            throw new JsonException("data-source property has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, DataSource value, JsonSerializerOptions options)

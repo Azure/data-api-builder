@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the health check rest query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the health check REST query: {ex.Message}");
                 return ex.Message;
             }
         }
@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the Graphql health check query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the GraphQL health check query: {ex.Message}");
                 return ex.Message;
             }
         }

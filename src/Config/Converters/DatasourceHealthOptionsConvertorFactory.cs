@@ -87,7 +87,7 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException("Datasource HealthOptions must be a proper object.");
+            throw new JsonException("Datasource Health Options has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, DatasourceHealthCheckConfig value, JsonSerializerOptions options)

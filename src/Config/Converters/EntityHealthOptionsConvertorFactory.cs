@@ -93,7 +93,7 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException("EntityHealth Options must be a proper object.");
+            throw new JsonException("Entity Health Options has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, EntityHealthCheckConfig value, JsonSerializerOptions options)

@@ -16,8 +16,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class MsSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
-        private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
-        private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
         private const string MSSQL_ESCAPE_CHAR = "\\";
 
         // Name of the column which stores the number of records with given PK. Used in Upsert queries.
@@ -43,85 +41,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     structure.JoinQueries.Select(
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
-            string predicates;
+            string predicates = BuildPredicates(structure);
 
-            if (structure.IsMultipleCreateOperation)
-            {
-                predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                    structure.FilterPredicates,
-                                    Build(structure.Predicates, " OR ", isMultipleCreateOperation: true),
-                                    Build(structure.PaginationMetadata.PaginationPredicate));
-            }
-            else
-            {
-                predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                    structure.FilterPredicates,
-                                    Build(structure.Predicates),
-                                    Build(structure.PaginationMetadata.PaginationPredicate));
-            }
-
-            // we add '\' character to escape the special characters in the string, but if special characters are needed to be searched
-            // as literal characters we need to escape the '\' character itself. Since we add `\` only for LIKE, so we search if the query
-            // contains LIKE and add the ESCAPE clause accordingly.
-            predicates = AddEscapeToLikeClauses(predicates);
-
-            string aggregations = string.Empty;
-            if (structure.GroupByMetadata.Aggregations.Count > 0)
-            {
-                if (structure.Columns.Any())
-                {
-                    aggregations = $",{BuildAggregationColumns(structure.GroupByMetadata)}";
-                }
-                else
-                {
-                    aggregations = $"{BuildAggregationColumns(structure.GroupByMetadata)}";
-                }
-            }
+            string aggregations = BuildAggregationColumns(structure);
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}";
 
-            // Add GROUP BY clause if there are any group by columns
-            if (structure.GroupByMetadata.Fields.Any())
-            {
-                query += $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
-            }
+            query += BuildGroupBy(structure);
 
-            if (structure.GroupByMetadata.Aggregations.Count > 0)
-            {
-                List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
-                      .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
-                      .ToList();
+            query += BuildHaving(structure);
 
-                if (havingPredicates.Any())
-                {
-                    query += $" HAVING {Build(havingPredicates)}";
-                }
-            }
+            query += BuildOrderBy(structure);
 
-            if (structure.OrderByColumns.Any())
-            {
-                query += $" ORDER BY {Build(structure.OrderByColumns)}";
-            }
-
-            query += FOR_JSON_SUFFIX;
-            if (!structure.IsListQuery)
-            {
-                query += "," + WITHOUT_ARRAY_WRAPPER_SUFFIX;
-            }
+            query += BuildJsonPath(structure);
 
             return query;
-        }
-
-        /// <summary>
-        /// Builds the aggregation columns part of the SELECT clause
-        /// </summary>
-        private string BuildAggregationColumns(GroupByMetadata metadata)
-        {
-            return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
         }
 
         /// <summary>
@@ -599,6 +535,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // Table names in MSSQL should not be quoted when used as DB Connection Params.
             return param;
+        }
+
+        protected override string BuildPredicates(SqlQueryStructure structure)
+        {
+            string predicates;
+            if (structure.IsMultipleCreateOperation)
+            {
+                predicates = JoinPredicateStrings(
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                    structure.FilterPredicates,
+                                    Build(structure.Predicates, " OR ", isMultipleCreateOperation: true),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+            else
+            {
+                predicates = JoinPredicateStrings(
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                    structure.FilterPredicates,
+                                    Build(structure.Predicates),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+
+            // we add '\' character to escape the special characters in the string, but if special characters are needed to be searched
+            // as literal characters we need to escape the '\' character itself. Since we add `\` only for LIKE, so we search if the query
+            // contains LIKE and add the ESCAPE clause accordingly.
+            return AddEscapeToLikeClauses(predicates);
         }
     }
 }

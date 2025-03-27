@@ -16,8 +16,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
         private readonly bool _enableNto1JoinOpt;
-        private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
-        private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
 
         public DwSqlQueryBuilder(bool enableNto1JoinOpt = false)
@@ -92,9 +90,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Build the query recursively with
         /// 1. JSON PATH for outer query
         /// 2. JSON OBJECT for inner query
+        /// Example:
+        /// SELECT TOP M 
+        ///    <Columns>
+        /// FROM
+        ///    <Tables>
+        /// OUTER APPLY
+        ///    <Sub-query-tables>
+        /// WHERE
+        ///    <Conditions>
+        /// ORDER BY
+        ///    <Conditions>
+        /// FOR JSON PATH, INCLUDE_NULL_VALUES;
         /// </summary>
-        /// <param name="structure"></param>
-        /// <param name="isSubQuery"></param>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <param name="isSubQuery">Used for recursive call purpose to generated different queries for sub-queries</param>
         /// <returns></returns>
         private string BuildWithJsonFunc(SqlQueryStructure structure, bool isSubQuery)
         {
@@ -111,11 +121,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else
             {
                 query = BuildWithJsonFunc(structure);
-                query += FOR_JSON_SUFFIX;
-                if (!structure.IsListQuery)
-                {
-                    query += "," + WITHOUT_ARRAY_WRAPPER_SUFFIX;
-                }
+                query += BuildJsonPath(structure);
             }
 
             return query;
@@ -124,7 +130,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Helper function for BuildWithJsonFunc that generates "FROM" portion of the query
         /// </summary>
-        /// <param name="structure"></param>
+        /// <param name="structure">Sql query structure to build query on</param>
         /// <returns></returns>
         private string BuildWithJsonFunc(SqlQueryStructure structure)
         {
@@ -137,51 +143,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     structure.JoinQueries.Select(
                         x => $" OUTER APPLY ({BuildWithJsonFunc(x.Value, true)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
-            string predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                    structure.FilterPredicates,
-                                    Build(structure.Predicates),
-                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            string predicates = BuildPredicates(structure);
 
-            string aggregations = string.Empty;
-            if (structure.GroupByMetadata.Aggregations.Count > 0)
-            {
-                if (structure.Columns.Any())
-                {
-                    aggregations = $",{BuildAggregationColumns(structure.GroupByMetadata)}";
-                }
-                else
-                {
-                    aggregations = $"{BuildAggregationColumns(structure.GroupByMetadata)}";
-                }
-            }
+            string aggregations = BuildAggregationColumns(structure);
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}"
                 + $" FROM {fromSql}"
                 + $" WHERE {predicates}";
 
-            // Add GROUP BY clause if there are any group by columns
-            if (structure.GroupByMetadata.Fields.Any())
-            {
-                query += $" GROUP BY {string.Join(", ", structure.GroupByMetadata.Fields.Values.Select(c => Build(c)))}";
-            }
+            query += BuildGroupBy(structure);
 
-            if (structure.GroupByMetadata.Aggregations.Count > 0)
-            {
-                List<Predicate>? havingPredicates = structure.GroupByMetadata.Aggregations
-                      .SelectMany(aggregation => aggregation.HavingPredicates ?? new List<Predicate>())
-                      .ToList();
+            query += BuildHaving(structure);
 
-                if (havingPredicates.Any())
-                {
-                    query += $" HAVING {Build(havingPredicates)}";
-                }
-            }
-
-            if (structure.OrderByColumns.Any())
-            {
-                query += $" ORDER BY {Build(structure.OrderByColumns)}";
-            }
+            query += BuildOrderBy(structure);
 
             return query;
         }
@@ -279,8 +253,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Generate the columns selected and wrap them with JSON_OBJECT
+        /// Example:
+        /// SELECT JSON_OBJECT('id': [id]) 
+        ///  FROM
+        ///    (
+        ///        SELECT TOP 1 
+        ///            [table1].[id] AS [id]
+        ///        FROM
+        ///            [dbo].[book_website_placements] AS [table1]
+        ///        WHERE
+        ///            [table0].[id] = [table1].[book_id]
+        ///            AND[table1].[book_id] = [table0].[id]
+        ///        ORDER BY
+        ///            [table1].[id] ASC
+        ///    ) AS[table1]
         /// </summary>
-        /// <param name="structure"></param>
+        /// <param name="structure">Sql query structure to generate the columns with JSON_OBJECT</param>
         /// <returns></returns>
         private static string GenerateColumnsAsJsonObject(SqlQueryStructure structure)
         {
@@ -592,14 +580,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string parameterList = sb.ToString();
             // If at least one parameter added, remove trailing comma and space, else return empty string
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
-        }
-
-        /// <summary>
-        /// Builds the aggregation columns part of the SELECT clause
-        /// </summary>
-        private string BuildAggregationColumns(GroupByMetadata metadata)
-        {
-            return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
         }
 
         public string QuoteTableNameAsDBConnectionParam(string param)

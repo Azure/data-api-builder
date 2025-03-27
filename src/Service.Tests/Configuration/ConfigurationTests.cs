@@ -51,7 +51,6 @@ using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
-using static HotChocolate.ErrorCodes;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {

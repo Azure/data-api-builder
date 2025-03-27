@@ -7,9 +7,11 @@ using System.Diagnostics;
 using System.Linq;
 using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Product;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -22,6 +24,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Dependencies
         private ILogger? _logger;
         private HttpUtilities _httpUtility;
+        private string _incomingRoleHeader = string.Empty;
+        private string _incomingRoleToken = string.Empty;
 
         private const string TIME_EXCEEDED_ERROR_MESSAGE = "The threshold for executing the request has exceeded.";
 
@@ -56,6 +60,48 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             UpdateHealthCheckDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
             UpdateOverallHealthStatus(ref ComprehensiveHealthCheckReport);
             return ComprehensiveHealthCheckReport;
+        }
+
+        public void UpdateIncomingRoleHeader(HttpContext httpContext)
+        {
+            StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+            StringValues clientTokenHeader = httpContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER];
+
+            if (clientRoleHeader.Count == 1)
+            {
+                _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
+            }
+
+            if (clientRoleHeader.Count == 1)
+            {
+                _incomingRoleToken = clientTokenHeader.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Checks if the incoming request is allowed to access the health check endpoint.
+        /// Anonymous requests are only allowed in Development Mode.
+        /// </summary>
+        /// <param name="httpContext">HttpContext to get the headers.</param>
+        /// <param name="hostMode">Compare with the HostMode of DAB</param>
+        /// <param name="allowedRoles">AllowedRoles in the Runtime.Health config</param>
+        /// <returns></returns>
+        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, HostMode hostMode, List<string> allowedRoles)
+        {
+            if (allowedRoles == null || allowedRoles.Count == 0)
+            {
+                // When allowedRoles is null or empty, all roles are allowed if Mode = Development.
+                return hostMode == HostMode.Development;
+            }
+
+            switch (hostMode)
+            {
+                case HostMode.Development:
+                case HostMode.Production:
+                    return allowedRoles.Contains(_incomingRoleHeader);
+            }
+
+            return false;
         }
 
         // Updates the overall status by comparing all the internal HealthStatuses in the response.
@@ -189,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
-                        Exception = !thresholdCheck ? TIME_EXCEEDED_ERROR_MESSAGE : response.Item2,
+                        Exception = response.Item2 ?? (!thresholdCheck ? TIME_EXCEEDED_ERROR_MESSAGE : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
@@ -210,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
-                        Exception = !thresholdCheck ? TIME_EXCEEDED_ERROR_MESSAGE : response.Item2,
+                        Exception = response.Item2 ?? (!thresholdCheck ? TIME_EXCEEDED_ERROR_MESSAGE : null),
                         Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
@@ -225,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteRestQuery(restUriSuffix, entityName, first);
+                errorMessage = _httpUtility.ExecuteRestQuery(restUriSuffix, entityName, first, _incomingRoleHeader, _incomingRoleToken);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
@@ -241,7 +287,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteGraphQLQuery(graphqlUriSuffix, entityName, entity);
+                errorMessage = _httpUtility.ExecuteGraphQLQuery(graphqlUriSuffix, entityName, entity, _incomingRoleHeader, _incomingRoleToken);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }

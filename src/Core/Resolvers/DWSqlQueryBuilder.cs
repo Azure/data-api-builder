@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// <summary>
     /// Class for building DwSql queries.
     /// </summary>
-    public class DwSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
+    public class DwSqlQueryBuilder : BaseTSqlQueryBuilder, IQueryBuilder
     {
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
         private readonly bool _enableNto1JoinOpt;

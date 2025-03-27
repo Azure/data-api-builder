@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// <summary>
     /// Class for building MsSql queries.
     /// </summary>
-    public class MsSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
+    public class MsSqlQueryBuilder : BaseTSqlQueryBuilder, IQueryBuilder
     {
         private const string MSSQL_ESCAPE_CHAR = "\\";
 

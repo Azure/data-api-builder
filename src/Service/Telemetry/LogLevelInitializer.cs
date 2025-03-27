@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         {
             if (_runtimeConfigProvider!.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                MinLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig, _loggerFilter);
+                MinLogLevel = runtimeConfig.GetConfiguredLogLevel(_loggerFilter);
             }
         }
 

@@ -563,7 +563,7 @@ public class ConfigurationHotReloadTests
     {
         // Arange
         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
-        LogLevel previouslogLevel = RuntimeConfig.GetConfiguredLogLevel(previousRuntimeConfig);
+        LogLevel previouslogLevel = previousRuntimeConfig.GetConfiguredLogLevel();
 
         //Act
         GenerateConfigFile(
@@ -571,7 +571,7 @@ public class ConfigurationHotReloadTests
         System.Threading.Thread.Sleep(3000);
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
-        LogLevel actualLogLevel = RuntimeConfig.GetConfiguredLogLevel(updatedRuntimeConfig);
+        LogLevel actualLogLevel = updatedRuntimeConfig.GetConfiguredLogLevel();
 
         //Assert
         Assert.AreNotEqual(previouslogLevel, actualLogLevel);

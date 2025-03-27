@@ -522,6 +522,9 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, string? loggerFilter)
         {
+            // Variable 'loggerFilter' can be of null type due to typeof().FullName,
+            // this case shouldn't happen but we change the value to be empty which is the
+            // default value for RuntimeConfig::GetConfiguredLogLevel function.
             if (loggerFilter == null)
             {
                 loggerFilter = string.Empty;

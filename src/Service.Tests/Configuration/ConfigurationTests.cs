@@ -51,6 +51,7 @@ using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
+using static HotChocolate.ErrorCodes;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -3776,19 +3777,36 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="loggingFilter"></param>
         private static void ValidateLogLevelFilters(LogLevel logLevel, string loggingFilter)
         {
-            Startup.AddValidFilters();
+            // Arrange
             Dictionary<string, LogLevel?> logLevelOptions = new();
             logLevelOptions.Add(loggingFilter, logLevel);
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithLogLevel(logLevelOptions);
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configWithCustomLogLevel.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            // Start a new server with the custom log level to ensure the
+            // instantiation of the valid log level filters works as expected.
+            TestServer server = new(Program.CreateWebHostBuilder(args));
+            RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
+
+            // RuntimeConfig with instantiated log level filters.
+            RuntimeConfig serverRuntimeConfig = runtimeConfigProvider.GetConfig();
+
+            // Act
             try
             {
-                RuntimeConfigValidator.ValidateLoggerFilters(configWithCustomLogLevel);
+                RuntimeConfigValidator.ValidateLoggerFilters(serverRuntimeConfig);
             }
             catch
             {
                 Assert.Fail();
             }
 
+            // Assert
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig deserializedRuntimeConfig));
 

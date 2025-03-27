@@ -536,7 +536,7 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    MinimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(runtimeConfig, loggerFilter);
+                    MinimumLogLevel = runtimeConfig.GetConfiguredLogLevel(loggerFilter);
                 }
             }
 
@@ -832,7 +832,7 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Adds all of the class namespaces that have loggers that the user is able to change
         /// </summary>
-        private static void AddValidFilters()
+        public static void AddValidFilters()
         {
             LoggerFilters.AddFilter(typeof(RuntimeConfigValidator).FullName);
             LoggerFilters.AddFilter(typeof(SqlQueryEngine).FullName);

@@ -645,7 +645,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
             Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);
             Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
-            Assert.IsTrue(RuntimeConfig.IsLogLevelNull(parsedConfig));
+            Assert.IsTrue(parsedConfig.IsLogLevelNull());
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null
                 || !parsedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
             return true;

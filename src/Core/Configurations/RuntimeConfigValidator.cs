@@ -4,7 +4,6 @@
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.RegularExpressions;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -144,7 +143,7 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 if (!IsLoggerFilterValid(logger.Key))
                 {
-                    throw new NotSupportedException($"Log level {logger.Key} needs to be of a valid log class.");
+                    throw new NotSupportedException($"Log level filter {logger.Key} needs to be of a valid log class.");
                 }
             }
         }

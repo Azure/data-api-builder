@@ -6,17 +6,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
-using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Service.Controllers;
-using Azure.DataApiBuilder.Service.HealthCheck;
 using Humanizer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -362,26 +355,6 @@ namespace Azure.DataApiBuilder.Service.Tests
                 MergeArrayHandling = MergeArrayHandling.Union
             });
             return configurationJson.ToString();
-        }
-
-        /// <summary>
-        /// Adds all of the class namespaces that have loggers that the user is able to change
-        /// This function is used when testing for validation
-        /// </summary>
-        public static void AddValidFilters()
-        {
-            LoggerFilters.AddFilter(typeof(RuntimeConfigValidator).FullName);
-            LoggerFilters.AddFilter(typeof(SqlQueryEngine).FullName);
-            LoggerFilters.AddFilter(typeof(IQueryExecutor).FullName);
-            LoggerFilters.AddFilter(typeof(ISqlMetadataProvider).FullName);
-            LoggerFilters.AddFilter(typeof(BasicHealthReportResponseWriter).FullName);
-            LoggerFilters.AddFilter(typeof(ComprehensiveHealthReportResponseWriter).FullName);
-            LoggerFilters.AddFilter(typeof(RestController).FullName);
-            LoggerFilters.AddFilter(typeof(ClientRoleHeaderAuthenticationMiddleware).FullName);
-            LoggerFilters.AddFilter(typeof(ConfigurationController).FullName);
-            LoggerFilters.AddFilter(typeof(IAuthorizationHandler).FullName);
-            LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
-            LoggerFilters.AddFilter("default");
         }
     }
 }

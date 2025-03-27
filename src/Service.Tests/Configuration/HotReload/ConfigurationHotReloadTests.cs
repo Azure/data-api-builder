@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.HotReload;
@@ -49,6 +50,7 @@ public class ConfigurationHotReloadTests
         string restEnabled = "true",
         string gQLPath = "/graphQL",
         string gQLEnabled = "true",
+        string logFilter = "debug",
         string entityName = "Book",
         string sourceObject = "books",
         string gQLEntityEnabled = "true",
@@ -91,6 +93,11 @@ public class ConfigurationHotReloadTests
                             ""provider"": ""StaticWebApps""
                           },
                           ""mode"": ""development""
+                        },
+                        ""telemetry"": {
+                          ""log-level"": {
+                            ""default"":" + logFilter + @"
+                          }
                         }
                       },
                     ""entities"": {
@@ -543,6 +550,35 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
+    /// Hot reload the configuration file so that it updated the log-level property.
+    /// Then we assert that the log-level property is properly updated by ensuring it is 
+    /// not the same as the previous log-level and asserting it is the expected log-level.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [DataTestMethod]
+    [DataRow(LogLevel.Trace, "trace")]
+    [DataRow(LogLevel.Warning, "warning")]
+    [DataRow(LogLevel.Information, "information")]
+    public void HotReloadLogLevel(LogLevel expectedLogLevel, string expectedFilter)
+    {
+        // Arange
+        RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
+        LogLevel previouslogLevel = RuntimeConfig.GetConfiguredLogLevel(previousRuntimeConfig);
+
+        //Act
+        GenerateConfigFile(
+            logFilter: expectedFilter);
+        System.Threading.Thread.Sleep(3000);
+
+        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
+        LogLevel actualLogLevel = RuntimeConfig.GetConfiguredLogLevel(updatedRuntimeConfig);
+
+        //Assert
+        Assert.AreNotEqual(previouslogLevel, actualLogLevel);
+        Assert.AreEqual(expectedLogLevel, actualLogLevel);
+    }
+
+    /// <summary>
     /// Hot reload the configuration file so that it changes from one connection string
     /// to an invalid connection string, then it hot reloads once more to the original
     /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
@@ -643,7 +679,6 @@ public class ConfigurationHotReloadTests
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 
-    /// <summary>
     /// Creates a hot reload scenario in which the schema file is invalid which causes
     /// hot reload to fail, then we check that the program is still able to work
     /// properly by validating that the DAB engine is still using the same configuration file

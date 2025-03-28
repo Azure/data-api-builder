@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string> columns = new();
             foreach (LabelledColumn column in structure.Columns)
             {
-                string col_value = $"\'{column.Label}\': [{column.Label}]";
+                string col_value = $"\'{column.Label}\': [{column.TableAlias}].[{column.Label}]";
                 columns.Add(col_value);
             }
 

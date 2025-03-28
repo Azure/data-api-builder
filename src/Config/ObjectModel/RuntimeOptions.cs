@@ -14,7 +14,7 @@ public record RuntimeOptions
     public HostOptions? Host { get; set; }
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
-    public EntityCacheOptions? Cache { get; init; }
+    public RuntimeCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
 
     [JsonConstructor]
@@ -24,7 +24,7 @@ public record RuntimeOptions
         HostOptions? Host,
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
-        EntityCacheOptions? Cache = null,
+        RuntimeCacheOptions? Cache = null,
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null)
     {
@@ -45,8 +45,5 @@ public record RuntimeOptions
     /// <returns>Whether caching is enabled globally.</returns>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Cache))]
-    public bool IsCachingEnabled =>
-            Cache is not null &&
-            Cache.Enabled is not null &&
-            Cache.Enabled is true;
+    public bool IsCachingEnabled => Cache?.Enabled is true;
 }

@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
         /// <summary>
         /// (MSSQL Test, which supports time type with 7 decimal precision)
-        /// Validates that LocalTime values with X precision are handled correctly: precision of 7 decimal places used with eq (=) will 
+        /// Validates that LocalTime values with X precision are handled correctly: precision of 7 decimal places used with eq (=) will
         /// not return result with only 3 decimal places i.e. 10:23:54.999 != 10:23:54.9999999
         /// In the Database only one row exists with value 23:59:59.9999999
         /// </summary>

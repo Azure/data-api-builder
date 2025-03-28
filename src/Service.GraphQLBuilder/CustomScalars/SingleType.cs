@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using HotChocolate;
 using HotChocolate.Language;
 using HotChocolate.Types;
 
@@ -13,7 +12,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars
     /// </summary>
     public class SingleType : FloatTypeBase<float>
     {
-        public static readonly NameString TypeName = new("Single");
+        public static readonly string TypeName = new("Single");
         public static readonly string SingleDescription = "IEEE 754 32 bit float";
 
         public SingleType()
@@ -27,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars
         /// </summary>
         public SingleType(float min, float max)
             : this(
-                TypeName.Value,
+                TypeName,
                 SingleDescription,
                 min,
                 max,
@@ -39,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars
         /// Initializes a new instance of the <see cref="SingleType"/> class.
         /// </summary>
         public SingleType(
-            NameString name,
+            string name,
             string? description = null,
             float min = float.MinValue,
             float max = float.MaxValue,

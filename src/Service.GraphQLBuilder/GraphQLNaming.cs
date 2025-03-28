@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Per GraphQL specification (October2021):
         /// "Any Name within a GraphQL type system must not start with two underscores '__'."
-        /// because such types and fields are reserved by GraphQL's introspection system 
+        /// because such types and fields are reserved by GraphQL's introspection system
         /// This helper function identifies whether the provided name is prefixed with double
         /// underscores.
         /// </summary>
@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns>string representing the top-level entity name defined in runtime configuration.</returns>
         public static string ObjectTypeToEntityName(ObjectTypeDefinitionNode node)
         {
-            DirectiveNode? modelDirective = node.Directives.FirstOrDefault(d => d.Name.Value == ModelDirectiveType.DirectiveName);
+            DirectiveNode? modelDirective = node.Directives.FirstOrDefault(d => d.Name.Value == ModelDirective.Names.MODEL);
 
             if (modelDirective is null)
             {

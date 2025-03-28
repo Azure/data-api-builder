@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -14,12 +13,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
     [TestClass]
     public abstract class GraphQLFilterTestBase : SqlTestBase
     {
-
-        #region Test Fixture Setup
-        protected static GraphQLSchemaCreator _graphQLService;
-
-        #endregion
-
         #region Tests
 
         /// <summary>
@@ -72,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
-        /// Tests correct rows are returned with filters containing 2 varchar columns one with null and one with non-null values. 
+        /// Tests correct rows are returned with filters containing 2 varchar columns one with null and one with non-null values.
         /// </summary>
         [TestMethod]
         public async Task TestFilterForVarcharColumnWithNullAndNonNullValues()
@@ -136,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Test that filter values are not truncated to fit the column size.
         /// Here, the habitat column is of size 6 and the filter value is "forestland" which is of size 10.
-        /// So, "forestland" should not be truncated to "forest" before matching values in the table. 
+        /// So, "forestland" should not be truncated to "forest" before matching values in the table.
         /// </summary>
         [TestMethod]
         public async Task TestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation()
@@ -229,12 +222,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             string graphQLQueryName = "books";
 
             // Construct the GraphQL query by injecting the dynamic filter
-            string gqlQuery = @$"{{ 
-                books(filter: {filterParams}, orderBy: {{title: ASC}}) {{ 
+            string gqlQuery = @$"{{
+                books(filter: {filterParams}, orderBy: {{title: ASC}}) {{
                     items {{
                         title
-                    }} 
-                }} 
+                    }}
+                }}
             }}";
 
             // Act
@@ -739,8 +732,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
 
             string dbQuery = MakeQueryOn(
                 "books",
-                new List<string> { "id", "title" },
-                @"id >= 2",
+                ["id", "title"],
+                "id >= 2",
                 GetDefaultSchema());
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
@@ -1159,12 +1152,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// Method used to execute GraphQL requests.
         /// For list results, returns the JsonElement representative of the property 'items'
         /// </summary>
-        /// <param name="graphQLQuery"></param>
-        /// <param name="graphQLQueryName"></param>
-        /// <param name="isAuthenticated"></param>
-        /// <param name="variables"></param>
-        /// <param name="clientRoleHeader"></param>
-        /// <returns></returns>
         protected override async Task<JsonElement> ExecuteGraphQLRequestAsync(
             string graphQLQuery,
             string graphQLQueryName,

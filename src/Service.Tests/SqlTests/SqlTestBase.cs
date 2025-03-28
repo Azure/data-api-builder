@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
         protected static ILogger<IQueryEngine> _queryEngineLogger;
         protected static ILogger<RestController> _restControllerLogger;
-        protected static GQLFilterParser _gQLFilterParser;
+        protected static GQLFilterParser _gqlFilterParser;
         protected const string MSSQL_DEFAULT_DB_NAME = "master";
 
         protected static string DatabaseName { get; set; }
@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     config: runtimeConfig,
                     entityKey: "magazine",
                     entityName: "foo.magazines",
-                    keyfields: new string[] { "id" }),
+                    keyfields: ["id"]),
                 _ => TestHelper.AddMissingEntitiesToConfig(
                     config: runtimeConfig,
                     entityKey: "magazine",
@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     config: runtimeConfig,
                     entityKey: "bar_magazine",
                     entityName: "bar.magazines",
-                    keyfields: new string[] { "upc" })
+                    keyfields: ["upc"])
             };
 
             // Add custom entities for the test, if any.
@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             await _sqlMetadataProvider.InitializeAsync();
 
-            // Setup Mock metadataprovider Factory
+            // Setup Mock metadata provider Factory
             _metadataProviderFactory = new Mock<IMetadataProviderFactory>();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
 
@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
             _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
-            _gQLFilterParser = new(runtimeConfigProvider, _metadataProviderFactory.Object);
+            _gqlFilterParser = new(runtimeConfigProvider, _metadataProviderFactory.Object);
 
             // sets the database name using the connection string
             SetDatabaseNameFromConnectionString(runtimeConfig.DataSource.ConnectionString);
@@ -175,30 +175,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     {
                         services.AddHttpContextAccessor();
                         services.AddSingleton(runtimeConfigProvider);
-                        services.AddSingleton(_gQLFilterParser);
-                        services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
+                        services.AddSingleton(_gqlFilterParser);
+                        services.AddSingleton<IQueryEngine>(implementationFactory: serviceProvider =>
                         {
                             return new SqlQueryEngine(
                                 _queryManagerFactory.Object,
                                 ActivatorUtilities.GetServiceOrCreateInstance<MetadataProviderFactory>(serviceProvider),
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                 _authorizationResolver,
-                                _gQLFilterParser,
+                                _gqlFilterParser,
                                 _queryEngineLogger,
                                 runtimeConfigProvider,
-                                cacheService
-                                );
+                                cacheService);
                         });
-                        services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+                        services.AddSingleton<IMutationEngine>(implementationFactory: serviceProvider =>
                         {
                             return new SqlMutationEngine(
-                                    _queryManagerFactory.Object,
-                                    ActivatorUtilities.GetServiceOrCreateInstance<MetadataProviderFactory>(serviceProvider),
-                                    _queryEngineFactory.Object,
-                                    _authorizationResolver,
-                                    _gQLFilterParser,
-                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
-                                    runtimeConfigProvider);
+                                _queryManagerFactory.Object,
+                                ActivatorUtilities.GetServiceOrCreateInstance<MetadataProviderFactory>(serviceProvider),
+                                _queryEngineFactory.Object,
+                                _authorizationResolver,
+                                _gqlFilterParser,
+                                ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                                runtimeConfigProvider);
                         });
                         services.AddSingleton(_sqlMetadataProvider);
                         services.AddSingleton(_authorizationResolver);
@@ -601,7 +600,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="query"></param>
         /// <param name="queryName"></param>
         /// <param name="httpClient"></param>
+        /// <param name="isAuthenticated"></param>
         /// <param name="variables">Variables to be included in the GraphQL request. If null, no variables property is included in the request, to pass an empty object provide an empty dictionary</param>
+        /// <param name="clientRoleHeader"></param>
+        /// <param name="expectsError"></param>
         /// <returns>string in JSON format</returns>
         protected virtual async Task<JsonElement> ExecuteGraphQLRequestAsync(
             string query,
@@ -619,14 +621,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 query,
                 variables,
                 isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader) : null,
-                clientRoleHeader: clientRoleHeader
-            );
+                clientRoleHeader: clientRoleHeader);
         }
 
         [TestCleanup]
         public void CleanupAfterEachTest()
-        {
-            TestHelper.UnsetAllDABEnvironmentVariables();
-        }
+            => TestHelper.UnsetAllDABEnvironmentVariables();
     }
 }

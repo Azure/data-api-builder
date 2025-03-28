@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -562,7 +563,7 @@ type Moon {
             {
                 if (isUpdateableRuntimeConfig)
                 {
-                    server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(args));
+                    server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(args));
                 }
                 else
                 {
@@ -843,7 +844,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestConflictAlreadySetConfiguration(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -879,7 +880,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -894,7 +895,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestInvalidConfigurationAtRuntime(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, "invalidString");
@@ -909,7 +910,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingFailureConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -931,7 +932,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLongRunningConfigUpdatedHandlerConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -970,7 +971,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig configuration = AuthorizationHelpers.InitRuntimeConfig(
@@ -1038,7 +1039,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestValidMultiSourceRunTimePostStartupConfigurations(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
@@ -1062,7 +1063,7 @@ type Moon {
             Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
             Assert.IsNotNull(configuration, "Config returned should not be null.");
 
-            Assert.IsNotNull(configuration.DataSource, "The base datasource should get populated in case of late hydration of config inspite of invalid multi-db files.");
+            Assert.IsNotNull(configuration.DataSource, "The base datasource should get populated in case of late hydration of config in-spite of invalid multi-db files.");
             Assert.AreEqual(1, configuration.ListAllDataSources().Count(), "There should be only 1 datasource populated for late hydration of config with invalid multi-db files.");
         }
 
@@ -1080,7 +1081,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestLoadingAccessTokenForCosmosClient(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint, null, true);
@@ -1174,7 +1175,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSettingConfigurationCreatesCorrectClasses(string configurationEndpoint)
         {
-            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient client = server.CreateClient();
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
@@ -2421,7 +2422,7 @@ type Moon {
 
             // Hosted Scenario
             // Instantiate new server with no runtime config for post-startup configuration hydration tests.
-            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
+            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
@@ -3465,7 +3466,7 @@ type Planet @model(name:""PlanetAlias"") {
             }
 
             // Instantiate new server with no runtime config for post-startup configuration hydration tests.
-            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>())))
+            using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
@@ -3772,7 +3773,7 @@ type Planet @model(name:""PlanetAlias"") {
             { "Book", requiredEntity }
         };
 
-            CreateCustomConfigFile(globalRestEnabled: globalRestEnabled, entityMap);
+            CreateCustomConfigFile(entityMap, globalRestEnabled);
 
             string[] args = new[]
             {
@@ -3833,7 +3834,7 @@ type Planet @model(name:""PlanetAlias"") {
                 { "Book", requiredEntity }
             };
 
-            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+            CreateCustomConfigFile(entityMap, enableGlobalRest: true);
 
             string[] args = new[]
             {
@@ -3855,13 +3856,188 @@ type Planet @model(name:""PlanetAlias"") {
             Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
+            ValidateBasicDetailsHealthCheckResponse(responseProperties);
+        }
+
+        /// <summary>
+        /// Simulates a GET request to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
+        /// The expected format of the response is the comprehensive health check response.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(true, true, true, true, true, true, true, DisplayName = "Validate Health Report all enabled.")]
+        [DataRow(false, true, true, true, true, true, true, DisplayName = "Validate when Comprehensive Health Report is disabled")]
+        [DataRow(true, true, true, false, true, true, true, DisplayName = "Validate Health Report when data-source health is disabled")]
+        [DataRow(true, true, true, true, false, true, true, DisplayName = "Validate Health Report when entity health is disabled")]
+        [DataRow(true, false, true, true, true, true, true, DisplayName = "Validate Health Report when global rest health is disabled")]
+        [DataRow(true, true, true, true, true, false, true, DisplayName = "Validate Health Report when entity rest health is disabled")]
+        [DataRow(true, true, false, true, true, true, true, DisplayName = "Validate Health Report when global graphql health is disabled")]
+        [DataRow(true, true, true, true, true, true, false, DisplayName = "Validate Health Report when entity graphql health is disabled")]
+        public async Task ComprehensiveHealthEndpoint_ValidateContents(bool enableGlobalHealth, bool enableGlobalRest, bool enableGlobalGraphql, bool enableDatasourceHealth, bool enableEntityHealth, bool enableEntityRest, bool enableEntityGraphQL)
+        {
+            // Arrange
+            // At least one entity is required in the runtime config for the engine to start.
+            // Even though this entity is not under test, it must be supplied enable successful
+            // config file creation.
+            Entity requiredEntity = new(
+                Health: new(Enabled: enableEntityHealth),
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: enableEntityRest),
+                GraphQL: new("book", "books", enableEntityGraphQL),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", requiredEntity }
+            };
+
+            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpRequestMessage healthRequest = new(HttpMethod.Get, "/health");
+                HttpResponseMessage response = await client.SendAsync(healthRequest);
+
+                if (!enableGlobalHealth)
+                {
+                    Assert.AreEqual(expected: HttpStatusCode.NotFound, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
+                }
+                else
+                {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+                    Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
+
+                    ValidateBasicDetailsHealthCheckResponse(responseProperties);
+                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties, enableGlobalRest, enableGlobalGraphql);
+                    ValidateIfAttributePresentInResponse(responseProperties, enableDatasourceHealth, HealthCheckConstants.DATASOURCE);
+                    ValidateIfAttributePresentInResponse(responseProperties, enableEntityHealth, HealthCheckConstants.ENDPOINT);
+                    if (enableEntityHealth)
+                    {
+                        ValidateEntityRestAndGraphQLResponse(responseProperties, enableEntityRest, enableEntityGraphQL, enableGlobalRest, enableGlobalGraphql);
+                    }
+                }
+            }
+        }
+
+        private static void ValidateEntityRestAndGraphQLResponse(
+            Dictionary<string, JsonElement> responseProperties,
+            bool enableEntityRest,
+            bool enableEntityGraphQL,
+            bool enableGlobalRest,
+            bool enableGlobalGraphQL)
+        {
+            bool hasRestTag = false, hasGraphQLTag = false;
+            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
+            {
+                checksElement.EnumerateArray().ToList().ForEach(entityCheck =>
+                {
+                    // Check if the 'tags' property exists and is of type array
+                    if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
+                    {
+                        hasRestTag = hasRestTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.REST);
+                        hasGraphQLTag = hasGraphQLTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.GRAPHQL);
+                    }
+                });
+
+                if (enableGlobalRest)
+                {
+                    // When both enableEntityRest and hasRestTag match the same value
+                    Assert.AreEqual(enableEntityRest, hasRestTag);
+                }
+                else
+                {
+                    Assert.IsFalse(hasRestTag);
+                }
+
+                if (enableGlobalGraphQL)
+                {
+                    // When both enableEntityGraphQL and hasGraphQLTag match the same value
+                    Assert.AreEqual(enableEntityGraphQL, hasGraphQLTag);
+                }
+                else
+                {
+                    Assert.IsFalse(hasGraphQLTag);
+                }
+            }
+        }
+
+        private static void ValidateIfAttributePresentInResponse(
+            Dictionary<string, JsonElement> responseProperties,
+            bool enableFlag,
+            string checkString)
+        {
+            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
+            {
+                bool checksTags = checksElement.EnumerateArray().Any(entityCheck =>
+                {
+                    if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
+                    {
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == checkString);
+                    }
+
+                    return false;
+                });
+
+                Assert.AreEqual(enableFlag, checksTags);
+            }
+            else
+            {
+                Assert.Fail("Checks array is not present in the Comprehensive Health Check Report.");
+            }
+        }
+
+        private static void ValidateConfigurationIsNotNull(Dictionary<string, JsonElement> configPropertyValues, string objectKey)
+        {
+            Assert.IsTrue(configPropertyValues.ContainsKey(objectKey), $"Expected {objectKey} to be present in the configuration object.");
+            Assert.IsNotNull(configPropertyValues[objectKey], $"Expected {objectKey} to be non-null.");
+        }
+
+        private static void ValidateConfigurationIsCorrectFlag(Dictionary<string, JsonElement> configElement, string objectKey, bool enableFlag)
+        {
+            Assert.AreEqual(enableFlag, configElement[objectKey].GetBoolean(), $"Expected {objectKey} to be set to {enableFlag}.");
+        }
+
+        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableGlobalRest, bool enableGlobalGraphQL)
+        {
+            if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
+            {
+                Dictionary<string, JsonElement> configPropertyValues = new();
+
+                // Enumerate through the configProperty's object properties and add them to the dictionary
+                foreach (JsonProperty property in configElement.EnumerateObject().ToList())
+                {
+                    configPropertyValues[property.Name] = property.Value;
+                }
+
+                ValidateConfigurationIsNotNull(configPropertyValues, "rest");
+                ValidateConfigurationIsCorrectFlag(configPropertyValues, "rest", enableGlobalRest);
+                ValidateConfigurationIsNotNull(configPropertyValues, "graphql");
+                ValidateConfigurationIsCorrectFlag(configPropertyValues, "graphql", enableGlobalGraphQL);
+                ValidateConfigurationIsNotNull(configPropertyValues, "caching");
+                ValidateConfigurationIsNotNull(configPropertyValues, "telemetry");
+                ValidateConfigurationIsNotNull(configPropertyValues, "mode");
+            }
+            else
+            {
+                Assert.Fail("Missing 'configuration' object in Health Check Response.");
+            }
+        }
+
+        private static void ValidateBasicDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
+        {
             // Validate value of 'status' property in reponse.
             if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
             {
-                Assert.AreEqual(
-                    expected: "Healthy",
-                    actual: statusValue.ToString(),
-                    message: "Expected endpoint to report 'Healthy'.");
+                Assert.IsTrue(statusValue.ValueKind == JsonValueKind.String, "Unexpected or missing status value as string.");
             }
             else
             {
@@ -3928,7 +4104,7 @@ type Planet @model(name:""PlanetAlias"") {
             { "Publisher", restDisabledEntity }
         };
 
-            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+            CreateCustomConfigFile(entityMap, enableGlobalRest: true);
 
             string[] args = new[]
             {
@@ -4007,7 +4183,7 @@ type Planet @model(name:""PlanetAlias"") {
                 { ENTITY_NAME, requiredEntity }
             };
 
-            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+            CreateCustomConfigFile(entityMap, enableGlobalRest: true);
 
             string[] args = new[]
             {
@@ -4328,19 +4504,24 @@ type Planet @model(name:""PlanetAlias"") {
         /// Helper function to write custom configuration file. with minimal REST/GraphQL global settings
         /// using the supplied entities.
         /// </summary>
-        /// <param name="globalRestEnabled">flag to enable or disabled REST globally.</param>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
-        private static void CreateCustomConfigFile(bool globalRestEnabled, Dictionary<string, Entity> entityMap)
+        /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
+        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            DataSource dataSource = new(
+                DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null,
+                Health: new(enableDatasourceHealth));
             HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(Enabled: globalRestEnabled),
-                    GraphQL: new(),
+                    Health: new(Enabled: enableGlobalHealth),
+                    Rest: new(Enabled: enableGlobalRest),
+                    GraphQL: new(Enabled: enableGlobalGraphql),
                     Host: hostOptions
                 ),
                 Entities: new(entityMap));

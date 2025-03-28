@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -23,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// The health status of the service.
         /// </summary>
         [JsonPropertyName("status")]
-        public HealthStatus Status { get; init; }
+        public HealthStatus Status { get; set; }
 
         /// <summary>
         /// The version of the service.

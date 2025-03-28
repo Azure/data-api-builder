@@ -201,8 +201,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// When using complex operators i.e. NotContains due to wildcards being added or special characters being escaped
         /// the string being passed as a parameter maybe longer than the length of the column. The parameter data type
         /// can't be fixed to the length of the underlying column, otherwise the parameter value would be truncated and
-        /// we'd get incorret results
-        /// Thus checking the parameter length is overridden to cater for teh extra length i.e. lengthOverride = true codepath?
+        /// we'd get incorrect results
+        /// Thus checking the parameter length is overridden to cater for the extra length i.e. lengthOverride = true codepath.
         /// </remarks>
         [DataTestMethod]
         [DataRow("contains")]
@@ -242,8 +242,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// When using complex operators i.e. NotContains due to wildcards being added or special characters being escaped
         /// the string being passed as a parameter maybe longer than the length of the column. The parameter data type
         /// can't be fixed to the length of the underlying column, otherwise the parameter value would be truncated and
-        /// we'd get incorret results.
-        /// Thus checking the parameter length is overridden to cater for teh extra length i.e. lengthOverride = true codepath?
+        /// we'd get incorrect results.
+        /// Thus checking the parameter length is overridden to cater for the extra length i.e. lengthOverride = true codepath.
         /// </remarks>
         [TestMethod]
         public virtual async Task TestFilterParamForStringFilterWorkWithNotContains(string op)

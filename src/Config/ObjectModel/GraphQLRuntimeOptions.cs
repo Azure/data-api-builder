@@ -12,7 +12,7 @@ public record GraphQLRuntimeOptions(bool Enabled = true,
                                     int? DepthLimit = null,
                                     MultipleMutationOptions? MultipleMutationOptions = null,
                                     bool EnableAggregation = true,
-                                    bool EnableDwNto1JoinOpt = false)
+                                    FeatureFlags? FeatureFlags = null)
 {
     public const string DEFAULT_PATH = "/graphql";
 
@@ -25,4 +25,10 @@ public record GraphQLRuntimeOptions(bool Enabled = true,
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(DepthLimit))]
     public bool UserProvidedDepthLimit { get; init; } = false;
+
+    /// <summary>
+    /// Feature flag contains ephemeral flags passed in to init the runtime options 
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public FeatureFlags FeatureFlags { get; init; } = FeatureFlags ?? new FeatureFlags();
 }

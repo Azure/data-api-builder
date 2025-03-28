@@ -151,7 +151,8 @@ public record RuntimeConfig
     public bool EnableDwNto1JoinOpt =>
         Runtime is not null &&
         Runtime.GraphQL is not null &&
-        Runtime.GraphQL.EnableDwNto1JoinOpt;
+        Runtime.GraphQL.FeatureFlags is not null &&
+        Runtime.GraphQL.FeatureFlags.EnableDwNto1JoinQueryOptimization;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 

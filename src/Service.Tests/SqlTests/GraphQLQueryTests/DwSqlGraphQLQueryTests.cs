@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -1089,6 +1090,55 @@ FROM (
         public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
         {
             await base.TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
+
+        /// <summary>
+        /// When the feature flag object is passed to build GraphQL runtime objects
+        /// Runtime config can correctly get the value
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public void TestEnableDwNto1JoinQueryFeatureFlagLoadedFromRuntime()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MySQL, string.Empty, new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(FeatureFlags: new()
+                   {
+                       EnableDwNto1JoinQueryOptimization = true
+                   }),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+            );
+
+            Assert.IsTrue(mockConfig.EnableDwNto1JoinOpt);
+        }
+
+        /// <summary>
+        /// When the feature flag object is NOT passed to build GraphQL runtime objects
+        /// Runtime config can correctly get the default value instead
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public void TestEnableDwNto1JoinQueryFeatureFlagDefaultValueLoaded()
+        {
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MySQL, string.Empty, new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+            );
+
+            FeatureFlags expect = new();
+
+            Assert.AreEqual(expect.EnableDwNto1JoinQueryOptimization, mockConfig.EnableDwNto1JoinOpt);
         }
         #endregion
     }

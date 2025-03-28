@@ -114,17 +114,6 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             }
 
                             break;
-                        case "enable-dw-nto1joinopt":
-                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
-                            {
-                                graphQLRuntimeOptions = graphQLRuntimeOptions with { EnableDwNto1JoinOpt = reader.GetBoolean() };
-                            }
-                            else
-                            {
-                                throw new JsonException($"Unexpected type of value entered for enable-dwnto1joinopt: {reader.TokenType}");
-                            }
-
-                            break;
                         case "path":
                             if (reader.TokenType is JsonTokenType.String)
                             {
@@ -195,11 +184,6 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteBoolean("enabled", value.Enabled);
             writer.WriteString("path", value.Path);
             writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
-
-            if (value.EnableDwNto1JoinOpt)
-            {
-                writer.WriteBoolean("enable-dw-nto1joinopt", value.EnableDwNto1JoinOpt);
-            }
 
             if (value.UserProvidedDepthLimit)
             {

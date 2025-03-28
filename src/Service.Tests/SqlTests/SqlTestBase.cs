@@ -87,6 +87,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
 
+            // Enable the feature flag for testing
+            runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime with { GraphQL = runtimeConfig.Runtime?.GraphQL with { FeatureFlags = new() { EnableDwNto1JoinQueryOptimization = true } } } };
+
             // Setting the rest.request-body-strict flag as per the test fixtures.
             if (!isRestBodyStrict)
             {

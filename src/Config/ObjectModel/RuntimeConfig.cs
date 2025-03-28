@@ -153,7 +153,7 @@ public record RuntimeConfig
     [JsonIgnore]
     public List<string> AllowedRolesForHealth =>
         Runtime?.Health?.Roles ?? new List<string>();
-        
+
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();

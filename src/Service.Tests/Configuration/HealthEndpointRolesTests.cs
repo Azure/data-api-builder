@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Helper function to write custom configuration file. with minimal REST/GraphQL global settings
+        /// Helper function to write custom configuration file with minimal REST/GraphQL global settings
         /// using the supplied entities.
         /// </summary>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>

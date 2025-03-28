@@ -9,6 +9,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private bool _replaceEnvVar;
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -18,11 +22,27 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new HealthCheckOptionsConverter();
+        return new HealthCheckOptionsConverter(_replaceEnvVar);
+    }
+
+    internal RuntimeHealthOptionsConvertorFactory(bool replaceEnvVar)
+    {
+        _replaceEnvVar = replaceEnvVar;
     }
 
     private class HealthCheckOptionsConverter : JsonConverter<RuntimeHealthCheckConfig>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private bool _replaceEnvVar;
+
+        /// <param name="replaceEnvVar">Whether to replace environment variable with its
+        /// value or not while deserializing.</param>
+        internal HealthCheckOptionsConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         /// <summary>
         /// Defines how DAB reads the data-source's health options and defines which values are
         /// used to instantiate DatasourceHealthCheckConfig.
@@ -72,19 +92,11 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                                     {
                                         if (reader.TokenType == JsonTokenType.String)
                                         {
-                                            string? currentRole = reader.GetString();
+                                            string? currentRole = reader.DeserializeString(_replaceEnvVar);
                                             if (!string.IsNullOrEmpty(currentRole))
                                             {
                                                 stringList.Add(currentRole);
-
                                             }
-                                            /*
-                                            else
-                                            {
-                                                Handle case where the string is empty (e.g., throw an exception or handle differently)
-                                                throw new JsonException("Empty string found in array of roles while deserialization.");
-                                            }
-                                            */
                                         }
                                         else
                                         {
@@ -104,6 +116,9 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                             }
 
                             break;
+
+                        default:
+                            throw new JsonException($"Unexpected property {property}");
                     }
                 }
             }

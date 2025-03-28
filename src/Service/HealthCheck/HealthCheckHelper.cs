@@ -62,6 +62,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return ComprehensiveHealthCheckReport;
         }
 
+        // Updates the incoming role header with the appropriate value from the request headers.
         public void UpdateIncomingRoleHeader(HttpContext httpContext)
         {
             StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
@@ -70,10 +71,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (clientRoleHeader.Count == 1)
             {
                 _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
-            }
-
-            if (clientRoleHeader.Count == 1)
-            {
                 _incomingRoleToken = clientTokenHeader.ToString();
             }
         }
@@ -86,22 +83,15 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="hostMode">Compare with the HostMode of DAB</param>
         /// <param name="allowedRoles">AllowedRoles in the Runtime.Health config</param>
         /// <returns></returns>
-        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, HostMode hostMode, List<string> allowedRoles)
+        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, bool isDevelopmentMode, List<string> allowedRoles)
         {
             if (allowedRoles == null || allowedRoles.Count == 0)
             {
                 // When allowedRoles is null or empty, all roles are allowed if Mode = Development.
-                return hostMode == HostMode.Development;
+                return isDevelopmentMode;
             }
 
-            switch (hostMode)
-            {
-                case HostMode.Development:
-                case HostMode.Production:
-                    return allowedRoles.Contains(_incomingRoleHeader);
-            }
-
-            return false;
+            return allowedRoles.Contains(_incomingRoleHeader);
         }
 
         // Updates the overall status by comparing all the internal HealthStatuses in the response.

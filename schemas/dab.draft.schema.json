@@ -399,6 +399,14 @@
               "description": "Enable health check endpoint globally",
               "default": true,
               "additionalProperties": false
+            },
+            "roles": {
+              "type": "array",
+              "description": "Allowed Roles for Comprehensive Health Endpoint",
+              "items": {
+                "type": "string"
+              },
+              "default": null
             }
           }
         }

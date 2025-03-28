@@ -85,8 +85,6 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableAggregation);
         // Ignore the AllowedRolesForHealth as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowedRolesForHealth);
-        // Ignore the HostMode as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.HostMode);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableAggregation);
         // Ignore the message as that's not serialized in our config file anyway.

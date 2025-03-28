@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the REST query by sending a GET request to the API.
-        public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first, string _incomingRoleHeader, string _incomingRoleToken)
+        public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
             try
@@ -106,10 +106,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     // Send a GET request to the API
                     apiRoute = $"{apiRoute}{Utilities.CreateHttpRestQuery(entityName, first)}";
                     HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: apiRoute);
-                    if (string.IsNullOrEmpty(_incomingRoleToken) && string.IsNullOrEmpty(_incomingRoleHeader))
+                    if (string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader))
                     {
-                        message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, _incomingRoleToken);
-                        message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, _incomingRoleHeader);
+                        message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                        message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                     }
 
                     HttpResponseMessage response = client.SendAsync(message).Result;
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Executes the GraphQL query by sending a POST request to the API.
         // Internally calls the metadata provider to fetch the column names to create the graphql payload.
-        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string _incomingRoleHeader, string _incomingRoleToken)
+        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations
@@ -168,10 +168,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             Content = content
                         };
 
-                        if (string.IsNullOrEmpty(_incomingRoleToken) && string.IsNullOrEmpty(_incomingRoleHeader))
+                        if (string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader))
                         {
-                            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, _incomingRoleToken);
-                            message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, _incomingRoleHeader);
+                            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                            message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                         }
 
                         HttpResponseMessage response = client.SendAsync(message).Result;

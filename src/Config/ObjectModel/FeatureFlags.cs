@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
 
         public FeatureFlags()
         {
-            this.EnableDwNto1JoinQueryOptimization = true;
+            this.EnableDwNto1JoinQueryOptimization = false;
         }
     }
 }

@@ -19,7 +19,7 @@ public record RuntimeCacheOptions
     public const int DEFAULT_TTL_SECONDS = 5;
 
     /// <summary>
-    /// Whether the cache should be used for the entity.
+    /// Whether the level2 cache should be used.
     /// </summary>
     [JsonPropertyName("enabled")]
     public bool? Enabled { get; init; } = false;
@@ -31,7 +31,7 @@ public record RuntimeCacheOptions
     public int? TtlSeconds { get; init; } = null;
 
     /// <summary>
-    /// The number of seconds a cache entry is valid before eligible for cache eviction.
+    /// The options for the level2 cache (and backplane).
     /// </summary>
     [JsonPropertyName("level-2")]
     public RuntimeCacheLevel2Options? Level2 { get; init; } = null;

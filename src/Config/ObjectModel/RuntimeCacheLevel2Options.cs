@@ -7,19 +7,19 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
-/// Runtime specific cache configuration.
+/// Runtime specific level2 cache configuration.
 /// Properties are nullable to support DAB CLI merge config
 /// expected behavior.
 /// </summary>
 public record RuntimeCacheLevel2Options
 {
     /// <summary>
-    /// Default ttl value for an entity.
+    /// Default level2 ttl value for any entity.
     /// </summary>
     public const int DEFAULT_TTL_SECONDS = 60;
 
     /// <summary>
-    /// Whether the cache should be used for the entity.
+    /// Whether the cache should be used.
     /// </summary>
     [JsonPropertyName("enabled")]
     public bool? Enabled { get; init; } = false;
@@ -31,13 +31,13 @@ public record RuntimeCacheLevel2Options
     public int? TtlSeconds { get; init; } = null;
 
     /// <summary>
-    /// The provider for the L2 cache.
+    /// The provider for the L2 cache. Currently only "redis" is supported.
     /// </summary>
     [JsonPropertyName("provider")]
     public string? Provider { get; init; } = null;
 
     /// <summary>
-    /// The connection string for the L2 cache.
+    /// The connection string for the level2 cache.
     /// </summary>
     [JsonPropertyName("connection-string")]
     public string? ConnectionString { get; init; } = null;

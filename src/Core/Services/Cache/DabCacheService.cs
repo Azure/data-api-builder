@@ -27,7 +27,6 @@ public class DabCacheService
 
     // Log Messages
     private const string CACHE_KEY_EMPTY = "The cache key should not be empty.";
-    //private const string CACHE_KEY_TOO_LARGE = "The cache key is too large.";
     private const string CACHE_KEY_CREATED = "The cache key was created by the cache service.";
     private const string CACHE_ENTRY_TOO_LARGE = "The cache entry is too large.";
 

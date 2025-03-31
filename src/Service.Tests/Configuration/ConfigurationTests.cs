@@ -468,6 +468,69 @@ type Moon {
 }
 ";
 
+        public const string CONFIG_FILE_WITH_NO_OPTIONAL_FIELD = @"{
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+        public const string CONFIG_FILE_WITH_NO_CORS_FIELD = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""authentication"": {
+                                                ""provider"": ""StaticWebApps""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
@@ -1589,6 +1652,64 @@ type Moon {
                     It.IsAny<Exception>(),
                     (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
                 Times.Once);
+        }
+
+        /// <summary>
+        /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
+        /// It asserts that the validation is successful and there are no validation failures when no optional fields are used.
+        /// It also verifies that the expected log message is logged.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
+        [DataRow(CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD, DisplayName = "Validates schema of the config file with no Authentication field.")]
+        [DataRow(CONFIG_FILE_WITH_NO_CORS_FIELD, DisplayName = "Validates schema of the config file with no Cors field.")]
+        public async Task TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
+        {
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsTrue(result.IsValid);
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            schemaValidatorLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
+        /// <summary>
+        /// The config file does not contain any entity fields, which is expected to be invalid according to the schema.
+        /// The test asserts that the validation fails and there are validation errors.
+        /// It also verifies that the expected error message is logged, indicating that the 'entities' property is required.
+        [TestMethod]
+        public async Task TestBasicConfigSchemaWithNoEntityFieldsIsInvalid()
+        {
+            string jsonData = @"{
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    }
+                                }";
+
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsFalse(result.IsValid);
+            Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            Assert.AreEqual(1, result.ErrorCount);
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> PropertyRequired: #/entities"));
         }
 
         /// <summary>

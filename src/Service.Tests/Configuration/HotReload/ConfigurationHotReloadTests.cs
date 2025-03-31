@@ -679,6 +679,7 @@ public class ConfigurationHotReloadTests
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 
+    /// <summary>
     /// Creates a hot reload scenario in which the schema file is invalid which causes
     /// hot reload to fail, then we check that the program is still able to work
     /// properly by validating that the DAB engine is still using the same configuration file

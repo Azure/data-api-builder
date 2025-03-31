@@ -210,14 +210,14 @@ namespace Azure.DataApiBuilder.Service
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<HealthCheckHelper>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(HealthCheckHelper).FullName);
                 return loggerFactory.CreateLogger<HealthCheckHelper>();
             });
 
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<HttpUtilities>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(HttpUtilities).FullName);
                 return loggerFactory.CreateLogger<HttpUtilities>();
             });
 
@@ -536,7 +536,7 @@ namespace Azure.DataApiBuilder.Service
             // Variable 'loggerFilter' can be of null type due to typeof().FullName,
             // this case shouldn't happen but we change the value to be empty which is the
             // default value for RuntimeConfig::GetConfiguredLogLevel function.
-            if (loggerFilter == null)
+            if (loggerFilter is null)
             {
                 loggerFilter = string.Empty;
             }

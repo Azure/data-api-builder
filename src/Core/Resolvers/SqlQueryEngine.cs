@@ -326,13 +326,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // If a db policy is configured for the read operation in the context of the executing role, skip the cache.
                 // We want to avoid caching token metadata because token metadata can change frequently and we want to avoid caching it.
-                if (!dbPolicyConfigured && entityCacheEnabled)
+                if (!dbPolicyConfigured && entityCacheEnabled && !string.Equals(structure.CacheControlOption, "no-cache"))
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
-                    byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
-                    JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
-                    return cacheServiceResponse;
+                    JsonElement result;
+                    switch (structure.CacheControlOption)
+                    {
+                        case "no store":
+                            break;
+                        case "only-if-cached":
+                            result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                            break;
+                        default:
+                            result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+                            JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+                            return cacheServiceResponse;
+                    }
                 }
             }
 

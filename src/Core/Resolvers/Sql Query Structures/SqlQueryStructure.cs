@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
+using Polly;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -92,6 +93,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public GroupByMetadata GroupByMetadata { get; private set; }
 
+        public string? CacheControlOption { get; set; }
+
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
@@ -150,6 +153,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
+                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx),
                   predicates: null,
                   entityName: entityName,
                   counter: counter)
@@ -217,6 +221,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
+            // Set the cache control based on the header if it exists.
+            if (httpContext.Request.Headers.TryGetValue("Cache-Control", out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
+            {
+                CacheControlOption = cacheControlOption;
+            }
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
@@ -380,9 +389,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
+                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx),
                   predicates: null,
                   entityName: entityName,
                   counter: counter
+                  
                   )
         {
             _ctx = ctx;
@@ -541,10 +552,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
+            HttpContext httpContext,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null,
-            HttpContext? httpContext = null)
+            IncrementingInteger? counter = null)
             : base(metadataProvider,
                   authorizationResolver,
                   gQLFilterParser, predicates,
@@ -559,6 +570,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ColumnLabelToParam = new();
             FilterPredicates = string.Empty;
             OrderByColumns = new();
+            AddCacheControlOptions(httpContext);
+        }
+
+        private void AddCacheControlOptions(HttpContext httpContext)
+        {
+            // Set the cache control based on the request header if it exists.
+            if (httpContext.Request.Headers.TryGetValue("Cache-Control", out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
+            {
+                CacheControlOption = cacheControlOption;
+            }
+
+            if (!string.IsNullOrEmpty(CacheControlOption) &&
+                !string.Equals(CacheControlOption, "no-cache") &&
+                !string.Equals(CacheControlOption, "no-store") &&
+                !string.Equals(CacheControlOption, "only-if-cached"))
+            {
+                throw new DataApiBuilderException(
+                    message: "Request Header Cache-Control is invalid: " + CacheControlOption,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>

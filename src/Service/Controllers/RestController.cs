@@ -185,7 +185,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <summary>
         /// Handle the given operation.
         /// </summary>
-        /// <param name="method">The method.</param>
         /// <param name="route">The entire route.</param>
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
@@ -193,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
             EntityActionOperation operationType)
         {
             var stopwatch = Stopwatch.StartNew();
-            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {route.Split('/')[1]}");
+            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {route?.Split('/')[1]}");
             if(activity is not null)
             {
                 activity.TrackRestControllerActivityStarted(HttpContext.Request.Method,

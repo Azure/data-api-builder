@@ -98,11 +98,6 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                                                 stringList.Add(currentRole);
                                             }
                                         }
-                                        else
-                                        {
-                                            // If the token is not a string, throw an exception
-                                            throw new JsonException($"Invalid token type in array. Expected a string, but found {reader.TokenType}.");
-                                        }
                                     }
 
                                     // After reading the array, assign it to the string[] variable
@@ -123,7 +118,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException();
+            throw new JsonException("Runtime Health Options has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, RuntimeHealthCheckConfig value, JsonSerializerOptions options)

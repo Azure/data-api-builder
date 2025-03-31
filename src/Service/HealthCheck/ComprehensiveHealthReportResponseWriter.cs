@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
             // Global comprehensive Health Check Enabled
-            if (config != null && config.IsHealthEnabled)
+            if (config.IsHealthEnabled)
             {
                 _healthCheckHelper.UpdateIncomingRoleHeader(context);
                 if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.IsDevelopmentMode(), config.AllowedRolesForHealth))
@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 string? response;
                 // Check if the cache is enabled 
-                if (config.CacheTtlSeconds != null && config.CacheTtlSeconds > 0)
+                if (config.CacheTtlSecondsForHealthReport != null && config.CacheTtlSecondsForHealthReport > 0)
                 {
                     if (!_cache.TryGetValue(CACHE_KEY, out response))
                     {
@@ -95,12 +95,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
                         LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
 
-                        // Cache the response for 5 minutes (or any other duration you prefer)
-                        MemoryCacheEntryOptions cacheEntryOptions = new MemoryCacheEntryOptions()
-                            .SetAbsoluteExpiration(TimeSpan.FromSeconds((double)config.CacheTtlSeconds));
+                        try
+                        {
+                            // Cache the response for cache-ttl-seconds provided by the user in the config
+                            MemoryCacheEntryOptions cacheEntryOptions = new MemoryCacheEntryOptions()
+                                .SetAbsoluteExpiration(TimeSpan.FromSeconds((double)config.CacheTtlSecondsForHealthReport));
 
-                        _cache.Set(CACHE_KEY, response, cacheEntryOptions);
-                        LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                            _cache.Set(CACHE_KEY, response, cacheEntryOptions);
+                            LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                        }
+                        catch (Exception ex)
+                        {
+                            LogTrace($"Error in caching health check response: {ex.Message}");
+                        }
                     }
 
                     // Ensure cachedResponse is not null before calling WriteAsync
@@ -123,7 +130,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
                     LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
                     await context.Response.WriteAsync(response);
-
                 }
             }
             else

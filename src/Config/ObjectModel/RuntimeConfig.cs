@@ -155,7 +155,7 @@ public record RuntimeConfig
         Runtime?.Health?.Roles ?? new List<string>();
 
     [JsonIgnore]
-    public int? CacheTtlSeconds =>
+    public int? CacheTtlSecondsForHealthReport =>
         Runtime?.Health?.CacheTtlSeconds;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;

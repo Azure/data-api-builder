@@ -1,0 +1,50 @@
+{
+  "status": "Healthy",
+  "version": "1.5.0",
+  "app-name": "dab_oss_1.5.0",
+  "configuration": {
+    "rest": true,
+    "graphql": true,
+    "caching": false,
+    "telemetry": false,
+    "mode": "Production"
+  },
+  "checks": [
+    {
+      "status": "Healthy",
+      "name": "MSSQL",
+      "tags": [
+        "data-source"
+      ],
+      "data": {
+        "response-ms": 1,
+        "threshold-ms": 1000
+      }
+    },
+    {
+      "status": "Healthy",
+      "name": "Book",
+      "tags": [
+        "rest",
+        "endpoint"
+      ],
+      "data": {
+        "response-ms": 10,
+        "threshold-ms": 100
+      }
+    },
+    {
+      "status": "Unhealthy",
+      "name": "Book",
+      "exception": "The threshold for executing the request has exceeded.",
+      "tags": [
+        "graphql",
+        "endpoint"
+      ],
+      "data": {
+        "response-ms": 20,
+        "threshold-ms": 10
+      }
+    }
+  ]
+}

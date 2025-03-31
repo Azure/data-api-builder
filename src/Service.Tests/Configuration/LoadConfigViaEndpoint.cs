@@ -24,7 +24,7 @@ public class LoadConfigViaEndpointTests
     [DataRow(CONFIGURATION_ENDPOINT_V2)]
     public async Task CanLoadConfigWithMissingEnvironmentVariables(string configurationEndpoint)
     {
-        TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+        TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
         HttpClient httpClient = server.CreateClient();
 
         (RuntimeConfig config, JsonContent content) = GetParameterContent(configurationEndpoint);
@@ -46,7 +46,7 @@ public class LoadConfigViaEndpointTests
     public async Task CanLoadConfigWithEnvironmentVariables(string configurationEndpoint)
     {
         Environment.SetEnvironmentVariable("schema", "schema.graphql");
-        TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+        TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
         HttpClient httpClient = server.CreateClient();
 
         (RuntimeConfig config, JsonContent content) = GetParameterContent(configurationEndpoint);

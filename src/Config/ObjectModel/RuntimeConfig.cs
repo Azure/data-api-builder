@@ -69,6 +69,12 @@ public record RuntimeConfig
          Runtime.Rest.Enabled) &&
          DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
 
+    [JsonIgnore]
+    public bool IsHealthEnabled =>
+        Runtime is null ||
+        Runtime.Health is null ||
+        Runtime.Health.Enabled;
+
     /// <summary>
     /// A shorthand method to determine whether Static Web Apps is configured for the current authentication provider.
     /// </summary>

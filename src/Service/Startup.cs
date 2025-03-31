@@ -187,6 +187,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
+            services.AddSingleton<HealthCheckHelper>();
+            services.AddSingleton<HttpUtilities>();
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
 
@@ -202,6 +204,20 @@ namespace Azure.DataApiBuilder.Service
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
+            });
+
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<HealthCheckHelper>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<HealthCheckHelper>();
+            });
+
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<HttpUtilities>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<HttpUtilities>();
             });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
@@ -229,7 +245,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Development mode implies support for "Hot Reload". The V2 authentication function
                 // wires up all DAB supported authentication providers (schemes) so that at request time,
-                // the runtime config defined authenitication provider is used to authenticate requests.
+                // the runtime config defined authentication provider is used to authenticate requests.
                 ConfigureAuthenticationV2(services, configProvider);
             }
             else
@@ -496,11 +512,6 @@ namespace Azure.DataApiBuilder.Service
                 endpoints.MapHealthChecks("/", new HealthCheckOptions
                 {
                     ResponseWriter = app.ApplicationServices.GetRequiredService<BasicHealthReportResponseWriter>().WriteResponse
-                });
-
-                endpoints.MapHealthChecks("/health", new HealthCheckOptions
-                {
-                    ResponseWriter = app.ApplicationServices.GetRequiredService<ComprehensiveHealthReportResponseWriter>().WriteResponse
                 });
             });
         }

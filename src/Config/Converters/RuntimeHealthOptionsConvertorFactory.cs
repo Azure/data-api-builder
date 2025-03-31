@@ -44,17 +44,12 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
         }
 
         /// <summary>
-        /// Defines how DAB reads the data-source's health options and defines which values are
-        /// used to instantiate DatasourceHealthCheckConfig.
+        /// Defines how DAB reads the runtime's health options and defines which values are
+        /// used to instantiate RuntimeHealthCheckConfig.
         /// </summary>
         /// <exception cref="JsonException">Thrown when improperly formatted health check options are provided.</exception>
         public override RuntimeHealthCheckConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.Null)
-            {
-                return new RuntimeHealthCheckConfig();
-            }
-
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool? enabled = null;

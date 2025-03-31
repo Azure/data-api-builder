@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
             {
                 if (route.Equals(REDIRECTED_ROUTE))
                 {
-                    return default!;
+                    return NotFound();
                 }
 
                 // Validate the PathBase matches the configured REST path.

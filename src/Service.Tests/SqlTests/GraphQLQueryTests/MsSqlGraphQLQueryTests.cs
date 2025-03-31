@@ -268,7 +268,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
-
         [TestMethod]
         public async Task QueryWithNullableForeignKey()
         {

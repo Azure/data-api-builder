@@ -315,6 +315,10 @@ public class RuntimeConfigProvider
             RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
 
             _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
+            if (!_configLoader.RuntimeConfig!.IsDevelopmentMode())
+            {
+                _configLoader.IsNewConfigValidated = _configLoader.IsConfigValidInProductionMode();
+            }
 
             // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
             if (_configLoader.IsNewConfigValidated)

@@ -6,6 +6,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -393,4 +394,48 @@ public abstract class RuntimeConfigLoader
     {
         RuntimeConfig = LastValidRuntimeConfig;
     }
+
+
+    /// <summary>
+    /// Creates a copy of the RuntimeConfig and the LastValidRuntimeConfig and
+    /// gets rid of the parts that can be changed with hot reload in production mode,
+    /// then compares them to ensure that there are no unwanted changes in the config file.
+    /// </summary>
+    public bool IsConfigValidInProductionMode()
+    {
+        if (RuntimeConfig is not null && LastValidRuntimeConfig is not null &&
+            !RuntimeConfig.IsLogLevelNull() && !LastValidRuntimeConfig.IsLogLevelNull())
+        {
+            // Creates copy without the loggerlevel property
+            RuntimeConfig runtimeConfigCopy = RuntimeConfig with
+            {
+                Runtime = RuntimeConfig.Runtime! with
+                {
+                    Telemetry = RuntimeConfig.Runtime!.Telemetry! with
+                    {
+                        LoggerLevel = null
+                    }
+                }
+            };
+
+            // Creates copy without the loggerlevel property
+            RuntimeConfig lastValidConfigCopy = LastValidRuntimeConfig with
+            {
+                Runtime = LastValidRuntimeConfig.Runtime! with
+                {
+                    Telemetry = LastValidRuntimeConfig.Runtime!.Telemetry! with
+                    {
+                        LoggerLevel = null
+                    }
+                }
+            };
+
+            string jsonConfigCopy = JsonSerializer.Serialize(runtimeConfigCopy);
+            string jsonLastValidConfigCopy = JsonSerializer.Serialize(lastValidConfigCopy);
+
+            return jsonConfigCopy.Equals(jsonLastValidConfigCopy);
+        }
+
+        return false;
+     }
 }

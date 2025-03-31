@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
-                    ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
+                    ILoggerFactory? loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service
                     // Category defines the namespace we will log from,
                     // including all sub-domains. ie: "Azure" includes
                     // "Azure.DataApiBuilder.Service"
-                    if (logLevelInitializer == null)
+                    if (logLevelInitializer is null)
                     {
                         builder.AddFilter(category: "Microsoft", logLevel);
                         builder.AddFilter(category: "Azure", logLevel);
@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service
                             },
                             configureApplicationInsightsLoggerOptions: (options) => { }
                         );
-                        if (logLevelInitializer == null)
+                        if (logLevelInitializer is null)
                         {
                             builder.AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
                         }

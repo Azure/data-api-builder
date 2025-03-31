@@ -319,7 +319,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         IsNewConfigValidated = false;
         SignalConfigChanged();
 
-        logger?.LogInformation("Hot-reload process finished");
+        logger?.LogInformation("Hot-reload process finished.");
     }
 
     /// <summary>

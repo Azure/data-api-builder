@@ -11,16 +11,18 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 {
     public class LogLevelInitializer
     {
-        private RuntimeConfigProvider? _runtimeConfigProvider;
+        private RuntimeConfigProvider _runtimeConfigProvider;
         private string _loggerFilter;
 
         public LogLevel MinLogLevel { get; private set; }
 
-        public LogLevelInitializer(LogLevel logLevel, string? loggerFilter, HotReloadEventHandler<HotReloadEventArgs>? handler)
+        public LogLevelInitializer(LogLevel logLevel, string? loggerFilter, RuntimeConfigProvider configProvider, HotReloadEventHandler<HotReloadEventArgs>? handler)
         {
             handler?.Subscribe(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, OnConfigChanged);
             MinLogLevel = logLevel;
-            if (loggerFilter != null)
+            _runtimeConfigProvider = configProvider;
+
+            if (loggerFilter is not null)
             {
                 _loggerFilter = loggerFilter;
             }
@@ -36,11 +38,6 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             {
                 MinLogLevel = runtimeConfig.GetConfiguredLogLevel(_loggerFilter);
             }
-        }
-
-        public void SetRuntimeConfigProvider(RuntimeConfigProvider configProvider)
-        {
-            _runtimeConfigProvider = configProvider;
         }
 
         private void OnConfigChanged(object? sender, HotReloadEventArgs args)

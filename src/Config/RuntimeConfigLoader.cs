@@ -89,6 +89,7 @@ public abstract class RuntimeConfigLoader
         // Signal that a change has occurred to all change token listeners.
         RaiseChanged();
 
+        // All the data inside of the if statement should only update when DAB is in development mode.
         if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
         {
             OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
@@ -109,6 +110,7 @@ public abstract class RuntimeConfigLoader
             OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
         }
 
+        // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
         OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
     }
 

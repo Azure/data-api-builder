@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     }
                     else
                     {
-                        errorMessage = $"The HealthEndpoint REST query failed with code: {response.StatusCode}.";
+                        errorMessage = $"The REST HealthEndpoint query failed with code: {response.StatusCode}.";
                     }
                 }
 
@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         }
                         else
                         {
-                            errorMessage = $"The HealthEndpoint GraphQL query failed with code: {response.StatusCode}.";
+                            errorMessage = $"The GraphQL HealthEndpoint query failed with code: {response.StatusCode}.";
                         }
                     }
                 }

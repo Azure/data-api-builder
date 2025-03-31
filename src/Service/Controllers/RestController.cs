@@ -189,10 +189,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
             {
                 if (route.Equals(REDIRECTED_ROUTE))
                 {
-                    throw new DataApiBuilderException(
-                        message: $"GraphQL request redirected to {REDIRECTED_ROUTE}.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    return default!;
                 }
 
                 // Validate the PathBase matches the configured REST path.

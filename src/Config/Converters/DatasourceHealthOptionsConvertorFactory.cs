@@ -9,6 +9,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private bool _replaceEnvVar;
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -18,11 +22,29 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new HealthCheckOptionsConverter();
+        return new HealthCheckOptionsConverter(_replaceEnvVar);
+    }
+
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
+    internal DataSourceHealthOptionsConvertorFactory(bool replaceEnvVar)
+    {
+        _replaceEnvVar = replaceEnvVar;
     }
 
     private class HealthCheckOptionsConverter : JsonConverter<DatasourceHealthCheckConfig>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private bool _replaceEnvVar;
+
+        /// <param name="replaceEnvVar">Whether to replace environment variable with its
+        /// value or not while deserializing.</param>
+        public HealthCheckOptionsConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         /// <summary>
         /// Defines how DAB reads the data-source's health options and defines which values are
         /// used to instantiate DatasourceHealthCheckConfig.
@@ -63,7 +85,7 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
                         case "name":
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
-                                name = reader.GetString();
+                                name = reader.DeserializeString(_replaceEnvVar);
                             }
 
                             break;
@@ -87,7 +109,7 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException("Datasource HealthOptions must be a proper object.");
+            throw new JsonException("Datasource Health Options has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, DatasourceHealthCheckConfig value, JsonSerializerOptions options)

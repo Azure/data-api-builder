@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     /// </summary>
     public class HttpUtilities
     {
-        private readonly ILogger? _logger;
+        private readonly ILogger<HttpUtilities> _logger;
         private string _apiRoute;
         private IMetadataProviderFactory _metadataProviderFactory;
         private RuntimeConfigProvider _runtimeConfigProvider;
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="metadataProviderFactory">MetadataProviderFactory</param>
         /// <param name="runtimeConfigProvider">RuntimeConfigProvider</param>
         public HttpUtilities(
-            ILogger<HttpUtilities>? logger,
+            ILogger<HttpUtilities> logger,
             IMetadataProviderFactory metadataProviderFactory,
             RuntimeConfigProvider runtimeConfigProvider)
         {
@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 // Base URL of the API that handles SQL operations
                 string apiRoute = Utilities.GetServiceRoute(_apiRoute, restUriSuffix);
-                if (apiRoute == string.Empty)
+                if (string.IsNullOrEmpty(apiRoute))
                 {
                     LogTrace("The API route is not available, hence HealthEndpoint is not available.");
                     return errorMessage;
@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the health check rest query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the health check REST query: {ex.Message}");
                 return ex.Message;
             }
         }
@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations
             string apiRoute = Utilities.GetServiceRoute(_apiRoute, graphqlUriSuffix);
-            if (apiRoute == string.Empty)
+            if (string.IsNullOrEmpty(apiRoute))
             {
                 LogTrace("The API route is not available, hence HealthEndpoint is not available.");
                 return errorMessage;
@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the Graphql health check query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the GraphQL health check query: {ex.Message}");
                 return ex.Message;
             }
         }
@@ -219,14 +219,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="message">Message to emit.</param>
         private void LogTrace(string message)
         {
-            if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace(message);
-            }
-            else
-            {
-                Console.WriteLine(message);
-            }
+            _logger.LogTrace(message);
         }
     }
 }

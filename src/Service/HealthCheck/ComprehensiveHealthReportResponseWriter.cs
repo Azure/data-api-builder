@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -97,14 +96,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="message">Message to emit.</param>
         private void LogTrace(string message)
         {
-            if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace(message);
-            }
-            else
-            {
-                Console.WriteLine(message);
-            }
+            _logger.LogTrace(message);
         }
     }
 }

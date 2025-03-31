@@ -47,14 +47,9 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
         public override DataSource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.Null)
-            {
-                return new(DatabaseType.MSSQL, string.Empty);
-            }
-
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                DatabaseType? databaseType = null;
+                DatabaseType databaseType = DatabaseType.MSSQL;
                 string connectionString = string.Empty;
                 DatasourceHealthCheckConfig? health = null;
                 Dictionary<string, object?>? datasourceOptions = null;
@@ -63,7 +58,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new DataSource(databaseType ?? DatabaseType.MSSQL, connectionString, datasourceOptions, health);
+                        return new DataSource(databaseType, connectionString, datasourceOptions, health);
                     }
 
                     if (reader.TokenType is JsonTokenType.PropertyName)
@@ -74,19 +69,13 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                         switch (propertyName)
                         {
                             case "database-type":
-                                if (reader.TokenType is not JsonTokenType.Null)
-                                {
-                                    databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
-                                }
-
+                                databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
                                 break;
+
                             case "connection-string":
-                                if (reader.TokenType is not JsonTokenType.Null)
-                                {
-                                    connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
-                                }
-
+                                connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
                                 break;
+
                             case "health":
                                 if (reader.TokenType == JsonTokenType.Null)
                                 {
@@ -157,7 +146,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException();
+            throw new JsonException("data-source property has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, DataSource value, JsonSerializerOptions options)

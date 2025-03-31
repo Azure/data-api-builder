@@ -35,8 +35,6 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsCachingEnabled);
         // Ignore the entity IsCachingEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsCachingEnabled);
-        // Ignore the entity IsCachingEnabled as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsCachingEnabled);
         // Ignore the global IsRestEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
         // Ignore the global RuntimeOptions.IsRestEnabled as that's unimportant from a test standpoint.
@@ -81,8 +79,6 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableAggregation);
         // Ignore the AllowedRolesForHealth as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowedRolesForHealth);
-        // Ignore the HostMode as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.HostMode);
         // Ignore the CacheTtlSeconds as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CacheTtlSeconds);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.

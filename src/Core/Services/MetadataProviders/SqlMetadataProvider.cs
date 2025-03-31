@@ -1468,7 +1468,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     throw new DataApiBuilderException(
                         message,
                         statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                        innerException: ex);
                 }
             }
 

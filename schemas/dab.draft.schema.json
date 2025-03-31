@@ -248,12 +248,12 @@
             },
             "mode": {
               "description": "Set if running in Development or Production mode",
-              "type": "string",
+              "type": ["string", "null"],
               "default": "production",
               "enum": ["production", "development"]
             },
             "cors": {
-              "type": "object",
+              "type": ["object", "null"],
               "description": "Configure CORS",
               "additionalProperties": false,
               "properties": {
@@ -273,7 +273,7 @@
               }
             },
             "authentication": {
-              "type": "object",
+              "type": ["object", "null"],
               "additionalProperties": false,
               "properties": {
                 "provider": {
@@ -399,6 +399,14 @@
               "description": "Enable health check endpoint globally",
               "default": true,
               "additionalProperties": false
+            },
+            "roles": {
+              "type": "array",
+              "description": "Allowed Roles for Comprehensive Health Endpoint",
+              "items": {
+                "type": "string"
+              },
+              "default": null
             }
           }
         }

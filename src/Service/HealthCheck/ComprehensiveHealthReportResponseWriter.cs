@@ -76,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (config != null && config.IsHealthEnabled)
             {
                 _healthCheckHelper.UpdateIncomingRoleHeader(context);
-                if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.HostMode, config.AllowedRolesForHealth))
+                if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.IsDevelopmentMode(), config.AllowedRolesForHealth))
                 {
                     LogTrace("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -142,10 +142,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="message">Message to emit.</param>
         private void LogTrace(string message)
         {
-            if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace(message);
-            }
+            _logger.LogTrace(message);
         }
     }
 }

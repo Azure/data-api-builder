@@ -30,14 +30,14 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
         /// <exception cref="JsonException">Thrown when improperly formatted health check options are provided.</exception>
         public override EntityHealthCheckConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.Null)
+            if (reader.TokenType is JsonTokenType.Null)
             {
                 return new EntityHealthCheckConfig();
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                bool enabled = true;
+                bool? enabled = null;
                 int? first = null;
                 int? threshold_ms = null;
 
@@ -86,11 +86,14 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                             }
 
                             break;
+
+                        default:
+                            throw new JsonException($"Unexpected property {property}");
                     }
                 }
             }
 
-            throw new JsonException();
+            throw new JsonException("Entity Health Options has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, EntityHealthCheckConfig value, JsonSerializerOptions options)
@@ -100,23 +103,19 @@ internal class EntityHealthOptionsConvertorFactory : JsonConverterFactory
                 writer.WriteStartObject();
                 writer.WritePropertyName("enabled");
                 JsonSerializer.Serialize(writer, value.Enabled, options);
-                if (value.UserProvidedFirst)
+                if (value.UserProvidedFirst is true)
                 {
                     writer.WritePropertyName("first");
                     JsonSerializer.Serialize(writer, value.First, options);
                 }
 
-                if (value.UserProvidedThresholdMs)
+                if (value.UserProvidedThresholdMs is true)
                 {
                     writer.WritePropertyName("threshold-ms");
                     JsonSerializer.Serialize(writer, value.ThresholdMs, options);
                 }
 
                 writer.WriteEndObject();
-            }
-            else
-            {
-                writer.WriteNullValue();
             }
         }
     }

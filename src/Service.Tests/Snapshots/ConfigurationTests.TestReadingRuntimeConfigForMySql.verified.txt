@@ -767,6 +767,41 @@
       }
     },
     {
+      Default_Books: {
+        Source: {
+          Object: default_books,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: default_book,
+          Plural: default_books,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       BookNF: {
         Source: {
           Object: books,
@@ -1389,7 +1424,7 @@
           spores: hazards
         },
         Relationships: {
-          shrub: {
+          Shrub: {
             TargetEntity: Shrub,
             SourceFields: [
               habitat
@@ -2188,9 +2223,6 @@
                   Exclude: [
                     current_date,
                     next_date
-                  ],
-                  Include: [
-                    *
                   ]
                 }
               },
@@ -2227,16 +2259,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read
-              },
-              {
-                Action: Create
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
+                Action: *
               }
             ]
           }

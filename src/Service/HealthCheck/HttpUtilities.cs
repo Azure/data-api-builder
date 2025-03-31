@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     /// </summary>
     public class HttpUtilities
     {
-        private readonly ILogger? _logger;
+        private readonly ILogger<HttpUtilities> _logger;
         private string _apiRoute;
         private IMetadataProviderFactory _metadataProviderFactory;
         private RuntimeConfigProvider _runtimeConfigProvider;
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="metadataProviderFactory">MetadataProviderFactory</param>
         /// <param name="runtimeConfigProvider">RuntimeConfigProvider</param>
         public HttpUtilities(
-            ILogger<HttpUtilities>? logger,
+            ILogger<HttpUtilities> logger,
             IMetadataProviderFactory metadataProviderFactory,
             RuntimeConfigProvider runtimeConfigProvider)
         {
@@ -73,12 +73,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     SqlCommand command = new(query, connection);
                     connection.Open();
                     SqlDataReader reader = command.ExecuteReader();
-                    LogTrace("The query executed successfully.");
+                    LogTrace("The health check query for datasource executed successfully.");
                     reader.Close();
                 }
                 catch (Exception ex)
                 {
-                    LogTrace($"An exception occurred while executing the query: {ex.Message}");
+                    LogTrace($"An exception occurred while executing the health check query: {ex.Message}");
                     errorMessage = ex.Message;
                 }
             }
@@ -87,14 +87,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the REST query by sending a GET request to the API.
-        public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first, string _incomingRoleHeader, string _incomingRoleToken)
+        public string? ExecuteRestQuery(string restUriSuffix, string entityName, int first, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
             try
             {
                 // Base URL of the API that handles SQL operations
                 string apiRoute = Utilities.GetServiceRoute(_apiRoute, restUriSuffix);
-                if (apiRoute == string.Empty)
+                if (string.IsNullOrEmpty(apiRoute))
                 {
                     LogTrace("The API route is not available, hence HealthEndpoint is not available.");
                     return errorMessage;
@@ -106,20 +106,20 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     // Send a GET request to the API
                     apiRoute = $"{apiRoute}{Utilities.CreateHttpRestQuery(entityName, first)}";
                     HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: apiRoute);
-                    if (string.IsNullOrEmpty(_incomingRoleToken) && string.IsNullOrEmpty(_incomingRoleHeader))
+                    if (string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader))
                     {
-                        message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, _incomingRoleToken);
-                        message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, _incomingRoleHeader);
+                        message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                        message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                     }
 
                     HttpResponseMessage response = client.SendAsync(message).Result;
                     if (response.IsSuccessStatusCode)
                     {
-                        LogTrace($"The HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
+                        LogTrace($"The REST HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
                     }
                     else
                     {
-                        errorMessage = $"The HealthEndpoint REST query failed with code: {response.StatusCode}.";
+                        errorMessage = $"The REST HealthEndpoint query failed with code: {response.StatusCode}.";
                     }
                 }
 
@@ -127,19 +127,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the health check REST query: {ex.Message}");
                 return ex.Message;
             }
         }
 
         // Executes the GraphQL query by sending a POST request to the API.
         // Internally calls the metadata provider to fetch the column names to create the graphql payload.
-        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string _incomingRoleHeader, string _incomingRoleToken)
+        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
             // Base URL of the API that handles SQL operations
-            string ApiRoute = Utilities.GetServiceRoute(_apiRoute, graphqlUriSuffix);
-            if (ApiRoute == string.Empty)
+            string apiRoute = Utilities.GetServiceRoute(_apiRoute, graphqlUriSuffix);
+            if (string.IsNullOrEmpty(apiRoute))
             {
                 LogTrace("The API route is not available, hence HealthEndpoint is not available.");
                 return errorMessage;
@@ -158,31 +158,31 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 // In case any primitive column names are present, execute the query
                 if (columnNames.Any())
                 {
-                    using (HttpClient client = CreateClient(ApiRoute))
+                    using (HttpClient client = CreateClient(apiRoute))
                     {
                         string jsonPayload = Utilities.CreateHttpGraphQLQuery(databaseObjectName, columnNames, entity.EntityFirst);
                         HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
 
-                        HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: ApiRoute)
+                        HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: apiRoute)
                         {
                             Content = content
                         };
 
-                        if (string.IsNullOrEmpty(_incomingRoleToken) && string.IsNullOrEmpty(_incomingRoleHeader))
+                        if (string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader))
                         {
-                            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, _incomingRoleToken);
-                            message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, _incomingRoleHeader);
+                            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                            message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                         }
 
                         HttpResponseMessage response = client.SendAsync(message).Result;
 
                         if (response.IsSuccessStatusCode)
                         {
-                            LogTrace("The HealthEndpoint query executed successfully.");
+                            LogTrace("The GraphQL HealthEndpoint query executed successfully.");
                         }
                         else
                         {
-                            errorMessage = $"The HealthEndpoint GraphQL query failed with code: {response.StatusCode}.";
+                            errorMessage = $"The GraphQL HealthEndpoint query failed with code: {response.StatusCode}.";
                         }
                     }
                 }
@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             catch (Exception ex)
             {
-                LogTrace($"An exception occurred while executing the query: {ex.Message}");
+                LogTrace($"An exception occurred while executing the GraphQL health check query: {ex.Message}");
                 return ex.Message;
             }
         }
@@ -219,14 +219,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="message">Message to emit.</param>
         private void LogTrace(string message)
         {
-            if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace(message);
-            }
-            else
-            {
-                Console.WriteLine(message);
-            }
+            _logger.LogTrace(message);
         }
     }
 }

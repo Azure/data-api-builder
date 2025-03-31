@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,19 +21,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     public class HealthCheckHelper
     {
         // Dependencies
-        private ILogger? _logger;
+        private ILogger<HealthCheckHelper> _logger;
         private HttpUtilities _httpUtility;
         private string _incomingRoleHeader = string.Empty;
         private string _incomingRoleToken = string.Empty;
 
-        private string _timeExceededErrorMessage = "The threshold for executing the request has exceeded.";
+        private const string TIME_EXCEEDED_ERROR_MESSAGE = "The threshold for executing the request has exceeded.";
 
         /// <summary>
         /// Constructor to inject the logger and HttpUtility class.
         /// </summary>
         /// <param name="logger">Logger to track the log statements.</param>
         /// <param name="httpUtility">HttpUtility to call methods from the internal class.</param>
-        public HealthCheckHelper(ILogger<HealthCheckHelper>? logger, HttpUtilities httpUtility)
+        public HealthCheckHelper(ILogger<HealthCheckHelper> logger, HttpUtilities httpUtility)
         {
             _logger = logger;
             _httpUtility = httpUtility;
@@ -46,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         /// <param name="context">HttpContext</param>
         /// <param name="runtimeConfig">RuntimeConfig</param>
-        /// <returns></returns>
+        /// <returns>This function returns the comprehensive health report after calculating the response time of each datasource, rest and graphql health queries.</returns>
         public ComprehensiveHealthCheckReport GetHealthCheckResponse(HttpContext context, RuntimeConfig runtimeConfig)
         {
             // Create a JSON response for the comprehensive health check endpoint using the provided basic health report.
@@ -63,6 +62,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return ComprehensiveHealthCheckReport;
         }
 
+        // Updates the incoming role header with the appropriate value from the request headers.
         public void UpdateIncomingRoleHeader(HttpContext httpContext)
         {
             StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
@@ -71,10 +71,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (clientRoleHeader.Count == 1)
             {
                 _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
-            }
-
-            if (clientRoleHeader.Count == 1)
-            {
                 _incomingRoleToken = clientTokenHeader.ToString();
             }
         }
@@ -87,22 +83,15 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="hostMode">Compare with the HostMode of DAB</param>
         /// <param name="allowedRoles">AllowedRoles in the Runtime.Health config</param>
         /// <returns></returns>
-        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, HostMode hostMode, List<string> allowedRoles)
+        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, bool isDevelopmentMode, List<string> allowedRoles)
         {
             if (allowedRoles == null || allowedRoles.Count == 0)
             {
                 // When allowedRoles is null or empty, all roles are allowed if Mode = Development.
-                return hostMode == HostMode.Development;
+                return isDevelopmentMode;
             }
 
-            switch (hostMode)
-            {
-                case HostMode.Development:
-                case HostMode.Production:
-                    return allowedRoles.Contains(_incomingRoleHeader);
-            }
-
-            return false;
+            return allowedRoles.Contains(_incomingRoleHeader);
         }
 
         // Updates the overall status by comparing all the internal HealthStatuses in the response.
@@ -138,11 +127,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             ComprehensiveHealthCheckReport.ConfigurationDetails = new ConfigurationDetails
             {
-                Rest = runtimeConfig?.Runtime?.Rest != null && runtimeConfig.Runtime.Rest.Enabled,
-                GraphQL = runtimeConfig?.Runtime?.GraphQL != null && runtimeConfig.Runtime.GraphQL.Enabled,
-                Caching = runtimeConfig?.Runtime?.IsCachingEnabled ?? false,
+                Rest = runtimeConfig.IsRestEnabled,
+                GraphQL = runtimeConfig.IsGraphQLEnabled,
+                Caching = runtimeConfig.IsCachingEnabled,
                 Telemetry = runtimeConfig?.Runtime?.Telemetry != null,
-                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Development,
+                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Production, // Modify to runtimeConfig.HostMode in Roles PR
             };
         }
 
@@ -160,8 +149,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (ComprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
-                (int, string?) response = ExecuteDBQuery(query, runtimeConfig.DataSource.ConnectionString);
-                bool thresholdCheck = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
+                (int, string?) response = ExecuteDatasourceQueryCheck(query, runtimeConfig.DataSource.ConnectionString);
+                bool IsResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
 
                 // Add DataSource Health Check Results
                 ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -172,15 +161,15 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         ResponseTimeMs = response.Item1,
                         ThresholdMs = runtimeConfig?.DataSource.DatasourceThresholdMs
                     },
-                    Exception = !thresholdCheck ? _timeExceededErrorMessage : response.Item2,
+                    Exception = !IsResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : response.Item2,
                     Tags = [HealthCheckConstants.DATASOURCE],
-                    Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
+                    Status = IsResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
                 });
             }
         }
 
         // Executes the DB Query and keeps track of the response time and error message.
-        private (int, string?) ExecuteDBQuery(string query, string? connectionString)
+        private (int, string?) ExecuteDatasourceQueryCheck(string query, string connectionString)
         {
             string? errorMessage = null;
             if (!string.IsNullOrEmpty(query) && !string.IsNullOrEmpty(connectionString))
@@ -230,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
                     string entityPath = entityValue.Rest.Path != null ? entityValue.Rest.Path.TrimStart('/') : entityKeyName;
                     (int, string?) response = ExecuteRestEntityQuery(runtimeConfig.RestPath, entityPath, entityValue.EntityFirst);
-                    bool thresholdCheck = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
+                    bool IsResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     // Add Entity Health Check Results
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -242,8 +231,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!thresholdCheck ? _timeExceededErrorMessage : null),
-                        Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
+                        Exception = response.Item2 ?? (!IsResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : null),
+                        Status = IsResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
 
@@ -252,7 +241,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
 
                     (int, string?) response = ExecuteGraphQLEntityQuery(runtimeConfig.GraphQLPath, entityValue, entityKeyName);
-                    bool thresholdCheck = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
+                    bool IsResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
@@ -263,8 +252,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!thresholdCheck ? _timeExceededErrorMessage : null),
-                        Status = thresholdCheck ? HealthStatus.Healthy : HealthStatus.Unhealthy
+                        Exception = response.Item2 ?? (!IsResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : null),
+                        Status = IsResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
             }
@@ -308,14 +297,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="message">Message to emit.</param>
         private void LogTrace(string message)
         {
-            if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace(message);
-            }
-            else
-            {
-                Console.WriteLine(message);
-            }
+            _logger.LogTrace(message);
         }
     }
 }

@@ -468,6 +468,69 @@ type Moon {
 }
 ";
 
+        public const string CONFIG_FILE_WITH_NO_OPTIONAL_FIELD = @"{
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+        public const string CONFIG_FILE_WITH_NO_CORS_FIELD = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""authentication"": {
+                                                ""provider"": ""StaticWebApps""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
@@ -1589,6 +1652,64 @@ type Moon {
                     It.IsAny<Exception>(),
                     (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
                 Times.Once);
+        }
+
+        /// <summary>
+        /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
+        /// It asserts that the validation is successful and there are no validation failures when no optional fields are used.
+        /// It also verifies that the expected log message is logged.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
+        [DataRow(CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD, DisplayName = "Validates schema of the config file with no Authentication field.")]
+        [DataRow(CONFIG_FILE_WITH_NO_CORS_FIELD, DisplayName = "Validates schema of the config file with no Cors field.")]
+        public async Task TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
+        {
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsTrue(result.IsValid);
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            schemaValidatorLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
+        /// <summary>
+        /// The config file does not contain any entity fields, which is expected to be invalid according to the schema.
+        /// The test asserts that the validation fails and there are validation errors.
+        /// It also verifies that the expected error message is logged, indicating that the 'entities' property is required.
+        [TestMethod]
+        public async Task TestBasicConfigSchemaWithNoEntityFieldsIsInvalid()
+        {
+            string jsonData = @"{
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    }
+                                }";
+
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsFalse(result.IsValid);
+            Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            Assert.AreEqual(1, result.ErrorCount);
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> PropertyRequired: #/entities"));
         }
 
         /// <summary>
@@ -3756,7 +3877,7 @@ type Planet @model(name:""PlanetAlias"") {
         {
             // Arrange
             // At least one entity is required in the runtime config for the engine to start.
-            // Even though this entity is not under test, it must be supplied enable successfull
+            // Even though this entity is not under test, it must be supplied enable successful
             // config file creation.
             Entity requiredEntity = new(
                 Health: new(Enabled: enableEntityHealth),
@@ -3772,7 +3893,7 @@ type Planet @model(name:""PlanetAlias"") {
                 { "Book", requiredEntity }
             };
 
-            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth);
+            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth, HostMode.Development);
 
             string[] args = new[]
             {
@@ -3796,36 +3917,14 @@ type Planet @model(name:""PlanetAlias"") {
                     Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
                     ValidateBasicDetailsHealthCheckResponse(responseProperties);
-                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties);
-                    ValidateDatasourceHealthCheckResponse(responseProperties, enableDatasourceHealth);
-                    ValidateEntityHealthCheckResponse(responseProperties, enableEntityHealth);
+                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties, enableGlobalRest, enableGlobalGraphql);
+                    ValidateIfAttributePresentInResponse(responseProperties, enableDatasourceHealth, HealthCheckConstants.DATASOURCE);
+                    ValidateIfAttributePresentInResponse(responseProperties, enableEntityHealth, HealthCheckConstants.ENDPOINT);
                     if (enableEntityHealth)
                     {
                         ValidateEntityRestAndGraphQLResponse(responseProperties, enableEntityRest, enableEntityGraphQL, enableGlobalRest, enableGlobalGraphql);
                     }
                 }
-            }
-        }
-
-        private static void ValidateDatasourceHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableDatasourceHealth)
-        {
-            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
-            {
-                bool checksTags = checksElement.EnumerateArray().Any(datasourceCheck =>
-                {
-                    if (datasourceCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
-                    {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.DATASOURCE);
-                    }
-
-                    return false;
-                });
-
-                Assert.AreEqual(enableDatasourceHealth, checksTags);
-            }
-            else
-            {
-                Assert.Fail("Checks Array is not present in the Comprehensive Health Check Report.");
             }
         }
 
@@ -3871,9 +3970,10 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
-        private static void ValidateEntityHealthCheckResponse(
+        private static void ValidateIfAttributePresentInResponse(
             Dictionary<string, JsonElement> responseProperties,
-            bool enableEntityHealth)
+            bool enableFlag,
+            string checkString)
         {
             if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
             {
@@ -3881,13 +3981,13 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
                     {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.ENDPOINT);
+                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == checkString);
                     }
 
                     return false;
                 });
 
-                Assert.AreEqual(enableEntityHealth, checksTags);
+                Assert.AreEqual(enableFlag, checksTags);
             }
             else
             {
@@ -3895,20 +3995,36 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
-        private static void ValidateConfigurationIsNotNull(JsonElement configElement, string objectKey)
+        private static void ValidateConfigurationIsNotNull(Dictionary<string, JsonElement> configPropertyValues, string objectKey)
         {
-            Assert.IsNotNull(configElement.TryGetProperty(objectKey, out JsonElement _), $"Expected {objectKey} to be present.");
+            Assert.IsTrue(configPropertyValues.ContainsKey(objectKey), $"Expected {objectKey} to be present in the configuration object.");
+            Assert.IsNotNull(configPropertyValues[objectKey], $"Expected {objectKey} to be non-null.");
         }
 
-        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
+        private static void ValidateConfigurationIsCorrectFlag(Dictionary<string, JsonElement> configElement, string objectKey, bool enableFlag)
+        {
+            Assert.AreEqual(enableFlag, configElement[objectKey].GetBoolean(), $"Expected {objectKey} to be set to {enableFlag}.");
+        }
+
+        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableGlobalRest, bool enableGlobalGraphQL)
         {
             if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
             {
-                ValidateConfigurationIsNotNull(configElement, "Rest");
-                ValidateConfigurationIsNotNull(configElement, "GraphQL");
-                ValidateConfigurationIsNotNull(configElement, "Caching");
-                ValidateConfigurationIsNotNull(configElement, "Telemetry");
-                ValidateConfigurationIsNotNull(configElement, "Mode");
+                Dictionary<string, JsonElement> configPropertyValues = new();
+
+                // Enumerate through the configProperty's object properties and add them to the dictionary
+                foreach (JsonProperty property in configElement.EnumerateObject().ToList())
+                {
+                    configPropertyValues[property.Name] = property.Value;
+                }
+
+                ValidateConfigurationIsNotNull(configPropertyValues, "rest");
+                ValidateConfigurationIsCorrectFlag(configPropertyValues, "rest", enableGlobalRest);
+                ValidateConfigurationIsNotNull(configPropertyValues, "graphql");
+                ValidateConfigurationIsCorrectFlag(configPropertyValues, "graphql", enableGlobalGraphQL);
+                ValidateConfigurationIsNotNull(configPropertyValues, "caching");
+                ValidateConfigurationIsNotNull(configPropertyValues, "telemetry");
+                ValidateConfigurationIsNotNull(configPropertyValues, "mode");
             }
             else
             {
@@ -4390,14 +4506,14 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
-        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true)
+        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true, HostMode hostMode = HostMode.Production)
         {
             DataSource dataSource = new(
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null,
                 Health: new(enableDatasourceHealth));
-            HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
+            HostOptions hostOptions = new(Mode: hostMode, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,

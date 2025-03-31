@@ -187,7 +187,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <summary>
         /// Handle the given operation.
         /// </summary>
-        /// <param name="method">The method.</param>
         /// <param name="route">The entire route.</param>
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(

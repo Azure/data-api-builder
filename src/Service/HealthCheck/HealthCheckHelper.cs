@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
                 (int, string?) response = ExecuteDatasourceQueryCheck(query, runtimeConfig.DataSource.ConnectionString);
-                bool IsResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
+                bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
 
                 // Add DataSource Health Check Results
                 ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -154,9 +154,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         ResponseTimeMs = response.Item1,
                         ThresholdMs = runtimeConfig?.DataSource.DatasourceThresholdMs
                     },
-                    Exception = !IsResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : response.Item2,
+                    Exception = !isResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : response.Item2,
                     Tags = [HealthCheckConstants.DATASOURCE],
-                    Status = IsResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
+                    Status = isResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
                 });
             }
         }
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
                     string entityPath = entityValue.Rest.Path != null ? entityValue.Rest.Path.TrimStart('/') : entityKeyName;
                     (int, string?) response = ExecuteRestEntityQuery(runtimeConfig.RestPath, entityPath, entityValue.EntityFirst);
-                    bool IsResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
+                    bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     // Add Entity Health Check Results
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -224,8 +224,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.REST, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!IsResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : null),
-                        Status = IsResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
+                        Exception = response.Item2 ?? (!isResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : null),
+                        Status = isResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
 
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
 
                     (int, string?) response = ExecuteGraphQLEntityQuery(runtimeConfig.GraphQLPath, entityValue, entityKeyName);
-                    bool IsResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
+                    bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
                     {
@@ -245,8 +245,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             ThresholdMs = entityValue.EntityThresholdMs
                         },
                         Tags = [HealthCheckConstants.GRAPHQL, HealthCheckConstants.ENDPOINT],
-                        Exception = response.Item2 ?? (!IsResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : null),
-                        Status = IsResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
+                        Exception = response.Item2 ?? (!isResponseTimeWithinThreshold ? TIME_EXCEEDED_ERROR_MESSAGE : null),
+                        Status = isResponseTimeWithinThreshold ? HealthStatus.Healthy : HealthStatus.Unhealthy
                     });
                 }
             }

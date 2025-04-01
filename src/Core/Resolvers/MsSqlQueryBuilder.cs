@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -45,19 +46,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string aggregations = BuildAggregationColumns(structure);
 
-            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}"
-                + $" FROM {fromSql}"
-                + $" WHERE {predicates}";
+            StringBuilder query = new();
 
-            query += BuildGroupBy(structure);
+            query.Append($"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}")
+                .Append($" FROM {fromSql}")
+                .Append($" WHERE {predicates}")
+                .Append(BuildGroupBy(structure))
+                .Append(BuildHaving(structure))
+                .Append(BuildOrderBy(structure))
+                .Append(BuildJsonPath(structure));
 
-            query += BuildHaving(structure);
-
-            query += BuildOrderBy(structure);
-
-            query += BuildJsonPath(structure);
-
-            return query;
+            return query.ToString();
         }
 
         /// <summary>

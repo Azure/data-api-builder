@@ -40,6 +40,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///     WHERE 1 = 1 ORDER BY [table0].[id] ASC
         ///     ) AS [table0]
         /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <returns>Generated sql queries based on the SqlQueryStructure</returns>
         public string Build(SqlQueryStructure structure)
         {
             if (this._enableNto1JoinOpt && HasToOneOrNoRelation(structure, false))
@@ -58,9 +60,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// 2. It does not have any relations, which means it is a simple query against one table
         /// We should apply the json funcs instead of string_agg for both cases
         /// </summary>
-        /// <param name="structure"></param>
-        /// <param name="isSubQuery"></param>
-        /// <returns></returns>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <param name="isSubQuery">Used for recursive call purpose to generated different queries for sub-queries</param>
+        /// <returns>True if the query structure only has N-1 relations or no relations at all</returns>
         private static bool HasToOneOrNoRelation(SqlQueryStructure structure, bool isSubQuery)
         {
             if (structure?.JoinQueries?.Values == null)
@@ -105,33 +107,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="structure">Sql query structure to build query on</param>
         /// <param name="isSubQuery">Used for recursive call purpose to generated different queries for sub-queries</param>
-        /// <returns></returns>
+        /// <returns>The sql queries built with json functions instead of string_agg</returns>
         private string BuildWithJsonFunc(SqlQueryStructure structure, bool isSubQuery)
         {
-            string query;
+            StringBuilder query = new();
 
             if (isSubQuery)
             {
                 // convert the columns to JSON Object for sub queries
-                string columns = GenerateColumnsAsJsonObject(structure);
-                string fromSql = $"{BuildWithJsonFunc(structure)}";
-                query = $"SELECT {columns}"
-                    + $" FROM ({fromSql}) AS {QuoteIdentifier(structure.SourceAlias)}";
+                string columns = $"SELECT {GenerateColumnsAsJsonObject(structure)}";
+                string fromSql = $" FROM ({BuildWithJsonFunc(structure)}) AS {QuoteIdentifier(structure.SourceAlias)}";
+                query.Append(columns).Append(fromSql);
             }
             else
             {
-                query = BuildWithJsonFunc(structure);
-                query += BuildJsonPath(structure);
+                query.Append(BuildWithJsonFunc(structure))
+                    .Append(BuildJsonPath(structure));
             }
 
-            return query;
+            return query.ToString();
         }
 
         /// <summary>
         /// Helper function for BuildWithJsonFunc that generates "FROM" portion of the query
         /// </summary>
         /// <param name="structure">Sql query structure to build query on</param>
-        /// <returns></returns>
+        /// <returns>The sql queries built with json functions instead of string_agg</returns>
         private string BuildWithJsonFunc(SqlQueryStructure structure)
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
@@ -147,17 +148,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string aggregations = BuildAggregationColumns(structure);
 
-            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}"
-                + $" FROM {fromSql}"
-                + $" WHERE {predicates}";
+            StringBuilder query = new();
 
-            query += BuildGroupBy(structure);
+            query.Append($"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}")
+                .Append($" FROM {fromSql}")
+                .Append($" WHERE {predicates}")
+                .Append(BuildGroupBy(structure))
+                .Append(BuildHaving(structure))
+                .Append(BuildOrderBy(structure));
 
-            query += BuildHaving(structure);
-
-            query += BuildOrderBy(structure);
-
-            return query;
+            return query.ToString();
         }
 
         /// <summary>
@@ -275,13 +275,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string> columns = new();
             foreach (LabelledColumn column in structure.Columns)
             {
-                string col_value = $"\'{column.Label}\': [{column.TableAlias}].[{column.Label}]";
+                string col_value = $"\'{column.Label}\': [{column.Label}]";
                 columns.Add(col_value);
             }
 
-            string? joinedColumns = columns.Count > 1 ?
+            string joinedColumns = columns.Count > 1 ?
                  string.Join(",", columns) :
-                 columns.FirstOrDefault();
+                 columns[0];
 
             return $"JSON_OBJECT({joinedColumns})";
         }

@@ -248,7 +248,6 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new HostOptionsConvertorFactory());
-        options.Converters.Add(new LogLevelOptionsConverterFactory());
 
         if (replaceEnvVar)
         {

@@ -218,14 +218,16 @@ namespace Azure.DataApiBuilder.Service
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<HealthCheckHelper>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(HealthCheckHelper).FullName);
+                LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(HealthCheckHelper).FullName, _configProvider, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
                 return loggerFactory.CreateLogger<HealthCheckHelper>();
             });
 
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<HttpUtilities>>(implementationFactory: (serviceProvider) =>
             {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(HttpUtilities).FullName);
+                LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(HttpUtilities).FullName, _configProvider, _hotReloadEventHandler);
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
                 return loggerFactory.CreateLogger<HttpUtilities>();
             });
 
@@ -546,14 +548,6 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
-            // Variable 'loggerFilter' can be of null type due to typeof().FullName,
-            // this case shouldn't happen but we change the value to be empty which is the
-            // default value for RuntimeConfig::GetConfiguredLogLevel function.
-            if (loggerFilter is null)
-            {
-                loggerFilter = string.Empty;
-            }
-
             if (!IsLogLevelOverriddenByCli)
             {
                 // If the log level is not overridden by command line arguments specified through CLI,

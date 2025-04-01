@@ -569,6 +569,7 @@ namespace Cli
         {
             DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
+            DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
 
             if (options.DataSourceDatabaseType is not null)
             {
@@ -611,7 +612,7 @@ namespace Cli
             }
 
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
-            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions);
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 
             return runtimeConfig != null;
@@ -1671,7 +1672,7 @@ namespace Cli
             }
             else
             {
-                minimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(deserializedRuntimeConfig);
+                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
                 HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
 
                 _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostMode} mode.", minimumLogLevel, hostModeType);

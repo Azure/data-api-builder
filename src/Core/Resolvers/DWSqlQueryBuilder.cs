@@ -117,7 +117,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // convert the columns to JSON Object for sub queries
                 string columns = $"SELECT {GenerateColumnsAsJsonObject(structure)}";
                 string fromSql = $" FROM ({BuildWithJsonFunc(structure)}) AS {QuoteIdentifier(structure.SourceAlias)}";
-                query.Append(columns).Append(fromSql);
+
+                query.Append(columns)
+                    .Append(fromSql);
             }
             else
             {

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;

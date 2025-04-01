@@ -1346,7 +1346,8 @@ public class RuntimeConfigValidator : IConfigValidator
 
     /// <summary>
     /// Returns whether the log-level keyword is valid or not.
-    /// It does this by checking each section of the name of the class
+    /// It does this by checking each section of the name of the class,
+    /// in order to ensure that the last section is complete.
     /// E.g. Azure.DataApiBuilder is valid. While Azure.DataA is invalid.
     /// </summary>
     /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>

@@ -47,31 +47,55 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
         public override DataSource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null);
             if (reader.TokenType is JsonTokenType.StartObject)
             {
+                DatabaseType databaseType = DatabaseType.MSSQL;
+                string connectionString = string.Empty;
+                DatasourceHealthCheckConfig? health = null;
+                Dictionary<string, object?>? datasourceOptions = null;
 
-                while (reader.Read() && reader.TokenType is not JsonTokenType.EndObject)
+                while (reader.Read())
                 {
+                    if (reader.TokenType is JsonTokenType.EndObject)
+                    {
+                        return new DataSource(databaseType, connectionString, datasourceOptions, health);
+                    }
+
                     if (reader.TokenType is JsonTokenType.PropertyName)
                     {
                         string propertyName = reader.GetString() ?? string.Empty;
                         reader.Read();
+
                         switch (propertyName)
                         {
                             case "database-type":
-                                dataSource = dataSource with { DatabaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!) };
+                                databaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!);
                                 break;
+
                             case "connection-string":
-                                dataSource = dataSource with { ConnectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)! };
+                                connectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
                                 break;
-                            case "options":
+
+                            case "health":
                                 if (reader.TokenType == JsonTokenType.Null)
                                 {
-                                    dataSource = dataSource with { Options = null };
-                                    break;
+                                    health = new();
                                 }
                                 else
+                                {
+                                    try
+                                    {
+                                        health = JsonSerializer.Deserialize<DatasourceHealthCheckConfig>(ref reader, options);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        throw new JsonException($"Error while deserializing DataSource health: {e.Message}");
+                                    }
+                                }
+
+                                break;
+                            case "options":
+                                if (reader.TokenType is not JsonTokenType.Null)
                                 {
                                     Dictionary<string, object?> optionsDict = new();
                                     while (reader.Read() && reader.TokenType is not JsonTokenType.EndObject)
@@ -111,18 +135,18 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                         optionsDict.Add(optionsSubproperty, optionsSubpropertyValue);
                                     }
 
-                                    dataSource = dataSource with { Options = optionsDict };
-                                    break;
+                                    datasourceOptions = optionsDict;
                                 }
+
+                                break;
                             default:
                                 throw new JsonException($"Unexpected property {propertyName} while deserializing DataSource.");
                         }
                     }
                 }
-
             }
 
-            return dataSource;
+            throw new JsonException("data-source property has a missing }.");
         }
 
         public override void Write(Utf8JsonWriter writer, DataSource value, JsonSerializerOptions options)

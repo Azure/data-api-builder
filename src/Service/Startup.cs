@@ -194,6 +194,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
+            services.AddSingleton<HealthCheckHelper>();
+            services.AddSingleton<HttpUtilities>();
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
 
@@ -211,6 +213,20 @@ namespace Azure.DataApiBuilder.Service
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(ComprehensiveHealthReportResponseWriter).FullName, _configProvider, _hotReloadEventHandler);
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
                 return loggerFactory.CreateLogger<ComprehensiveHealthReportResponseWriter>();
+            });
+
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<HealthCheckHelper>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(HealthCheckHelper).FullName);
+                return loggerFactory.CreateLogger<HealthCheckHelper>();
+            });
+
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<HttpUtilities>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, typeof(HttpUtilities).FullName);
+                return loggerFactory.CreateLogger<HttpUtilities>();
             });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
@@ -241,7 +257,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Development mode implies support for "Hot Reload". The V2 authentication function
                 // wires up all DAB supported authentication providers (schemes) so that at request time,
-                // the runtime config defined authenitication provider is used to authenticate requests.
+                // the runtime config defined authentication provider is used to authenticate requests.
                 ConfigureAuthenticationV2(services, configProvider);
             }
             else
@@ -511,11 +527,6 @@ namespace Azure.DataApiBuilder.Service
                 {
                     ResponseWriter = app.ApplicationServices.GetRequiredService<BasicHealthReportResponseWriter>().WriteResponse
                 });
-
-                endpoints.MapHealthChecks("/health", new HealthCheckOptions
-                {
-                    ResponseWriter = app.ApplicationServices.GetRequiredService<ComprehensiveHealthReportResponseWriter>().WriteResponse
-                });
             });
         }
 
@@ -535,6 +546,14 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static ILoggerFactory CreateLoggerFactoryForHostedAndNonHostedScenario(IServiceProvider serviceProvider, LogLevelInitializer logLevelInitializer)
         {
+            // Variable 'loggerFilter' can be of null type due to typeof().FullName,
+            // this case shouldn't happen but we change the value to be empty which is the
+            // default value for RuntimeConfig::GetConfiguredLogLevel function.
+            if (loggerFilter is null)
+            {
+                loggerFilter = string.Empty;
+            }
+
             if (!IsLogLevelOverriddenByCli)
             {
                 // If the log level is not overridden by command line arguments specified through CLI,

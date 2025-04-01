@@ -1980,10 +1980,10 @@ type Moon {
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
             HostMode.Production, HttpStatusCode.OK, "data",
             DisplayName = "GraphQL endpoint with query in production mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Development, HttpStatusCode.BadRequest,
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Development, HttpStatusCode.NotFound,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in development mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Production, HttpStatusCode.BadRequest,
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Production, HttpStatusCode.NotFound,
             "GraphQL request redirected to favicon.ico.",
             DisplayName = "Redirected endpoint in production mode.")]
         public async Task TestInteractiveGraphQLEndpoints(

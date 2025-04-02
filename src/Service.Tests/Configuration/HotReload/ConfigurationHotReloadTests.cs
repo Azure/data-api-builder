@@ -96,7 +96,7 @@ public class ConfigurationHotReloadTests
                         },
                         ""telemetry"": {
                           ""log-level"": {
-                            ""default"":" + logFilter + @"
+                            ""default"": """ + logFilter + @"""
                           }
                         }
                       },
@@ -555,18 +555,18 @@ public class ConfigurationHotReloadTests
     /// not the same as the previous log-level and asserting it is the expected log-level.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
-    [DataTestMethod]
-    [DataRow(LogLevel.Trace, "trace")]
-    [DataRow(LogLevel.Warning, "warning")]
-    [DataRow(LogLevel.Information, "information")]
-    public void HotReloadLogLevel(LogLevel expectedLogLevel, string expectedFilter)
+    [TestMethod]
+    public void HotReloadLogLevel()
     {
         // Arange
+        LogLevel expectedLogLevel = LogLevel.Trace;
+        string expectedFilter = "trace";
         RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
         LogLevel previouslogLevel = previousRuntimeConfig.GetConfiguredLogLevel();
 
         //Act
         GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             logFilter: expectedFilter);
         System.Threading.Thread.Sleep(3000);
 

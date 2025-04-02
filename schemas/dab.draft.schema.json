@@ -367,11 +367,11 @@
             },
             "log-level": {
               "type": "object",
-              "description": "Global configuration of log level",
+              "description": "Global configuration of log level, defines logging severity levels for specific classes, when 'null' it will set logging level based on 'host: mode' property",
               "additionalProperties": false,
-              "properties": {
-                "level": {
-                  "description": "Defines logging severity levels, when in default value it will set logging level based on 'host: mode' property",
+              "patternProperties": {
+                "^[a-zA-Z_]\\w{0,}(\\.\\w{1,}){0,}$": {
+                  "description": "Only specific namespaces that are used for logging in DAB are able to be used here. The regex pattern checks that it only allows for namespace values. So it only accepts a letter as its first value, from there it accepts any alphanumeric character, each section is divided by '.' and there cannot be more than 1 '.' in a row",
                   "type": "string",
                   "default": null,
                   "enum": [

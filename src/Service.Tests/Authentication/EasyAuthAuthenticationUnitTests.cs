@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow(EasyAuthType.EasyAuth, false, true, DisplayName = "Valid EasyAuth header only")]
         [DataRow(EasyAuthType.EasyAuth, true, true, DisplayName = "Valid EasyAuth header and authorization header")]
         [TestMethod]
-        public async Task TestValidNoneEasyAuthToken(EasyAuthType easyAuthType, bool sendAuthorizationHeader, bool addAuthenticated)
+        public async Task TestValidEasyAuthToken(EasyAuthType easyAuthType, bool sendAuthorizationHeader, bool addAuthenticated)
         {
             string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(

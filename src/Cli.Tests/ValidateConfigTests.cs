@@ -146,7 +146,7 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// This Test is used to verify that the None authentication scheme is valid
+    /// This Test is used to verify that the None authentication schema is valid.
     /// </summary>
     [TestMethod]
     public void TestEasyAuthIsValidAuthenticationProvider()
@@ -169,7 +169,7 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// This Test is used to verify that the None authentication scheme is valid
+    /// This Test is used to verify that the None authentication schema is valid.
     /// </summary>
     [TestMethod]
     public void TestNoneIsValidAuthenticationProvider()
@@ -192,7 +192,7 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// This Test is used to verify that the JWT properties must be added when the authentication scheme is Not easyAuth and not Simulator.
+    /// This Test is used to verify that DAB fails when the JWT properties are missing, and the authentication schema is not 'EasyAuth' or 'Simulator'.
     /// </summary>
     [DataTestMethod]
     [DataRow("AzureAD")]

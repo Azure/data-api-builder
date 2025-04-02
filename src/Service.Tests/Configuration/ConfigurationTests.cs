@@ -1982,11 +1982,9 @@ type Moon {
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
             HostMode.Production, HttpStatusCode.OK, "data",
             DisplayName = "GraphQL endpoint with query in production mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Development, HttpStatusCode.BadRequest,
-            "GraphQL request redirected to favicon.ico.",
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Development, HttpStatusCode.NotFound, "Not Found",
             DisplayName = "Redirected endpoint in development mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Production, HttpStatusCode.BadRequest,
-            "GraphQL request redirected to favicon.ico.",
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Production, HttpStatusCode.NotFound, "Not Found",
             DisplayName = "Redirected endpoint in production mode.")]
         public async Task TestInteractiveGraphQLEndpoints(
             string endpoint,
@@ -2010,8 +2008,8 @@ type Moon {
             File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
-            $"--ConfigFileName={CUSTOM_CONFIG}"
-        };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();

@@ -302,7 +302,7 @@ namespace Cli.Tests
         [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
         [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
-        [DataRow("EntraId", "aud-xxx", "issuer-xxx", DisplayName = "EntraId with both audience and issuer specified.")]
+        [DataRow("EntraID", "aud-xxx", "issuer-xxx", DisplayName = "EntraID with both audience and issuer specified.")]
         public Task EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(
             string authenticationProvider,
             string? audience,

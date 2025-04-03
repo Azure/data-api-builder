@@ -48,7 +48,8 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         }
 
-        public static void TrackRestControllerActivityFinished(this Activity activity,
+        public static void TrackRestControllerActivityFinished(
+            this Activity activity,
             int statusCode)
         {
             if (activity.IsAllDataRequested)

@@ -156,23 +156,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         /// <summary>
-        /// Ensures a valid EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
+        /// Ensures a valid StaticWebApps EasyAuth header/value does NOT result in HTTP 401 Unauthorized response.
         /// 403 is okay, as it indicates authorization level failure, not authentication.
         /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
         /// then there is improper JWT validation occurring.
         /// </summary>
         [DataTestMethod]
-        [DataRow(EasyAuthType.StaticWebApps, false, true, DisplayName = "Valid EasyAuth (Static Web Apps) header only")]
-        [DataRow(EasyAuthType.StaticWebApps, true, true, DisplayName = "Valid EasyAuth (Static Web Apps) header and authorization header")]
-        [DataRow(EasyAuthType.AppService, false, true, DisplayName = "Valid EasyAuth (App Service) header only")]
-        [DataRow(EasyAuthType.AppService, true, true, DisplayName = "Valid EasyAuth (App Service) header and authorization header")]
+        [DataRow(false, true, DisplayName = "Valid StaticWebApps EasyAuth header only")]
+        [DataRow(true, true, DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
         [TestMethod]
-        public async Task TestValidEasyAuthToken(EasyAuthType easyAuthType, bool sendAuthorizationHeader, bool addAuthenticated)
+        public async Task TestValidStaticWebAppsEasyAuthToken(bool sendAuthorizationHeader, bool addAuthenticated)
         {
             string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(
                 generatedToken,
-                easyAuthType,
+                EasyAuthType.StaticWebApps,
                 sendAuthorizationHeader);
             Assert.IsNotNull(postMiddlewareContext.User.Identity);
             Assert.IsTrue(postMiddlewareContext.User.Identity.IsAuthenticated);

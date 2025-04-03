@@ -16,7 +16,6 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     /// </summary>
     public static class TelemetryMetricsHelper
     {
-        public static readonly string MeterName = "DataApiBuilder.Metrics";
         private static readonly Meter _meter = new(MeterName);
         private static readonly UpDownCounter<long> _activeRequests = _meter.CreateUpDownCounter<long>("active_requests");
         private static readonly Counter<long> _errorCounter = _meter.CreateCounter<long>("total_errors");

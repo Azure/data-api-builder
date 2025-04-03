@@ -24,18 +24,15 @@ public class HealthEndpointCachingTests
     private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
 
     /// <summary>
-    /// Simulates two GET requests to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
-    /// The expected behavior is that both these response should be same in case cache is enabled with no delay and different in case of delay.
+    /// Simulates GET requests to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
+    /// The expected behavior is that these response should be different as we supply delay here.
     /// </summary>
     [TestMethod]
     [TestCategory(TestCategory.MSSQL)]
-    [DataRow(true, null, DisplayName = "Validation of default cache TTL and delay.")]
-    [DataRow(true, 0, DisplayName = "Validation of cache TTL set to 0 and delay.")]
-    [DataRow(true, 10, DisplayName = "Validation of cache TTL set to 10 and delay.")]
-    [DataRow(false, null, DisplayName = "Validation of default cache TTL and no delay.")]
-    [DataRow(false, 0, DisplayName = "Validation of cache TTL set to 0 and no delay.")]
-    [DataRow(false, 10, DisplayName = "Validation of cache TTL set to 10 and no delay.")]
-    public async Task ComprehensiveHealthEndpointCachingValidate(bool delay, int? cacheTtlSeconds)
+    [DataRow(null, DisplayName = "Validation of default cache TTL and delay.")]
+    [DataRow(0, DisplayName = "Validation of cache TTL set to 0 and delay.")]
+    [DataRow(10, DisplayName = "Validation of cache TTL set to 10 and delay.")]
+    public async Task ComprehensiveHealthEndpointCachingValidateWithDelay(int? cacheTtlSeconds)
     {
         Entity requiredEntity = new(
             Health: new(Enabled: true),
@@ -66,10 +63,9 @@ public class HealthEndpointCachingTests
             string responseContent1 = await response.Content.ReadAsStringAsync();
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
-            if (delay)
-            {
-                Task.Delay((cacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS) * 1000 + 1000).Wait();
-            }
+            // Simulate a delay to allow the cache to expire
+            // and force a new request to be sent to the database.
+            Task.Delay((cacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS) * 1000 + 1000).Wait();
 
             HttpRequestMessage healthRequest2 = new(HttpMethod.Get, "/health");
             response = await client.SendAsync(healthRequest2);
@@ -80,8 +76,62 @@ public class HealthEndpointCachingTests
             responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
             responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
 
-            if (delay || cacheTtlSeconds == 0)
+            Assert.AreNotEqual(responseContent2, responseContent1);
+        }
+    }
+
+    /// <summary>
+    /// Simulates GET request to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
+    /// The expected behavior is that both these response should be same in case cache is enabled with no delay.
+    /// </summary>
+    [TestMethod]
+    [TestCategory(TestCategory.MSSQL)]
+    [DataRow(null, DisplayName = "Validation of default cache TTL and no delay.")]
+    [DataRow(0, DisplayName = "Validation of cache TTL set to 0 and no delay.")]
+    [DataRow(10, DisplayName = "Validation of cache TTL set to 10 and no delay.")]
+    public async Task ComprehensiveHealthEndpointCachingValidateNoDelay(int? cacheTtlSeconds)
+    {
+        Entity requiredEntity = new(
+            Health: new(Enabled: true),
+            Source: new("books", EntitySourceType.Table, null, null),
+            Rest: new(Enabled: true),
+            GraphQL: new("book", "books", true),
+            Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+            Relationships: null,
+            Mappings: null);
+
+        Dictionary<string, Entity> entityMap = new()
+        {
+            { "Book", requiredEntity }
+        };
+
+        CreateCustomConfigFile(entityMap, cacheTtlSeconds);
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+        };
+
+        using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+        using (HttpClient client = server.CreateClient())
+        {
+            HttpRequestMessage healthRequest1 = new(HttpMethod.Get, "/health");
+            HttpResponseMessage response = await client.SendAsync(healthRequest1);
+            string responseContent1 = await response.Content.ReadAsStringAsync();
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
+
+            // No delay, force a new request to be sent to the database.
+
+            HttpRequestMessage healthRequest2 = new(HttpMethod.Get, "/health");
+            response = await client.SendAsync(healthRequest2);
+            string responseContent2 = await response.Content.ReadAsStringAsync();
+
+            if (cacheTtlSeconds == 0)
             {
+                // Regex to remove the "timestamp" field from the JSON string
+                string pattern = @"""timestamp""\s*:\s*""[^""]*""\s*,?";
+                responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
+                responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
                 Assert.AreNotEqual(responseContent2, responseContent1);
             }
             else

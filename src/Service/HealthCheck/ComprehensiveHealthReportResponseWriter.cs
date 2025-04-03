@@ -90,10 +90,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     if (!_cache.TryGetValue(CACHE_KEY, out response))
                     {
-                        ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
-
-                        response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-                        LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                        response = ExecuteHealthCheck(context, config);
 
                         try
                         {
@@ -102,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                                 .SetAbsoluteExpiration(TimeSpan.FromSeconds((double)config.CacheTtlSecondsForHealthReport));
 
                             _cache.Set(CACHE_KEY, response, cacheEntryOptions);
-                            LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                            LogTrace($"Health check response written in cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
                         }
                         catch (Exception ex)
                         {
@@ -119,16 +116,15 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     else
                     {
                         // Handle the case where cachedResponse is still null
-                        LogTrace("Error: The cached health check response is null.");
+                        LogTrace("Error: The health check response is null.");
                         context.Response.StatusCode = 500; // Internal Server Error
                         await context.Response.WriteAsync("Failed to generate health check response.");
                     }
                 }
                 else
                 {
-                    ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
-                    response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-                    LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                    response = ExecuteHealthCheck(context, config);
+                    // Return the newly generated response
                     await context.Response.WriteAsync(response);
                 }
             }
@@ -140,6 +136,15 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             return;
+        }
+
+        private string ExecuteHealthCheck(HttpContext context, RuntimeConfig config)
+        {
+            ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
+            string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+            LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+
+            return response;
         }
 
         /// <summary>

@@ -81,7 +81,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                                 int parseTtlSeconds = reader.GetInt32();
                                 if (parseTtlSeconds < 0)
                                 {
-                                    throw new JsonException($"Invalid value for ttl-seconds: {parseTtlSeconds}. Value must be greater than or equal to 0.");
+                                    throw new JsonException($"Invalid value for health cache ttl-seconds: {parseTtlSeconds}. Value must be greater than or equal to 0.");
                                 }
 
                                 cacheTtlSeconds = parseTtlSeconds;

@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             string databaseType,
             string dataSourceName)
         {
-            if(activity.IsAllDataRequested)
+            if (activity.IsAllDataRequested)
             {
                 activity.SetTag("data-source.type", databaseType);
                 activity.SetTag("data-source.name", dataSourceName);

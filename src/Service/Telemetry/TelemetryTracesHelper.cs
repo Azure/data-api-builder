@@ -9,8 +9,22 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 {
     public static class TelemetryTracesHelper
     {
+        /// <summary>
+        /// Activity source for Data API Builder telemetry.
+        /// </summary>
         public static readonly ActivitySource DABActivitySource = new("DataApiBuilder");
 
+        /// <summary>
+        /// Tracks the start of a REST controller activity.
+        /// </summary>
+        /// <param name="activity">The activity instance.</param>
+        /// <param name="httpMethod">The HTTP method of the request (e.g., GET, POST).</param>
+        /// <param name="userAgent">The user agent string from the request.</param>
+        /// <param name="actionType">The type of action being performed (e.g. Read).</param>
+        /// <param name="httpURL">The URL of the request.</param>
+        /// <param name="queryString">The query string of the request, if any.</param>
+        /// <param name="userRole">The role of the user making the request.</param>
+        /// <param name="apiType">The type of API being used (e.g., REST, GraphQL).</param>
         public static void TrackRestControllerActivityStarted(
             this Activity activity,
             string httpMethod,
@@ -37,6 +51,12 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             }
         }
 
+        /// <summary>
+        /// Tracks the start of a query activity.
+        /// </summary>
+        /// <param name="activity">The activity instance.</param>
+        /// <param name="databaseType">The type of database being queried.</param>
+        /// <param name="dataSourceName">The name of the data source being queried.</param>
         public static void TrackQueryActivityStarted(
             this Activity activity,
             string databaseType,
@@ -50,6 +70,11 @@ namespace Azure.DataApiBuilder.Service.Telemetry
 
         }
 
+        /// <summary>
+        /// Tracks the completion of a REST controller activity.
+        /// </summary>
+        /// <param name="activity">The activity instance.</param>
+        /// <param name="statusCode">The HTTP status code of the response.</param>
         public static void TrackRestControllerActivityFinished(
             this Activity activity,
             int statusCode)
@@ -60,6 +85,12 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             }
         }
 
+        /// <summary>
+        /// Tracks the completion of a REST controller activity with an exception.
+        /// </summary>
+        /// <param name="activity">The activity instance.</param>
+        /// <param name="ex">The exception that occurred.</param>
+        /// <param name="statusCode">The HTTP status code of the response.</param>
         public static void TrackRestControllerActivityFinishedWithWithException(
             this Activity activity,
             Exception ex,

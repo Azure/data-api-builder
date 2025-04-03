@@ -11,7 +11,8 @@ namespace Azure.DataApiBuilder.Service.Telemetry
     {
         public static readonly ActivitySource DABActivitySource = new("DataApiBuilder");
 
-        public static void TrackRestControllerActivityStarted(this Activity activity,
+        public static void TrackRestControllerActivityStarted(
+            this Activity activity,
             string httpMethod,
             string userAgent,
             string actionType,

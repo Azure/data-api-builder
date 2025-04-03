@@ -192,6 +192,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
             EntityActionOperation operationType)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
+            // This activity tracks the entire REST request.
             using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {route?.Split('/')[1]}");
             if(activity is not null)
             {
@@ -207,8 +208,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
             TelemetryMetricsHelper.IncrementActiveRequests();
             try
-            { 
-            
+            {
+
                 if (route.Equals(REDIRECTED_ROUTE))
                 {
                     throw new DataApiBuilderException(
@@ -233,6 +234,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
 
+                // This activity tracks the query execution. This will create a new activity nested under the REST request activity.
                 using Activity? queryActivity = TelemetryTracesHelper.DABActivitySource.StartActivity($"QUERY {entityName}");
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
 

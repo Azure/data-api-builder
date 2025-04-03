@@ -194,7 +194,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
             Stopwatch stopwatch = Stopwatch.StartNew();
             // This activity tracks the entire REST request.
             using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {route.Split('/')[1]}");
-            if(activity is not null)
+            if (activity is not null)
             {
                 activity.TrackRestControllerActivityStarted(
                     HttpContext.Request.Method,

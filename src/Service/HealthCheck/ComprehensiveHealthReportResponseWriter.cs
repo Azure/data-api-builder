@@ -69,34 +69,25 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Global comprehensive Health Check Enabled
             if (config.IsHealthEnabled)
             {
-                _healthCheckHelper.UpdateIncomingRoleHeader(context);
+                _healthCheckHelper.StoreIncomingRoleHeader(context);
                 if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.IsDevelopmentMode(), config.AllowedRolesForHealth))
                 {
-                    LogTrace("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
+                    _logger.LogError("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
                     return context.Response.CompleteAsync();
                 }
 
                 ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
                 string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-                LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+                _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
                 return context.Response.WriteAsync(response);
             }
             else
             {
-                LogTrace("Comprehensive Health Check Report Not Found: 404 Not Found.");
+                _logger.LogError("Comprehensive Health Check Report Not Found: 404 Not Found.");
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return context.Response.CompleteAsync();
             }
-        }
-
-        /// <summary>
-        /// Logs a trace message if a logger is present and the logger is enabled for trace events.
-        /// </summary>
-        /// <param name="message">Message to emit.</param>
-        private void LogTrace(string message)
-        {
-            _logger.LogTrace(message);
         }
     }
 }

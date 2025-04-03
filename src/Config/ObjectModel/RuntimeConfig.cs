@@ -151,8 +151,8 @@ public record RuntimeConfig
         Runtime.GraphQL.EnableAggregation;
 
     [JsonIgnore]
-    public List<string> AllowedRolesForHealth =>
-        Runtime?.Health?.Roles ?? new List<string>();
+    public HashSet<string> AllowedRolesForHealth =>
+        Runtime?.Health?.Roles ?? new HashSet<string>();
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 

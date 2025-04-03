@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -62,11 +63,17 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Updates the incoming role header with the appropriate value from the request headers.
-        public void UpdateIncomingRoleHeader(HttpContext httpContext)
+        public void StoreIncomingRoleHeader(HttpContext httpContext)
         {
             StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
             StringValues clientTokenHeader = httpContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER];
 
+            if (clientRoleHeader.Count > 1 || clientTokenHeader.Count > 1)
+            {
+                throw new ArgumentException("Multiple values for the client role or token header are not allowed.");
+            }
+
+            // Role Header is not present in the request, set it to anonymous.
             if (clientRoleHeader.Count == 1)
             {
                 _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
@@ -82,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <param name="hostMode">Compare with the HostMode of DAB</param>
         /// <param name="allowedRoles">AllowedRoles in the Runtime.Health config</param>
         /// <returns></returns>
-        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, bool isDevelopmentMode, List<string> allowedRoles)
+        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, bool isDevelopmentMode, HashSet<string> allowedRoles)
         {
             if (allowedRoles == null || allowedRoles.Count == 0)
             {

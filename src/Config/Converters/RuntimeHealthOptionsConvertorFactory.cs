@@ -53,7 +53,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool? enabled = null;
-                List<string>? roles = null;
+                HashSet<string>? roles = null;
 
                 while (reader.Read())
                 {
@@ -80,7 +80,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                                 // Check if the token type is an array
                                 if (reader.TokenType == JsonTokenType.StartArray)
                                 {
-                                    List<string> stringList = new();
+                                    HashSet<string> stringList = new();
 
                                     // Read the array elements one by one
                                     while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)

@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -56,7 +57,8 @@ public class DabCacheService
     public async ValueTask<TResult?> GetOrSetAsync<TResult>(
         IQueryExecutor queryExecutor,
         DatabaseQueryMetadata queryMetadata,
-        int cacheEntryTtl)
+        int cacheEntryTtl,
+        EntityCacheLevel cacheEntryLevel)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
         TResult? result = await _cache.GetOrSetAsync(
@@ -77,6 +79,11 @@ public class DabCacheService
 
                    ctx.Options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
 
+                   if (cacheEntryLevel == EntityCacheLevel.L1)
+                   {
+                       ctx.Options.SetSkipDistributedCache(true, true);
+                   }
+
                    return result;
                });
 
@@ -95,7 +102,8 @@ public class DabCacheService
     public async ValueTask<TResult?> GetOrSetAsync<TResult>(
         Func<Task<TResult>> executeQueryAsync,
         DatabaseQueryMetadata queryMetadata,
-        int cacheEntryTtl)
+        int cacheEntryTtl,
+        EntityCacheLevel cacheEntryLevel)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
         TResult? result = await _cache.GetOrSetAsync(
@@ -108,6 +116,11 @@ public class DabCacheService
                    ctx.Options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: JsonSerializer.Serialize(result?.ToString())));
 
                    ctx.Options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
+
+                   if (cacheEntryLevel == EntityCacheLevel.L1)
+                   {
+                       ctx.Options.SetSkipDistributedCache(true, true);
+                   }
 
                    return result;
 

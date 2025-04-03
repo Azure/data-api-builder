@@ -435,6 +435,41 @@ public record RuntimeConfig
     }
 
     /// <summary>
+    /// Returns the cache level value for a given entity.
+    /// If the property is not set, returns the default (L1L2) for a given entity.
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Cache level that a cache entry should be stored in.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    public EntityCacheLevel GetEntityCacheEntryLevel(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        if (!entityConfig.IsCachingEnabled)
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} does not have caching enabled.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+        }
+
+        if (entityConfig.Cache.UserProvidedLevelOptions)
+        {
+            return entityConfig.Cache.Level.Value;
+        }
+        else
+        {
+            return EntityCacheLevel.L1L2;
+        }
+    }
+
+    /// <summary>
     /// Whether the caching service should be used for a given operation. This is determined by
     /// - whether caching is enabled globally
     /// - whether the datasource is SQL and session context is disabled.

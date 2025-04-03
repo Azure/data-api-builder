@@ -57,7 +57,8 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             }
         }
 
-        public static void TrackRestControllerActivityFinishedWithWithException(this Activity activity,
+        public static void TrackRestControllerActivityFinishedWithWithException(
+            this Activity activity,
             Exception ex,
             int statusCode)
         {

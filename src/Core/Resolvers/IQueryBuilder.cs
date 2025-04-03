@@ -84,5 +84,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Adds database specific quotes to string identifier
         /// </summary>
         public string QuoteIdentifier(string identifier);
+
+        /// <summary>
+        /// Adds database specific quotes to the table name when used as part of a
+        /// DB Connection Param.
+        /// </summary>
+        public string QuoteTableNameAsDBConnectionParam(string param);
     }
 }

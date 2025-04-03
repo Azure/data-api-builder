@@ -12,10 +12,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// <summary>
     /// Class for building DwSql queries.
     /// </summary>
-    public class DwSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
+    public class DwSqlQueryBuilder : BaseTSqlQueryBuilder, IQueryBuilder
     {
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
+        private readonly bool _enableNto1JoinOpt;
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
+
+        public DwSqlQueryBuilder(bool enableNto1JoinOpt = false)
+        {
+            // flag to enable the optimization for N to 1 join queries
+            this._enableNto1JoinOpt = enableNto1JoinOpt;
+        }
 
         /// <inheritdoc />
         public override string QuoteIdentifier(string ident)
@@ -33,18 +40,135 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///     WHERE 1 = 1 ORDER BY [table0].[id] ASC
         ///     ) AS [table0]
         /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <returns>Generated sql queries based on the SqlQueryStructure</returns>
         public string Build(SqlQueryStructure structure)
         {
-            return BuildAsJson(structure);
+            if (this._enableNto1JoinOpt && HasToOneOrNoRelation(structure, false))
+            {
+                return BuildWithJsonFunc(structure, isSubQuery: false);
+            }
+            else
+            {
+                return BuildWithStringAgg(structure);
+            }
         }
 
         /// <summary>
-        /// Builds the sql query that will return the json result for the sql query.
+        /// Recursively checks the structure to see if
+        /// 1. It only has to-1 relations
+        /// 2. It does not have any relations, which means it is a simple query against one table
+        /// We should apply the json funcs instead of string_agg for both cases
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <param name="isSubQuery">Used for recursive call purpose to generated different queries for sub-queries</param>
+        /// <returns>True if the query structure only has N-1 relations or no relations at all</returns>
+        private static bool HasToOneOrNoRelation(SqlQueryStructure structure, bool isSubQuery)
+        {
+            if (structure?.JoinQueries?.Values == null)
+            {
+                // if there is no sub-queries, use JSON PATH for performance improvements as well
+                return true;
+            }
+
+            if (structure.IsListQuery && isSubQuery)
+            {
+                // If it is a list query in sub-query, then it is not a to-1 relation
+                return false;
+            }
+
+            foreach (SqlQueryStructure subQueries in structure.JoinQueries.Values)
+            {
+                if (!HasToOneOrNoRelation(subQueries, true))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Build the query recursively with
+        /// 1. JSON PATH for outer query
+        /// 2. JSON OBJECT for inner query
+        /// Example:
+        /// SELECT TOP M 
+        ///    <Columns>
+        /// FROM
+        ///    <Tables>
+        /// OUTER APPLY
+        ///    <Sub-query-tables>
+        /// WHERE
+        ///    <Conditions>
+        /// ORDER BY
+        ///    <Conditions>
+        /// FOR JSON PATH, INCLUDE_NULL_VALUES;
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <param name="isSubQuery">Used for recursive call purpose to generated different queries for sub-queries</param>
+        /// <returns>The sql queries built with json functions instead of string_agg</returns>
+        private string BuildWithJsonFunc(SqlQueryStructure structure, bool isSubQuery)
+        {
+            StringBuilder query = new();
+
+            if (isSubQuery)
+            {
+                // convert the columns to JSON Object for sub queries
+                string columns = $"SELECT {GenerateColumnsAsJsonObject(structure)}";
+                string fromSql = $" FROM ({BuildWithJsonFunc(structure)}) AS {QuoteIdentifier(structure.SourceAlias)}";
+
+                query.Append(columns)
+                    .Append(fromSql);
+            }
+            else
+            {
+                query.Append(BuildWithJsonFunc(structure))
+                    .Append(BuildJsonPath(structure));
+            }
+
+            return query.ToString();
+        }
+
+        /// <summary>
+        /// Helper function for BuildWithJsonFunc that generates "FROM" portion of the query
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on</param>
+        /// <returns>The sql queries built with json functions instead of string_agg</returns>
+        private string BuildWithJsonFunc(SqlQueryStructure structure)
+        {
+            string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
+            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                             $"AS {QuoteIdentifier($"{structure.SourceAlias}")}{Build(structure.Joins)}";
+
+            fromSql += string.Join(
+                    "",
+                    structure.JoinQueries.Select(
+                        x => $" OUTER APPLY ({BuildWithJsonFunc(x.Value, true)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
+
+            string predicates = BuildPredicates(structure);
+
+            string aggregations = BuildAggregationColumns(structure);
+
+            StringBuilder query = new();
+
+            query.Append($"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}")
+                .Append($" FROM {fromSql}")
+                .Append($" WHERE {predicates}")
+                .Append(BuildGroupBy(structure))
+                .Append(BuildHaving(structure))
+                .Append(BuildOrderBy(structure));
+
+            return query.ToString();
+        }
+
+        /// <summary>
+        /// Builds the sql query that will return the json result for the sql query using string_agg
         /// </summary>
         /// <param name="structure">Sql query structure to build query on.</param>
         /// <param name="subQueryStructure">if this is a sub query executed under outerapply.</param>
         /// <returns></returns>
-        private string BuildAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
+        private string BuildWithStringAgg(SqlQueryStructure structure, bool subQueryStructure = false)
         {
             string columns = GenerateColumnsAsJson(structure, subQueryStructure);
             string fromSql = $"{BuildSqlQuery(structure)}";
@@ -75,7 +199,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             fromSql.Append(string.Join(
                     "",
                     structure.JoinQueries.Select(
-                        x => $" OUTER APPLY ({BuildAsJson(x.Value, true)}) AS {QuoteIdentifier(x.Key)}({dataIdent})")));
+                        x => $" OUTER APPLY ({BuildWithStringAgg(x.Value, true)}) AS {QuoteIdentifier(x.Key)}({dataIdent})")));
 
             string predicates = JoinPredicateStrings(
                                     structure.GetDbPolicyForOperation(EntityActionOperation.Read),
@@ -127,6 +251,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string query = queryBuilder.ToString();
 
             return query;
+        }
+
+        /// <summary>
+        /// Generate the columns selected and wrap them with JSON_OBJECT
+        /// Example:
+        /// SELECT JSON_OBJECT('id': [id]) 
+        ///  FROM
+        ///    (
+        ///        SELECT TOP 1 
+        ///            [table1].[id] AS [id]
+        ///        FROM
+        ///            [dbo].[book_website_placements] AS [table1]
+        ///        WHERE
+        ///            [table0].[id] = [table1].[book_id]
+        ///            AND[table1].[book_id] = [table0].[id]
+        ///        ORDER BY
+        ///            [table1].[id] ASC
+        ///    ) AS[table1]
+        /// </summary>
+        /// <param name="structure">Sql query structure to generate the columns with JSON_OBJECT</param>
+        /// <returns></returns>
+        private static string GenerateColumnsAsJsonObject(SqlQueryStructure structure)
+        {
+            List<string> columns = new();
+            foreach (LabelledColumn column in structure.Columns)
+            {
+                string col_value = $"\'{column.Label}\': [{column.Label}]";
+                columns.Add(col_value);
+            }
+
+            string joinedColumns = columns.Count > 1 ?
+                 string.Join(",", columns) :
+                 columns[0];
+
+            return $"JSON_OBJECT({joinedColumns})";
         }
 
         private static string GenerateColumnsAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
@@ -425,12 +584,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
 
-        /// <summary>
-        /// Builds the aggregation columns part of the SELECT clause
-        /// </summary>
-        private string BuildAggregationColumns(GroupByMetadata metadata)
+        public string QuoteTableNameAsDBConnectionParam(string param)
         {
-            return string.Join(", ", metadata.Aggregations.Select(aggregation => Build(aggregation.Column, useAlias: true)));
+            // Table names in DWSql should not be quoted when used as DB Connection Params.
+            return param;
         }
     }
 }

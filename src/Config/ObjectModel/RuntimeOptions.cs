@@ -15,6 +15,7 @@ public record RuntimeOptions
     public TelemetryOptions? Telemetry { get; init; }
     public EntityCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
+    public RuntimeHealthCheckConfig? Health { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -24,7 +25,8 @@ public record RuntimeOptions
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
         EntityCacheOptions? Cache = null,
-        PaginationOptions? Pagination = null)
+        PaginationOptions? Pagination = null,
+        RuntimeHealthCheckConfig? Health = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -33,6 +35,7 @@ public record RuntimeOptions
         this.Telemetry = Telemetry;
         this.Cache = Cache;
         this.Pagination = Pagination;
+        this.Health = Health;
     }
 
     /// <summary>
@@ -46,4 +49,23 @@ public record RuntimeOptions
             Cache is not null &&
             Cache.Enabled is not null &&
             Cache.Enabled is true;
+
+    [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Rest))]
+    public bool IsRestEnabled =>
+        Rest is null ||
+        Rest?.Enabled is null ||
+        Rest?.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsGraphQLEnabled =>
+        GraphQL is null ||
+        GraphQL?.Enabled is null ||
+        GraphQL?.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsHealthCheckEnabled =>
+        Health is null ||
+        Health?.Enabled is null ||
+        Health?.Enabled is true;
 }

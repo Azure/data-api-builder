@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Service
 
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostBuilder, instead of a IHostBuilder.
-        public static IWebHostBuilder CreateWebHostFromInMemoryUpdateableConfBuilder(string[] args) =>
+        public static IWebHostBuilder CreateWebHostFromInMemoryUpdatableConfBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
             .UseStartup<Startup>();
 

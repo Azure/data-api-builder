@@ -73,6 +73,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
+        ValidateLoggerFilters(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -125,6 +126,25 @@ public class RuntimeConfigValidator : IConfigValidator
                     message: "Application Insights connection string cannot be null or empty if enabled.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Only certain classes can have different log levels, this function ensures that only those classes are used in the config file.
+    /// </summary>
+    public static void ValidateLoggerFilters(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime?.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
+        {
+            Dictionary<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
+
+            foreach (KeyValuePair<string, LogLevel?> logger in loggerLevelOptions)
+            {
+                if (!IsLoggerFilterValid(logger.Key))
+                {
+                    throw new NotSupportedException($"Log level filter {logger.Key} needs to be of a valid log class.");
+                }
             }
         }
     }
@@ -1322,5 +1342,41 @@ public class RuntimeConfigValidator : IConfigValidator
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);
         }
+    }
+
+    /// <summary>
+    /// Returns whether the log-level keyword is valid or not.
+    /// It does this by checking each section of the name of the class,
+    /// in order to ensure that the last section is complete.
+    /// E.g. Azure.DataApiBuilder is valid. While Azure.DataA is invalid.
+    /// </summary>
+    /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>
+    private static bool IsLoggerFilterValid(string loggerFilter)
+    {
+        string[] loggerSub = loggerFilter.Split('.');
+        for (int i = 0; i < LoggerFilters.validFilters.Count; i++)
+        {
+            bool isValid = true;
+            string[] validFiltersSub = LoggerFilters.validFilters[i].Split('.');
+
+            if (loggerSub.Length <= validFiltersSub.Length)
+            {
+                for (int j = 0; j < loggerSub.Length; j++)
+                {
+                    if (!loggerSub[j].Equals(validFiltersSub[j]))
+                    {
+                        isValid = false;
+                        break;
+                    }
+                }
+
+                if (isValid)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

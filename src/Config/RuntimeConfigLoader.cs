@@ -234,6 +234,8 @@ public abstract class RuntimeConfigLoader
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
+        options.Converters.Add(new DataSourceHealthOptionsConvertorFactory(replaceEnvVar));
+        options.Converters.Add(new EntityHealthOptionsConvertorFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));
@@ -246,7 +248,6 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new HostOptionsConvertorFactory());
-        options.Converters.Add(new LogLevelOptionsConverterFactory());
 
         if (replaceEnvVar)
         {

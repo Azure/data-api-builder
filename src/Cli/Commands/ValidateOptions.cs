@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Product;
+using Azure.DataApiBuilder.Service;
 using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,7 @@ namespace Cli.Commands
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
+            Startup.AddValidFilters();
             bool isValidConfig = ConfigGenerator.IsConfigValid(this, loader, fileSystem);
 
             if (isValidConfig)

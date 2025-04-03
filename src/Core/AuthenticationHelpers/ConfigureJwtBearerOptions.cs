@@ -59,10 +59,6 @@ public class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearerOptions
             RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
         };
 
-        // TODO: The PR says "This (OAuth) also opens up a future direction should we need to handle special cases with EntraId."
-        // This would be the case here. Currently, OAuth should just be a synonym for AzureAD/EntraID.
-        // But that doesn't make sense, because adding an OR statement for OAUth would be a behavioural change.
-        // What do we do here?
         if (newAuthOptions.Provider.Equals("AzureAD") || newAuthOptions.Provider.Equals("EntraID"))
         {
             // Enables the validation of the issuer of the signing keys

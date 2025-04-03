@@ -179,13 +179,8 @@ public class ClientRoleHeaderAuthenticationMiddleware
     /// <returns>Authentication Scheme</returns>
     private static string ResolveConfiguredAuthNScheme(string? configuredProviderName)
     {
-        // TODO: Jerry Nixon says that EASY_AUTH is also a synonym for STATIC_WEB_APPS/APP_SERVICE/NONE in DAB.
-        // But as far as I know, EASY_AUTH is an abstraction on the auth schemes that SWA/AS use.
-        // So the question is: Is this IF statement still correct now that I added EASY_AUTH to it? It would now default to SWA auth.
         if (string.IsNullOrWhiteSpace(configuredProviderName)
-            || string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(configuredProviderName, SupportedAuthNProviders.EASY_AUTH, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(configuredProviderName, SupportedAuthNProviders.NONE, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(configuredProviderName, SupportedAuthNProviders.STATIC_WEB_APPS, StringComparison.OrdinalIgnoreCase))
         {
             return EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
         }
@@ -198,8 +193,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
             return SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME;
         }
         else if (string.Equals(configuredProviderName, SupportedAuthNProviders.AZURE_AD, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(configuredProviderName, SupportedAuthNProviders.OAUTH, StringComparison.OrdinalIgnoreCase))
+            string.Equals(configuredProviderName, SupportedAuthNProviders.ENTRA_ID, StringComparison.OrdinalIgnoreCase))
         {
             return JwtBearerDefaults.AuthenticationScheme;
         }

@@ -9,12 +9,9 @@ internal static class SupportedAuthNProviders
 
     public const string AZURE_AD = "AzureAD";
     public const string ENTRA_ID = "EntraID";
-    public const string OAUTH = "OAuth";
 
     public const string GENERIC_OAUTH = "Custom";
     public const string SIMULATOR = "Simulator";
 
     public const string STATIC_WEB_APPS = "StaticWebApps";
-    public const string EASY_AUTH = "EasyAuth";
-    public const string NONE = "None";
 }

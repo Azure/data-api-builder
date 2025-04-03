@@ -27,10 +27,7 @@ public static class EasyAuthAuthenticationBuilderExtensions
             throw new ArgumentNullException(nameof(builder));
         }
 
-        // TODO: Same question as in ClientRoleHeaderAuthenticationMiddleware. Jerry Nixon says that EASY_AUTH is also a synonym for STATIC_WEB_APPS/APP_SERVICE/NONE in DAB.
-        // But as far as I know, EASY_AUTH is an abstraction on the auth schemes that SWA/AS use.
-        // So the question is: Is this IF statement still correct now that I added EASY_AUTH to it? It would now default to SWA auth.
-        if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps or EasyAuthType.EasyAuth or EasyAuthType.None)
+        if (easyAuthAuthenticationProvider is EasyAuthType.StaticWebApps)
         {
             builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
                 authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,

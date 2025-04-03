@@ -142,12 +142,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// a correctly configured EasyAuth environment guarantees that only authenticated requests
         /// will contain an EasyAuth header.
         /// </summary>
-        /// <param name="easyAuthType">AppService/StaticWebApps/EasyAuth/None</param>
+        /// <param name="easyAuthType">AppService/StaticWebApps</param>
         [DataTestMethod]
         [DataRow(EasyAuthType.AppService)]
         [DataRow(EasyAuthType.StaticWebApps)]
-        [DataRow(EasyAuthType.EasyAuth)]
-        [DataRow(EasyAuthType.None)]
         public async Task TestMissingEasyAuthHeader(EasyAuthType easyAuthType)
         {
             HttpContext postMiddlewareContext = await SendRequestAndGetHttpContextState(token: null, easyAuthType);
@@ -168,10 +166,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         [DataRow(EasyAuthType.StaticWebApps, true, true, DisplayName = "Valid EasyAuth (Static Web Apps) header and authorization header")]
         [DataRow(EasyAuthType.AppService, false, true, DisplayName = "Valid EasyAuth (App Service) header only")]
         [DataRow(EasyAuthType.AppService, true, true, DisplayName = "Valid EasyAuth (App Service) header and authorization header")]
-        [DataRow(EasyAuthType.None, false, true, DisplayName = "Valid EasyAuth (None) header only")]
-        [DataRow(EasyAuthType.None, true, true, DisplayName = "Valid EasyAuth (None) header and authorization header")]
-        [DataRow(EasyAuthType.EasyAuth, false, true, DisplayName = "Valid EasyAuth header only")]
-        [DataRow(EasyAuthType.EasyAuth, true, true, DisplayName = "Valid EasyAuth header and authorization header")]
         [TestMethod]
         public async Task TestValidEasyAuthToken(EasyAuthType easyAuthType, bool sendAuthorizationHeader, bool addAuthenticated)
         {

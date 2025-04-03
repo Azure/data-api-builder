@@ -36,7 +36,8 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             }
         }
 
-        public static void TrackQueryActivityStarted(this Activity activity,
+        public static void TrackQueryActivityStarted(
+            this Activity activity,
             string databaseType,
             string dataSourceName)
         {

@@ -67,7 +67,7 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
             ClaimsIdentity? identity = Options.EasyAuthProvider switch
             {
                 EasyAuthType.StaticWebApps => StaticWebAppsAuthentication.Parse(Context, Logger),
-                EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger)
+                EasyAuthType.AppService => AppServiceAuthentication.Parse(Context, Logger),
                 _ => null
             };
 

@@ -75,10 +75,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // Global comprehensive Health Check Enabled
             if (config.IsHealthEnabled)
             {
-                _healthCheckHelper.UpdateIncomingRoleHeader(context);
+                _healthCheckHelper.StoreIncomingRoleHeader(context);
                 if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.IsDevelopmentMode(), config.AllowedRolesForHealth))
                 {
-                    LogTrace("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
+                    _logger.LogError("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
                     await context.Response.CompleteAsync();
                     return;
@@ -99,11 +99,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                                 .SetAbsoluteExpiration(TimeSpan.FromSeconds((double)config.CacheTtlSecondsForHealthReport));
 
                             _cache.Set(CACHE_KEY, response, cacheEntryOptions);
-                            LogTrace($"Health check response written in cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
+                            _logger.LogTrace($"Health check response written in cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
                         }
                         catch (Exception ex)
                         {
-                            LogTrace($"Error in caching health check response: {ex.Message}");
+                            _logger.LogError($"Error in caching health check response: {ex.Message}");
                         }
                     }
 
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     else
                     {
                         // Handle the case where cachedResponse is still null
-                        LogTrace("Error: The health check response is null.");
+                        _logger.LogError("Error: The health check response is null.");
                         context.Response.StatusCode = 500; // Internal Server Error
                         await context.Response.WriteAsync("Failed to generate health check response.");
                     }
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
             else
             {
-                LogTrace("Comprehensive Health Check Report Not Found: 404 Not Found.");
+                _logger.LogError("Comprehensive Health Check Report Not Found: 404 Not Found.");
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 await context.Response.CompleteAsync();
             }
@@ -142,18 +142,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
             string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-            LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+            _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
 
             return response;
-        }
-
-        /// <summary>
-        /// Logs a trace message if a logger is present and the logger is enabled for trace events.
-        /// </summary>
-        /// <param name="message">Message to emit.</param>
-        private void LogTrace(string message)
-        {
-            _logger.LogTrace(message);
         }
     }
 }

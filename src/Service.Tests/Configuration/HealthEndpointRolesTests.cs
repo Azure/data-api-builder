@@ -20,6 +20,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string STARTUP_CONFIG_ROLE = "authenticated";
 
         private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
+        
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            if (File.Exists(CUSTOM_CONFIG_FILENAME))
+            {
+                File.Delete(CUSTOM_CONFIG_FILENAME);
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
 
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
@@ -91,7 +102,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
                         break;
                 }
-
             }
         }
 
@@ -114,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Health: new(Enabled: true, Roles: role != null ? new List<string> { role } : null),
+                    Health: new(Enabled: true, Roles: role != null ? new HashSet<string> { role } : null),
                     Rest: new(Enabled: true),
                     GraphQL: new(Enabled: true),
                     Host: hostOptions

@@ -59,14 +59,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [TestMethod("AuthN validation passes when all values are provided when provider not EasyAuth")]
-        public void ValidateJwtConfigParamsSet()
+        [DataTestMethod("AuthN validation passes when all values are provided when provider not EasyAuth")]
+        [DataRow("AzureAD")]
+        [DataRow("EntraID")]
+        public void ValidateJwtConfigParamsSet(string authenticationProvider)
         {
             JwtOptions jwt = new(
                 Audience: "12345",
                 Issuer: "https://login.microsoftonline.com/common");
             AuthenticationOptions authNConfig = new(
-                Provider: "AzureAD",
+                Provider: authenticationProvider,
                 Jwt: jwt);
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
@@ -108,14 +110,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [TestMethod("AuthN validation fails when either Issuer or Audience not provided not EasyAuth")]
-        public void ValidateFailureWithIncompleteJwtConfig()
+        [DataTestMethod("AuthN validation fails when either Issuer or Audience not provided not EasyAuth")]
+        [DataRow("AzureAD")]
+        [DataRow("EntraID")]
+        public void ValidateFailureWithIncompleteJwtConfig(string authenticationProvider)
         {
             JwtOptions jwt = new(
                 Audience: "12345",
                 Issuer: string.Empty);
             AuthenticationOptions authNConfig = new(
-                Provider: "AzureAD",
+                Provider: authenticationProvider,
                 Jwt: jwt);
 
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
@@ -136,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Audience: string.Empty,
                 Issuer: DEFAULT_ISSUER);
             authNConfig = new(
-                Provider: "AzureAD",
+                Provider: authenticationProvider,
                 Jwt: jwt);
             config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 

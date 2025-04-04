@@ -92,7 +92,7 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
             if (claimsPrincipal is not null)
             {
                 // AuthenticationTicket is Asp.Net Core Abstraction of Authentication information
-                // Ref: aspnetcore/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs 
+                // Ref: aspnetcore/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs
                 AuthenticationTicket ticket = new(claimsPrincipal, EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME);
                 AuthenticateResult success = AuthenticateResult.Success(ticket);
                 return Task.FromResult(success);

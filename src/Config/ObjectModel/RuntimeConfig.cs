@@ -150,6 +150,10 @@ public record RuntimeConfig
         Runtime.GraphQL is not null &&
         Runtime.GraphQL.EnableAggregation;
 
+    [JsonIgnore]
+    public HashSet<string> AllowedRolesForHealth =>
+        Runtime?.Health?.Roles ?? new HashSet<string>();
+
     /// <summary>
     /// Retrieves the value of runtime.graphql.dwnto1joinopt.enabled property if present, default is false.
     /// </summary>

@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record RuntimeHealthCheckConfig : HealthCheckConfig
 {
     [JsonPropertyName("cache-ttl-seconds")]
-    public int? CacheTtlSeconds { get; set; }
+    public int CacheTtlSeconds { get; set; }
 
     public HashSet<string>? Roles { get; set; }
 
@@ -30,7 +30,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
 
         if (CacheTtlSeconds is not null)
         {
-            this.CacheTtlSeconds = CacheTtlSeconds;
+            this.CacheTtlSeconds = (int)CacheTtlSeconds;
             UserProvidedTtlOptions = true;
         }
         else

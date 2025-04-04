@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string STARTUP_CONFIG_ROLE = "authenticated";
 
         private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
-        
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {

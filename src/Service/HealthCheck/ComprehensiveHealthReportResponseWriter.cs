@@ -4,12 +4,13 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -23,14 +24,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private readonly ILogger<ComprehensiveHealthReportResponseWriter> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly HealthCheckHelper _healthCheckHelper;
-        private readonly IMemoryCache _cache;
+        private readonly IFusionCache _cache;
         private const string CACHE_KEY = "HealthCheckResponse";
 
         public ComprehensiveHealthReportResponseWriter(
             ILogger<ComprehensiveHealthReportResponseWriter> logger,
             RuntimeConfigProvider runtimeConfigProvider,
             HealthCheckHelper healthCheckHelper,
-            IMemoryCache cache)
+            IFusionCache cache)
         {
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
@@ -86,25 +87,25 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 string? response;
                 // Check if the cache is enabled 
-                if (config.CacheTtlSecondsForHealthReport != null && config.CacheTtlSecondsForHealthReport > 0)
+                if (config.CacheTtlSecondsForHealthReport > 0)
                 {
-                    if (!_cache.TryGetValue(CACHE_KEY, out response))
+                    try
                     {
-                        response = ExecuteHealthCheck(context, config);
+                        response = await _cache.GetOrSetAsync<string?>(
+                            key: CACHE_KEY,
+                            async (FusionCacheFactoryExecutionContext<string?> ctx, CancellationToken ct) =>
+                            {
+                                string? response = await ExecuteHealthCheck(context, config).ConfigureAwait(false);
+                                ctx.Options.SetDuration(TimeSpan.FromSeconds(config.CacheTtlSecondsForHealthReport));
+                                return response;
+                            });
 
-                        try
-                        {
-                            // Cache the response for cache-ttl-seconds provided by the user in the config
-                            MemoryCacheEntryOptions cacheEntryOptions = new MemoryCacheEntryOptions()
-                                .SetAbsoluteExpiration(TimeSpan.FromSeconds((double)config.CacheTtlSecondsForHealthReport));
-
-                            _cache.Set(CACHE_KEY, response, cacheEntryOptions);
-                            _logger.LogTrace($"Health check response written in cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError($"Error in caching health check response: {ex.Message}");
-                        }
+                        _logger.LogTrace($"Health check response if fetched from cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
+                    }
+                    catch (Exception ex)
+                    {
+                        response = null; // Set response to null in case of an error
+                        _logger.LogError($"Error in caching health check response: {ex.Message}");
                     }
 
                     // Ensure cachedResponse is not null before calling WriteAsync
@@ -123,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 }
                 else
                 {
-                    response = ExecuteHealthCheck(context, config);
+                    response = await ExecuteHealthCheck(context, config).ConfigureAwait(false);
                     // Return the newly generated response
                     await context.Response.WriteAsync(response);
                 }
@@ -138,9 +139,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return;
         }
 
-        private string ExecuteHealthCheck(HttpContext context, RuntimeConfig config)
+        private async Task<string> ExecuteHealthCheck(HttpContext context, RuntimeConfig config)
         {
-            ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
+            ComprehensiveHealthCheckReport dabHealthCheckReport = await _healthCheckHelper.GetHealthCheckResponse(context, config);
             string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
             _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
 

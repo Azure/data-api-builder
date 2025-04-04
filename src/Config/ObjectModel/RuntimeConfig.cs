@@ -155,8 +155,8 @@ public record RuntimeConfig
         Runtime?.Health?.Roles ?? new HashSet<string>();
 
     [JsonIgnore]
-    public int? CacheTtlSecondsForHealthReport =>
-        Runtime?.Health?.CacheTtlSeconds;
+    public int CacheTtlSecondsForHealthReport =>
+        Runtime?.Health?.CacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 

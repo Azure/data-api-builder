@@ -23,6 +23,17 @@ public class HealthEndpointCachingTests
 {
     private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
 
+    [TestCleanup]
+    public void CleanupAfterEachTest()
+    {
+        if (File.Exists(CUSTOM_CONFIG_FILENAME))
+        {
+            File.Delete(CUSTOM_CONFIG_FILENAME);
+        }
+
+        TestHelper.UnsetAllDABEnvironmentVariables();
+    }
+
     /// <summary>
     /// Simulates GET requests to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
     /// The expected behavior is that these response should be different as we supply delay here.

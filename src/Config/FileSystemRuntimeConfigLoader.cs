@@ -135,7 +135,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             return false;
         }
 
-        if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+        if (RuntimeConfig is not null)
         {
             try
             {
@@ -318,6 +318,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         IsNewConfigDetected = true;
         IsNewConfigValidated = false;
         SignalConfigChanged();
+
+        logger?.LogInformation("Hot-reload process finished.");
     }
 
     /// <summary>

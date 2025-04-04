@@ -4054,7 +4054,7 @@ type Planet @model(name:""PlanetAlias"") {
                 { "Book", requiredEntity }
             };
 
-            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth);
+            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth, HostMode.Development);
 
             string[] args = new[]
             {
@@ -4667,14 +4667,14 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
-        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true)
+        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true, HostMode hostMode = HostMode.Production)
         {
             DataSource dataSource = new(
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null,
                 Health: new(enableDatasourceHealth));
-            HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
+            HostOptions hostOptions = new(Mode: hostMode, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,

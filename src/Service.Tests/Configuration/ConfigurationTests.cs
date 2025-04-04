@@ -5090,9 +5090,9 @@ type Planet @model(name:""PlanetAlias"") {
             entityName ??= "Book";
 
             Dictionary<string, Entity> entityMap = new()
-        {
-            { entityName, entity }
-        };
+            {
+                { entityName, entity }
+            };
 
             // Adding an entity with only Authorized Access
             Entity anotherEntity = new(

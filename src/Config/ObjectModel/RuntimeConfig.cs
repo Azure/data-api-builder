@@ -164,6 +164,10 @@ public record RuntimeConfig
         Runtime.GraphQL.FeatureFlags is not null &&
         Runtime.GraphQL.FeatureFlags.EnableDwNto1JoinQueryOptimization;
 
+    [JsonIgnore]
+    public int CacheTtlSecondsForHealthReport =>
+        Runtime?.Health?.CacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS;
+
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();

@@ -1402,7 +1402,7 @@ type Moon {
 
         /// <summary>
         /// This method validates that depth-limit outside the valid range should fail validation
-        /// during `dab validate` and `dab start`.     
+        /// during `dab validate` and `dab start`.
         /// </summary>
         /// <param name="depthLimit"></param>
         /// <param name="expectedSuccess"></param>
@@ -4396,7 +4396,7 @@ type Planet @model(name:""PlanetAlias"") {
 
         /// <summary>
         /// Tests the enforcement of depth limit restrictions on GraphQL queries and mutations in non-hosted mode.
-        /// Verifies that requests exceeding the specified depth limit result in a BadRequest, 
+        /// Verifies that requests exceeding the specified depth limit result in a BadRequest,
         /// while requests within the limit succeed with the expected status code.
         /// Also verifies that the error message contains the current and allowed max depth limit value.
         /// Example:

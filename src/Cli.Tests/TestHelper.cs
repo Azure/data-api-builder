@@ -176,6 +176,32 @@ namespace Cli.Tests
           }";
 
         /// <summary>
+        /// Only Runtime section containing both rest and graphql enabled. The authentication provider can be replaced with <>.
+        /// </summary>
+        public const string RUNTIME_SECTION_JWT_AUTHENTICATION_PLACEHOLDER = @"
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": true
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""<>""
+                  }
+              }
+          }";
+
+        /// <summary>
         /// Configuration with unresolved environment variable references on
         /// properties of various data types (string, enum, bool, int).
         /// </summary>

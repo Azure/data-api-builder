@@ -77,6 +77,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (clientRoleHeader.Count == 1)
             {
                 _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
+            }
+
+            if (clientTokenHeader.Count == 1)
+            {
                 _incomingRoleToken = clientTokenHeader.ToString();
             }
         }

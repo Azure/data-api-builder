@@ -106,9 +106,13 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     // Send a GET request to the API
                     apiRoute = $"{apiRoute}{Utilities.CreateHttpRestQuery(entityName, first)}";
                     HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: apiRoute);
-                    if (!(string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader)))
+                    if (!string.IsNullOrEmpty(incomingRoleToken))
                     {
                         message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                    }
+
+                    if (!string.IsNullOrEmpty(incomingRoleHeader))
+                    {
                         message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                     }
 
@@ -168,9 +172,13 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             Content = content
                         };
 
-                        if (!(string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader)))
+                        if (!string.IsNullOrEmpty(incomingRoleToken))
                         {
                             message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                        }
+
+                        if (!string.IsNullOrEmpty(incomingRoleHeader))
+                        {
                             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                         }
 

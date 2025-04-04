@@ -165,6 +165,109 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await QueryWithMultipleColumnPrimaryKey(msSqlQuery);
         }
 
+        /// <sumary>
+        /// Test if filter param successfully filters when string filter
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestFilterParamForStringFilter()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: {eq:""Awesome book""}}) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            string expected = @"
+[
+  {
+    ""id"": 1,
+    ""title"": ""Awesome book""
+  }
+]";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <sumary>
+        /// Test if filter param successfully filters when string filter results in a value longer than the column
+        /// </summary>
+        /// <remarks>
+        /// When using complex operators i.e. NotContains due to wildcards being added or special characters being escaped
+        /// the string being passed as a parameter maybe longer than the length of the column. The parameter data type
+        /// can't be fixed to the length of the underlying column, otherwise the parameter value would be truncated and
+        /// we'd get incorrect results
+        /// Thus checking the parameter length is overridden to cater for the extra length i.e. lengthOverride = true codepath.
+        /// </remarks>
+        [DataTestMethod]
+        [DataRow("contains")]
+        [DataRow("startsWith")]
+        [DataRow("endsWith")]
+        public virtual async Task TestFilterParamForStringFilterWorkWithComplexOp(string op)
+        {
+            string graphQLQueryName = "books";
+
+            //using a lookup value that is the length of the title column AND includes special characters
+            string graphQLQuery = @"{
+                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: {" + op + @":""Great wall of china explained]""}}) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            string expected = @"
+[
+  {
+    ""id"": 3,
+    ""title"": ""Great wall of china explained]""
+  }
+]";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <sumary>
+        /// Test if filter param successfully filters when string filter results in a value longer than the column
+        /// </summary>
+        /// <remarks>
+        /// When using complex operators i.e. NotContains due to wildcards being added or special characters being escaped
+        /// the string being passed as a parameter maybe longer than the length of the column. The parameter data type
+        /// can't be fixed to the length of the underlying column, otherwise the parameter value would be truncated and
+        /// we'd get incorrect results.
+        /// Thus checking the parameter length is overridden to cater for the extra length i.e. lengthOverride = true codepath.
+        /// </remarks>
+        [TestMethod]
+        public virtual async Task TestFilterParamForStringFilterWorkWithNotContains(string op)
+        {
+            string graphQLQueryName = "books";
+            //using a lookup value that is the length of the title column AND includes special characters
+            string graphQLQuery = @"{
+                books( " + Service.GraphQLBuilder.Queries.QueryBuilder.FILTER_FIELD_NAME + @":{ title: { notContains:""Great wall of china explained]""},id:{eq:3} }) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            string expected = @"
+[
+]";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
         [TestMethod]
         public async Task QueryWithNullableForeignKey()
         {
@@ -421,8 +524,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task TestSupportForAggregationsWithAliases()
         {
             string msSqlQuery = @"
-                SELECT 
-                    MAX(categoryid) AS max, 
+                SELECT
+                    MAX(categoryid) AS max,
                     MAX(price) AS max_price,
                     MIN(price) AS min_price,
                     AVG(price) AS avg_price,

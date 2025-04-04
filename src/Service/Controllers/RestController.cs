@@ -2,13 +2,16 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -47,11 +50,14 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
         private readonly ILogger<RestController> _logger;
 
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+
         /// <summary>
         /// Constructor.
         /// </summary>
-        public RestController(RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger)
+        public RestController(RuntimeConfigProvider runtimeConfigProvider, RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger)
         {
+            _runtimeConfigProvider = runtimeConfigProvider;
             _restService = restService;
             _openApiDocumentor = openApiDocumentor;
             _logger = logger;
@@ -185,8 +191,25 @@ namespace Azure.DataApiBuilder.Service.Controllers
             string route,
             EntityActionOperation operationType)
         {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            // This activity tracks the entire REST request.
+            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {route.Split('/')[1]}");
+            if (activity is not null)
+            {
+                activity.TrackRestControllerActivityStarted(
+                    HttpContext.Request.Method,
+                    HttpContext.Request.Headers["User-Agent"].ToString(),
+                    operationType.ToString(),
+                    route,
+                    HttpContext.Request.QueryString.ToString(),
+                    HttpContext.User.FindFirst("role")?.Value,
+                    "REST");
+            }
+
+            TelemetryMetricsHelper.IncrementActiveRequests();
             try
             {
+
                 if (route.Equals(REDIRECTED_ROUTE))
                 {
                     return NotFound();
@@ -208,7 +231,25 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
 
+                // This activity tracks the query execution. This will create a new activity nested under the REST request activity.
+                using Activity? queryActivity = TelemetryTracesHelper.DABActivitySource.StartActivity($"QUERY {entityName}");
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
+
+                RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+                string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+
+                if (queryActivity is not null)
+                {
+                    queryActivity.TrackQueryActivityStarted(
+                        databaseType.ToString(),
+                        dataSourceName);
+                }
+
+                if (queryActivity is not null && queryActivity.IsAllDataRequested)
+                {
+                    queryActivity.Dispose();
+                }
 
                 if (result is null)
                 {
@@ -218,6 +259,13 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
 
+                int statusCode = (result as ObjectResult)?.StatusCode ?? (result as StatusCodeResult)?.StatusCode ?? (result as JsonResult)?.StatusCode ?? 200;
+                if (activity is not null && activity.IsAllDataRequested)
+                {
+                    activity.TrackRestControllerActivityFinished(statusCode);
+                }
+
+                TelemetryMetricsHelper.TrackRequest(HttpContext.Request.Method, statusCode, route, "REST");
                 return result;
             }
             catch (DataApiBuilderException ex)
@@ -228,6 +276,9 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)ex.StatusCode;
+                activity?.TrackRestControllerActivityFinishedWithWithException(ex, Response.StatusCode);
+
+                TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
@@ -238,10 +289,24 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                activity?.TrackRestControllerActivityFinishedWithWithException(ex, Response.StatusCode);
+
+                TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,
                     HttpStatusCode.InternalServerError);
+            }
+            finally
+            {
+                stopwatch.Stop();
+                TelemetryMetricsHelper.TrackRequestDuration(HttpContext.Request.Method, Response.StatusCode, route, "REST", stopwatch.Elapsed.TotalMilliseconds);
+                if (activity is not null && activity.IsAllDataRequested)
+                {
+                    activity.Dispose();
+                }
+
+                TelemetryMetricsHelper.DecrementActiveRequests();
             }
         }
 

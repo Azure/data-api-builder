@@ -316,34 +316,25 @@
                     "issuer": {
                       "type": "string"
                     }
-                  }
+                  },
+                  "required": ["audience", "issuer"]
                 }
               },
-              "allOf": [
-                {
-                  "if": {
-                    "properties": {
-                      "provider": {
-                        "enum": [
-                          "EntraID",
-                          "AzureAD",
-                          "Custom"
-                        ]
-                      }
-                    }
-                  },
-                  "then": {
-                    "properties": {
-                      "jwt": {
-                        "required": [
-                          "audience",
-                          "issuer"
-                        ]
-                      }
-                    }
+              "if": {
+                "properties": {
+                  "provider": {
+                    "anyOf": [
+                      { "const": "EntraID" },
+                      { "const": "AzureAD" },
+                      { "const": "Custom" }
+                    ]
                   }
-                }
-              ]
+                },
+                "required": ["provider"]
+              },
+              "then": {
+                "required": ["jwt"]
+              }
             }
           }
         },

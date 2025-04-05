@@ -277,8 +277,33 @@
               "additionalProperties": false,
               "properties": {
                 "provider": {
-                  "type": "string",
                   "description": "The name of authentication provider",
+                  "oneOf": [
+                    {
+                      "const": "StaticWebApps",
+                      "description": "Authentication provided by Azure Static Web Apps."
+                    },
+                    {
+                      "const": "EntraID",
+                      "description": "Authentication provided by Microsoft Entra ID (formerly Azure AD)."
+                    },
+                    {
+                      "const": "Simulator",
+                      "description": "Simulated authentication for development and testing purposes."
+                    },
+                    {
+                      "const": "AppService",
+                      "description": "Authentication provided by Azure App Service."
+                    },
+                    {
+                      "const": "AzureAD",
+                      "description": "Synonymous with the EntraID value."
+                    },
+                    {
+                      "const": "Custom",
+                      "description": "Custom authentication provider defined by the user. Use the JWT property to configure the custom provider."
+                    }
+                  ],
                   "default": "StaticWebApps"
                 },
                 "jwt": {
@@ -293,7 +318,32 @@
                     }
                   }
                 }
-              }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "enum": [
+                          "EntraID",
+                          "AzureAD",
+                          "Custom"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "jwt": {
+                        "required": [
+                          "audience",
+                          "issuer"
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
             }
           }
         },

@@ -344,24 +344,6 @@
                   "if": {
                     "properties": {
                       "provider": {
-                        "anyOf": [
-                          { "const": "EntraID" },
-                          { "const": "AzureAD" },
-                          { "const": "Custom" }
-                        ]
-                      }
-                    },
-                    "required": ["provider"]
-                  },
-                  "then": {
-                    "required": ["jwt"]
-                  }
-                },
-                {
-                  "$comment": "We want JWT property to be null when a provider does not require it. This reduces bugs and confusion.",
-                  "if": {
-                    "properties": {
-                      "provider": {
                         "not": {
                           "anyOf": [
                             { "const": "EntraID" },

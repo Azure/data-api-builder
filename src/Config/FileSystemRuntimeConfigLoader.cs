@@ -135,7 +135,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             return false;
         }
 
-        if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+        if (RuntimeConfig is not null)
         {
             try
             {
@@ -273,13 +273,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             return false;
         }
 
-        string errorMessage = "Unable to find config file: {path} does not exist.";
         if (logger is null)
         {
+            string errorMessage = $"Unable to find config file: {path} does not exist.";
             Console.Error.WriteLine(errorMessage);
         }
         else
         {
+            string errorMessage = "Unable to find config file: {path} does not exist.";
             logger.LogError(message: errorMessage, path);
         }
 
@@ -317,6 +318,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         IsNewConfigDetected = true;
         IsNewConfigValidated = false;
         SignalConfigChanged();
+
+        logger?.LogInformation("Hot-reload process finished.");
     }
 
     /// <summary>

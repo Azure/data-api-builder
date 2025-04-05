@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     /// Creates a JSON response for the health check endpoint using the provided health report.
     /// If the response has already been created, it will be reused.
     /// </summary>
-    public class HealthReportResponseWriter
+    public class BasicHealthReportResponseWriter
     {
         // Dependencies
         private ILogger? _logger;
@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Constants
         private const string JSON_CONTENT_TYPE = "application/json; charset=utf-8";
 
-        public HealthReportResponseWriter(ILogger<HealthReportResponseWriter>? logger)
+        public BasicHealthReportResponseWriter(ILogger<BasicHealthReportResponseWriter>? logger)
         {
             _logger = logger;
         }
@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// <returns>Writes the http response to the http context.</returns>
         public Task WriteResponse(HttpContext context, HealthReport healthReport)
         {
-
+            LogTrace("Writing response for basic health check endpoint.");
             context.Response.ContentType = JSON_CONTENT_TYPE;
 
             if (_responseBytes is null)
@@ -72,20 +72,20 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 jsonWriter.WriteStartObject();
                 jsonWriter.WriteString("status", healthReport.Status.ToString());
 
-                if (healthReport.Entries.TryGetValue(key: typeof(DabHealthCheck).Name, out HealthReportEntry healthReportEntry))
+                if (healthReport.Entries.TryGetValue(key: typeof(BasicHealthCheck).Name, out HealthReportEntry healthReportEntry))
                 {
-                    if (healthReportEntry.Data.TryGetValue(DabHealthCheck.DAB_VERSION_KEY, out object? versionValue) && versionValue is string versionNumber)
+                    if (healthReportEntry.Data.TryGetValue(BasicHealthCheck.DAB_VERSION_KEY, out object? versionValue) && versionValue is string versionNumber)
                     {
-                        jsonWriter.WriteString(DabHealthCheck.DAB_VERSION_KEY, versionNumber);
+                        jsonWriter.WriteString(BasicHealthCheck.DAB_VERSION_KEY, versionNumber);
                     }
                     else
                     {
                         LogTrace("DabHealthCheck did not contain the version number in the HealthReport.");
                     }
 
-                    if (healthReportEntry.Data.TryGetValue(DabHealthCheck.DAB_APPNAME_KEY, out object? appNameValue) && appNameValue is string appName)
+                    if (healthReportEntry.Data.TryGetValue(BasicHealthCheck.DAB_APPNAME_KEY, out object? appNameValue) && appNameValue is string appName)
                     {
-                        jsonWriter.WriteString(DabHealthCheck.DAB_APPNAME_KEY, appName);
+                        jsonWriter.WriteString(BasicHealthCheck.DAB_APPNAME_KEY, appName);
                     }
                     else
                     {

@@ -2,14 +2,15 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
 /// Represents the options for telemetry.
 /// </summary>
-public record TelemetryOptions(ApplicationInsightsOptions? ApplicationInsights = null, OpenTelemetryOptions? OpenTelemetry = null, LogLevelOptions? LoggerLevel = null)
+public record TelemetryOptions(ApplicationInsightsOptions? ApplicationInsights = null, OpenTelemetryOptions? OpenTelemetry = null, Dictionary<string, LogLevel?>? LoggerLevel = null)
 {
     [JsonPropertyName("log-level")]
-    public LogLevelOptions? LoggerLevel { get; init; } = LoggerLevel;
+    public Dictionary<string, LogLevel?>? LoggerLevel { get; init; } = LoggerLevel;
 }

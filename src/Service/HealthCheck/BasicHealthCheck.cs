@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     /// - version: Major.Minor.Patch
     /// - app-name: dab_oss_Major.Minor.Patch
     /// </summary>
-    internal class DabHealthCheck : IHealthCheck
+    public class BasicHealthCheck : IHealthCheck
     {
         public const string DAB_VERSION_KEY = "version";
         public const string DAB_APPNAME_KEY = "app-name";

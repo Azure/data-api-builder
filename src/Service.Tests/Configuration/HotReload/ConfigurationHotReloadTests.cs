@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.HotReload;
@@ -49,6 +50,7 @@ public class ConfigurationHotReloadTests
         string restEnabled = "true",
         string gQLPath = "/graphQL",
         string gQLEnabled = "true",
+        string logFilter = "debug",
         string entityName = "Book",
         string sourceObject = "books",
         string gQLEntityEnabled = "true",
@@ -91,6 +93,11 @@ public class ConfigurationHotReloadTests
                             ""provider"": ""StaticWebApps""
                           },
                           ""mode"": ""development""
+                        },
+                        ""telemetry"": {
+                          ""log-level"": {
+                            ""default"": """ + logFilter + @"""
+                          }
                         }
                       },
                     ""entities"": {
@@ -540,6 +547,35 @@ public class ConfigurationHotReloadTests
         Assert.AreNotEqual(previousSessionContext, actualSessionContext);
         Assert.AreEqual(false, actualSessionContext.SetSessionContext);
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
+    }
+
+    /// <summary>
+    /// Hot reload the configuration file so that it updated the log-level property.
+    /// Then we assert that the log-level property is properly updated by ensuring it is 
+    /// not the same as the previous log-level and asserting it is the expected log-level.
+    /// </summary>
+    [TestCategory(MSSQL_ENVIRONMENT)]
+    [TestMethod]
+    public void HotReloadLogLevel()
+    {
+        // Arange
+        LogLevel expectedLogLevel = LogLevel.Trace;
+        string expectedFilter = "trace";
+        RuntimeConfig previousRuntimeConfig = _configProvider.GetConfig();
+        LogLevel previouslogLevel = previousRuntimeConfig.GetConfiguredLogLevel();
+
+        //Act
+        GenerateConfigFile(
+            connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
+            logFilter: expectedFilter);
+        System.Threading.Thread.Sleep(3000);
+
+        RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
+        LogLevel actualLogLevel = updatedRuntimeConfig.GetConfiguredLogLevel();
+
+        //Assert
+        Assert.AreNotEqual(previouslogLevel, actualLogLevel);
+        Assert.AreEqual(expectedLogLevel, actualLogLevel);
     }
 
     /// <summary>

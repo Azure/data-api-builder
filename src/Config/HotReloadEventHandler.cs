@@ -33,7 +33,8 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             { AUTHZ_RESOLVER_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, null },
-            { GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, null }
+            { GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, null },
+            { LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, null }
         };
     }
 
@@ -49,7 +50,7 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
     {
         if (_eventHandlers.ContainsKey(eventName))
         {
-            _eventHandlers[eventName] = handler;
+            _eventHandlers[eventName] += handler;
         }
     }
 }

@@ -107,13 +107,17 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     // Send a GET request to the API
                     apiRoute = $"{apiRoute}{Utilities.CreateHttpRestQuery(entityName, first)}";
                     HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: apiRoute);
-                    if (!(string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader)))
+                    if (!string.IsNullOrEmpty(incomingRoleToken))
                     {
                         message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                    }
+
+                    if (!string.IsNullOrEmpty(incomingRoleHeader))
+                    {
                         message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                     }
 
-                    HttpResponseMessage response = await client.SendAsync(message).ConfigureAwait(false);
+                    HttpResponseMessage response = client.SendAsync(message).Result;
                     if (response.IsSuccessStatusCode)
                     {
                         _logger.LogTrace($"The REST HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
@@ -169,13 +173,17 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             Content = content
                         };
 
-                        if (!(string.IsNullOrEmpty(incomingRoleToken) && string.IsNullOrEmpty(incomingRoleHeader)))
+                        if (!string.IsNullOrEmpty(incomingRoleToken))
                         {
                             message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                        }
+
+                        if (!string.IsNullOrEmpty(incomingRoleHeader))
+                        {
                             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                         }
 
-                        HttpResponseMessage response = await client.SendAsync(message).ConfigureAwait(false);
+                        HttpResponseMessage response = client.SendAsync(message).Result;
 
                         if (response.IsSuccessStatusCode)
                         {

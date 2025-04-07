@@ -4680,7 +4680,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Health: new(Enabled: enableGlobalHealth),
+                    Health: new(enabled: enableGlobalHealth),
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: enableGlobalGraphql),
                     Host: hostOptions

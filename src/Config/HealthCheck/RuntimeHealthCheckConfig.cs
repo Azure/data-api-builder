@@ -17,20 +17,19 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     // public int MaxDop { get; set; } = 1; // Parallelized streams to run Health Check (Default: 1)
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(CacheTtlSeconds))]
     public bool UserProvidedTtlOptions { get; init; } = false;
 
     public RuntimeHealthCheckConfig() : base()
     {
     }
 
-    public RuntimeHealthCheckConfig(bool? Enabled, HashSet<string>? Roles = null, int? CacheTtlSeconds = null) : base(Enabled)
+    public RuntimeHealthCheckConfig(bool? enabled, HashSet<string>? roles = null, int? cacheTtlSeconds = null) : base(enabled)
     {
-        this.Roles = Roles;
+        this.Roles = roles;
 
-        if (CacheTtlSeconds is not null)
+        if (cacheTtlSeconds is not null)
         {
-            this.CacheTtlSeconds = (int)CacheTtlSeconds;
+            this.CacheTtlSeconds = (int)cacheTtlSeconds;
             UserProvidedTtlOptions = true;
         }
         else

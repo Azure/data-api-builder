@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.HealthCheck;
@@ -22,7 +21,6 @@ public record DatasourceHealthCheckConfig : HealthCheckConfig
     public int ThresholdMs { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(ThresholdMs))]
     public bool UserProvidedThresholdMs { get; set; } = false;
 
     public DatasourceHealthCheckConfig() : base()

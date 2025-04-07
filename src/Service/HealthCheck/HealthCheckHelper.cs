@@ -301,3 +301,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
+        }
+    }
+}

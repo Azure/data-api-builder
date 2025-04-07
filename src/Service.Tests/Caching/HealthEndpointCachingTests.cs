@@ -171,7 +171,7 @@ public class HealthEndpointCachingTests
             Schema: string.Empty,
             DataSource: dataSource,
             Runtime: new(
-                Health: new(Enabled: true, CacheTtlSeconds: cacheTtlSeconds),
+                Health: new(enabled: true, cacheTtlSeconds: cacheTtlSeconds),
                 Rest: new(Enabled: true),
                 GraphQL: new(Enabled: true),
                 Host: hostOptions

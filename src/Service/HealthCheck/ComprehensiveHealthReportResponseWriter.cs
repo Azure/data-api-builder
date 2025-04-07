@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                                 return response;
                             });
 
-                        _logger.LogTrace($"Health check response if fetched from cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
+                        _logger.LogTrace($"Health check response is fetched from cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
                     }
                     catch (Exception ex)
                     {

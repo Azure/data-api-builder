@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                     }
 
-                    HttpResponseMessage response = client.SendAsync(message).Result;
+                    HttpResponseMessage response = await client.SendAsync(message);
                     if (response.IsSuccessStatusCode)
                     {
                         _logger.LogTrace($"The REST HealthEndpoint query executed successfully with code {response.IsSuccessStatusCode}.");
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                         }
 
-                        HttpResponseMessage response = client.SendAsync(message).Result;
+                        HttpResponseMessage response = await client.SendAsync(message);
 
                         if (response.IsSuccessStatusCode)
                         {

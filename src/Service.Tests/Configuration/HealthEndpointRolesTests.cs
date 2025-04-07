@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Even though this entity is not under test, it must be supplied enable successful
             // config file creation.
             Entity requiredEntity = new(
-                Health: new(Enabled: true),
+                Health: new(enabled: true),
                 Source: new("books", EntitySourceType.Table, null, null),
                 Rest: new(Enabled: true),
                 GraphQL: new("book", "books", true),

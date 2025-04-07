@@ -28,13 +28,13 @@ public record DatasourceHealthCheckConfig : HealthCheckConfig
         ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
     }
 
-    public DatasourceHealthCheckConfig(bool? Enabled, string? Name = null, int? ThresholdMs = null) : base(Enabled)
+    public DatasourceHealthCheckConfig(bool? enabled, string? name = null, int? thresholdMs = null) : base(enabled)
     {
-        this.Name = Name;
+        this.Name = name;
 
-        if (ThresholdMs is not null)
+        if (thresholdMs is not null)
         {
-            this.ThresholdMs = (int)ThresholdMs;
+            this.ThresholdMs = (int)thresholdMs;
             UserProvidedThresholdMs = true;
         }
         else

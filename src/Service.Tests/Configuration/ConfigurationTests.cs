@@ -4041,7 +4041,7 @@ type Planet @model(name:""PlanetAlias"") {
             // Even though this entity is not under test, it must be supplied enable successful
             // config file creation.
             Entity requiredEntity = new(
-                Health: new(Enabled: enableEntityHealth),
+                Health: new(enabled: enableEntityHealth),
                 Source: new("books", EntitySourceType.Table, null, null),
                 Rest: new(Enabled: enableEntityRest),
                 GraphQL: new("book", "books", enableEntityGraphQL),

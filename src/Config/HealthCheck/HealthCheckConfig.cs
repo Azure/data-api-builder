@@ -17,11 +17,11 @@ public record HealthCheckConfig
         Enabled = true;
     }
 
-    public HealthCheckConfig(bool? Enabled)
+    public HealthCheckConfig(bool? enabled)
     {
-        if (Enabled is not null)
+        if (enabled is not null)
         {
-            this.Enabled = (bool)Enabled;
+            this.Enabled = (bool)enabled;
             UserProvidedEnabled = true;
         }
         else

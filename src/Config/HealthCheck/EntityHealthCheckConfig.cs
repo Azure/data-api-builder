@@ -33,11 +33,11 @@ public record EntityHealthCheckConfig : HealthCheckConfig
         ThresholdMs = HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
     }
 
-    public EntityHealthCheckConfig(bool? Enabled, int? First = null, int? ThresholdMs = null) : base(Enabled)
+    public EntityHealthCheckConfig(bool? enabled, int? first = null, int? thresholdMs = null) : base(enabled)
     {
-        if (First is not null)
+        if (first is not null)
         {
-            this.First = (int)First;
+            this.First = (int)first;
             UserProvidedFirst = true;
         }
         else
@@ -45,9 +45,9 @@ public record EntityHealthCheckConfig : HealthCheckConfig
             this.First = HealthCheckConstants.DEFAULT_FIRST_VALUE;
         }
 
-        if (ThresholdMs is not null)
+        if (thresholdMs is not null)
         {
-            this.ThresholdMs = (int)ThresholdMs;
+            this.ThresholdMs = (int)thresholdMs;
             UserProvidedThresholdMs = true;
         }
         else

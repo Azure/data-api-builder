@@ -46,7 +46,7 @@ public class HealthEndpointCachingTests
     public async Task ComprehensiveHealthEndpointCachingValidateWithDelay(int? cacheTtlSeconds)
     {
         Entity requiredEntity = new(
-            Health: new(Enabled: true),
+            Health: new(enabled: true),
             Source: new("books", EntitySourceType.Table, null, null),
             Rest: new(Enabled: true),
             GraphQL: new("book", "books", true),
@@ -74,8 +74,8 @@ public class HealthEndpointCachingTests
             string responseContent1 = await response.Content.ReadAsStringAsync();
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
-            // Simulate a delay to allow the cache to expire (in case available)
-            // and force a new request to be sent to the database.
+            // Simulate a "delay" to allow the cache to expire (in case available)
+            // and send a new request to the health endpoint.
             Task.Delay((cacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS) * 1000 + 1000).Wait();
 
             HttpRequestMessage healthRequest2 = new(HttpMethod.Get, "/health");
@@ -87,6 +87,7 @@ public class HealthEndpointCachingTests
             responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
             responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
 
+            // Response are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
             Assert.AreNotEqual(responseContent2, responseContent1);
         }
     }
@@ -103,7 +104,7 @@ public class HealthEndpointCachingTests
     public async Task ComprehensiveHealthEndpointCachingValidateNoDelay(int? cacheTtlSeconds)
     {
         Entity requiredEntity = new(
-            Health: new(Enabled: true),
+            Health: new(enabled: true),
             Source: new("books", EntitySourceType.Table, null, null),
             Rest: new(Enabled: true),
             GraphQL: new("book", "books", true),
@@ -131,9 +132,8 @@ public class HealthEndpointCachingTests
             string responseContent1 = await response.Content.ReadAsStringAsync();
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
-            // Simulate no delay scenario to make sure that the cache is not expired (in case available)
-            // and force a new request to be sent to the database.
-            // Further check if the responses are same.
+            // Simulate a "no delay" scenario to make sure that the cache is not expired (in case available)
+            // and send a new request to the health endpoint.
             HttpRequestMessage healthRequest2 = new(HttpMethod.Get, "/health");
             response = await client.SendAsync(healthRequest2);
             string responseContent2 = await response.Content.ReadAsStringAsync();
@@ -144,10 +144,13 @@ public class HealthEndpointCachingTests
                 string pattern = @"""timestamp""\s*:\s*""[^""]*""\s*,?";
                 responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
                 responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
+
+                // Response are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
                 Assert.AreNotEqual(responseContent2, responseContent1);
             }
             else
             {
+                // Response are the same as its coming from Cache (Timestamp would also be the same)
                 Assert.AreEqual(responseContent2, responseContent1);
             }
         }

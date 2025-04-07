@@ -87,7 +87,7 @@ public class HealthEndpointCachingTests
             responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
             responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
 
-            // Response are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
+            // Responses are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
             Assert.AreNotEqual(responseContent2, responseContent1);
         }
     }
@@ -145,7 +145,7 @@ public class HealthEndpointCachingTests
                 responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
                 responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
 
-                // Response are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
+                // Responses are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
                 Assert.AreNotEqual(responseContent2, responseContent1);
             }
             else

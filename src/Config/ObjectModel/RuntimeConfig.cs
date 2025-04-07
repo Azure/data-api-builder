@@ -157,7 +157,7 @@ public record RuntimeConfig
     [JsonIgnore]
     public int CacheTtlSecondsForHealthReport =>
         Runtime?.Health?.CacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS;
-        
+
     /// <summary>
     /// Retrieves the value of runtime.graphql.dwnto1joinopt.enabled property if present, default is false.
     /// </summary>

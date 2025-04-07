@@ -74,7 +74,7 @@ public class HealthEndpointCachingTests
             string responseContent1 = await response.Content.ReadAsStringAsync();
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
-            // Simulate a delay to allow the cache to expire
+            // Simulate a delay to allow the cache to expire (in case available)
             // and force a new request to be sent to the database.
             Task.Delay((cacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS) * 1000 + 1000).Wait();
 
@@ -131,8 +131,9 @@ public class HealthEndpointCachingTests
             string responseContent1 = await response.Content.ReadAsStringAsync();
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
-            // No delay, force a new request to be sent to the database.
-
+            // Simulate no delay scenario to make sure that the cache is not expired (in case available)
+            // and force a new request to be sent to the database.
+            // Further check if the responses are same.
             HttpRequestMessage healthRequest2 = new(HttpMethod.Get, "/health");
             response = await client.SendAsync(healthRequest2);
             string responseContent2 = await response.Content.ReadAsStringAsync();

@@ -19,6 +19,47 @@ With data API builder, database objects can be exposed via REST or GraphQL endpo
 
 Data API builder is Open Source and works on any platform. It can be executed on-premises, in a container or as a Managed Service in Azure, via the new [Database Connection](https://learn.microsoft.com/azure/static-web-apps/database-overview) feature available in Azure Static Web Apps.
 
+```mermaid
+erDiagram
+    ENGINE ||--|{ DATA_API : "Provides"
+    ENGINE {
+        container true "Microsoft Container Repostiory"
+        open-source true "MIT license / any cloud or on-prem."
+        objects true "Supports: Table / View / Stored Procedure"
+        developer true "Swagger / Banana Cake Pop"
+        otel true "Open Telemetry / Structured Logs / Health Endpoints"
+        security true "EntraId / EasyAuth / OAuth / JWT / Anonymous"
+        cache true "Level1 (in-memory) / Level2 (redis)"
+        policy true "Item policy / Database policy / Claims policy"
+        hot_reload true "Dyanmically controllable log levels"
+    }
+    DATA_API ||--o{ DATASOURCE : "Queries"
+    DATA_API {
+        REST true "$select / $filter / $orderby"
+        GraphQL true "relationships / multiple mutations"
+    }
+    DATASOURCE {
+        MS_SQL Supported
+        PostgreSQL Supported
+        Cosmos_DB Supported
+        MySQL Supported
+        SQL_DW Supported
+    }
+    CLIENT ||--o{ DATA_API : "Consumes"
+    CLIENT {
+        Transport HTTP "HTTP / HTTPS"
+        Syntax JSON "Standard payloads"
+        Mobile Supported "No requirement"
+        Web Supported "No requirement"
+        Desktop Supported "No requirement"
+        Language Any "No requirement"
+        Framework None "Not required"
+        Library None "Not required"
+        ORM None "Not required"
+        Driver None "Not required"
+    }
+```
+
 ![Data API builder Architecture Overview Diagram](./docs/media/dab-architecture-overview.png)
 
 ## Features

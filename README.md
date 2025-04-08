@@ -21,8 +21,8 @@ Data API builder is Open Source and works on any platform. It can be executed on
 
 ```mermaid
 erDiagram
-    ENGINE ||--|{ DATA_API : "Provides"
-    ENGINE {
+    DATA_API_BUILDER ||--|{ DATA_API : "Provides"
+    DATA_API_BUILDER {
         container true "Microsoft Container Repostiory"
         open-source true "MIT license / any cloud or on-prem."
         objects true "Supports: Table / View / Stored Procedure"

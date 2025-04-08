@@ -246,11 +246,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         dataSourceName);
                 }
 
-                if (queryActivity is not null && queryActivity.IsAllDataRequested)
-                {
-                    queryActivity.Dispose();
-                }
-
                 if (result is null)
                 {
                     throw new DataApiBuilderException(
@@ -301,10 +296,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
             {
                 stopwatch.Stop();
                 TelemetryMetricsHelper.TrackRequestDuration(HttpContext.Request.Method, Response.StatusCode, route, "REST", stopwatch.Elapsed.TotalMilliseconds);
-                if (activity is not null && activity.IsAllDataRequested)
-                {
-                    activity.Dispose();
-                }
 
                 TelemetryMetricsHelper.DecrementActiveRequests();
             }

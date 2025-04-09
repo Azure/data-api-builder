@@ -160,8 +160,10 @@ sequenceDiagram
     deactivate Endpoint
     Client-->>Endpoint: HTTP Request
     activate Endpoint
+        critical
         Endpoint-->>Endpoint: Authenticate
         Endpoint-->>Endpoint: Authorize
+        end
         Endpoint->>QueryBuilder: Request
         QueryBuilder-->>Endpoint: SQL
         alt Cache

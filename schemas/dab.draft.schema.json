@@ -322,7 +322,7 @@
               },
               "allOf": [
                 {
-                  "$comment": "We want the user to provide the JWT property when the provider requires it",
+                  "$comment": "We want the user to provide the JWT property when the provider requires it, and omit JWT when the provider does not require it.",
                   "if": {
                     "properties": {
                       "provider": {
@@ -335,33 +335,8 @@
                     },
                     "required": ["provider"]
                   },
-                  "then": {
-                    "required": ["jwt"]
-                  }
-                },
-                {
-                  "$comment": "We want JWT property to be null when a provider does not require it. This reduces bugs and confusion.",
-                  "if": {
-                    "properties": {
-                      "provider": {
-                        "not": {
-                          "anyOf": [
-                            { "const": "EntraID" },
-                            { "const": "AzureAD" },
-                            { "const": "Custom" }
-                          ]
-                        }
-                      }
-                    },
-                    "required": ["provider"]
-                  },
-                  "then": {
-                    "properties": {
-                      "jwt": {
-                        "type": "null"
-                      }
-                    }
-                  }
+                  "then": { "required": ["jwt"] },
+                  "else": { "properties": { "jwt": false } }
                 }
               ]
             }

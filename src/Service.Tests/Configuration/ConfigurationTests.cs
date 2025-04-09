@@ -507,6 +507,136 @@ type Moon {
                                     },
                                     ""entities"":{ }
                                 }";
+
+        public const string CONFIG_FILE_WITH_UNKNOWN_AUTHENTICATION_PROVIDER = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""UnknownProvider""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_MISSING_JWT_PROPERTY = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""EntraID""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_MISSING_JWT_CHILD_PROPERTIES = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""EntraID"",
+                                                ""jwt"": { }
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_AUTHENTICATION_PROVIDER_THAT_SHOULD_NOT_HAVE_JWT = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""Simulator"",
+                                                ""jwt"": { ""audience"": ""https://example.com"", ""issuer"": ""https://example.com"" }
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
         public const string CONFIG_FILE_WITH_NO_CORS_FIELD = @"{
                                     // Link for latest draft schema.
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
@@ -1684,6 +1814,36 @@ type Moon {
                     It.IsAny<Exception>(),
                     (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
                 Times.Once);
+        }
+
+        /// <summary>
+        /// This test method validates that the JSON schema validates that only known auth providers can be used.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(CONFIG_FILE_WITH_UNKNOWN_AUTHENTICATION_PROVIDER, DisplayName = "Validates schema of the config file when there is an unknown authentication provider.")]
+        [DataRow(CONFIG_FILE_WITH_MISSING_JWT_PROPERTY, DisplayName = "Validates schema of the config file a missing JWT property")]
+        [DataRow(CONFIG_FILE_WITH_MISSING_JWT_CHILD_PROPERTIES, DisplayName = "Validates schema of the config file with missing JWT child properties.")]
+        [DataRow(CONFIG_FILE_WITH_AUTHENTICATION_PROVIDER_THAT_SHOULD_NOT_HAVE_JWT, DisplayName = "Validates schema of the config file when an auth provider is chosen WITH a JWT property, "
+        + "even though the JWT property should not exist.")]
+        public async Task TestBasicConfigWithAuthProviders(string jsonData)
+        {
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsFalse(result.IsValid);
+            Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            schemaValidatorLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Never);
         }
 
         /// <summary>

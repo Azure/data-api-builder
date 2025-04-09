@@ -130,6 +130,54 @@ GET http://localhost:5000/api/Actor
 
 Demo source code: [startrek](https://aka.ms/dab/startrek)
 
+## How does it work?
+
+This sequence diagram steps through the basic operation of DAB to help you, the developer, understand the fundamentals of the engine. DAB dynamically creates endpoints based on your configuration file, which must match the underlying data source. It automatically translates HTTP requests into SQL queries, converts the results to JSON, and pages the results according to your settings.  
+
+```mermaid
+sequenceDiagram
+    actor Client
+
+    box Data API builder (DAB)
+        participant Endpoint
+        participant QueryBuilder
+    end
+
+    participant Configuration as Configuration File
+
+    box Data Source
+        participant DB
+    end
+
+    Endpoint->>Endpoint: Start
+    activate Endpoint
+        Endpoint->>Configuration: Request
+        Configuration-->>Endpoint: Configuration
+        Endpoint->>DB: Request
+        DB-->>Endpoint: Metadata
+            Note over Endpoint, DB: Some configuration is validated against the metadata
+        Endpoint-->>Endpoint: Configure
+    deactivate Endpoint
+    Client-->>Endpoint: HTTP Request
+    activate Endpoint
+        Endpoint-->>Endpoint: Authenticate
+        Endpoint-->>Endpoint: Authorize
+        Endpoint->>QueryBuilder: Request
+        QueryBuilder-->>Endpoint: SQL
+        alt Cache
+            Endpoint-->>Endpoint: Use Cache
+        else Query
+            Endpoint-->>DB: Request
+            Note over Endpoint, DB: Query is automatically throttled and results paginated
+            DB->>Endpoint: Results
+            Note over Endpoint, DB: Results are automatically cached for use in next request
+        end
+        Endpoint->>Client: HTTP 200
+    deactivate Endpoint
+```
+
+Because DAB is stateless, you can scale it up or out using whatever container size fits your data source and usage needs. Most importantly, we aren’t doing anything exotic—we’re building a feature-rich Data API just like you would from scratch, only now you don’t have to.
+
 ## Additional Resources
 
 |Repository|Documentation|Samples|Introduction

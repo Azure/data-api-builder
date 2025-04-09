@@ -182,17 +182,9 @@ Because DAB is stateless, you can scale it up or out using whatever container si
 
 ## Additional Resources
 
-|Repository|Documentation|Samples|Introduction
-|:-:|:-:|:-:|:-:|
-|[aka.ms/dab](https://aka.ms/dab)|[aka.ms/dab/docs](https://aka.ms/dab/docs)|[aka.ms/dab/samples](https://aka.ms/dab/samples)|[YouTube Video](https://www.youtube.com/playlist?list=PLYA3nHmjWIYE1PUl8_dVR-yKtCLgVhie4)
-
-### Known Issues
-
-List of known issues and possible workarounds is available here: [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues).
-
-### Development Roadmap
-
-What is the planned development roadmap: [Roadmap](https://github.com/Azure/data-api-builder/discussions/1377).
+|Repository|Resources|More Info
+|:-:|:-:|:-:|
+|[aka.ms/dab](https://aka.ms/dab)|<ul><li>[Documentation](https://aka.ms/dab/docs)</li><li>[Samples](https://aka.ms/dab/samples)<li></ul>|<ul><li>[Intro Video](https://www.youtube.com/playlist?list=PLYA3nHmjWIYE1PUl8_dVR-yKtCLgVhie4)</li><li>[Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues)</li><li>[Roadmap](https://github.com/Azure/data-api-builder/discussions/1377)</li></ul>
 
 ### How to Contribute
 

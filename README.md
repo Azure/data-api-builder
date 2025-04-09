@@ -58,21 +58,6 @@ erDiagram
     }
 ```
 
-## Overview
-
-| Category       | Features |
-|----------------|---------|
-| **Database Objects** | • NoSQL collections<br>• RDBMS tables, views, and stored procedures |
-| **Data Sources** | • SQL Server & Azure SQL Database<br>• Azure Cosmos DB<br>• PostgreSQL<br>• MySQL<br> |
-| **REST** | • `$select` for projection<br>• `$filter`for filtering<br> • `$orderBy` for sorting |
-| **GraphQL** | • Relationship natigation<br>• Data aggregation<br>• Multiple mutations (insert) |
-| **Telemetry** | • Structured Logs<br>• Open Telemetry<br>• Application Insights (supported)<br>• Health Endpoints<br> |
-| **Advanced** | • Pagination<br>• Level 1 cache (in memory)<br>• Level 2 cache (Redis) |
-| **Authentication** | • OAuth2/JWT<br>• EasyAuth<br>• EntraId |
-| **Authorization** | • Role-based support<br>• Entity permissions<br>• Database policies |
-| **Developer** | • Cross-platform CLI<br>• Swagger (REST)<br>• Banana Cake Pop (GraphQL)<br>• Open Source<br>• Hot Reload
-
-
 ## Getting Started
 
 To get started quickly with Data API builder, use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial; that will help to get familiar with some basic tools and concepts while giving you a good experience on how much Data API builder can make you more efficient, but removing the need to write a lot of plumbing code.
@@ -130,6 +115,20 @@ GET http://localhost:5000/api/Actor
 
 Demo source code: [startrek](https://aka.ms/dab/startrek)
 
+## Overview
+
+| Category       | Features |
+|----------------|---------|
+| **Database Objects** | • NoSQL collections<br>• RDBMS tables, views, and stored procedures |
+| **Data Sources** | • SQL Server & Azure SQL Database<br>• Azure Cosmos DB<br>• PostgreSQL<br>• MySQL<br> |
+| **REST** | • `$select` for projection<br>• `$filter`for filtering<br> • `$orderBy` for sorting |
+| **GraphQL** | • Relationship natigation<br>• Data aggregation<br>• Multiple mutations (insert) |
+| **Telemetry** | • Structured Logs<br>• Open Telemetry<br>• Application Insights (supported)<br>• Health Endpoints<br> |
+| **Advanced** | • Pagination<br>• Level 1 cache (in memory)<br>• Level 2 cache (Redis) |
+| **Authentication** | • OAuth2/JWT<br>• EasyAuth<br>• EntraId |
+| **Authorization** | • Role-based support<br>• Entity permissions<br>• Database policies |
+| **Developer** | • Cross-platform CLI<br>• Swagger (REST)<br>• Banana Cake Pop (GraphQL)<br>• Open Source<br>• Hot Reload
+
 ## How does it work?
 
 This sequence diagram steps through the basic operation of DAB to help you, the developer, understand the fundamentals of the engine. DAB dynamically creates endpoints based on your configuration file, which must match the underlying data source. It automatically translates HTTP requests into SQL queries, converts the results to JSON, and pages the results according to your settings.  
@@ -182,9 +181,16 @@ Because DAB is stateless, you can scale it up or out using whatever container si
 
 ## Additional Resources
 
-|Repository|Resources|More Info
-|:-:|:-:|:-:|
-|[aka.ms/dab](https://aka.ms/dab)|<ul><li>[Documentation](https://aka.ms/dab/docs)</li><li>[Samples](https://aka.ms/dab/samples)<li></ul>|<ul><li>[Intro Video](https://www.youtube.com/playlist?list=PLYA3nHmjWIYE1PUl8_dVR-yKtCLgVhie4)</li><li>[Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues)</li><li>[Roadmap](https://github.com/Azure/data-api-builder/discussions/1377)</li></ul>
+ - [Online Documentation](https://aka.ms/dab/docs)
+ - [Official Samples](https://aka.ms/dab/samples)
+ - [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues)
+ - [Feature Roadmap](https://github.com/Azure/data-api-builder/discussions/1377)
+
+#### References
+
+- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
+- [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
+- [GraphQL Specification](https://graphql.org/)
 
 ### How to Contribute
 
@@ -193,12 +199,6 @@ Contributions to this project are more than welcome. Make sure you check out the
 - [Code Of Conduct](./CODE_OF_CONDUCT.md)
 - [Security](./SECURITY.md)
 - [Contributing](./CONTRIBUTING.md)
-
-### References
-
-- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
-- [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
-- [GraphQL](https://graphql.org/)
 
 ### License
 

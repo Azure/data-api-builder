@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)ex.StatusCode;
-                activity?.TrackRestControllerActivityFinishedWithWithException(ex, Response.StatusCode);
+                activity?.TrackRestControllerActivityFinishedWithException(ex, Response.StatusCode);
 
                 TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                activity?.TrackRestControllerActivityFinishedWithWithException(ex, Response.StatusCode);
+                activity?.TrackRestControllerActivityFinishedWithException(ex, Response.StatusCode);
 
                 TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
                 return ErrorResponse(

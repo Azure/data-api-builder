@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <param name="activity">The activity instance.</param>
         /// <param name="ex">The exception that occurred.</param>
         /// <param name="statusCode">The HTTP status code of the response.</param>
-        public static void TrackRestControllerActivityFinishedWithWithException(
+        public static void TrackRestControllerActivityFinishedWithException(
             this Activity activity,
             Exception ex,
             int statusCode)

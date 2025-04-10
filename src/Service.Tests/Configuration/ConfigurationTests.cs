@@ -1402,7 +1402,7 @@ type Moon {
 
         /// <summary>
         /// This method validates that depth-limit outside the valid range should fail validation
-        /// during `dab validate` and `dab start`.     
+        /// during `dab validate` and `dab start`.
         /// </summary>
         /// <param name="depthLimit"></param>
         /// <param name="expectedSuccess"></param>
@@ -1982,11 +1982,9 @@ type Moon {
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
             HostMode.Production, HttpStatusCode.OK, "data",
             DisplayName = "GraphQL endpoint with query in production mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Development, HttpStatusCode.BadRequest,
-            "GraphQL request redirected to favicon.ico.",
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Development, HttpStatusCode.NotFound, "Not Found",
             DisplayName = "Redirected endpoint in development mode.")]
-        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Production, HttpStatusCode.BadRequest,
-            "GraphQL request redirected to favicon.ico.",
+        [DataRow(RestController.REDIRECTED_ROUTE, HostMode.Production, HttpStatusCode.NotFound, "Not Found",
             DisplayName = "Redirected endpoint in production mode.")]
         public async Task TestInteractiveGraphQLEndpoints(
             string endpoint,
@@ -2010,8 +2008,8 @@ type Moon {
             File.WriteAllText(CUSTOM_CONFIG, configWithCustomHostMode.ToJson());
             string[] args = new[]
             {
-            $"--ConfigFileName={CUSTOM_CONFIG}"
-        };
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
@@ -4056,7 +4054,7 @@ type Planet @model(name:""PlanetAlias"") {
                 { "Book", requiredEntity }
             };
 
-            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth);
+            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth, HostMode.Development);
 
             string[] args = new[]
             {
@@ -4398,7 +4396,7 @@ type Planet @model(name:""PlanetAlias"") {
 
         /// <summary>
         /// Tests the enforcement of depth limit restrictions on GraphQL queries and mutations in non-hosted mode.
-        /// Verifies that requests exceeding the specified depth limit result in a BadRequest, 
+        /// Verifies that requests exceeding the specified depth limit result in a BadRequest,
         /// while requests within the limit succeed with the expected status code.
         /// Also verifies that the error message contains the current and allowed max depth limit value.
         /// Example:
@@ -4669,14 +4667,14 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
-        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true)
+        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true, HostMode hostMode = HostMode.Production)
         {
             DataSource dataSource = new(
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null,
                 Health: new(enableDatasourceHealth));
-            HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
+            HostOptions hostOptions = new(Mode: hostMode, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,

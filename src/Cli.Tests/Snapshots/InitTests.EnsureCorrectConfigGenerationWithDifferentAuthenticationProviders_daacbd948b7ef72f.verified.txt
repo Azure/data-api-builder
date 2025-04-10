@@ -1,0 +1,34 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL,
+    Options: {
+      set-session-context: false
+    }
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: EntraID,
+        Jwt: {
+          Audience: aud-xxx,
+          Issuer: issuer-xxx
+        }
+      },
+      Mode: Production
+    }
+  },
+  Entities: []
+}

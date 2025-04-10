@@ -77,8 +77,14 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableAggregation);
+        // Ignore the AllowedRolesForHealth as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowedRolesForHealth);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableAggregation);
+        // Ignore the EnableDwNto1JoinOpt as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableDwNto1JoinOpt);
+        // Ignore the FeatureFlags as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.FeatureFlags);
         // Ignore the JSON schema path as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the message as that's not serialized in our config file anyway.

@@ -192,6 +192,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
             string route,
             EntityActionOperation operationType)
         {
+            if (route.Equals(REDIRECTED_ROUTE))
+            {
+                return NotFound();
+            }
+
             Stopwatch stopwatch = Stopwatch.StartNew();
             // This activity tracks the entire REST request.
             using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {(route.Split('/').Length > 1 ? route.Split('/')[1] : string.Empty)}");
@@ -210,12 +215,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
             TelemetryMetricsHelper.IncrementActiveRequests();
             try
             {
-
-                if (route.Equals(REDIRECTED_ROUTE))
-                {
-                    return NotFound();
-                }
-
                 // Validate the PathBase matches the configured REST path.
                 string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
 
@@ -261,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     activity.TrackRestControllerActivityFinished(statusCode);
                 }
 
-                TelemetryMetricsHelper.TrackRequest(HttpContext.Request.Method, statusCode, route, "REST");
+                
                 return result;
             }
             catch (DataApiBuilderException ex)
@@ -296,6 +295,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
             finally
             {
                 stopwatch.Stop();
+                TelemetryMetricsHelper.TrackRequest(HttpContext.Request.Method, Response.StatusCode, route, "REST");
                 TelemetryMetricsHelper.TrackRequestDuration(HttpContext.Request.Method, Response.StatusCode, route, "REST", stopwatch.Elapsed.TotalMilliseconds);
 
                 TelemetryMetricsHelper.DecrementActiveRequests();

@@ -63,6 +63,7 @@ namespace Azure.DataApiBuilder.Service
         public static bool IsLogLevelOverriddenByCli;
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
+        public static OpenTelemetryOptions OpenTelemetryOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
         private HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
@@ -125,17 +126,17 @@ namespace Azure.DataApiBuilder.Service
                     options.IncludeFormattedMessage = true;
                 });
                 services.AddOpenTelemetry()
-                .WithLogging(logging =>
-                {
-                    logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                    .AddOtlpExporter(configure =>
-                    {
-                        configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
-                        configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                        configure.Protocol = OtlpExportProtocol.Grpc;
-                    });
+                //.WithLogging(logging =>
+                //{
+                //    logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                //    .AddOtlpExporter(configure =>
+                //    {
+                //        configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                //        configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                //        configure.Protocol = OtlpExportProtocol.Grpc;
+                //    });
 
-                })
+                //})
                 .WithMetrics(metrics =>
                 {
                     metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
@@ -409,6 +410,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Configure Application Insights Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
+                ConfigureOpenTelemetry(app, runtimeConfig);
 
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -722,6 +724,37 @@ namespace Azure.DataApiBuilder.Service
 
                 // Updating Startup Logger to Log from Startup Class.
                 ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+                _logger = loggerFactory.CreateLogger<Startup>();
+            }
+        }
+
+        /// <summary>
+        /// Configure Open Telemetry based on the loaded runtime configuration. If Open Telemetry
+        /// is enabled, we can track different events and metrics.
+        /// </summary>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
+        private void ConfigureOpenTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig?.Runtime?.Telemetry is not null
+                && runtimeConfig.Runtime.Telemetry.OpenTelemetry is not null)
+            {
+                OpenTelemetryOptions = runtimeConfig.Runtime.Telemetry.OpenTelemetry;
+
+                if (!OpenTelemetryOptions.Enabled)
+                {
+                    _logger.LogInformation("Open Telemetry are disabled.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(OpenTelemetryOptions?.Endpoint))
+                {
+                    _logger.LogWarning("Logs won't be sent to Open Telemetry because an Open Telemetry connection string is not available in the runtime config.");
+                    return;
+                }
+
+                // Updating Startup Logger to Log from Startup Class.
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
                 _logger = loggerFactory.CreateLogger<Startup>();
             }
         }

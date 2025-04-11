@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -202,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     operationType.ToString(),
                     route,
                     HttpContext.Request.QueryString.ToString(),
-                    HttpContext.User.FindFirst("role")?.Value,
+                    HttpContext.Request.Headers["X-MS-API-ROLE"].FirstOrDefault() ?? HttpContext.User.FindFirst("role")?.Value,
                     "REST");
             }
 

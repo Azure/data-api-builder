@@ -41,12 +41,16 @@ namespace Azure.DataApiBuilder.Service.Telemetry
                 activity.SetTag("user-agent", userAgent);
                 activity.SetTag("action.type", actionType);
                 activity.SetTag("http.url", httpURL);
-                if (queryString is not null && queryString != string.Empty)
+                if (!string.IsNullOrEmpty(queryString))
                 {
                     activity.SetTag("http.querystring", queryString);
                 }
 
-                activity.SetTag("user.role", userRole);
+                if (!string.IsNullOrEmpty(userRole))
+                {
+                    activity.SetTag("user.role", userRole);
+                }
+
                 activity.SetTag("api.type", apiType);
             }
         }

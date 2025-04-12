@@ -1,14 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Diagnostics;
 using System.Net;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using OpenTelemetry.Trace;
 using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry
 {
     public static class TelemetryTracesHelper
     {
@@ -32,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
             this Activity activity,
             Kestral httpMethod,
             string userAgent,
-            string actionType,
+            string actionType, // CRUD(EntityActionOperation) for REST, Query|Mutation(OperationType) for GraphQL
             string httpURL,
             string? queryString,
             string? userRole,

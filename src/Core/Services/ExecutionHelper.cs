@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
@@ -9,6 +10,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
@@ -50,14 +52,55 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="context">
         /// The middleware context.
         /// </param>
-        public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
+        public async ValueTask ExecuteAsync(IMiddlewareContext context, OperationType operationType)
         {
+            using Activity? activity = StartQueryActivity();
+
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
-
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
+            switch (operationType)
+            {
+                case OperationType.Query:
+                    await ExecuteQueryAsync(context, queryEngine, parameters, dataSourceName);
+                    break;
+                case OperationType.Mutation:
+                    await ExecuteMutateAsync(context, queryEngine, parameters, dataSourceName, ds.DatabaseType);
+                    break;
+                default:
+                    throw new NotImplementedException(operationType.ToString());
+            }
+
+            Activity? StartQueryActivity()
+            {
+                string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
+                Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod method = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod.Post;
+
+                Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}");
+
+                if (activity is not null)
+                {
+                    string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+                    DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+                    activity.TrackQueryActivityStarted(
+                        databaseType: ds.DatabaseType,
+                        dataSourceName: dataSourceName);
+                }
+
+                return activity;
+            }
+        }
+
+        /// <summary>
+        /// Represents the root query resolver and fetches the initial data from the query engine.
+        /// </summary>
+        /// <param name="context">
+        /// The middleware context.
+        /// </param>
+        private static async ValueTask ExecuteQueryAsync(IMiddlewareContext context, IQueryEngine queryEngine, IDictionary<string, object?> parameters, string dataSourceName)
+        {
             if (context.Selection.Type.IsListType())
             {
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
@@ -91,14 +134,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="context">
         /// The middleware context.
         /// </param>
-        public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
+        private async ValueTask ExecuteMutateAsync(IMiddlewareContext context, IQueryEngine queryEngine, IDictionary<string, object?> parameters, string dataSourceName, DatabaseType databaseType)
         {
-            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
-            DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
-            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
-
-            IDictionary<string, object?> parameters = GetParametersFromContext(context);
-
             // Only Stored-Procedure has ListType as returnType for Mutation
             if (context.Selection.Type.IsListType())
             {
@@ -121,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Services
             }
             else
             {
-                IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(ds.DatabaseType);
+                IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
                 Tuple<JsonDocument?, IMetadata?> result =
                     await mutationEngine.ExecuteAsync(context, parameters, dataSourceName);
                 SetContextResult(context, result.Item1);
@@ -441,7 +478,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public static InputObjectType InputObjectTypeFromIInputField(IInputField field)
         {
-            return (InputObjectType)(InnerMostType(field.Type));
+            return (InputObjectType)InnerMostType(field.Type);
         }
 
         /// <summary>

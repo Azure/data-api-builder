@@ -20,7 +20,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
             new FieldMiddlewareDefinition(
                 next => async context =>
                 {
-                    await executionHelper.ExecuteQueryAsync(context).ConfigureAwait(false);
+                    await executionHelper.ExecuteAsync(context, HotChocolate.Language.OperationType.Query).ConfigureAwait(false);
                     await next(context).ConfigureAwait(false);
                 });
 
@@ -28,7 +28,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
             new FieldMiddlewareDefinition(
                 next => async context =>
                 {
-                    await executionHelper.ExecuteMutateAsync(context).ConfigureAwait(false);
+                    await executionHelper.ExecuteAsync(context, HotChocolate.Language.OperationType.Mutation).ConfigureAwait(false);
                     await next(context).ConfigureAwait(false);
                 });
 

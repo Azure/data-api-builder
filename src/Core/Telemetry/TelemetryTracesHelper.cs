@@ -1,11 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Diagnostics;
+using System.Net;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using OpenTelemetry.Trace;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Core.Telemetry
 {
     public static class TelemetryTracesHelper
     {
@@ -27,13 +28,13 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <param name="apiType">The type of API being used (e.g., REST, GraphQL).</param>
         public static void TrackRestControllerActivityStarted(
             this Activity activity,
-            string httpMethod,
+            Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod httpMethod,
             string userAgent,
-            string actionType,
+            string actionType, // CRUD(EntityActionOperation) for REST, Query|Mutation(OperationType) for GraphQL
             string httpURL,
             string? queryString,
             string? userRole,
-            string apiType)
+            ApiType apiType)
         {
             if (activity.IsAllDataRequested)
             {
@@ -63,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <param name="dataSourceName">The name of the data source being queried.</param>
         public static void TrackQueryActivityStarted(
             this Activity activity,
-            string databaseType,
+            DatabaseType databaseType,
             string dataSourceName)
         {
             if (activity.IsAllDataRequested)
@@ -81,7 +82,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         /// <param name="statusCode">The HTTP status code of the response.</param>
         public static void TrackRestControllerActivityFinished(
             this Activity activity,
-            int statusCode)
+            HttpStatusCode statusCode)
         {
             if (activity.IsAllDataRequested)
             {
@@ -98,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         public static void TrackRestControllerActivityFinishedWithException(
             this Activity activity,
             Exception ex,
-            int statusCode)
+            HttpStatusCode statusCode)
         {
             if (activity.IsAllDataRequested)
             {

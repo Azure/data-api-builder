@@ -21,6 +21,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
@@ -410,7 +411,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Configure Application Insights Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
-                ConfigureOpenTelemetry(app, runtimeConfig);
+                ConfigureOpenTelemetry(runtimeConfig);
 
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -734,7 +735,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
-        private void ConfigureOpenTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
+        private void ConfigureOpenTelemetry(RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Runtime?.Telemetry is not null
                 && runtimeConfig.Runtime.Telemetry.OpenTelemetry is not null)

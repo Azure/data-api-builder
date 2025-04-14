@@ -51,12 +51,12 @@ steps:
 - task: NuGetToolInstaller@1
 
 - task: DotNetCoreCLI@2
-    displayName: Restore NuGet packages
-    inputs:
-      command: restore
-      projects: '$(solution)'
-      feedsToUse: config
-      nugetConfigPath: Nuget.config
+  displayName: Restore NuGet packages
+  inputs:
+    command: restore
+    projects: '$(solution)'
+    feedsToUse: config
+    nugetConfigPath: Nuget.config
 
 - task: DotNetCoreCLI@2
   displayName: Build

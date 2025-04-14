@@ -126,6 +126,17 @@ namespace Azure.DataApiBuilder.Service
                     options.IncludeFormattedMessage = true;
                 });
                 services.AddOpenTelemetry()
+                .WithLogging(logging =>
+                {
+                    logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                    .AddOtlpExporter(configure =>
+                    {
+                        configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                        configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                        configure.Protocol = OtlpExportProtocol.Grpc;
+                    });
+
+                })
                 .WithMetrics(metrics =>
                 {
                     metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))

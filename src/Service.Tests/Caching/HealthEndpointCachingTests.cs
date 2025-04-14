@@ -36,7 +36,7 @@ public class HealthEndpointCachingTests
 
     /// <summary>
     /// Simulates GET requests to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
-    /// The expected behavior is that these response should be different as we supply delay here.
+    /// The expected behavior is that these responses should be different as we supply delay in between them.
     /// </summary>
     [TestMethod]
     [TestCategory(TestCategory.MSSQL)]
@@ -94,7 +94,7 @@ public class HealthEndpointCachingTests
 
     /// <summary>
     /// Simulates GET request to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
-    /// The expected behavior is that both these response should be same in case cache is enabled with no delay.
+    /// The expected behavior is that both these responses should be same in case cache is enabled with no delay between the two requests.
     /// </summary>
     [TestMethod]
     [TestCategory(TestCategory.MSSQL)]

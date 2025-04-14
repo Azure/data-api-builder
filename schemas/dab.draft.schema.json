@@ -285,7 +285,7 @@
                     },
                     {
                       "const": "EntraID",
-                      "description": "Authentication provided by Microsoft Entra ID (formerly Azure AD)."
+                      "description": "Authentication provided by Microsoft Entra ID (formerly Azure AD). Use the JWT property to configure this provider."
                     },
                     {
                       "const": "Simulator",
@@ -297,7 +297,7 @@
                     },
                     {
                       "const": "AzureAD",
-                      "description": "Synonymous with the EntraID value."
+                      "description": "Synonymous with the EntraID value. Use the JWT property to configure this provider."
                     },
                     {
                       "const": "Custom",

@@ -80,7 +80,7 @@
         <PackageReference Include="ZiggyCreatures.FusionCache.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
         <PackageReference Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" />
-        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"  />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />

@@ -329,7 +329,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!dbPolicyConfigured && entityCacheEnabled)
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName), runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName));
                     byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
                     JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
                     return cacheServiceResponse;
@@ -392,7 +392,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             args: null,
                             dataSourceName: dataSourceName),
                         queryMetadata,
-                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName));
 
                     JsonDocument? cacheServiceResponse = null;
 

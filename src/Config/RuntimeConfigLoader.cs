@@ -251,8 +251,9 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
-        options.Converters.Add(new EntityCacheOptionsConverterFactory());
+        options.Converters.Add(new EntityCacheOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new RuntimeCacheOptionsConverterFactory());
+        options.Converters.Add(new RuntimeCacheLevel2OptionsConverterFactory());
         options.Converters.Add(new MultipleCreateOptionsConverter());
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));

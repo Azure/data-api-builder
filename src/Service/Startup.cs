@@ -129,6 +129,9 @@ namespace Azure.DataApiBuilder.Service
                     metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
+                        // TODO: should we also add FusionCache metrics?
+                        // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
+                        // .AddFusionCacheInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
@@ -142,6 +145,9 @@ namespace Azure.DataApiBuilder.Service
                     tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
+                        // TODO: should we also add FusionCache traces?
+                        // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
+                        // .AddFusionCacheInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
@@ -300,46 +306,64 @@ namespace Azure.DataApiBuilder.Service
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
                     options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                    string? cachePartition = runtimeConfig?.Runtime?.Cache?.Level2?.Partition;
+                    if (string.IsNullOrWhiteSpace(cachePartition) == false)
+                    {
+                        options.CacheKeyPrefix = cachePartition + "_";
+                        options.BackplaneChannelPrefix = cachePartition + "_";
+                    }
                 })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {
                     Duration = TimeSpan.FromSeconds(RuntimeCacheOptions.DEFAULT_TTL_SECONDS),
-                    DistributedCacheDuration = TimeSpan.FromSeconds(RuntimeCacheLevel2Options.DEFAULT_TTL_SECONDS)
+                    ReThrowBackplaneExceptions = false,
+                    ReThrowDistributedCacheExceptions = false,
+                    ReThrowSerializationExceptions = false,
                 });
 
-            // L2 cache config
-            bool useL2 = runtimeConfigAvailable
+            // Level2 cache config
+            bool isLevel2Enabled = runtimeConfigAvailable
                 && (runtimeConfig?.Runtime?.IsCachingEnabled ?? false)
                 && (runtimeConfig?.Runtime?.Cache?.Level2?.Enabled ?? false);
 
-            if (useL2)
+            if (isLevel2Enabled)
             {
-                RuntimeCacheLevel2Options l2CacheOptions = runtimeConfig!.Runtime!.Cache!.Level2!;
+                RuntimeCacheLevel2Options level2CacheOptions = runtimeConfig!.Runtime!.Cache!.Level2!;
+                string level2CacheProvider = level2CacheOptions.Provider ?? "redis";
 
-                // TODO: pick the best way to handle unknown providers (error? ignore? log? else?)
-
-                if (l2CacheOptions.Provider == "redis" && !string.IsNullOrWhiteSpace(l2CacheOptions.ConnectionString))
+                switch (level2CacheProvider)
                 {
-                    // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
-                    Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(l2CacheOptions.ConnectionString);
+                    case "redis":
+                        if (string.IsNullOrWhiteSpace(level2CacheOptions.ConnectionString))
+                        {
+                            throw new Exception($"Cache Provider: the \"redis\" level2 cache provider requires a valid connection-string. Please provide one.");
+                        }
+                        else
+                        {
+                            // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
+                            Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(level2CacheOptions.ConnectionString);
 
-                    fusionCacheBuilder
-                        .WithSerializer(new FusionCacheSystemTextJsonSerializer())
-                        .WithDistributedCache(new RedisCache(new RedisCacheOptions
-                        {
-                            //Configuration = l2CacheOptions.ConnectionString
-                            ConnectionMultiplexerFactory = async () =>
-                            {
-                                return await connectionMultiplexerTask;
-                            }
-                        }))
-                        .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
-                        {
-                            ConnectionMultiplexerFactory = async () =>
-                            {
-                                return await connectionMultiplexerTask;
-                            }
-                        }));
+                            fusionCacheBuilder
+                                .WithSerializer(new FusionCacheSystemTextJsonSerializer())
+                                .WithDistributedCache(new RedisCache(new RedisCacheOptions
+                                {
+                                    ConnectionMultiplexerFactory = async () =>
+                                    {
+                                        return await connectionMultiplexerTask;
+                                    }
+                                }))
+                                .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
+                                {
+                                    ConnectionMultiplexerFactory = async () =>
+                                    {
+                                        return await connectionMultiplexerTask;
+                                    }
+                                }));
+                        }
+
+                        break;
+                    default:
+                        throw new Exception($"Cache Provider: ${level2CacheOptions.Provider} not supported. Please provide a valid cache provider.");
                 }
             }
 

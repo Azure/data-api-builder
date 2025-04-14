@@ -8,7 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 namespace Azure.DataApiBuilder.Config.Converters;
 
 /// <summary>
-/// Defines how DAB reads and writes an entity's cache options (JSON).
+/// Defines how DAB reads and writes a runtime cache options (JSON).
 /// </summary>
 internal class RuntimeCacheOptionsConverterFactory : JsonConverterFactory
 {
@@ -27,8 +27,8 @@ internal class RuntimeCacheOptionsConverterFactory : JsonConverterFactory
     private class RuntimeCacheOptionsConverter : JsonConverter<RuntimeCacheOptions>
     {
         /// <summary>
-        /// Defines how DAB reads an entity's cache options and defines which values are
-        /// used to instantiate EntityCacheOptions.
+        /// Defines how DAB reads a runtime cache options and defines which values are
+        /// used to instantiate RuntimeCacheOptions.
         /// </summary>
         /// <exception cref="JsonException">Thrown when improperly formatted cache options are provided.</exception>
         public override RuntimeCacheOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -51,8 +51,8 @@ internal class RuntimeCacheOptionsConverterFactory : JsonConverterFactory
         }
 
         /// <summary>
-        /// When writing the EntityCacheOptions back to a JSON file, only write the ttl-seconds
-        /// property and value when EntityCacheOptions.Enabled is true. This avoids polluting
+        /// When writing the RuntimeCacheOptions back to a JSON file, only write the ttl-seconds
+        /// property and value when RuntimeCacheOptions.Enabled is true. This avoids polluting
         /// the written JSON file with a property the user most likely omitted when writing the
         /// original DAB runtime config file.
         /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.

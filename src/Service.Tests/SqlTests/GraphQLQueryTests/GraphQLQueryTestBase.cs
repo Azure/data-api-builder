@@ -2146,6 +2146,62 @@ query {
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
         }
 
+        [TestMethod]
+        public virtual async Task TestInvalidOrderByQueryUsingAnd()
+        {
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"{
+              books(orderBy: { and: { id: ASC, title: ASC } }) {
+                items {
+                  id
+                }
+              }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
+
+        [TestMethod]
+        public virtual async Task TestInvalidOrderByQueryUsingOr()
+        {
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"{
+              books(orderBy: { or: { id: ASC, title: ASC } }) {
+                items {
+                  id
+                }
+              }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
+
+        [TestMethod]
+        public virtual async Task TestInvalidOrderByQueryUsingRelationship()
+        {
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"{
+              publishers (first: 5 orderBy:  {books:  {
+                title: DESC
+              }
+              }){
+                items {
+                  id
+                  books {
+                    items {
+                      title
+                    }
+                  }
+                }
+              }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
+
         /// <summary>
         /// Test to check that sourceFields and targetFields for relationship provided in the config
         /// overrides relationship fields defined in DB.

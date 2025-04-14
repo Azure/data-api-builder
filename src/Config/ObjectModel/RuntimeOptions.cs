@@ -8,7 +8,6 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record RuntimeOptions
 {
-    public RuntimeHealthCheckConfig? Health { get; init; }
     public RestRuntimeOptions? Rest { get; init; }
     public GraphQLRuntimeOptions? GraphQL { get; init; }
     public HostOptions? Host { get; set; }
@@ -16,6 +15,7 @@ public record RuntimeOptions
     public TelemetryOptions? Telemetry { get; init; }
     public RuntimeCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
+    public RuntimeHealthCheckConfig? Health { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -28,7 +28,6 @@ public record RuntimeOptions
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null)
     {
-        this.Health = Health;
         this.Rest = Rest;
         this.GraphQL = GraphQL;
         this.Host = Host;
@@ -36,6 +35,7 @@ public record RuntimeOptions
         this.Telemetry = Telemetry;
         this.Cache = Cache;
         this.Pagination = Pagination;
+        this.Health = Health;
     }
 
     /// <summary>
@@ -46,4 +46,23 @@ public record RuntimeOptions
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Cache))]
     public bool IsCachingEnabled => Cache?.Enabled is true;
+
+    [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Rest))]
+    public bool IsRestEnabled =>
+        Rest is null ||
+        Rest?.Enabled is null ||
+        Rest?.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsGraphQLEnabled =>
+        GraphQL is null ||
+        GraphQL?.Enabled is null ||
+        GraphQL?.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsHealthCheckEnabled =>
+        Health is null ||
+        Health?.Enabled is null ||
+        Health?.Enabled is true;
 }

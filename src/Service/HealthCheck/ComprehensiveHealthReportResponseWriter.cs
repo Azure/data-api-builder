@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
@@ -19,13 +18,18 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     public class ComprehensiveHealthReportResponseWriter
     {
         // Dependencies
-        private ILogger? _logger;
-        private RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ILogger<ComprehensiveHealthReportResponseWriter> _logger;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly HealthCheckHelper _healthCheckHelper;
 
-        public ComprehensiveHealthReportResponseWriter(ILogger<ComprehensiveHealthReportResponseWriter>? logger, RuntimeConfigProvider runtimeConfigProvider)
+        public ComprehensiveHealthReportResponseWriter(
+            ILogger<ComprehensiveHealthReportResponseWriter> logger,
+            RuntimeConfigProvider runtimeConfigProvider,
+            HealthCheckHelper healthCheckHelper)
         {
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _healthCheckHelper = healthCheckHelper;
         }
 
         /* {
@@ -57,35 +61,32 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// Function provided to the health check middleware to write the response.
         /// </summary>
         /// <param name="context">HttpContext for writing the response.</param>
-        /// <param name="healthReport">Result of health check(s).</param>
         /// <returns>Writes the http response to the http context.</returns>
-        public Task WriteResponse(HttpContext context, HealthReport healthReport)
+        public Task WriteResponse(HttpContext context)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
-            if (config?.Runtime != null && config.Runtime?.Health != null && config.Runtime.Health.Enabled)
+
+            // Global comprehensive Health Check Enabled
+            if (config.IsHealthEnabled)
             {
-                // TODO: Enhance to improve the Health Report with the latest configuration
-                string response = JsonSerializer.Serialize(healthReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-                LogTrace($"Health check response writer writing status as: {healthReport.Status}");
+                _healthCheckHelper.StoreIncomingRoleHeader(context);
+                if (!_healthCheckHelper.IsUserAllowedToAccessHealthCheck(context, config.IsDevelopmentMode(), config.AllowedRolesForHealth))
+                {
+                    _logger.LogError("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return context.Response.CompleteAsync();
+                }
+
+                ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
+                string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+                _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
                 return context.Response.WriteAsync(response);
             }
             else
             {
-                LogTrace("Comprehensive Health Check Report Not Found: 404 Not Found.");
+                _logger.LogError("Comprehensive Health Check Report Not Found: 404 Not Found.");
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return context.Response.CompleteAsync();
-            }
-        }
-
-        /// <summary>
-        /// Logs a trace message if a logger is present and the logger is enabled for trace events.
-        /// </summary>
-        /// <param name="message">Message to emit.</param>
-        private void LogTrace(string message)
-        {
-            if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
-            {
-                _logger.LogTrace(message);
             }
         }
     }

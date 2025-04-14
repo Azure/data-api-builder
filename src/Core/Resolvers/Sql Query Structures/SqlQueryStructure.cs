@@ -17,7 +17,6 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Polly;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.Sql.SchemaConverter;
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -94,6 +93,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public GroupByMetadata GroupByMetadata { get; private set; }
 
         public string? CacheControlOption { get; set; }
+
+        public const string CACHE_CONTROL = "Cache-Control";
+
+        public const string CACHE_CONTROL_NO_STORE = "no-store";
+
+        public const string CACHE_CONTROL_NO_CACHE = "no-cache";
+
+        public const string CACHE_CONTROL_ONLY_IF_CACHED = "only-if-cached";
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
@@ -222,7 +229,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
             // Set the cache control based on the header if it exists.
-            if (httpContext.Request.Headers.TryGetValue("Cache-Control", out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
+            if (httpContext.Request.Headers.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
             {
                 CacheControlOption = cacheControlOption;
             }
@@ -576,15 +583,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private void AddCacheControlOptions(HttpContext httpContext)
         {
             // Set the cache control based on the request header if it exists.
-            if (httpContext.Request.Headers.TryGetValue("Cache-Control", out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
+            if (httpContext.Request.Headers.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
             {
                 CacheControlOption = cacheControlOption;
             }
 
             if (!string.IsNullOrEmpty(CacheControlOption) &&
-                !string.Equals(CacheControlOption, "no-cache") &&
-                !string.Equals(CacheControlOption, "no-store") &&
-                !string.Equals(CacheControlOption, "only-if-cached"))
+                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_CACHE) &&
+                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_STORE) &&
+                !string.Equals(CacheControlOption, CACHE_CONTROL_ONLY_IF_CACHED))
             {
                 throw new DataApiBuilderException(
                     message: "Request Header Cache-Control is invalid: " + CacheControlOption,

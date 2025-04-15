@@ -29,8 +29,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
     public class ResponseTimeData
     {
-        [JsonPropertyName("duration-ms")]
-        public int? DurationMs { get; set; }
+        [JsonPropertyName("response-ms")]
+        public int? ResponseTimeMs { get; set; }
 
         [JsonPropertyName("threshold-ms")]
         public int? ThresholdMs { get; set; }

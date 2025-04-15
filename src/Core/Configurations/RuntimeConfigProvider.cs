@@ -314,6 +314,10 @@ public class RuntimeConfigProvider
             ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
 
+            // This function only works if DAB is started in Production Mode
+            _configLoader.InsertWantedChangesInProductionMode();
+
+            // Checks if the new config is valid or invalid
             _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
 
             // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload

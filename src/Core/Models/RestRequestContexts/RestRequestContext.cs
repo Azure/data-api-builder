@@ -43,7 +43,6 @@ public abstract class RestRequestContext
 
     /// <summary>
     /// Defines the cache control option from the request header.
-    /// 
     /// </summary>
     public string? HeaderCacheControlOption { get; set; }
 

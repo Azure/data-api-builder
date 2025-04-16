@@ -580,10 +580,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             AddCacheControlOptions(httpContext);
         }
 
-        private void AddCacheControlOptions(HttpContext httpContext)
+        private void AddCacheControlOptions(HttpContext? httpContext)
         {
             // Set the cache control based on the request header if it exists.
-            if (httpContext.Request.Headers.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
+            if (httpContext is not null && httpContext.Request.Headers.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
             {
                 CacheControlOption = cacheControlOption;
             }

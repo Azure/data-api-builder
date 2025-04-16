@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
-                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx),
+                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx).Request.Headers,
                   predicates: null,
                   entityName: entityName,
                   counter: counter)
@@ -271,6 +271,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                 authorizationResolver,
                 gQLFilterParser,
+                httpRequestHeaders: httpContext.Request.Headers,
                 predicates: null,
                 entityName: context.EntityName,
                 counter: new IncrementingInteger(),
@@ -396,7 +397,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
-                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx),
+                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx).Request.Headers,
                   predicates: null,
                   entityName: entityName,
                   counter: counter)
@@ -557,10 +558,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            HttpContext httpContext,
+            IHeaderDictionary httpRequestHeaders,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null)
+            IncrementingInteger? counter = null,
+            HttpContext? httpContext = null)
             : base(metadataProvider,
                   authorizationResolver,
                   gQLFilterParser, predicates,
@@ -575,13 +577,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ColumnLabelToParam = new();
             FilterPredicates = string.Empty;
             OrderByColumns = new();
-            AddCacheControlOptions(httpContext);
+            AddCacheControlOptions(httpRequestHeaders);
         }
 
-        private void AddCacheControlOptions(HttpContext? httpContext)
+        private void AddCacheControlOptions(IHeaderDictionary? httpRequestHeaders)
         {
             // Set the cache control based on the request header if it exists.
-            if (httpContext is not null && httpContext.Request.Headers.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
+            if (httpRequestHeaders is not null && httpRequestHeaders.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
             {
                 CacheControlOption = cacheControlOption;
             }

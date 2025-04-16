@@ -589,9 +589,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             if (!string.IsNullOrEmpty(CacheControlOption) &&
-                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_CACHE) &&
-                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_STORE) &&
-                !string.Equals(CacheControlOption, CACHE_CONTROL_ONLY_IF_CACHED))
+                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_CACHE, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_STORE, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(CacheControlOption, CACHE_CONTROL_ONLY_IF_CACHED, StringComparison.OrdinalIgnoreCase))
             {
                 throw new DataApiBuilderException(
                     message: "Request Header Cache-Control is invalid: " + CacheControlOption,

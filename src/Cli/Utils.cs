@@ -828,6 +828,24 @@ namespace Cli
             return graphQLType;
         }
 
+        public static EntityCacheOptions ConstructCacheOptions(string? cacheEnabled, string? cacheTtl)
+        {
+            EntityCacheOptions cacheOptions = new();
+            if (!bool.TryParse(cacheEnabled, out bool isEnabled))
+            {
+                _logger.LogError("Invalid format for --cache.enabled. Accepted values are true/false.");
+                isEnabled = false;
+            }
+
+            if (!int.TryParse(cacheTtl, out int ttl))
+            {
+                _logger.LogError("Invalid format for --cache.ttl. Accepted values are any integer.");
+                ttl = 5;
+            }
+
+            return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl };
+        }
+
         /// <summary>
         /// Check if add/update command has Entity provided. Return false otherwise.
         /// </summary>

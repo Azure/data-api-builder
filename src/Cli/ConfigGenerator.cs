@@ -433,6 +433,7 @@ namespace Cli
 
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
+            EntityCacheOptions cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
             // Create new entity.
             Entity entity = new(
@@ -441,7 +442,8 @@ namespace Cli
                 GraphQL: graphqlOptions,
                 Permissions: permissionSettings,
                 Relationships: null,
-                Mappings: null);
+                Mappings: null,
+                Cache: cacheOptions);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)

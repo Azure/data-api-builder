@@ -40,6 +40,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -67,6 +69,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -96,6 +100,8 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -129,6 +135,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -165,6 +173,8 @@ namespace Cli.Tests
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
                 config: TEST_RUNTIME_CONFIG_FILE,
+                cacheEnabled: null,
+                cacheTtl: null,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -195,6 +205,8 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
+                cacheEnabled: null,
+                cacheTtl: null,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -223,6 +235,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch" },
                 graphQLOperationForStoredProcedure: "Query"
@@ -271,6 +285,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -328,6 +344,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
@@ -361,6 +379,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
@@ -397,6 +417,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null

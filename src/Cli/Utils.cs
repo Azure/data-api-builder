@@ -831,16 +831,17 @@ namespace Cli
         public static EntityCacheOptions ConstructCacheOptions(string? cacheEnabled, string? cacheTtl)
         {
             EntityCacheOptions cacheOptions = new();
-            if (!bool.TryParse(cacheEnabled, out bool isEnabled))
+            bool isEnabled = false;
+            int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
+
+            if (cacheEnabled is not null && !bool.TryParse(cacheEnabled, out isEnabled))
             {
                 _logger.LogError("Invalid format for --cache.enabled. Accepted values are true/false.");
-                isEnabled = false;
             }
 
-            if (!int.TryParse(cacheTtl, out int ttl))
+            if (cacheTtl is not null && !int.TryParse(cacheTtl, out ttl))
             {
                 _logger.LogError("Invalid format for --cache.ttl. Accepted values are any integer.");
-                ttl = 5;
             }
 
             return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl };

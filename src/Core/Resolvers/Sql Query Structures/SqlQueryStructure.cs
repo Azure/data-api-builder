@@ -399,9 +399,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx),
                   predicates: null,
                   entityName: entityName,
-                  counter: counter
-                  
-                  )
+                  counter: counter)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;

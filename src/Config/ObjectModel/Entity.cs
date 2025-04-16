@@ -72,7 +72,6 @@ public record Entity
     [MemberNotNullWhen(true, nameof(Cache))]
     public bool IsCachingEnabled => Cache?.Enabled is true;
 
-
     [JsonIgnore]
     public bool IsEntityHealthEnabled =>
         Health is null || Health.Enabled;

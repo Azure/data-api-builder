@@ -21,7 +21,7 @@ Data API builder (DAB) is an open-source, no-code tool that creates secure, full
 erDiagram
     DATA_API_BUILDER ||--|{ DATA_API : "Provides"
     DATA_API_BUILDER {
-        container true "Microsoft Container Repostiory"
+        container true "Microsoft Container Repository"
         open-source true "MIT license / any cloud or on-prem."
         objects true "Supports: Table / View / Stored Procedure"
         developer true "Swagger / Banana Cake Pop"

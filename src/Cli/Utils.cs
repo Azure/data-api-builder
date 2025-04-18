@@ -842,7 +842,7 @@ namespace Cli
             }
 
             EntityCacheOptions cacheOptions = new();
-            bool isEnabled = false;           
+            bool isEnabled = false;
             int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
 
             if (cacheEnabled is not null && !bool.TryParse(cacheEnabled, out isEnabled))

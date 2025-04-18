@@ -81,10 +81,10 @@ namespace Cli.Commands
         [Option("policy-database", Required = false, HelpText = "Specify an OData style filter rule that will be injected in the query sent to the database.")]
         public string? PolicyDatabase { get; }
 
-        [Option("cache.enabled", Required = false, HelpText = "Specify if caching is enabled for Entity.")]
+        [Option("cache.enabled", Required = false, HelpText = "Specify if caching is enabled for Entity, default value is false.")]
         public string? CacheEnabled { get; }
 
-        [Option("cache.ttl", Required = false, HelpText = "Specify time to live for cache entries for Entity.")]
+        [Option("cache.ttl", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
         public string? CacheTtl { get; }
     }
 }

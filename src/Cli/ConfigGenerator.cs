@@ -433,7 +433,7 @@ namespace Cli
 
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
-            EntityCacheOptions cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
             // Create new entity.
             Entity entity = new(

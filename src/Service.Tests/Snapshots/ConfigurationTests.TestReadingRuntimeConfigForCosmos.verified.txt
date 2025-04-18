@@ -226,11 +226,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 5
-        }
+        ]
       }
     },
     {

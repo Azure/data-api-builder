@@ -85,6 +85,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableAggregation);
         // Ignore the AllowedRolesForHealth as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowedRolesForHealth);
+        // Ignore the CacheTtlSeconds as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CacheTtlSecondsForHealthReport);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableAggregation);
         // Ignore the EnableDwNto1JoinOpt as that's unimportant from a test standpoint.

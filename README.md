@@ -29,7 +29,7 @@ erDiagram
         security true "EntraId / EasyAuth / OAuth / JWT / Anonymous"
         cache true "Level1 (in-memory) / Level2 (redis)"
         policy true "Item policy / Database policy / Claims policy"
-        hot_reload true "Dyanmically controllable log levels"
+        hot_reload true "Dynamically controllable log levels"
     }
     DATA_API ||--o{ DATASOURCE : "Queries"
     DATA_API {

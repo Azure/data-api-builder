@@ -15,7 +15,7 @@ Join the Data API builder community! This sign up will help us maintain a list o
 
 ## About Data API builder
 
-Data API builder (DAB) is an open-source, no-code tool that creates secure, full-featured REST and GraphQL endpoints for your database. It is a CRUD Data API engine that runs in a container—in Azure or any other cloud platforms, or even on-premises. DAB is built for developers with integrated tooling, telemetry and other productivity features.
+Data API builder (DAB) is an open-source, no-code tool that creates secure, full-featured REST and GraphQL endpoints for your database. It’s a CRUD data API engine that runs in a container—on Azure, any other cloud, or on-premises. DAB is built for developers with integrated tooling, telemetry, and other productivity features.
 
 ```mermaid
 erDiagram
@@ -60,11 +60,11 @@ erDiagram
 
 ## Getting Started
 
-To get started quickly with Data API builder, use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial; that will help to get familiar with some basic tools and concepts while giving you a good experience on how much Data API builder can make you more efficient, but removing the need to write a lot of plumbing code.
+Use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial to quickly explore the core tools and concepts. It gives you hands-on experience with how DAB makes you more efficient by removing boilerplate code.
 
 **1. Install the DAB CLI**
 
-The [Data API builder (DAB) CLI](https://aka.ms/dab/docs) is a cross-platform dotnet tool. This means you will need to install the cross-platform [.NET SDK CLI](https://get.dot.net) before running the command indicated below.
+The [DAB CLI](https://aka.ms/dab/docs) is a cross-platform .NET tool. Install the [.NET SDK](https://get.dot.net) before running:
 
 ```
 dotnet tool install microsoft.dataapibuilder -g
@@ -72,7 +72,7 @@ dotnet tool install microsoft.dataapibuilder -g
 
 **2. Create your initial configuration file**
 
-[Data API builder (DAB)](https://aka.ms/dab/docs) requires only a JSON configuration file to work. This can be edited by hand or with the CLI. Developers can use `dab --help` for additional syntax options.
+DAB requires a JSON configuration file. Edit manually or with the CLI. Use `dab --help` for syntax options.
 
 ```
 dab init
@@ -83,7 +83,7 @@ dab init
 
 **3. Add your first table**
 
-[Data API builder (DAB)](https://aka.ms/dab/docs) supports tables, views, and stored procedures. Data sources include: Microsoft SQL, Azure Cosmos DB, PostgreSQL, MySQL, and SQL Datawarehouse. Though security is configured at the engine-level, permissions are managed at the entity level.
+DAB supports tables, views, and stored procedures. It works with SQL Server, Azure Cosmos DB, PostgreSQL, MySQL, and SQL Data Warehouse. Security is engine-level, but permissions are per entity.
 
 ```
 dab add Actor
@@ -91,9 +91,9 @@ dab add Actor
   --permissions "anonymous:*"
 ```
 
-**4. Run Data APi builder**
+**4. Run Data API builder**
 
-In `production`, Data API builder (DAB) runs in a container. In `development`, DAB is self-hosted on your local machine with support for hot reload, Swagger, and Banana Cake Pop. 
+In `production`, DAB runs in a container. In `development`, it’s self-hosted locally with hot reload, Swagger, and Banana Cake Pop support.
 
 ```
 dab start
@@ -101,7 +101,7 @@ dab start
 
 **5. Access your data source**
 
-By default, Data API builder (DAB) enables both REST and GraphQL endpoints. REST endpoints support `$select`, `$filter`, and `$orderBy`. GraphQL supports relationships defined in the config.
+By default, DAB enables both REST and GraphQL. REST supports `$select`, `$filter`, and `$orderBy`. GraphQL uses config-defined relationships.
 
 ```
 GET http://localhost:5000/api/Actor
@@ -118,20 +118,20 @@ Demo source code: [startrek](https://aka.ms/dab/startrek)
 ## Overview
 
 | Category       | Features |
-|----------------|---------|
-| **Database Objects** | • NoSQL collections<br>• RDBMS tables, views, and stored procedures |
-| **Data Sources** | • SQL Server & Azure SQL Database<br>• Azure Cosmos DB<br>• PostgreSQL<br>• MySQL<br> |
-| **REST** | • `$select` for projection<br>• `$filter`for filtering<br> • `$orderBy` for sorting |
-| **GraphQL** | • Relationship natigation<br>• Data aggregation<br>• Multiple mutations (insert) |
-| **Telemetry** | • Structured Logs<br>• Open Telemetry<br>• Application Insights (supported)<br>• Health Endpoints<br> |
-| **Advanced** | • Pagination<br>• Level 1 cache (in memory)<br>• Level 2 cache (Redis) |
-| **Authentication** | • OAuth2/JWT<br>• EasyAuth<br>• EntraId |
+|----------------|----------|
+| **Database Objects** | • NoSQL collections<br>• RDBMS tables, views, stored procedures |
+| **Data Sources** | • SQL Server & Azure SQL<br>• Azure Cosmos DB<br>• PostgreSQL<br>• MySQL |
+| **REST** | • `$select` for projection<br>• `$filter` for filtering<br>• `$orderBy` for sorting |
+| **GraphQL** | • Relationship navigation<br>• Data aggregation<br>• Multiple mutations |
+| **Telemetry** | • Structured logs<br>• OpenTelemetry<br>• Application Insights<br>• Health endpoints |
+| **Advanced** | • Pagination<br>• Level 1 (in-memory) cache<br>• Level 2 (Redis) cache |
+| **Authentication** | • OAuth2/JWT<br>• EasyAuth<br>• Entra ID |
 | **Authorization** | • Role-based support<br>• Entity permissions<br>• Database policies |
-| **Developer** | • Cross-platform CLI<br>• Swagger (REST)<br>• Banana Cake Pop (GraphQL)<br>• Open Source<br>• Hot Reload
+| **Developer** | • Cross-platform CLI<br>• Swagger (REST)<br>• Banana Cake Pop (GraphQL)<br>• Open Source<br>• Hot Reload |
 
 ## How does it work?
 
-This sequence diagram steps through the basic operation of DAB to help you, the developer, understand the fundamentals of the engine. DAB dynamically creates endpoints based on your configuration file, which must match the underlying data source. It automatically translates HTTP requests into SQL queries, converts the results to JSON, and pages the results according to your settings.  
+This diagram shows how DAB works. DAB dynamically creates endpoints from your config file. It translates HTTP requests to SQL, returns JSON, and auto-pages results.
 
 ```mermaid
 sequenceDiagram
@@ -177,37 +177,37 @@ sequenceDiagram
     deactivate Endpoint
 ```
 
-Because DAB is stateless, you can scale it up or out using whatever container size fits your data source and usage needs. Most importantly, we aren’t doing anything exotic—we’re building a feature-rich Data API just like you would from scratch, only now you don’t have to.
+Because DAB is stateless, it can scale up or out using any container size. It builds a feature-rich API like you would from scratch—but now you don’t have to.
 
 ## Additional Resources
 
- - [Online Documentation](https://aka.ms/dab/docs)
- - [Official Samples](https://aka.ms/dab/samples)
- - [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues)
- - [Feature Roadmap](https://github.com/Azure/data-api-builder/discussions/1377)
+- [Online Documentation](https://aka.ms/dab/docs)  
+- [Official Samples](https://aka.ms/dab/samples)  
+- [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues)  
+- [Feature Roadmap](https://github.com/Azure/data-api-builder/discussions/1377)
 
 #### References
 
-- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
-- [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
+- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)  
+- [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)  
 - [GraphQL Specification](https://graphql.org/)
 
 ### How to Contribute
 
-Contributions to this project are more than welcome. Make sure you check out the following documents, to successfully contribute to the project:
+To contribute, see these documents:
 
-- [Code Of Conduct](./CODE_OF_CONDUCT.md)
-- [Security](./SECURITY.md)
+- [Code of Conduct](./CODE_OF_CONDUCT.md)  
+- [Security](./SECURITY.md)  
 - [Contributing](./CONTRIBUTING.md)
 
 ### License
 
-**Data API builder for Azure Databases** is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more details.
+**Data API builder for Azure Databases** is licensed under the MIT License. See [LICENSE](./LICENSE.txt) for details.
 
 ### Third-Party Component Notice
 
-If you use the third-party software Banana Cake Pop by ChilliCream, Inc., as part of your Data API builder solution, you may have the option to save your work on ChilliCream's cloud service, via your separate ChilliCream account.  Microsoft is not affiliated with and does not endorse ChilliCream's service, and you use those services at your own option.
+Banana Cake Pop (by ChilliCream, Inc.) may optionally store work in its cloud service via your ChilliCream account. Microsoft is not affiliated with or endorsing this service. Use at your discretion.
 
 ### Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow Microsoft's Trademark & Brand Guidelines. Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.
+This project may use trademarks or logos. Use of Microsoft trademarks must follow Microsoft’s [Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks). Use of third-party marks is subject to their policies.

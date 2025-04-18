@@ -102,6 +102,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public const string CACHE_CONTROL_ONLY_IF_CACHED = "only-if-cached";
 
+        public HashSet<string> cacheControlHeaderOptions = new(
+            new[] { CACHE_CONTROL, CACHE_CONTROL_NO_STORE, CACHE_CONTROL_NO_CACHE, CACHE_CONTROL_ONLY_IF_CACHED },
+            StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
@@ -228,11 +232,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
-            // Set the cache control based on the header if it exists.
-            if (httpContext.Request.Headers.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
-            {
-                CacheControlOption = cacheControlOption;
-            }
+
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
@@ -589,9 +589,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             if (!string.IsNullOrEmpty(CacheControlOption) &&
-                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_CACHE) &&
-                !string.Equals(CacheControlOption, CACHE_CONTROL_NO_STORE) &&
-                !string.Equals(CacheControlOption, CACHE_CONTROL_ONLY_IF_CACHED))
+                !cacheControlHeaderOptions.Contains(CacheControlOption))
             {
                 throw new DataApiBuilderException(
                     message: "Request Header Cache-Control is invalid: " + CacheControlOption,

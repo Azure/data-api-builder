@@ -42,12 +42,6 @@ public abstract class RestRequestContext
     public List<string> FieldsToBeReturned { get; set; } = new();
 
     /// <summary>
-    /// Defines the cache control option from the request header.
-    /// 
-    /// </summary>
-    public string? HeaderCacheControlOption { get; set; }
-
-    /// <summary>
     /// Dictionary of primary key and their values specified in the request.
     /// When there are multiple values, that means its a composite primary key.
     /// Based on the operation type, this property may or may not be populated.

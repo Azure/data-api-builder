@@ -87,7 +87,6 @@ public class DabCacheService
     /// <typeparam name="JsonElement">The type of value in the cache</typeparam>
     /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
     /// <returns>JSON Response</returns>
-    /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
     public MaybeValue<JsonElement>? TryGet<JsonElement>(DatabaseQueryMetadata queryMetadata)
     {
         string cacheKey = CreateCacheKey(queryMetadata);

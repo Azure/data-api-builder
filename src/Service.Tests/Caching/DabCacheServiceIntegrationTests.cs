@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.Cache;
@@ -63,7 +64,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Act
             int cacheEntryTtlInSeconds = 1;
-            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
@@ -100,10 +102,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Prime the cache with a single entry
             int cacheEntryTtlInSeconds = 1;
-            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
+            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Act
-            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.IsFalse(mockQueryExecutor.Invocations.Count is 2, message: "Expected a cache hit, but observed two cache misses.");
@@ -135,14 +138,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Prime the cache with a single entry
             int cacheEntryTtlInSeconds = 1;
-            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
-            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
+            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
+            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Sleep for the amount of time the cache entry is valid to trigger eviction.
             Thread.Sleep(millisecondsTimeout: cacheEntryTtlInSeconds * 1000);
 
             // Act
-            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.IsFalse(mockQueryExecutor.Invocations.Count is 1, message: "QueryExecutor invocation count too low. A cache hit shouldn't have occurred since the entry should have expired.");
@@ -175,10 +179,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Prime the cache.
             int cacheEntryTtlInSeconds = 1;
-            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
+            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Act
-            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.IsFalse(mockQueryExecutor.Invocations.Count is 1, message: "Unexpected cache hit when cache entry size exceeded cache capacity.");
@@ -209,7 +214,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Act
             int cacheEntryTtlInSeconds = 1;
-            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
@@ -248,8 +254,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Act and Assert
             int cacheEntryTtlInSeconds = 1;
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
             await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
-                async () => await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds),
+                async () => await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel),
                 message: "Expected an exception to be thrown.");
         }
 
@@ -284,7 +291,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Act
             int cacheEntryTtlInSeconds = 1;
-            JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
+            JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
@@ -324,11 +332,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             DabCacheService dabCache = CreateDabCacheService(cache);
 
             int cacheEntryTtlInSeconds = 1;
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
             // First call. Cache miss
-            _ = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            _ = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Act
-            JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
@@ -362,7 +371,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Act
             int cacheEntryTtlInSeconds = 1;
-            JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
+            JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
@@ -394,11 +404,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             DabCacheService dabCache = CreateDabCacheService(cache);
 
             int cacheEntryTtlInSeconds = 1;
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
             // First call. Cache miss
-            _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Act
-            JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
@@ -431,16 +442,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             DabCacheService dabCache = CreateDabCacheService(cache);
 
             int cacheEntryTtlInSeconds = 1;
+            EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
 
             // First call. Cache miss
-            _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
-            _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
+            _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Sleep for the amount of time the cache entry is valid to trigger eviction.
             Thread.Sleep(millisecondsTimeout: cacheEntryTtlInSeconds * 1000);
 
             // Act
-            JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds);
+            JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
             Assert.IsFalse(mockExecuteQuery.Invocations.Count < 2, message: "QueryExecutor invocation count too low. A cache hit shouldn't have occurred since the entry should have expired.");

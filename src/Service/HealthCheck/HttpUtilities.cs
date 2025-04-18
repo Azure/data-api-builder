@@ -158,11 +158,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 List<string> columnNames = dbObject.SourceDefinition.Columns.Keys.ToList();
-                
+
                 // In case of GraphQL API, use the plural value specified in [entity.graphql.type.plural].
                 // Further, we need to camel case this plural value to match the GraphQL object name.                  
                 string graphqlObjectName = LowerFirstLetter(entity.GraphQL.Plural.Pascalize());
-                
+
                 // In case any primitive column names are present, execute the query
                 if (columnNames.Any())
                 {

@@ -828,7 +828,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 5
+        }
       }
     },
     {
@@ -1639,7 +1643,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 5
+        }
       }
     },
     {
@@ -1988,7 +1996,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 5
+        }
       }
     },
     {

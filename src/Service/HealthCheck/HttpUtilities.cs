@@ -100,6 +100,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return errorMessage;
                 }
 
+                if (!IsValidOutboundUri(apiRoute))
+                {
+                    LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                    return "Blocked outbound request due to invalid or unsafe URI.";
+                }
+
                 // Create an instance of HttpClient
                 using (HttpClient client = CreateClient(apiRoute))
                 {
@@ -219,6 +225,28 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 },
                 Timeout = TimeSpan.FromSeconds(200),
             };
+        }
+
+        private static bool IsValidOutboundUri(string uri)
+        {
+            if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? parsedUri))
+            {
+                return false;
+            }
+
+            // Only allow HTTP or HTTPS schemes
+            if (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps)
+            {
+                return false;
+            }
+
+            // Disallow empty hostnames
+            if (string.IsNullOrWhiteSpace(parsedUri.Host))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         // <summary>

@@ -24,7 +24,7 @@ erDiagram
         container true "Microsoft Container Repository"
         open-source true "MIT license / any cloud or on-prem."
         objects true "Supports: Table / View / Stored Procedure"
-        developer true "Swagger / Banana Cake Pop"
+        developer true "Swagger / Nitro (fka Banana Cake Pop)"
         otel true "Open Telemetry / Structured Logs / Health Endpoints"
         security true "EntraId / EasyAuth / OAuth / JWT / Anonymous"
         cache true "Level1 (in-memory) / Level2 (redis)"

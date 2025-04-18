@@ -99,6 +99,8 @@ In `production`, DAB runs in a container. In `development`, it’s self-hosted l
 dab start
 ```
 
+> **Note**: Before you run `dab start`, make sure your connection string is stored in an environment variable called `my-connection-string`. This is required for `@env('my-connection-string')` in your config file to work. The easiest way is to create a `.env` file with `name=value` pairs—DAB will load these automatically at runtime.
+
 **5. Access your data source**
 
 By default, DAB enables both REST and GraphQL. REST supports `$select`, `$filter`, and `$orderBy`. GraphQL uses config-defined relationships.

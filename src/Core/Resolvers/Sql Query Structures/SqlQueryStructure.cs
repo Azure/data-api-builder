@@ -397,7 +397,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
-                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx)?.Request.Headers,
+                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx).Request.Headers,
                   predicates: null,
                   entityName: entityName,
                   counter: counter)

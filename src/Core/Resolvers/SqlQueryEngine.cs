@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Resolvers;
@@ -329,10 +330,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!dbPolicyConfigured && entityCacheEnabled)
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
-                    byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
-                    JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
-                    return cacheServiceResponse;
+                    JsonElement? result;
+                    switch (structure.CacheControlOption)
+                    {
+                        // Do not get result from cache even if it exists, still cache result.
+                        case SqlQueryStructure.CACHE_CONTROL_NO_CACHE:
+                            result = await queryExecutor.ExecuteQueryAsync(
+                                sqltext: queryMetadata.QueryText,
+                                parameters: queryMetadata.QueryParameters,
+                                dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
+                                httpContext: _httpContextAccessor.HttpContext!,
+                                args: null,
+                                dataSourceName: queryMetadata.DataSource);
+                            _cache.Set<JsonElement?>(queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName), result);
+                            return ParseResultIntoJsonDocument(result);
+                        // Do not store result even if valid, stil get from cache if available.
+                        case SqlQueryStructure.CACHE_CONTROL_NO_STORE:
+                            result = _cache.TryGet<JsonElement?>(queryMetadata);
+                            result = result.HasValue ? result.Value :
+                                await queryExecutor.ExecuteQueryAsync(
+                                    sqltext: queryMetadata.QueryText,
+                                    parameters: queryMetadata.QueryParameters,
+                                    dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
+                                    httpContext: _httpContextAccessor.HttpContext!,
+                                    args: null,
+                                    dataSourceName: queryMetadata.DataSource);
+                            return ParseResultIntoJsonDocument(result);
+                        // Only return query response if it exists in cache, return gateway timeout otherwise.
+                        case SqlQueryStructure.CACHE_CONTROL_ONLY_IF_CACHED:
+                            result = _cache.TryGet<JsonElement?>(queryMetadata);
+                            result = result.HasValue ? result :
+                                throw new DataApiBuilderException(
+                                    message: "Header 'only-if-cached' was used but item was not found in cache.",
+                                    statusCode: System.Net.HttpStatusCode.GatewayTimeout,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
+                            return ParseResultIntoJsonDocument(result);
+                        default:
+                            result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                            return ParseResultIntoJsonDocument(result);
+                    }
                 }
             }
 
@@ -349,6 +385,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 args: null,
                 dataSourceName: dataSourceName);
             return response;
+        }
+
+        private static JsonDocument? ParseResultIntoJsonDocument(JsonElement? result)
+        {
+            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+            return JsonDocument.Parse(jsonBytes);
         }
 
         // <summary>

@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Controllers
@@ -200,21 +201,23 @@ namespace Azure.DataApiBuilder.Service.Controllers
             Stopwatch stopwatch = Stopwatch.StartNew();
             // This activity tracks the entire REST request.
             using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {(route.Split('/').Length > 1 ? route.Split('/')[1] : string.Empty)}");
-            if (activity is not null)
-            {
-                activity.TrackRestControllerActivityStarted(
-                    HttpContext.Request.Method,
-                    HttpContext.Request.Headers["User-Agent"].ToString(),
-                    operationType.ToString(),
-                    route,
-                    HttpContext.Request.QueryString.ToString(),
-                    HttpContext.Request.Headers["X-MS-API-ROLE"].FirstOrDefault() ?? HttpContext.User.FindFirst("role")?.Value,
-                    "REST");
-            }
 
-            TelemetryMetricsHelper.IncrementActiveRequests();
             try
             {
+                TelemetryMetricsHelper.IncrementActiveRequests(ApiType.REST);
+
+                if (activity is not null)
+                {
+                    activity.TrackRestControllerActivityStarted(
+                        Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true),
+                        HttpContext.Request.Headers["User-Agent"].ToString(),
+                        operationType.ToString(),
+                        route,
+                        HttpContext.Request.QueryString.ToString(),
+                        HttpContext.Request.Headers["X-MS-API-ROLE"].FirstOrDefault() ?? HttpContext.User.FindFirst("role")?.Value,
+                        ApiType.REST);
+                }
+
                 // Validate the PathBase matches the configured REST path.
                 string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
 
@@ -242,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 if (queryActivity is not null)
                 {
                     queryActivity.TrackQueryActivityStarted(
-                        databaseType.ToString(),
+                        databaseType,
                         dataSourceName);
                 }
 
@@ -257,7 +260,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 int statusCode = (result as ObjectResult)?.StatusCode ?? (result as StatusCodeResult)?.StatusCode ?? (result as JsonResult)?.StatusCode ?? 200;
                 if (activity is not null && activity.IsAllDataRequested)
                 {
-                    activity.TrackRestControllerActivityFinished(statusCode);
+                    HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(statusCode.ToString(), ignoreCase: true);
+                    activity.TrackRestControllerActivityFinished(httpStatusCode);
                 }
 
                 
@@ -271,9 +275,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)ex.StatusCode;
-                activity?.TrackRestControllerActivityFinishedWithException(ex, Response.StatusCode);
+                activity?.TrackRestControllerActivityFinishedWithException(ex, Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true));
 
-                TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
+                HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
+                HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true);
+                TelemetryMetricsHelper.TrackError(method, httpStatusCode, route, ApiType.REST, ex);
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
@@ -284,9 +290,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                activity?.TrackRestControllerActivityFinishedWithException(ex, Response.StatusCode);
 
-                TelemetryMetricsHelper.TrackError(HttpContext.Request.Method, Response.StatusCode, route, "REST", ex);
+                HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
+                HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true);
+                activity?.TrackRestControllerActivityFinishedWithException(ex, httpStatusCode);
+
+                TelemetryMetricsHelper.TrackError(method, httpStatusCode, route, ApiType.REST, ex);
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,
@@ -295,10 +304,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
             finally
             {
                 stopwatch.Stop();
-                TelemetryMetricsHelper.TrackRequest(HttpContext.Request.Method, Response.StatusCode, route, "REST");
-                TelemetryMetricsHelper.TrackRequestDuration(HttpContext.Request.Method, Response.StatusCode, route, "REST", stopwatch.Elapsed.TotalMilliseconds);
+                HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
+                HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true);
+                TelemetryMetricsHelper.TrackRequest(method, httpStatusCode, route, ApiType.REST);
+                TelemetryMetricsHelper.TrackRequestDuration(method, httpStatusCode, route, ApiType.REST, stopwatch.Elapsed);
 
-                TelemetryMetricsHelper.DecrementActiveRequests();
+                TelemetryMetricsHelper.DecrementActiveRequests(ApiType.REST);
             }
         }
 

@@ -264,7 +264,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     activity.TrackRestControllerActivityFinished(httpStatusCode);
                 }
 
-                
                 return result;
             }
             catch (DataApiBuilderException ex)

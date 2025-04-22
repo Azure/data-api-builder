@@ -93,7 +93,7 @@ dab add Actor
 
 **4. Run Data API builder**
 
-In `production`, DAB runs in a container. In `development`, it’s self-hosted locally with hot reload, Swagger, and Banana Cake Pop support.
+In `production`, DAB runs in a container. In `development`, it’s self-hosted locally with hot reload, Swagger, and Nitro (fka Banana Cake Pop) support.
 
 ```
 dab start
@@ -208,7 +208,7 @@ To contribute, see these documents:
 
 ### Third-Party Component Notice
 
-Banana Cake Pop (by ChilliCream, Inc.) may optionally store work in its cloud service via your ChilliCream account. Microsoft is not affiliated with or endorsing this service. Use at your discretion.
+Nitro (fka Banana Cake Pop by ChilliCream, Inc.) may optionally store work in its cloud service via your ChilliCream account. Microsoft is not affiliated with or endorsing this service. Use at your discretion.
 
 ### Trademarks
 

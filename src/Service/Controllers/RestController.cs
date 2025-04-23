@@ -274,11 +274,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)ex.StatusCode;
-                activity?.TrackRestControllerActivityFinishedWithException(ex, Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true));
+                activity?.TrackRestControllerActivityFinishedWithException(ex, ex.StatusCode);
 
                 HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
-                HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true);
-                TelemetryMetricsHelper.TrackError(method, httpStatusCode, route, ApiType.REST, ex);
+                TelemetryMetricsHelper.TrackError(method, ex.StatusCode, route, ApiType.REST, ex);
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
@@ -291,10 +290,9 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
                 HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
-                HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true);
-                activity?.TrackRestControllerActivityFinishedWithException(ex, httpStatusCode);
+                activity?.TrackRestControllerActivityFinishedWithException(ex, HttpStatusCode.InternalServerError);
 
-                TelemetryMetricsHelper.TrackError(method, httpStatusCode, route, ApiType.REST, ex);
+                TelemetryMetricsHelper.TrackError(method, HttpStatusCode.InternalServerError, route, ApiType.REST, ex);
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,

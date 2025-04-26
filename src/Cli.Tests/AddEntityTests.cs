@@ -105,7 +105,7 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
-                );
+            );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig), "Loaded config");
@@ -123,8 +123,8 @@ namespace Cli.Tests
         public Task AddEntityWithAnExistingNameButWithDifferentCase()
         {
             AddOptions options = new(
-               source: "MyTable",
-               permissions: new string[] { "anonymous", "*" },
+                source: "MyTable",
+                permissions: new string[] { "anonymous", "*" },
                 entity: "FIRSTEntity",
                 sourceType: null,
                 sourceParameters: null,
@@ -144,6 +144,35 @@ namespace Cli.Tests
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             return ExecuteVerifyTest(options, initialConfiguration);
+        }
+
+        /// <summary>
+        /// Simple test to verify success on adding a new entity with caching enabled.
+        /// </summary>
+        [TestMethod]
+        public Task AddEntityWithCachingEnabled()
+        {
+            AddOptions options = new(
+                source: "MyTable",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "CachingEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: "true",
+                cacheTtl: "1",
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+            );
+
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>

@@ -252,6 +252,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 return false;
             }
 
+            string regexPattern = @"^(http|https):\/\/[^\/:]+:\d+\/[^\/]+\/[^\/]+$";
+            if (System.Text.RegularExpressions.Regex.IsMatch(uri, regexPattern))
+            {
+                return false;
+            }
+
             return true;
         }
 

@@ -264,7 +264,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
             return true;
         }
-        
+
         // Updates the entity key name to camel case for the health check report.
         public static string LowerFirstLetter(string input)
         {

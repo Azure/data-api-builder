@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -44,22 +45,7 @@ public class HealthEndpointCachingTests
     [DataRow(10, DisplayName = "Validation of cache TTL set to 10 and delay.")]
     public async Task ComprehensiveHealthEndpointCachingValidateWithDelay(int? cacheTtlSeconds)
     {
-        Entity requiredEntity = new(
-            Health: new(enabled: true),
-            Source: new("books", EntitySourceType.Table, null, null),
-            Rest: new(Enabled: true),
-            GraphQL: new("book", "books", true),
-            Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-            Relationships: null,
-            Mappings: null);
-
-        Dictionary<string, Entity> entityMap = new()
-        {
-            { "Book", requiredEntity }
-        };
-
-        CreateCustomConfigFile(entityMap, cacheTtlSeconds);
-
+        SetupCachingTest(cacheTtlSeconds);
         string[] args = new[]
         {
             $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
@@ -97,22 +83,7 @@ public class HealthEndpointCachingTests
     [DataRow(10, DisplayName = "Validation of cache TTL set to 10 and no delay.")]
     public async Task ComprehensiveHealthEndpointCachingValidateNoDelay(int? cacheTtlSeconds)
     {
-        Entity requiredEntity = new(
-            Health: new(enabled: true),
-            Source: new("books", EntitySourceType.Table, null, null),
-            Rest: new(Enabled: true),
-            GraphQL: new("book", "books", true),
-            Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-            Relationships: null,
-            Mappings: null);
-
-        Dictionary<string, Entity> entityMap = new()
-        {
-            { "Book", requiredEntity }
-        };
-
-        CreateCustomConfigFile(entityMap, cacheTtlSeconds);
-
+        SetupCachingTest(cacheTtlSeconds);
         string[] args = new[]
         {
             $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
@@ -143,6 +114,25 @@ public class HealthEndpointCachingTests
                 Assert.AreEqual(responseContent2, responseContent1);
             }
         }
+    }
+
+    private static void SetupCachingTest(int? cacheTtlSeconds)
+    {
+        Entity requiredEntity = new(
+            Health: new(enabled: true),
+            Source: new("books", EntitySourceType.Table, null, null),
+            Rest: new(Enabled: true),
+            GraphQL: new("book", "books", true),
+            Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+            Relationships: null,
+            Mappings: null);
+
+        Dictionary<string, Entity> entityMap = new()
+        {
+            { "Book", requiredEntity }
+        };
+
+        CreateCustomConfigFile(entityMap, cacheTtlSeconds);
     }
 
     /// <summary>

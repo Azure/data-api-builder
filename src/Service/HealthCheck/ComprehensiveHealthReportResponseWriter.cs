@@ -62,7 +62,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         /// <param name="context">HttpContext for writing the response.</param>
         /// <returns>Writes the http response to the http context.</returns>
-        public Task WriteResponse(HttpContext context)
+        public async Task WriteResponse(HttpContext context)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
@@ -74,19 +74,22 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     _logger.LogError("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                    return context.Response.CompleteAsync();
+                    await context.Response.CompleteAsync();
+                    return;
                 }
 
-                ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
+                ComprehensiveHealthCheckReport dabHealthCheckReport = await _healthCheckHelper.GetHealthCheckResponse(config);
                 string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
                 _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
-                return context.Response.WriteAsync(response);
+                await context.Response.WriteAsync(response);
+                return;
             }
             else
             {
                 _logger.LogError("Comprehensive Health Check Report Not Found: 404 Not Found.");
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return context.Response.CompleteAsync();
+                await context.Response.CompleteAsync();
+                return;
             }
         }
     }

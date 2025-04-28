@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Humanizer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -158,14 +159,17 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 List<string> columnNames = dbObject.SourceDefinition.Columns.Keys.ToList();
-                string databaseObjectName = entity.Source.Object;
+
+                // In case of GraphQL API, use the plural value specified in [entity.graphql.type.plural].
+                // Further, we need to camel case this plural value to match the GraphQL object name.                  
+                string graphqlObjectName = LowerFirstLetter(entity.GraphQL.Plural.Pascalize());
 
                 // In case any primitive column names are present, execute the query
                 if (columnNames.Any())
                 {
                     using (HttpClient client = CreateClient(apiRoute))
                     {
-                        string jsonPayload = Utilities.CreateHttpGraphQLQuery(databaseObjectName, columnNames, entity.EntityFirst);
+                        string jsonPayload = Utilities.CreateHttpGraphQLQuery(graphqlObjectName, columnNames, entity.EntityFirst);
                         HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
 
                         HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: apiRoute)
@@ -220,6 +224,27 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 },
                 Timeout = TimeSpan.FromSeconds(200),
             };
+        }
+
+        // Updates the entity key name to camel case for the health check report.
+        public static string LowerFirstLetter(string input)
+        {
+            if (string.IsNullOrEmpty(input) || char.IsLower(input[0]))
+            {
+                // If the input is null or empty, or if the first character is already lowercase, return the input as is.
+                return input;
+            }
+
+            return char.ToLower(input[0]) + input.Substring(1);
+        }
+
+        // <summary>
+        /// Logs a trace message if a logger is present and the logger is enabled for trace events.
+        /// </summary>
+        /// <param name="message">Message to emit.</param>
+        private void LogTrace(string message)
+        {
+            _logger.LogTrace(message);
         }
     }
 }

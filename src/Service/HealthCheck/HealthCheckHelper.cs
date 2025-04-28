@@ -229,6 +229,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 if (runtimeOptions.IsRestEnabled && entityValue.IsRestEnabled)
                 {
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
+
+                    // In case of REST API, use the path specified in [entity.path] (if present).
+                    // The path is trimmed to remove the leading '/' character.
+                    // If the path is not present, use the entity key name as the path.
                     string entityPath = entityValue.Rest.Path != null ? entityValue.Rest.Path.TrimStart('/') : entityKeyName;
                     (int, string?) response = await ExecuteRestEntityQuery(runtimeConfig.RestPath, entityPath, entityValue.EntityFirst);
                     bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;

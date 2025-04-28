@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             var payload = new
             {
                 //{"query":"{publishers(first:4) {items {id name} }}"}
-                query = $"{{{entityName.ToLowerInvariant()} (first: {first}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
+                query = $"{{{entityName} (first: {first}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
             };
 
             // Serialize the payload to a JSON string

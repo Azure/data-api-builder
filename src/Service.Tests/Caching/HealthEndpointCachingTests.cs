@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -82,11 +81,6 @@ public class HealthEndpointCachingTests
             response = await client.SendAsync(healthRequest2);
             string responseContent2 = await response.Content.ReadAsStringAsync();
 
-            // Regex to remove the "timestamp" field from the JSON string
-            string pattern = @"""timestamp""\s*:\s*""[^""]*""\s*,?";
-            responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
-            responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
-
             // Responses are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
             Assert.AreNotEqual(responseContent2, responseContent1);
         }
@@ -140,11 +134,6 @@ public class HealthEndpointCachingTests
 
             if (cacheTtlSeconds == 0)
             {
-                // Regex to remove the "timestamp" field from the JSON string
-                string pattern = @"""timestamp""\s*:\s*""[^""]*""\s*,?";
-                responseContent1 = Regex.Replace(responseContent1, pattern, string.Empty);
-                responseContent2 = Regex.Replace(responseContent2, pattern, string.Empty);
-
                 // Responses are not the same as a new request was made to the DB (change in responseTimeMs for DB health check)
                 Assert.AreNotEqual(responseContent2, responseContent1);
             }

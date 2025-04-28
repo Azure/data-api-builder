@@ -237,14 +237,5 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
             return char.ToLower(input[0]) + input.Substring(1);
         }
-
-        // <summary>
-        /// Logs a trace message if a logger is present and the logger is enabled for trace events.
-        /// </summary>
-        /// <param name="message">Message to emit.</param>
-        private void LogTrace(string message)
-        {
-            _logger.LogTrace(message);
-        }
     }
 }

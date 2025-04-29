@@ -13,7 +13,7 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Humanizer;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 // In case of GraphQL API, use the plural value specified in [entity.graphql.type.plural].
                 // Further, we need to camel case this plural value to match the GraphQL object name.                  
-                string graphqlObjectName = LowerFirstLetter(entity.GraphQL.Plural.Pascalize());
+                string graphqlObjectName = GraphQLNaming.GenerateListQueryName(entityName, entity);
 
                 // In case any primitive column names are present, execute the query
                 if (columnNames.Any())
@@ -176,18 +176,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 LogTrace($"An exception occurred while executing the GraphQL health check query: {ex.Message}");
                 return ex.Message;
             }
-        }
-
-        // Updates the entity key name to camel case for the health check report.
-        public static string LowerFirstLetter(string input)
-        {
-            if (string.IsNullOrEmpty(input) || char.IsLower(input[0]))
-            {
-                // If the input is null or empty, or if the first character is already lowercase, return the input as is.
-                return input;
-            }
-
-            return char.ToLower(input[0]) + input.Substring(1);
         }
 
         // <summary>

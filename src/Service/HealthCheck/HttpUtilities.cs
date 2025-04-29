@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return errorMessage;
                 }
 
-                if (!IsValidOutboundUri(apiRoute))
+                if (!Program.CheckSanityOfUrl(apiRoute))
                 {
                     LogTrace("Blocked outbound request due to invalid or unsafe URI.");
                     return "Blocked outbound request due to invalid or unsafe URI.";
@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 return errorMessage;
             }
 
-            if (!IsValidOutboundUri(apiRoute))
+            if (!Program.CheckSanityOfUrl(apiRoute))
             {
                 LogTrace("Blocked outbound request due to invalid or unsafe URI.");
                 return "Blocked outbound request due to invalid or unsafe URI.";
@@ -235,34 +235,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 },
                 Timeout = TimeSpan.FromSeconds(200),
             };
-        }
-
-        private static bool IsValidOutboundUri(string uri)
-        {
-            if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? parsedUri))
-            {
-                return false;
-            }
-
-            // Only allow HTTP or HTTPS schemes
-            if (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps)
-            {
-                return false;
-            }
-
-            // Disallow empty hostnames
-            if (string.IsNullOrWhiteSpace(parsedUri.Host))
-            {
-                return false;
-            }
-
-            string regexPattern = @"^(http|https):\/\/[^\/:]+:\d+\/[^\/]+\/[^\/]+$";
-            if (System.Text.RegularExpressions.Regex.IsMatch(uri, regexPattern))
-            {
-                return false;
-            }
-
-            return true;
         }
 
         // Updates the entity key name to camel case for the health check report.

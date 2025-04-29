@@ -3,7 +3,7 @@
 In case it is not possible to either git switch or git fetch
 
 1. Add the contributor's repo `.git` as a remote, you can find the `.git` by clicking on their branch which should bring you to their fork and then clicking on the Green Code button, the .git address will be listed under the option to clone using web URL. Copy this `.git` address for future steps.
-2. git remote add <name> <.git address>
+2. `git remote add <name> <.git address>`
 
 For example:
 `git remote add thomasfroehle https://github.com/thomasfroehle/data-api-builder.git`

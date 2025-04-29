@@ -47,9 +47,11 @@ public sealed class BuildRequestStateMiddleware
         {
             if (activity is not null)
             {
-                // TODO: HttpStatusCode.Ambiguous change to real HttpStatusCode
-                TelemetryMetricsHelper.TrackRequest(method, HttpStatusCode.Ambiguous, default!, apiType);
-                TelemetryMetricsHelper.TrackRequestDuration(method, HttpStatusCode.Ambiguous, default!, apiType, stopwatch.Elapsed);
+                DefaultHttpContext httpContext = (DefaultHttpContext)context.ContextData.First(x => x.Key == "HttpContext").Value!;
+                HttpStatusCode statusCode = Enum.Parse<HttpStatusCode>(httpContext.Response.StatusCode.ToString(), ignoreCase: true);
+
+                TelemetryMetricsHelper.TrackRequest(method, statusCode, default!, apiType);
+                TelemetryMetricsHelper.TrackRequestDuration(method, statusCode, default!, apiType, stopwatch.Elapsed);
                 TelemetryMetricsHelper.DecrementActiveRequests(apiType);
             }
         }

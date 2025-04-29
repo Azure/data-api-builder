@@ -283,8 +283,7 @@ namespace Azure.DataApiBuilder.Service
                 }
 
                 string testUrl = ReplaceWildcardHost(url);
-                if (!Uri.TryCreate(testUrl, UriKind.Absolute, out Uri? uriResult) ||
-                    (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
+                if (!CheckSanityOfUrl(testUrl))
                 {
                     return false;
                 }
@@ -300,6 +299,28 @@ namespace Azure.DataApiBuilder.Service
 
             static string ReplaceWildcardHost(string url) =>
                 Regex.Replace(url, @"^(https?://)[\+\*]", "$1localhost", RegexOptions.IgnoreCase);
+        }
+
+        public static bool CheckSanityOfUrl(string uri)
+        {
+            if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? parsedUri))
+            {
+                return false;
+            }
+
+            // Only allow HTTP or HTTPS schemes
+            if (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps)
+            {
+                return false;
+            }
+
+            // Disallow empty hostnames
+            if (string.IsNullOrWhiteSpace(parsedUri.Host))
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

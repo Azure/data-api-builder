@@ -87,6 +87,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return errorMessage;
                 }
 
+                if (!Program.CheckSanityOfUrl(apiRoute))
+                {
+                    LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                    return "Blocked outbound request due to invalid or unsafe URI.";
+                }
+
                 HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: apiRoute);
                 if (!string.IsNullOrEmpty(incomingRoleToken))
                 {
@@ -122,6 +128,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
+
+            if (!Program.CheckSanityOfUrl(apiRoute))
+            {
+                LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                return "Blocked outbound request due to invalid or unsafe URI.";
+            }
 
             try
             {

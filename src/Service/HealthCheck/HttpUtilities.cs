@@ -203,6 +203,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 return errorMessage;
             }
 
+            if (!Program.CheckSanityOfUrl(apiRoute))
+            {
+                LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                return "Blocked outbound request due to invalid or unsafe URI.";
+            }
+
             try
             {
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);

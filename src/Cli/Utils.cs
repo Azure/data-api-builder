@@ -831,7 +831,7 @@ namespace Cli
         /// <summary>
         /// Constructs the EntityCacheOption for Add/Update.
         /// </summary>
-        /// <param name="cacheEnabled">Bool that flags if the cache is enabled.</param>
+        /// <param name="cacheEnabled">String value that defines if the cache is enabled.</param>
         /// <param name="cacheTtl">Int that gives time to live in seconds for cache.</param>
         /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtl, null otherwise.</returns>
         public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtl)
@@ -850,9 +850,9 @@ namespace Cli
                 _logger.LogError("Invalid format for --cache.enabled. Accepted values are true/false.");
             }
 
-            if (cacheTtl is not null && !int.TryParse(cacheTtl, out ttl))
+            if ((cacheTtl is not null && !int.TryParse(cacheTtl, out ttl)) || ttl < 0)
             {
-                _logger.LogError("Invalid format for --cache.ttl. Accepted values are any integer.");
+                _logger.LogError("Invalid format for --cache.ttl. Accepted values are any non-negative integer.");
             }
 
             // Both cacheEnabled and cacheTtl can not be null here, so if either one

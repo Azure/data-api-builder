@@ -1217,6 +1217,7 @@ namespace Cli
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
             if (!updatedGraphQLDetails.Enabled)
             {
@@ -1295,7 +1296,8 @@ namespace Cli
                 GraphQL: updatedGraphQLDetails,
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
-                Mappings: updatedMappings);
+                Mappings: updatedMappings,
+                Cache: updatedCacheOptions);
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
                 [options.Entity] = updatedEntity

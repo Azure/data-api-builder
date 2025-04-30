@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return errorMessage;
                 }
 
-                if (!Program.CheckSanityOfUrl(apiRoute))
+                if (!Program.CheckSanityOfUrl($"{_httpClient.BaseAddress}{restUriSuffix}"))
                 {
                     LogTrace("Blocked outbound request due to invalid or unsafe URI.");
                     return "Blocked outbound request due to invalid or unsafe URI.";
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             string? errorMessage = null;
 
-            if (!Program.CheckSanityOfUrl(apiRoute))
+            if (!Program.CheckSanityOfUrl($"{_httpClient.BaseAddress}{graphqlUriSuffix}"))
             {
                 LogTrace("Blocked outbound request due to invalid or unsafe URI.");
                 return "Blocked outbound request due to invalid or unsafe URI.";

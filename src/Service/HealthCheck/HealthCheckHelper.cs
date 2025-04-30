@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     ComprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
 
-                    (int, string?) response = ExecuteGraphQLEntityQuery(runtimeConfig.GraphQLPath, entityValue, entityKeyName);
+                    (int, string?) response = await ExecuteGraphQLEntityQueryAsync(runtimeConfig.GraphQLPath, entityValue, entityKeyName);
                     bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     ComprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -284,14 +284,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the GraphQL Entity Query and keeps track of the response time and error message.
-        private (int, string?) ExecuteGraphQLEntityQuery(string graphqlUriSuffix, Entity entity, string entityName)
+        private async Task<(int, string?)> ExecuteGraphQLEntityQueryAsync(string graphqlUriSuffix, Entity entity, string entityName)
         {
             string? errorMessage = null;
             if (entity != null)
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteGraphQLQuery(graphqlUriSuffix, entityName, entity, _incomingRoleHeader, _incomingRoleToken);
+                errorMessage = await _httpUtility.ExecuteGraphQLQuery(graphqlUriSuffix, entityName, entity, _incomingRoleHeader, _incomingRoleToken);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }

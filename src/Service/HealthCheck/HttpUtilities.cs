@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Executes the GraphQL query by sending a POST request to the API.
         // Internally calls the metadata provider to fetch the column names to create the graphql payload.
-        public string? ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
+        public async Task<string?> ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
 
@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
                     }
 
-                    HttpResponseMessage response = _httpClient.SendAsync(message).Result;
+                    HttpResponseMessage response = await _httpClient.SendAsync(message);
 
                     if (response.IsSuccessStatusCode)
                     {

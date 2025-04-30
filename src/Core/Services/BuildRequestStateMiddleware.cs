@@ -11,7 +11,7 @@ using HotChocolate.Execution;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
+using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 using RequestDelegate = HotChocolate.Execution.RequestDelegate;
 
 /// <summary>
@@ -35,23 +35,53 @@ public sealed class BuildRequestStateMiddleware
     /// <param name="context">HotChocolate execution request context.</param>
     public async ValueTask InvokeAsync(IRequestContext context)
     {
-        (Activity? activity, ApiType apiType, Kestral.HttpMethod method) = StartOuterActivity();
+        bool isInstrospectionQuery = context.Request.OperationName == "IntrospectionQuery";
+        ApiType apiType = ApiType.GraphQL;
+        Kestral method = Kestral.Post;
+        string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
         Stopwatch stopwatch = Stopwatch.StartNew();
+
+        using Activity? activity = !isInstrospectionQuery ?
+              TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}") : null;
 
         try
         {
-            TelemetryMetricsHelper.IncrementActiveRequests(apiType);
+            if (!isInstrospectionQuery)
+            {
+                TelemetryMetricsHelper.IncrementActiveRequests(apiType);
+
+                if (activity is not null)
+                {
+                    /*activity.TrackRestControllerActivityStarted(
+                        httpMethod: method,
+                        userAgent: "default", // TODO: find the real user-agent
+                        actionType: (context.Request.Query!.ToString().StartsWith("query") ? OperationType.Query : OperationType.Mutation).ToString(),
+                        httpURL: string.Empty, // GraphQL has no route
+                        queryString: string.Empty, // GraphQL has no query-string
+                        userRole: context.ContextData.First(x => x.Key == "X-MS-API-ROLE").Value!.ToString(),
+                        apiType: apiType);*/
+                }
+            }
+
             await InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            // TODO: Missing logerror
+            activity?.TrackRestControllerActivityFinishedWithException(ex, HttpStatusCode.InternalServerError);
+
+            TelemetryMetricsHelper.TrackError(method, HttpStatusCode.InternalServerError, string.Empty, apiType, ex);
         }
         finally
         {
-            if (activity is not null)
-            {
-                DefaultHttpContext httpContext = (DefaultHttpContext)context.ContextData.First(x => x.Key == "HttpContext").Value!;
-                HttpStatusCode statusCode = Enum.Parse<HttpStatusCode>(httpContext.Response.StatusCode.ToString(), ignoreCase: true);
+            stopwatch.Stop();
+            DefaultHttpContext httpContext = (DefaultHttpContext)context.ContextData.First(x => x.Key == "HttpContext").Value!;
+            HttpStatusCode statusCode = Enum.Parse<HttpStatusCode>(httpContext.Response.StatusCode.ToString(), ignoreCase: true);
 
-                TelemetryMetricsHelper.TrackRequest(method, statusCode, default!, apiType);
-                TelemetryMetricsHelper.TrackRequestDuration(method, statusCode, default!, apiType, stopwatch.Elapsed);
+            if (!isInstrospectionQuery)
+            {
+                TelemetryMetricsHelper.TrackRequest(method, statusCode, string.Empty, apiType);
+                TelemetryMetricsHelper.TrackRequestDuration(method, statusCode, string.Empty, apiType, stopwatch.Elapsed);
                 TelemetryMetricsHelper.DecrementActiveRequests(apiType);
             }
         }
@@ -67,27 +97,6 @@ public sealed class BuildRequestStateMiddleware
             }
 
             await _next(context).ConfigureAwait(false);
-        }
-
-        (Activity?, ApiType, Kestral.HttpMethod) StartOuterActivity()
-        {
-            ApiType apiType = ApiType.GraphQL;
-            Kestral.HttpMethod method = Kestral.HttpMethod.Post;
-            string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
-
-            using Activity? activity = (context.Request.OperationName != "IntrospectionQuery") ?
-                TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}") : null;
-
-            activity?.TrackRestControllerActivityStarted(
-                httpMethod: method,
-                userAgent: default!, // TODO: find the real user-agent
-                actionType: (context.Request.Query!.ToString().StartsWith("query") ? OperationType.Query : OperationType.Mutation).ToString(),
-                httpURL: string.Empty, // GraphQL has no route
-                queryString: default!, // GraphQL has no query-string
-                userRole: context.ContextData.First(x => x.Key == "X-MS-API-ROLE").Value!.ToString(),
-                apiType: apiType);
-
-            return (activity, apiType, method);
         }
     }
 }

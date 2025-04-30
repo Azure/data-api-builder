@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using System.Net;
 using Azure.DataApiBuilder.Config.ObjectModel;

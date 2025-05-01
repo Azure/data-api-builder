@@ -39,49 +39,72 @@ public sealed class BuildRequestStateMiddleware
         ApiType apiType = ApiType.GraphQL;
         Kestral method = Kestral.Post;
         string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
+        DefaultHttpContext httpContext = (DefaultHttpContext)context.ContextData.First(x => x.Key == "HttpContext").Value!;
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         using Activity? activity = !isInstrospectionQuery ?
-              TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}") : null;
+            TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}") : null;
 
         try
         {
+            // We want to ignore introspection queries DAB uses to check access to GraphQL since they are not sent by the user.
             if (!isInstrospectionQuery)
             {
                 TelemetryMetricsHelper.IncrementActiveRequests(apiType);
-
                 if (activity is not null)
                 {
-                    /*activity.TrackRestControllerActivityStarted(
+                    activity.TrackRestControllerActivityStarted(
                         httpMethod: method,
-                        userAgent: "default", // TODO: find the real user-agent
-                        actionType: (context.Request.Query!.ToString().StartsWith("query") ? OperationType.Query : OperationType.Mutation).ToString(),
+                        userAgent: httpContext.Request.Headers["User-Agent"].ToString(),
+                        actionType: (context.Request.Query!.ToString().Contains("mutation") ? OperationType.Mutation : OperationType.Query).ToString(),
                         httpURL: string.Empty, // GraphQL has no route
-                        queryString: string.Empty, // GraphQL has no query-string
-                        userRole: context.ContextData.First(x => x.Key == "X-MS-API-ROLE").Value!.ToString(),
-                        apiType: apiType);*/
+                        queryString: null, // GraphQL has no query-string
+                        userRole: httpContext.Request.Headers["X-MS-API-ROLE"].FirstOrDefault() ?? httpContext.User.FindFirst("role")?.Value,
+                        apiType: apiType);
                 }
             }
 
             await InvokeAsync();
         }
-        catch (Exception ex)
-        {
-            // TODO: Missing logerror
-            activity?.TrackRestControllerActivityFinishedWithException(ex, HttpStatusCode.InternalServerError);
-
-            TelemetryMetricsHelper.TrackError(method, HttpStatusCode.InternalServerError, string.Empty, apiType, ex);
-        }
         finally
         {
             stopwatch.Stop();
-            DefaultHttpContext httpContext = (DefaultHttpContext)context.ContextData.First(x => x.Key == "HttpContext").Value!;
-            HttpStatusCode statusCode = Enum.Parse<HttpStatusCode>(httpContext.Response.StatusCode.ToString(), ignoreCase: true);
 
+            HttpStatusCode statusCode;
+
+            // We want to ignore introspection queries DAB uses to check access to GraphQL since they are not sent by the user.
             if (!isInstrospectionQuery)
             {
-                TelemetryMetricsHelper.TrackRequest(method, statusCode, string.Empty, apiType);
-                TelemetryMetricsHelper.TrackRequestDuration(method, statusCode, string.Empty, apiType, stopwatch.Elapsed);
+                // There is an error in GraphQL when ContextData is not null
+                if (context.Result!.ContextData is not null)
+                {
+                    if (context.Result.ContextData.ContainsKey(WellKnownContextData.ValidationErrors))
+                    {
+                        statusCode = HttpStatusCode.BadRequest;
+                    }
+                    else if (context.Result.ContextData.ContainsKey(WellKnownContextData.OperationNotAllowed))
+                    {
+                        statusCode = HttpStatusCode.MethodNotAllowed;
+                    }
+                    else
+                    {
+                        statusCode = HttpStatusCode.InternalServerError;
+                    }
+
+                    string errorMessage = context.Result.Errors![0].Message;
+                    Exception ex = new (errorMessage);
+
+                    // Activity will track error
+                    activity?.TrackRestControllerActivityFinishedWithException(ex, statusCode);
+                    TelemetryMetricsHelper.TrackError(method, statusCode, route, apiType, ex);
+                }
+                else
+                {
+                    statusCode = HttpStatusCode.OK;
+                }
+
+                TelemetryMetricsHelper.TrackRequest(method, statusCode, route, apiType);
+                TelemetryMetricsHelper.TrackRequestDuration(method, statusCode, route, apiType, stopwatch.Elapsed);
                 TelemetryMetricsHelper.DecrementActiveRequests(apiType);
             }
         }

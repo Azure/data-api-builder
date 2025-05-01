@@ -21,6 +21,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types.NodaTime;
 using NodaTime.Text;
+using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -52,55 +53,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="context">
         /// The middleware context.
         /// </param>
-        public async ValueTask ExecuteAsync(IMiddlewareContext context, OperationType operationType)
+        public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
         {
-            using Activity? activity = StartQueryActivity();
+            using Activity? activity = StartQueryActivity(context);
 
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
+
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
-            switch (operationType)
-            {
-                case OperationType.Query:
-                    await ExecuteQueryAsync(context, queryEngine, parameters, dataSourceName);
-                    break;
-                case OperationType.Mutation:
-                    await ExecuteMutateAsync(context, queryEngine, parameters, dataSourceName, ds.DatabaseType);
-                    break;
-                default:
-                    throw new NotImplementedException(operationType.ToString());
-            }
-
-            Activity? StartQueryActivity()
-            {
-                string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
-                Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod method = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod.Post;
-
-                Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}");
-
-                if (activity is not null)
-                {
-                    string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
-                    DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
-                    activity.TrackQueryActivityStarted(
-                        databaseType: ds.DatabaseType,
-                        dataSourceName: dataSourceName);
-                }
-
-                return activity;
-            }
-        }
-
-        /// <summary>
-        /// Represents the root query resolver and fetches the initial data from the query engine.
-        /// </summary>
-        /// <param name="context">
-        /// The middleware context.
-        /// </param>
-        private static async ValueTask ExecuteQueryAsync(IMiddlewareContext context, IQueryEngine queryEngine, IDictionary<string, object?> parameters, string dataSourceName)
-        {
             if (context.Selection.Type.IsListType())
             {
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
@@ -134,8 +96,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="context">
         /// The middleware context.
         /// </param>
-        private async ValueTask ExecuteMutateAsync(IMiddlewareContext context, IQueryEngine queryEngine, IDictionary<string, object?> parameters, string dataSourceName, DatabaseType databaseType)
+        public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
         {
+            using Activity? activity = StartQueryActivity(context);
+
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+            DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
+
+            IDictionary<string, object?> parameters = GetParametersFromContext(context);
+
             // Only Stored-Procedure has ListType as returnType for Mutation
             if (context.Selection.Type.IsListType())
             {
@@ -158,12 +128,37 @@ namespace Azure.DataApiBuilder.Service.Services
             }
             else
             {
-                IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
+                IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(ds.DatabaseType);
                 Tuple<JsonDocument?, IMetadata?> result =
                     await mutationEngine.ExecuteAsync(context, parameters, dataSourceName);
                 SetContextResult(context, result.Item1);
                 SetNewMetadata(context, result.Item2);
             }
+        } 
+
+        /// <summary>
+        /// Starts the activity for the query
+        /// </summary>
+        /// <param name="context">
+        /// The middleware context.
+        /// </param>
+        private Activity? StartQueryActivity(IMiddlewareContext context)
+        {
+            string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
+            Kestral method = Kestral.Post;
+
+            Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}");
+
+            if (activity is not null)
+            {
+                string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+                DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+                activity.TrackQueryActivityStarted(
+                    databaseType: ds.DatabaseType,
+                    dataSourceName: dataSourceName);
+            }
+
+            return activity;
         }
 
         /// <summary>

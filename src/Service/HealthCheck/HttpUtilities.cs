@@ -101,6 +101,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return errorMessage;
                 }
 
+                if (!Program.CheckSanityOfUrl(apiRoute))
+                {
+                    LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                    return "Blocked outbound request due to invalid or unsafe URI.";
+                }
+
                 // Create an instance of HttpClient
                 using (HttpClient client = CreateClient(apiRoute))
                 {
@@ -148,6 +154,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 LogTrace("The API route is not available, hence HealthEndpoint is not available.");
                 return errorMessage;
+            }
+
+            if (!Program.CheckSanityOfUrl(apiRoute))
+            {
+                LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                return "Blocked outbound request due to invalid or unsafe URI.";
             }
 
             try

@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 SetContextResult(context, result.Item1);
                 SetNewMetadata(context, result.Item2);
             }
-        } 
+        }
 
         /// <summary>
         /// Starts the activity for the query

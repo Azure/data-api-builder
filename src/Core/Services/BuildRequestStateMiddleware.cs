@@ -35,20 +35,20 @@ public sealed class BuildRequestStateMiddleware
     /// <param name="context">HotChocolate execution request context.</param>
     public async ValueTask InvokeAsync(IRequestContext context)
     {
-        bool isInstrospectionQuery = context.Request.OperationName == "IntrospectionQuery";
+        bool isIntrospectionQuery = context.Request.OperationName == "IntrospectionQuery";
         ApiType apiType = ApiType.GraphQL;
         Kestral method = Kestral.Post;
         string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
         DefaultHttpContext httpContext = (DefaultHttpContext)context.ContextData.First(x => x.Key == "HttpContext").Value!;
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        using Activity? activity = !isInstrospectionQuery ?
+        using Activity? activity = !isIntrospectionQuery ?
             TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}") : null;
 
         try
         {
             // We want to ignore introspection queries DAB uses to check access to GraphQL since they are not sent by the user.
-            if (!isInstrospectionQuery)
+            if (!isIntrospectionQuery)
             {
                 TelemetryMetricsHelper.IncrementActiveRequests(apiType);
                 if (activity is not null)
@@ -73,7 +73,7 @@ public sealed class BuildRequestStateMiddleware
             HttpStatusCode statusCode;
 
             // We want to ignore introspection queries DAB uses to check access to GraphQL since they are not sent by the user.
-            if (!isInstrospectionQuery)
+            if (!isIntrospectionQuery)
             {
                 // There is an error in GraphQL when ContextData is not null
                 if (context.Result!.ContextData is not null)

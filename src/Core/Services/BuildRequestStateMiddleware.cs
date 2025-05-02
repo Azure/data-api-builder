@@ -92,7 +92,7 @@ public sealed class BuildRequestStateMiddleware
                     }
 
                     string errorMessage = context.Result.Errors![0].Message;
-                    Exception ex = new (errorMessage);
+                    Exception ex = new(errorMessage);
 
                     // Activity will track error
                     activity?.TrackRestControllerActivityFinishedWithException(ex, statusCode);

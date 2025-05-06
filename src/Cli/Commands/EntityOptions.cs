@@ -23,6 +23,8 @@ namespace Cli.Commands
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
+            string? cacheEnabled,
+            string? cacheTtl,
             string? config)
             : base(config)
         {
@@ -38,6 +40,8 @@ namespace Cli.Commands
             FieldsToExclude = fieldsToExclude;
             PolicyRequest = policyRequest;
             PolicyDatabase = policyDatabase;
+            CacheEnabled = cacheEnabled;
+            CacheTtl = cacheTtl;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -76,5 +80,11 @@ namespace Cli.Commands
 
         [Option("policy-database", Required = false, HelpText = "Specify an OData style filter rule that will be injected in the query sent to the database.")]
         public string? PolicyDatabase { get; }
+
+        [Option("cache.enabled", Required = false, HelpText = "Specify if caching is enabled for Entity, default value is false.")]
+        public string? CacheEnabled { get; }
+
+        [Option("cache.ttl", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
+        public string? CacheTtl { get; }
     }
 }

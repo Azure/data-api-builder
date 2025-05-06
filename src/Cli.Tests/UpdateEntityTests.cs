@@ -293,6 +293,33 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Simple test to update an entity cache.
+        /// </summary>
+        [TestMethod, Description("It should update the cache into true.")]
+        public Task TestUpdateEntityCaching()
+        {
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                source: "MyTable",
+                cacheEnabled: "true",
+                cacheTtl: "1"
+            );
+
+            string initialConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""cache"": {
+                                    ""enabled"": false,
+                                    ""ttlseconds"": 0
+                                }
+                            }
+                        }
+                    }";
+
+            return ExecuteVerifyTest(initialConfig, options);
+        }
+
+        /// <summary>
         /// Test to check creation of a new relationship
         /// </summary>
         [TestMethod]
@@ -1093,7 +1120,9 @@ namespace Cli.Tests
             IEnumerable<string>? relationshipFields = null,
             IEnumerable<string>? map = null,
             IEnumerable<string>? restMethodsForStoredProcedure = null,
-            string? graphQLOperationForStoredProcedure = null
+            string? graphQLOperationForStoredProcedure = null,
+            string? cacheEnabled = null,
+            string? cacheTtl = null
             )
         {
             return new(
@@ -1117,6 +1146,8 @@ namespace Cli.Tests
                 linkingTargetFields: linkingTargetFields,
                 relationshipFields: relationshipFields,
                 map: map,
+                cacheEnabled: cacheEnabled,
+                cacheTtl: cacheTtl,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethodsForStoredProcedure,
                 graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure

@@ -40,6 +40,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -67,6 +69,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -96,10 +100,12 @@ namespace Cli.Tests
                 fieldsToExclude: null,
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
-                );
+            );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig), "Loaded config");
@@ -117,8 +123,8 @@ namespace Cli.Tests
         public Task AddEntityWithAnExistingNameButWithDifferentCase()
         {
             AddOptions options = new(
-               source: "MyTable",
-               permissions: new string[] { "anonymous", "*" },
+                source: "MyTable",
+                permissions: new string[] { "anonymous", "*" },
                 entity: "FIRSTEntity",
                 sourceType: null,
                 sourceParameters: null,
@@ -129,6 +135,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -136,6 +144,35 @@ namespace Cli.Tests
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             return ExecuteVerifyTest(options, initialConfiguration);
+        }
+
+        /// <summary>
+        /// Simple test to verify success on adding a new entity with caching enabled.
+        /// </summary>
+        [TestMethod]
+        public Task AddEntityWithCachingEnabled()
+        {
+            AddOptions options = new(
+                source: "MyTable",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "CachingEntity",
+                sourceType: null,
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: null,
+                fieldsToExclude: null,
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: "true",
+                cacheTtl: "1",
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null
+            );
+
+            return ExecuteVerifyTest(options);
         }
 
         /// <summary>
@@ -165,6 +202,8 @@ namespace Cli.Tests
                 policyRequest: policyRequest,
                 policyDatabase: policyDatabase,
                 config: TEST_RUNTIME_CONFIG_FILE,
+                cacheEnabled: null,
+                cacheTtl: null,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
             );
@@ -195,6 +234,8 @@ namespace Cli.Tests
                 policyRequest: null,
                 policyDatabase: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
+                cacheEnabled: null,
+                cacheTtl: null,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
                 );
@@ -223,6 +264,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch" },
                 graphQLOperationForStoredProcedure: "Query"
@@ -271,6 +314,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null
@@ -328,6 +373,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
@@ -361,6 +408,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
@@ -397,6 +446,8 @@ namespace Cli.Tests
                 fieldsToExclude: new string[] { "level" },
                 policyRequest: null,
                 policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null

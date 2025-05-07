@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using System.Net;
-using System.Net.Mail;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;

@@ -32,6 +32,8 @@ namespace Cli.Commands
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
+            string? cacheEnabled,
+            string? cacheTtl,
             string? config)
             : base(entity,
                   sourceType,
@@ -45,6 +47,8 @@ namespace Cli.Commands
                   fieldsToExclude,
                   policyRequest,
                   policyDatabase,
+                  cacheEnabled,
+                  cacheTtl,
                   config)
         {
             Source = source;

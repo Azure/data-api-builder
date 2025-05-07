@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 if (!Program.CheckSanityOfUrl(apiRoute))
                 {
-                    LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                    _logger.LogError("Blocked outbound request due to invalid or unsafe URI.");
                     return "Blocked outbound request due to invalid or unsafe URI.";
                 }
 
@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
             if (!Program.CheckSanityOfUrl(apiRoute))
             {
-                LogTrace("Blocked outbound request due to invalid or unsafe URI.");
+                _logger.LogError("Blocked outbound request due to invalid or unsafe URI.");
                 return "Blocked outbound request due to invalid or unsafe URI.";
             }
 

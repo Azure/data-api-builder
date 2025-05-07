@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         public static readonly ActivitySource DABActivitySource = new("DataApiBuilder");
 
         /// <summary>
-        /// Tracks the start of a REST controller activity.
+        /// Tracks the start of a controller activity.
         /// </summary>
         /// <param name="activity">The activity instance.</param>
         /// <param name="httpMethod">The HTTP method of the request (e.g., GET, POST).</param>
@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         /// <param name="queryString">The query string of the request, if any.</param>
         /// <param name="userRole">The role of the user making the request.</param>
         /// <param name="apiType">The type of API being used (e.g., REST, GraphQL).</param>
-        public static void TrackRestControllerActivityStarted(
+        public static void TrackMainControllerActivityStarted(
             this Activity activity,
             Kestral httpMethod,
             string userAgent,
@@ -77,11 +77,11 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         }
 
         /// <summary>
-        /// Tracks the completion of a REST controller activity.
+        /// Tracks the completion of a controller activity without any exceptions.
         /// </summary>
         /// <param name="activity">The activity instance.</param>
         /// <param name="statusCode">The HTTP status code of the response.</param>
-        public static void TrackRestControllerActivityFinished(
+        public static void TrackControllerActivityFinished(
             this Activity activity,
             HttpStatusCode statusCode)
         {
@@ -92,12 +92,12 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         }
 
         /// <summary>
-        /// Tracks the completion of a REST controller activity with an exception.
+        /// Tracks the completion of a controller activity with an exception.
         /// </summary>
         /// <param name="activity">The activity instance.</param>
         /// <param name="ex">The exception that occurred.</param>
         /// <param name="statusCode">The HTTP status code of the response.</param>
-        public static void TrackRestControllerActivityFinishedWithException(
+        public static void TrackControllerActivityFinishedWithException(
             this Activity activity,
             Exception ex,
             HttpStatusCode statusCode)

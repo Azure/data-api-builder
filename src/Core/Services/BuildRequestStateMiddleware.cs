@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Net;
+using System.Net.Mail;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -53,7 +54,7 @@ public sealed class BuildRequestStateMiddleware
                 TelemetryMetricsHelper.IncrementActiveRequests(apiType);
                 if (activity is not null)
                 {
-                    activity.TrackRestControllerActivityStarted(
+                    activity.TrackMainControllerActivityStarted(
                         httpMethod: method,
                         userAgent: httpContext.Request.Headers["User-Agent"].ToString(),
                         actionType: (context.Request.Query!.ToString().Contains("mutation") ? OperationType.Mutation : OperationType.Query).ToString(),
@@ -91,16 +92,21 @@ public sealed class BuildRequestStateMiddleware
                         statusCode = HttpStatusCode.InternalServerError;
                     }
 
-                    string errorMessage = context.Result.Errors![0].Message;
-                    Exception ex = new(errorMessage);
+                    Exception ex = new();
+                    if (context.Result.Errors is not null)
+                    {
+                        string errorMessage = context.Result.Errors[0].Message;
+                        ex = new(errorMessage);
+                    }
 
                     // Activity will track error
-                    activity?.TrackRestControllerActivityFinishedWithException(ex, statusCode);
+                    activity?.TrackControllerActivityFinishedWithException(ex, statusCode);
                     TelemetryMetricsHelper.TrackError(method, statusCode, route, apiType, ex);
                 }
                 else
                 {
                     statusCode = HttpStatusCode.OK;
+                    activity?.TrackControllerActivityFinished(statusCode);
                 }
 
                 TelemetryMetricsHelper.TrackRequest(method, statusCode, route, apiType);

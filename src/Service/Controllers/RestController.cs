@@ -208,7 +208,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 if (activity is not null)
                 {
-                    activity.TrackRestControllerActivityStarted(
+                    activity.TrackMainControllerActivityStarted(
                         Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true),
                         HttpContext.Request.Headers["User-Agent"].ToString(),
                         operationType.ToString(),
@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 if (activity is not null && activity.IsAllDataRequested)
                 {
                     HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(statusCode.ToString(), ignoreCase: true);
-                    activity.TrackRestControllerActivityFinished(httpStatusCode);
+                    activity.TrackControllerActivityFinished(httpStatusCode);
                 }
 
                 return result;
@@ -274,7 +274,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)ex.StatusCode;
-                activity?.TrackRestControllerActivityFinishedWithException(ex, ex.StatusCode);
+                activity?.TrackControllerActivityFinishedWithException(ex, ex.StatusCode);
 
                 HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
                 TelemetryMetricsHelper.TrackError(method, ex.StatusCode, route, ApiType.REST, ex);
@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
                 HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
-                activity?.TrackRestControllerActivityFinishedWithException(ex, HttpStatusCode.InternalServerError);
+                activity?.TrackControllerActivityFinishedWithException(ex, HttpStatusCode.InternalServerError);
 
                 TelemetryMetricsHelper.TrackError(method, HttpStatusCode.InternalServerError, route, ApiType.REST, ex);
                 return ErrorResponse(

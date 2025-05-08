@@ -34,6 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
     public class HealthEndpointTests
     {
         private const string CUSTOM_CONFIG_FILENAME = "custom_config.json";
+        private const string BASE_DAB_URL = "http://localhost:5000";
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -75,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                HttpRequestMessage healthRequest = new(HttpMethod.Get, "http://localhost:5000/health");
+                HttpRequestMessage healthRequest = new(HttpMethod.Get, $"{BASE_DAB_URL}/health");
                 HttpResponseMessage response = await client.SendAsync(healthRequest);
 
                 if (!enableGlobalHealth)
@@ -101,55 +102,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod]
-        public async Task TestHealthCheckRestResponse()
+        public async Task TestHealthCheckRestResponseAsync()
         {
             // Arrange
-            // Create a mock entity map with a single entity for testing and load in RuntimeConfigProvider
             RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
-            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-
-            // Create a Mock of HttpMessageHandler
-            Mock<HttpMessageHandler> mockHandler = new();
-            // Mocking the handler to return a specific response for SendAsync
-            mockHandler.Protected()
-                .Setup<Task<HttpResponseMessage>>(
-                    "SendAsync",
-                    ItExpr.Is<HttpRequestMessage>(req =>
-                        req.Method == HttpMethod.Get
-                        && req.RequestUri.Equals($"http://localhost:5000/{runtimeConfig.RestPath.Trim('/')}/{runtimeConfig.Entities.First().Key}?$first={runtimeConfig.Entities.First().Value.Health.First}")),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-                {
-                    Content = new StringContent("{\"message\":\"Rest response\"}")
-                });
-
-            // Mocking IHttpClientFactory
-            Mock<IHttpClientFactory> mockHttpClientFactory = new();
-            mockHttpClientFactory.Setup(x => x.CreateClient("ContextConfiguredHealthCheckClient"))
-                .Returns(new HttpClient(mockHandler.Object)
-                {
-                    BaseAddress = new Uri("http://localhost:5000")
-                });
-
-            Mock<ILogger<HttpUtilities>> _logger = new();
-
-            // Create the mock HttpContext to return the expected scheme and host
-            // when the ConfigureApiRoute method is called.
-            Mock<HttpContext> mockHttpContext = new();
-            Mock<HttpRequest> mockHttpRequest = new();
-            mockHttpRequest.Setup(r => r.Scheme).Returns("http");
-            mockHttpRequest.Setup(r => r.Host).Returns(new HostString("localhost", 5000));
-            mockHttpContext.Setup(c => c.Request).Returns(mockHttpRequest.Object);
-
-            HttpUtilities httpUtilities = new(
-                _logger.Object,
-                metadataProviderFactory.Object,
-                provider,
-                mockHttpClientFactory.Object);
+            HttpUtilities httpUtilities = SetupRestTest(runtimeConfig);
 
             // Act
             // Call the ExecuteRestQuery method with the mock HttpClient
@@ -169,11 +126,120 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod]
+        public async Task TestFailureHealthCheckRestResponseAsync()
+        {
+            // Arrange
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
+            HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig, HttpStatusCode.BadRequest);
+
+            // Act
+            // Call the ExecuteRestQuery method with the mock HttpClient
+            // Simulate a REST API call to the endpoint
+            // Response should be null as error message is not expected to be returned
+            string errorMessageFromRest = await httpUtilities.ExecuteRestQuery(
+                restUriSuffix: runtimeConfig.RestPath,
+                entityName: runtimeConfig.Entities.First().Key,
+                first: runtimeConfig.Entities.First().Value.Health.First,
+                incomingRoleHeader: string.Empty,
+                incomingRoleToken: string.Empty
+            );
+
+            // Assert
+            Assert.IsNotNull(errorMessageFromRest);
+        }
+
+        [TestMethod]
         public async Task TestHealthCheckGraphQLResponseAsync()
         {
             // Arrange
-            // Create a mock entity map with a single entity for testing and load in RuntimeConfigProvider
             RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
+            HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig);
+
+            // Act
+            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQuery(
+                graphqlUriSuffix: "/graphql",
+                entityName: runtimeConfig.Entities.First().Key,
+                entity: runtimeConfig.Entities.First().Value,
+                incomingRoleHeader: string.Empty,
+                incomingRoleToken: string.Empty);
+
+            // Assert
+            Assert.IsNull(errorMessageFromGraphQL);
+        }
+
+        [TestMethod]
+        public async Task TestFailureHealthCheckGraphQLResponseAsync()
+        {
+            // Arrange
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
+            HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig, HttpStatusCode.InternalServerError);
+
+            // Act
+            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQuery(
+                graphqlUriSuffix: "/graphql",
+                entityName: runtimeConfig.Entities.First().Key,
+                entity: runtimeConfig.Entities.First().Value,
+                incomingRoleHeader: string.Empty,
+                incomingRoleToken: string.Empty);
+
+            // Assert
+            Assert.IsNotNull(errorMessageFromGraphQL);
+        }
+
+        private static HttpUtilities SetupRestTest(RuntimeConfig runtimeConfig, HttpStatusCode httpStatusCode = HttpStatusCode.OK)
+        {
+            // Arrange
+            // Create a mock entity map with a single entity for testing and load in RuntimeConfigProvider
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            // Create a Mock of HttpMessageHandler
+            Mock<HttpMessageHandler> mockHandler = new();
+            // Mocking the handler to return a specific response for SendAsync
+            mockHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                        req.Method == HttpMethod.Get
+                        && req.RequestUri.Equals($"{BASE_DAB_URL}/{runtimeConfig.RestPath.Trim('/')}/{runtimeConfig.Entities.First().Key}?$first={runtimeConfig.Entities.First().Value.Health.First}")),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage(httpStatusCode)
+                {
+                    Content = new StringContent("{\"message\":\"Rest response\"}")
+                });
+
+            // Mocking IHttpClientFactory
+            Mock<IHttpClientFactory> mockHttpClientFactory = new();
+            mockHttpClientFactory.Setup(x => x.CreateClient("ContextConfiguredHealthCheckClient"))
+                .Returns(new HttpClient(mockHandler.Object)
+                {
+                    BaseAddress = new Uri($"{BASE_DAB_URL}")
+                });
+
+            Mock<ILogger<HttpUtilities>> _logger = new();
+
+            // Create the mock HttpContext to return the expected scheme and host
+            // when the ConfigureApiRoute method is called.
+            Mock<HttpContext> mockHttpContext = new();
+            Mock<HttpRequest> mockHttpRequest = new();
+            mockHttpRequest.Setup(r => r.Scheme).Returns("http");
+            mockHttpRequest.Setup(r => r.Host).Returns(new HostString("localhost", 5000));
+            mockHttpContext.Setup(c => c.Request).Returns(mockHttpRequest.Object);
+
+            return new(
+                _logger.Object,
+                metadataProviderFactory.Object,
+                provider,
+                mockHttpClientFactory.Object);
+        }
+
+        private static HttpUtilities SetupGraphQLTest(RuntimeConfig runtimeConfig, HttpStatusCode httpStatusCode = HttpStatusCode.OK)
+        {
+            // Arrange
+            // Create a mock entity map with a single entity for testing and load in RuntimeConfigProvider            
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()));
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
@@ -198,39 +264,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     "SendAsync",
                     ItExpr.Is<HttpRequestMessage>(req =>
                         req.Method == HttpMethod.Post &&
-                        req.RequestUri == new Uri("http://localhost:5000/graphql") &&
-                        req.Content.ReadAsStringAsync().Result.Equals("{\"query\":\"{books (first: 100) {items { id title }}}\"}")), // Use the correct GraphQL query format
+                        req.RequestUri == new Uri($"{BASE_DAB_URL}/graphql") &&
+                        req.Content.ReadAsStringAsync().Result.Equals("{\"query\":\"{bookLists (first: 100) {items { id title }}}\"}")), // Use the correct GraphQL query format
                     ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                .ReturnsAsync(new HttpResponseMessage(httpStatusCode)
                 {
-                    Content = new StringContent("{\"data\":{\"books\":[{\"id\":1,\"title\":\"Test Book\"}]}}")
+                    Content = new StringContent("{\"errors\":[{\"message\":\"Internal Server Error\"}]}")
                 });
 
             Mock<IHttpClientFactory> mockHttpClientFactory = new();
             mockHttpClientFactory.Setup(x => x.CreateClient("ContextConfiguredHealthCheckClient"))
                 .Returns(new HttpClient(mockHandler.Object)
                 {
-                    BaseAddress = new Uri("http://localhost:5000")
+                    BaseAddress = new Uri($"{BASE_DAB_URL}")
                 });
 
             Mock<ILogger<HttpUtilities>> logger = new();
 
-            HttpUtilities httpUtilities = new(
+            return new(
                 logger.Object,
                 metadataProviderFactory.Object,
                 provider,
                 mockHttpClientFactory.Object);
-
-            // Act
-            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQuery(
-                graphqlUriSuffix: "/graphql",
-                entityName: runtimeConfig.Entities.First().Key,
-                entity: runtimeConfig.Entities.First().Value,
-                incomingRoleHeader: string.Empty,
-                incomingRoleToken: string.Empty);
-
-            // Assert
-            Assert.IsNull(errorMessageFromGraphQL);
         }
 
         private static void ValidateEntityRestAndGraphQLResponse(
@@ -385,7 +440,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Health: new(Enabled: enableEntityHealth),
                 Source: new("books", EntitySourceType.Table, null, null),
                 Rest: new(Enabled: enableEntityRest),
-                GraphQL: new("book", "books", enableEntityGraphQL),
+                GraphQL: new("book", "bookLists", enableEntityGraphQL),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null);

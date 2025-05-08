@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         [TestMethod]
-        public void TestHealthCheckGraphQLResponse()
+        public async Task TestHealthCheckGraphQLResponseAsync()
         {
             // Arrange
             // Create a mock entity map with a single entity for testing and load in RuntimeConfigProvider
@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 mockHttpClientFactory.Object);
 
             // Act
-            string errorMessageFromGraphQL = httpUtilities.ExecuteGraphQLQuery(
+            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQuery(
                 graphqlUriSuffix: "/graphql",
                 entityName: runtimeConfig.Entities.First().Key,
                 entity: runtimeConfig.Entities.First().Value,
@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         public static void ValidateBasicDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
         {
-            // Validate value of 'status' property in reponse.
+            // Validate value of 'status' property in response.
             if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
             {
                 Assert.IsTrue(statusValue.ValueKind == JsonValueKind.String, "Unexpected or missing status value as string.");

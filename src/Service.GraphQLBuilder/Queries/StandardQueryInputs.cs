@@ -170,6 +170,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    // add IN node for all sclar types
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new StringType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 

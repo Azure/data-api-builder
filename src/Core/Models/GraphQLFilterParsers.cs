@@ -701,7 +701,7 @@ public static class FieldFilterParser
             predicates.Push(new PredicateOperand(new Predicate(
                 new PredicateOperand(column),
                 op,
-                new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
+                isInOp ? ParseInOperand(argumentObject, name, ctx, processLiterals, value) : new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
                 ));
         }
 

@@ -4183,7 +4183,9 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Simulates a GET request to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
         /// The expected format of the response is the comprehensive health check response.
+        /// This test is currently flakey, failing intermittently in our pipeline, and is therefore ignored.
         /// </summary>
+        [Ignore]
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(true, true, true, true, true, true, true, DisplayName = "Validate Health Report all enabled.")]

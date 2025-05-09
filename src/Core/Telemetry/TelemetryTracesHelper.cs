@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         public static readonly ActivitySource DABActivitySource = new("DataApiBuilder");
 
         /// <summary>
-        /// Tracks the start of a controller activity.
+        /// Tracks the start of the main controller activity.
         /// </summary>
         /// <param name="activity">The activity instance.</param>
         /// <param name="httpMethod">The HTTP method of the request (e.g., GET, POST).</param>
@@ -77,11 +77,11 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         }
 
         /// <summary>
-        /// Tracks the completion of a controller activity without any exceptions.
+        /// Tracks the completion of the main controller activity without any exceptions.
         /// </summary>
         /// <param name="activity">The activity instance.</param>
         /// <param name="statusCode">The HTTP status code of the response.</param>
-        public static void TrackControllerActivityFinished(
+        public static void TrackMainControllerActivityFinished(
             this Activity activity,
             HttpStatusCode statusCode)
         {
@@ -92,12 +92,12 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         }
 
         /// <summary>
-        /// Tracks the completion of a controller activity with an exception.
+        /// Tracks the completion of the main controller activity with an exception.
         /// </summary>
         /// <param name="activity">The activity instance.</param>
         /// <param name="ex">The exception that occurred.</param>
         /// <param name="statusCode">The HTTP status code of the response.</param>
-        public static void TrackControllerActivityFinishedWithException(
+        public static void TrackMainControllerActivityFinishedWithException(
             this Activity activity,
             Exception ex,
             HttpStatusCode statusCode)

@@ -99,13 +99,13 @@ public sealed class BuildRequestStateMiddleware
                     }
 
                     // Activity will track error
-                    activity?.TrackControllerActivityFinishedWithException(ex, statusCode);
+                    activity?.TrackMainControllerActivityFinishedWithException(ex, statusCode);
                     TelemetryMetricsHelper.TrackError(method, statusCode, route, apiType, ex);
                 }
                 else
                 {
                     statusCode = HttpStatusCode.OK;
-                    activity?.TrackControllerActivityFinished(statusCode);
+                    activity?.TrackMainControllerActivityFinished(statusCode);
                 }
 
                 TelemetryMetricsHelper.TrackRequest(method, statusCode, route, apiType);

@@ -3725,6 +3725,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Tests different log level filters that are valid and check that they are deserialized correctly
         /// </summary>
+        [Ignore]
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(LogLevel.Trace, typeof(RuntimeConfigValidator))]

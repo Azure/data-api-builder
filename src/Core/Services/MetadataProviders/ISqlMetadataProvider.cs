@@ -132,6 +132,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns></returns>
         DatabaseType GetDatabaseType();
 
+        // Method to access the dictionary since DatabaseObject is abstract class
+        public virtual DatabaseObject GetDatabaseObjectByKey(string key)
+        {
+            return EntityToDatabaseObject[key];
+        }
+
         IQueryBuilder GetQueryBuilder();
 
         /// <summary>

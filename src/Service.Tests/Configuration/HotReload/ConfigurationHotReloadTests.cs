@@ -228,7 +228,6 @@ public class ConfigurationHotReloadTests
     /// Hot reload the configuration by saving a new file with different rest and graphQL paths.
     /// Validate that the response is correct when making a request with the newly hot-reloaded paths.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload runtime paths.")]
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
@@ -584,7 +583,6 @@ public class ConfigurationHotReloadTests
     /// to an invalid connection string, then it hot reloads once more to the original
     /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigConnectionString()

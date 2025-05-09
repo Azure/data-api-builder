@@ -154,6 +154,10 @@ public record RuntimeConfig
     public HashSet<string> AllowedRolesForHealth =>
         Runtime?.Health?.Roles ?? new HashSet<string>();
 
+    [JsonIgnore]
+    public int CacheTtlSecondsForHealthReport =>
+        Runtime?.Health?.CacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS;
+
     /// <summary>
     /// Retrieves the value of runtime.graphql.dwnto1joinopt.enabled property if present, default is false.
     /// </summary>

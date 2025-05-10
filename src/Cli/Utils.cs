@@ -829,6 +829,49 @@ namespace Cli
         }
 
         /// <summary>
+        /// Constructs the EntityCacheOption for Add/Update.
+        /// </summary>
+        /// <param name="cacheEnabled">String value that defines if the cache is enabled.</param>
+        /// <param name="cacheTtl">Int that gives time to live in seconds for cache.</param>
+        /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtl, null otherwise.</returns>
+        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtl)
+        {
+            if (cacheEnabled is null && cacheTtl is null)
+            {
+                return null;
+            }
+
+            EntityCacheOptions cacheOptions = new();
+            bool isEnabled = false;
+            int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
+
+            if (cacheEnabled is not null && !bool.TryParse(cacheEnabled, out isEnabled))
+            {
+                _logger.LogError("Invalid format for --cache.enabled. Accepted values are true/false.");
+            }
+
+            if ((cacheTtl is not null && !int.TryParse(cacheTtl, out ttl)) || ttl < 0)
+            {
+                _logger.LogError("Invalid format for --cache.ttl. Accepted values are any non-negative integer.");
+            }
+
+            // Both cacheEnabled and cacheTtl can not be null here, so if either one
+            // is, the other is not, and we return the cacheOptions with just that other
+            // value.
+            if (cacheEnabled is null)
+            {
+                return cacheOptions with { TtlSeconds = ttl };
+            }
+
+            if (cacheTtl is null)
+            {
+                return cacheOptions with { Enabled = isEnabled };
+            }
+
+            return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl };
+        }
+
+        /// <summary>
         /// Check if add/update command has Entity provided. Return false otherwise.
         /// </summary>
         public static bool IsEntityProvided(string? entity, ILogger cliLogger, string command)

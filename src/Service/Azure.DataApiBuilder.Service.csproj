@@ -71,6 +71,11 @@
         <PackageReference Include="MySqlConnector" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Npgsql" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
         <PackageReference Include="Polly" />
         <PackageReference Include="DotNetEnv" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
@@ -80,11 +85,6 @@
         <PackageReference Include="ZiggyCreatures.FusionCache.Serialization.SystemTextJson" />
         <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
         <PackageReference Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" />
-        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     </ItemGroup>
 
     <ItemGroup>

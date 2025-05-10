@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -35,6 +36,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         [JsonPropertyName("app-name")]
         public string? AppName { get; set; }
+
+        /// <summary>
+        /// The timestamp of the response.
+        /// </summary>
+        [JsonPropertyName("timestamp")]
+        public DateTime TimeStamp { get; set; }
 
         /// <summary>
         /// The configuration details of the dab service.

@@ -332,6 +332,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName), runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName));
                     byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
                     JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+
                     return cacheServiceResponse;
                 }
             }
@@ -348,6 +349,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 httpContext: _httpContextAccessor.HttpContext!,
                 args: null,
                 dataSourceName: dataSourceName);
+
             return response;
         }
 

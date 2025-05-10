@@ -5078,7 +5078,7 @@ type Planet @model(name:""PlanetAlias"") {
             RestRuntimeOptions restOptions,
             Entity entity = null,
             string entityName = null,
-            EntityCacheOptions cacheOptions = null
+            RuntimeCacheOptions cacheOptions = null
             )
         {
             entity ??= new(
@@ -5114,7 +5114,9 @@ type Planet @model(name:""PlanetAlias"") {
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
                 Runtime: new(restOptions, graphqlOptions,
-                    Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: cacheOptions),
+                    Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development),
+                    Cache: cacheOptions
+                ),
                 Entities: new(entityMap)
             );
         }

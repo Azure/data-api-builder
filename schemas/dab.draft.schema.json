@@ -452,6 +452,11 @@
                 "type": "string"
               },
               "default": null
+            },
+            "cache-ttl-seconds": {
+              "type": "integer",
+              "description": "Time to live in seconds for the Comprehensive Health Check Report cache entry.",
+              "default": 5
             }
           }
         }

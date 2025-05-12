@@ -3,6 +3,7 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -322,11 +323,17 @@ namespace Azure.DataApiBuilder.Service
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
                     {
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
+                        error = error.RemoveException()
                                 .WithMessage(thrownException.Message)
                                 .WithCode($"{thrownException.SubStatusCode}");
+
+                        // If user error i.e. validation error or conflict error with datasource, then retain location/path
+                        int httpStatusCode = (int)thrownException.StatusCode;
+                        if (httpStatusCode < 400 || httpStatusCode >= 500)
+                        {
+                            error = error.RemoveLocations()
+                                .RemovePath();
+                        }
                     }
 
                     return error;

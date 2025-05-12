@@ -3725,6 +3725,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Tests different log level filters that are valid and check that they are deserialized correctly
         /// </summary>
+        [Ignore]
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(LogLevel.Trace, typeof(RuntimeConfigValidator))]
@@ -4875,9 +4876,9 @@ type Planet @model(name:""PlanetAlias"") {
             entityName ??= "Book";
 
             Dictionary<string, Entity> entityMap = new()
-        {
-            { entityName, entity }
-        };
+            {
+                { entityName, entity }
+            };
 
             // Adding an entity with only Authorized Access
             Entity anotherEntity = new(

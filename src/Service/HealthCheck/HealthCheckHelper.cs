@@ -51,10 +51,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             // Create a JSON response for the comprehensive health check endpoint using the provided basic health report.
             // If the response has already been created, it will be reused.
-            LogTrace("Comprehensive Health check is enabled in the runtime configuration.");
+            _httpUtility.ConfigureApiRoute(context);
+            _logger.LogTrace("Comprehensive Health check is enabled in the runtime configuration.");
 
             ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport = new();
             UpdateVersionAndAppName(ref ComprehensiveHealthCheckReport);
+            UpdateTimestampOfResponse(ref ComprehensiveHealthCheckReport);
             UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport, runtimeConfig);
             await UpdateHealthCheckDetails(ComprehensiveHealthCheckReport, runtimeConfig);
             UpdateOverallHealthStatus(ref ComprehensiveHealthCheckReport);
@@ -125,6 +127,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             response.AppName = ProductInfo.GetDataApiBuilderUserAgent();
         }
 
+        // Updates the timestamp for the Health report.
+        private static void UpdateTimestampOfResponse(ref ComprehensiveHealthCheckReport response)
+        {
+            response.TimeStamp = DateTime.UtcNow;
+        }
+
         // Updates the DAB configuration details coming from RuntimeConfig for the Health report.
         private static void UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
@@ -142,17 +150,17 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private async Task UpdateHealthCheckDetails(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             ComprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
-            UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport, runtimeConfig);
+            await UpdateDataSourceHealthCheckResults(ComprehensiveHealthCheckReport, runtimeConfig);
             await UpdateEntityHealthCheckResults(ComprehensiveHealthCheckReport, runtimeConfig);
         }
 
         // Updates the DataSource Health Check Results in the response.
-        private void UpdateDataSourceHealthCheckResults(ref ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
+        private async Task UpdateDataSourceHealthCheckResults(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
             if (ComprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
-                (int, string?) response = ExecuteDatasourceQueryCheck(query, runtimeConfig.DataSource.ConnectionString);
+                (int, string?) response = await ExecuteDatasourceQueryCheck(query, runtimeConfig.DataSource.ConnectionString);
                 bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
 
                 // Add DataSource Health Check Results
@@ -172,14 +180,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the DB Query and keeps track of the response time and error message.
-        private (int, string?) ExecuteDatasourceQueryCheck(string query, string connectionString)
+        private async Task<(int, string?)> ExecuteDatasourceQueryCheck(string query, string connectionString)
         {
             string? errorMessage = null;
             if (!string.IsNullOrEmpty(query) && !string.IsNullOrEmpty(connectionString))
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = _httpUtility.ExecuteDbQuery(query, connectionString);
+                errorMessage = await _httpUtility.ExecuteDbQuery(query, connectionString);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
@@ -225,7 +233,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     // The path is trimmed to remove the leading '/' character.
                     // If the path is not present, use the entity key name as the path.
                     string entityPath = entityValue.Rest.Path != null ? entityValue.Rest.Path.TrimStart('/') : entityKeyName;
-
                     (int, string?) response = await ExecuteRestEntityQuery(runtimeConfig.RestPath, entityPath, entityValue.EntityFirst);
                     bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
@@ -297,15 +304,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
-        }
-
-        // <summary>
-        /// Logs a trace message if a logger is present and the logger is enabled for trace events.
-        /// </summary>
-        /// <param name="message">Message to emit.</param>
-        private void LogTrace(string message)
-        {
-            _logger.LogTrace(message);
         }
     }
 }

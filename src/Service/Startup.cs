@@ -3,7 +3,6 @@
 
 using System;
 using System.IO.Abstractions;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;

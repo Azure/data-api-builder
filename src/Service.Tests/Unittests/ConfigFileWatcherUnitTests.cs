@@ -11,7 +11,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataApiBuilder.Service.Tests.Unittests;
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests;
 
 [TestClass]
 public class ConfigFileWatcherUnitTests

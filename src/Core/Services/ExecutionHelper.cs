@@ -187,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     // for e.g. System.FormatException - One of the identified items was in an invalid format
                     // System.InvalidOperationException - The requested operation requires an element of type 'Number', but the target element has type 'String'.
                     throw new DataApiBuilderException(
-                        message: $"The value could not be parsed for configured GraphQL data type {namedType.Name}",
+                        message: $"The {context.Selection.Field.Name} value could not be parsed for configured GraphQL data type {namedType.Name}",
                         statusCode: HttpStatusCode.Conflict,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
                         ex);

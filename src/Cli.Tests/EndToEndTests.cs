@@ -459,11 +459,13 @@ public class EndToEndTests
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.
     /// </summary>
-    [TestMethod]
-    public void TestVerifyAuthenticationOptions()
+    [DataTestMethod]
+    [DataRow("AzureAD")]
+    [DataRow("EntraID")]
+    public void TestVerifyAuthenticationOptions(string authenticationProvider)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
-            "--auth.provider", "AzureAD", "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
+            "--auth.provider", authenticationProvider, "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -471,7 +473,7 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.Host);
-        Assert.AreEqual("AzureAD", runtimeConfig.Runtime.Host.Authentication?.Provider);
+        Assert.AreEqual(authenticationProvider, runtimeConfig.Runtime.Host.Authentication?.Provider);
         Assert.AreEqual("aud-xxx", runtimeConfig.Runtime.Host.Authentication?.Jwt?.Audience);
         Assert.AreEqual("issuer-xxx", runtimeConfig.Runtime.Host.Authentication?.Jwt?.Issuer);
     }
@@ -1114,6 +1116,7 @@ public class EndToEndTests
     [DataRow("StaticWebApps", false)]
     [DataRow("AppService", true)]
     [DataRow("AzureAD", true)]
+    [DataRow("EntraID", true)]
     public void TestBaseRouteIsConfigurableForSWA(string authProvider, bool isExceptionExpected)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",

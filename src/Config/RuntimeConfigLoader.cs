@@ -89,22 +89,29 @@ public abstract class RuntimeConfigLoader
         // Signal that a change has occurred to all change token listeners.
         RaiseChanged();
 
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+        // All the data inside of the if statement should only update when DAB is in development mode.
+        if (RuntimeConfig!.IsDevelopmentMode())
+        {
+            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
 
-        // Order of event firing matters: Authorization rules can only be updated after the
-        // MetadataProviderFactory has been updated with latest database object metadata.
-        // RuntimeConfig must already be updated and is implied to have been updated by the time
-        // this function is called.
-        OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
+            // Order of event firing matters: Authorization rules can only be updated after the
+            // MetadataProviderFactory has been updated with latest database object metadata.
+            // RuntimeConfig must already be updated and is implied to have been updated by the time
+            // this function is called.
+            OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
 
-        // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
-        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+            // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+        }
+
+        // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
+        OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
     }
 
     /// <summary>
@@ -234,6 +241,9 @@ public abstract class RuntimeConfigLoader
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
+        options.Converters.Add(new RuntimeHealthOptionsConvertorFactory(replaceEnvVar));
+        options.Converters.Add(new DataSourceHealthOptionsConvertorFactory(replaceEnvVar));
+        options.Converters.Add(new EntityHealthOptionsConvertorFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));
@@ -246,7 +256,6 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new HostOptionsConvertorFactory());
-        options.Converters.Add(new LogLevelOptionsConverterFactory());
 
         if (replaceEnvVar)
         {
@@ -386,5 +395,30 @@ public abstract class RuntimeConfigLoader
     public void RestoreLkgConfig()
     {
         RuntimeConfig = LastValidRuntimeConfig;
+    }
+
+    /// <summary>
+    /// Uses the Last Valid Runtime Config and inserts the log-level property to the Runtime Config that will be used
+    /// during the hot-reload if DAB is in Production Mode, this means that only changes to log-level will be registered.
+    /// This is done in order to ensure that no unwanted changes are honored during hot-reload in Production Mode.
+    /// </summary>
+    public void InsertWantedChangesInProductionMode()
+    {
+        if (!RuntimeConfig!.IsDevelopmentMode())
+        {
+            // Creates copy of last valid runtime config and only adds the new logger level changes
+            RuntimeConfig runtimeConfigCopy = LastValidRuntimeConfig! with
+            {
+                Runtime = LastValidRuntimeConfig.Runtime! with
+                {
+                    Telemetry = LastValidRuntimeConfig.Runtime!.Telemetry! with
+                    {
+                        LoggerLevel = RuntimeConfig.Runtime!.Telemetry!.LoggerLevel
+                    }
+                }
+            };
+
+            RuntimeConfig = runtimeConfigCopy;
+        }
     }
 }

@@ -433,6 +433,7 @@ namespace Cli
 
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
+            EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
             // Create new entity.
             Entity entity = new(
@@ -441,7 +442,8 @@ namespace Cli
                 GraphQL: graphqlOptions,
                 Permissions: permissionSettings,
                 Relationships: null,
-                Mappings: null);
+                Mappings: null,
+                Cache: cacheOptions);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
@@ -569,6 +571,7 @@ namespace Cli
         {
             DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
+            DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
 
             if (options.DataSourceDatabaseType is not null)
             {
@@ -611,7 +614,7 @@ namespace Cli
             }
 
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
-            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions);
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 
             return runtimeConfig != null;
@@ -1214,6 +1217,7 @@ namespace Cli
             Dictionary<string, string>? updatedMappings = entity.Mappings;
             EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
+            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
             if (!updatedGraphQLDetails.Enabled)
             {
@@ -1292,7 +1296,8 @@ namespace Cli
                 GraphQL: updatedGraphQLDetails,
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
-                Mappings: updatedMappings);
+                Mappings: updatedMappings,
+                Cache: updatedCacheOptions);
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
                 [options.Entity] = updatedEntity
@@ -1671,10 +1676,10 @@ namespace Cli
             }
             else
             {
-                minimumLogLevel = RuntimeConfig.GetConfiguredLogLevel(deserializedRuntimeConfig);
+                minimumLogLevel = deserializedRuntimeConfig.GetConfiguredLogLevel();
                 HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
 
-                _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostMode} mode.", minimumLogLevel, hostModeType);
+                _logger.LogInformation($"Setting default minimum LogLevel: {minimumLogLevel} for {hostModeType} mode.", minimumLogLevel, hostModeType);
             }
 
             args.Add("--LogLevel");

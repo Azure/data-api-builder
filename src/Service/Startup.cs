@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -377,11 +378,16 @@ namespace Azure.DataApiBuilder.Service
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
                     {
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
+                        error = error.RemoveException()
                                 .WithMessage(thrownException.Message)
                                 .WithCode($"{thrownException.SubStatusCode}");
+
+                        // If user error i.e. validation error or conflict error with datasource, then retain location/path
+                        if (!thrownException.StatusCode.IsClientError())
+                        {
+                            error = error.RemoveLocations()
+                                .RemovePath();
+                        }
                     }
 
                     return error;

@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private string _apiRoute;
         private IMetadataProviderFactory _metadataProviderFactory;
         private RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly HealthCheckHttpClient _healthCheckHttpClient;
 
         /// <summary>
         /// HttpUtility constructor.
@@ -40,12 +41,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         public HttpUtilities(
             ILogger<HttpUtilities> logger,
             IMetadataProviderFactory metadataProviderFactory,
-            RuntimeConfigProvider runtimeConfigProvider)
+            RuntimeConfigProvider runtimeConfigProvider,
+            HealthCheckHttpClient healthCheckHttpClient)
         {
             _logger = logger;
             _apiRoute = string.Empty;
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _healthCheckHttpClient = healthCheckHttpClient;
         }
 
         /// <summary>
@@ -109,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 }
 
                 // Create an instance of HttpClient
-                using (HttpClient client = CreateClient(apiRoute))
+                using (HttpClient client = CreateClient(apiRoute, true))
                 {
                     // Send a GET request to the API
                     apiRoute = $"{apiRoute}{Utilities.CreateHttpRestQuery(entityName, first)}";
@@ -179,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 // In case any primitive column names are present, execute the query
                 if (columnNames.Any())
                 {
-                    using (HttpClient client = CreateClient(apiRoute))
+                    using (HttpClient client = CreateClient(apiRoute, true))
                     {
                         string jsonPayload = Utilities.CreateHttpGraphQLQuery(graphqlObjectName, columnNames, entity.EntityFirst);
                         HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
@@ -223,19 +226,24 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         /// <summary>
         /// Creates a <see cref="HttpClient" /> for processing HTTP requests/responses with the test server.
+        /// <param name="apiRoute">Base URL of the API that handles SQL operations</param>"
+        /// <param name="useHealthCheckHttpClient">Whether to use the health check HTTP client</param>"
         /// </summary>
-        public HttpClient CreateClient(string apiRoute)
+        public HttpClient CreateClient(string apiRoute, bool useHealthCheckHttpClient)
         {
-            return new HttpClient()
-            {
-                // Set the base URL for the client
-                BaseAddress = new Uri(apiRoute),
-                DefaultRequestHeaders =
+            HttpClient client = useHealthCheckHttpClient
+                ? _healthCheckHttpClient.Create(apiRoute)
+                : new HttpClient
                 {
-                    Accept = { new MediaTypeWithQualityHeaderValue(Utilities.JSON_CONTENT_TYPE) }
-                },
-                Timeout = TimeSpan.FromSeconds(200),
-            };
+                    BaseAddress = new Uri(apiRoute),
+                    Timeout = TimeSpan.FromSeconds(200)
+                };
+
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue(Utilities.JSON_CONTENT_TYPE));
+
+            return client;
         }
 
         // Updates the entity key name to camel case for the health check report.

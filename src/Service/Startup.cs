@@ -4,6 +4,7 @@
 using System;
 using System.IO.Abstractions;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -114,6 +115,27 @@ namespace Azure.DataApiBuilder.Service
                 services.AddApplicationInsightsTelemetry();
                 services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
             }
+
+            // Add HealthCheckHttpClient service and register
+            services.AddHttpClient("HealthCheckClient", client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(200);
+                client.DefaultRequestHeaders.Accept.Add(
+                    new MediaTypeWithQualityHeaderValue("application/json"));
+            })
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                HttpClientHandler handler = new();
+
+#if DEBUG
+                // Allow self-signed certificates in dev (useful in containers or local dev)
+                handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+#endif
+
+                return handler;
+            });
+
+            services.AddTransient<HealthCheckHttpClient>();
 
             if (runtimeConfigAvailable
                 && runtimeConfig?.Runtime?.Telemetry?.OpenTelemetry is not null

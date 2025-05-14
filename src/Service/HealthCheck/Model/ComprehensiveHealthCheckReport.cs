@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// The health status of the service.
         /// </summary>
         [JsonPropertyName("status")]
-        public HealthStatus Status { get; init; }
+        public HealthStatus Status { get; set; }
 
         /// <summary>
         /// The version of the service.
@@ -36,6 +36,12 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         [JsonPropertyName("app-name")]
         public string? AppName { get; set; }
+
+        /// <summary>
+        /// The timestamp of the response.
+        /// </summary>
+        [JsonPropertyName("timestamp")]
+        public DateTime TimeStamp { get; set; }
 
         /// <summary>
         /// The configuration details of the dab service.

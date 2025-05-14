@@ -207,6 +207,10 @@ public class UtilsTests
     [DataRow("AzureAD", null, "issuer-xxx", false, DisplayName = "FAIL: AzureAD incorrectly configured with no audience specified.")]
     [DataRow("AzureAD", "aud-xxx", null, false, DisplayName = "FAIL: AzureAD incorrectly configured with no issuer specified.")]
     [DataRow("AzureAD", null, null, false, DisplayName = "FAIL: AzureAD incorrectly configured with no audience or issuer specified.")]
+    [DataRow("EntraID", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: EntraID correctly configured with both audience and issuer.")]
+    [DataRow("EntraID", null, "issuer-xxx", false, DisplayName = "FAIL: EntraID incorrectly configured with no audience specified.")]
+    [DataRow("EntraID", "aud-xxx", null, false, DisplayName = "FAIL: EntraID incorrectly configured with no issuer specified.")]
+    [DataRow("EntraID", null, null, false, DisplayName = "FAIL: EntraID incorrectly configured with no audience or issuer specified.")]
     public void TestValidateAudienceAndIssuerForAuthenticationProvider(
         string authenticationProvider,
         string? audience,

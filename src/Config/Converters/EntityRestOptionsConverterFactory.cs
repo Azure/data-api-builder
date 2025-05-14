@@ -63,7 +63,6 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
                     switch (propertyName)
                     {
                         case "path":
-                        {
                             reader.Read();
 
                             if (reader.TokenType is JsonTokenType.String || reader.TokenType is JsonTokenType.Null)
@@ -73,10 +72,8 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
                             }
 
                             throw new JsonException($"The value of {propertyName} must be a string. Found {reader.TokenType}.");
-                        }
 
                         case "methods":
-                        {
                             List<SupportedHttpVerb> methods = new();
                             while (reader.Read())
                             {
@@ -95,14 +92,10 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
 
                             restOptions = restOptions with { Methods = methods.ToArray() };
                             break;
-                        }
-
                         case "enabled":
-                        {
                             reader.Read();
                             restOptions = restOptions with { Enabled = reader.GetBoolean() };
                             break;
-                        }
 
                         default:
                             throw new JsonException($"Unexpected property {propertyName}");

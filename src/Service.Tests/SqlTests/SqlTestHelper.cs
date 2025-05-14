@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -62,6 +63,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         {
             return string.IsNullOrEmpty(jsonString1) && string.IsNullOrEmpty(jsonString2) ||
                 JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
+        }
+
+        /// <summary>
+        /// For nested queries results from direct db call, it will append a whitespace for each item in an array
+        /// e.g. [{address: 1},<whitespace>{address: 2}]
+        /// Removing all whitespaces when comparing with results from GraphQL
+        /// </summary>
+        /// <param name="expected"></param>
+        /// <param name="actual"></param>
+        public static void PerformTestEqualJsonStringsForNestedQueries(string expected, string actual)
+        {
+            PerformTestEqualJsonStrings(
+                expected.Trim().Replace(" ", ""),
+                actual.Trim().Replace(" ", ""));
         }
 
         /// <summary>
@@ -148,6 +163,93 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 Console.WriteLine(response);
                 Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error");
+            }
+        }
+
+        /// <summary>
+        /// For the results from GraphQL execution response, it will contains the Items key for 1-Many relations
+        /// However for direct db query execution response, it will not have the Item key.
+        /// This function will remove the Item key and aggregate child objs to parent which makes it easier to compare two results
+        /// books {                    books {
+        ///     items: {
+        ///         authors {    ==>  
+        ///               id                  authors {
+        ///                                     id
+        ///                                 }
+        ///                             }
+        ///     }
+        /// }
+        /// }
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        public static JsonNode RemoveItemsKeyFromJson(JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                JsonObject jsonObject = new();
+
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    if (property.Name == "items")
+                    {
+                        if (property.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            // If "items" contains an array, return its elements merged into the parent
+                            JsonArray itemsArray = new();
+                            foreach (JsonElement item in property.Value.EnumerateArray())
+                            {
+                                itemsArray.Add(RemoveItemsKeyFromJson(item));
+                            }
+
+                            return itemsArray;
+
+                        }
+                        else if (property.Value.ValueKind == JsonValueKind.Object)
+                        {
+                            // If "items" contains an object, merge its properties into the parent
+                            JsonObject nestedObject = RemoveItemsKeyFromJson(property.Value) as JsonObject;
+                            foreach (KeyValuePair<string, JsonNode> kvp in nestedObject)
+                            {
+                                jsonObject[kvp.Key] = kvp.Value;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        JsonNode node = RemoveItemsKeyFromJson(property.Value);
+
+                        if (node.GetValueKind() == JsonValueKind.String || node.GetValueKind() == JsonValueKind.Number)
+                        {
+                            jsonObject[property.Name] = node;
+                        }
+                        else
+                        {
+                            // serialize the array to be in same format as the query results from DB
+                            jsonObject[property.Name] = JsonSerializer.Serialize(node, new JsonSerializerOptions
+                            {
+                                // avoid \u0022 when a json string is serialized for multiple times due to recursion
+                                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                            });
+                        }
+                    }
+                }
+
+                return jsonObject;
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                JsonArray jsonArray = new();
+                foreach (JsonElement item in element.EnumerateArray())
+                {
+                    jsonArray.Add(RemoveItemsKeyFromJson(item));
+                }
+
+                return jsonArray;
+            }
+            else
+            {
+                return JsonValue.Create(element);
             }
         }
 

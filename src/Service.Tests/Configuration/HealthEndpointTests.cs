@@ -101,6 +101,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
+        /// <summary>
+        /// Simulates the function call to HttpUtilities.ExecuteRestQueryAsync.
+        /// while setting up mock HTTP client to simulate the response from the server to send OK code.
+        /// Validates the response to ensure no error message is received.
+        /// </summary>
         [TestMethod]
         public async Task TestHealthCheckRestResponseAsync()
         {
@@ -112,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Call the ExecuteRestQuery method with the mock HttpClient
             // Simulate a REST API call to the endpoint
             // Response should be null as error message is not expected to be returned
-            string errorMessageFromRest = await httpUtilities.ExecuteRestQuery(
+            string errorMessageFromRest = await httpUtilities.ExecuteRestQueryAsync(
                 restUriSuffix: runtimeConfig.RestPath,
                 entityName: runtimeConfig.Entities.First().Key,
                 first: runtimeConfig.Entities.First().Value.Health.First,
@@ -125,6 +130,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNull(errorMessageFromRest);
         }
 
+        /// <summary>
+        /// Simulates the function call to HttpUtilities.ExecuteRestQueryAsync.
+        /// while setting up mock HTTP client to simulate the response from the server to send BadRequest code.
+        /// Validates the response to ensure error message is received.
+        /// </summary>
         [TestMethod]
         public async Task TestFailureHealthCheckRestResponseAsync()
         {
@@ -136,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Call the ExecuteRestQuery method with the mock HttpClient
             // Simulate a REST API call to the endpoint
             // Response should be null as error message is not expected to be returned
-            string errorMessageFromRest = await httpUtilities.ExecuteRestQuery(
+            string errorMessageFromRest = await httpUtilities.ExecuteRestQueryAsync(
                 restUriSuffix: runtimeConfig.RestPath,
                 entityName: runtimeConfig.Entities.First().Key,
                 first: runtimeConfig.Entities.First().Value.Health.First,
@@ -148,6 +158,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(errorMessageFromRest);
         }
 
+        /// <summary>
+        /// Simulates the function call to HttpUtilities.ExecuteGraphQLQueryAsync.
+        /// while setting up mock HTTP client to simulate the response from the server to send OK code.
+        /// Validates the response to ensure no error message is received.
+        /// </summary>
         [TestMethod]
         public async Task TestHealthCheckGraphQLResponseAsync()
         {
@@ -156,7 +171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig);
 
             // Act
-            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQuery(
+            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQueryAsync(
                 graphqlUriSuffix: "/graphql",
                 entityName: runtimeConfig.Entities.First().Key,
                 entity: runtimeConfig.Entities.First().Value,
@@ -166,7 +181,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Assert
             Assert.IsNull(errorMessageFromGraphQL);
         }
-
+        
+        /// <summary>
+        /// Simulates the function call to HttpUtilities.ExecuteGraphQLQueryAsync.
+        /// while setting up mock HTTP client to simulate the response from the server to send InternalServerError code.
+        /// Validates the response to ensure error message is received.
+        /// </summary>
         [TestMethod]
         public async Task TestFailureHealthCheckGraphQLResponseAsync()
         {
@@ -175,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig, HttpStatusCode.InternalServerError);
 
             // Act
-            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQuery(
+            string errorMessageFromGraphQL = await httpUtilities.ExecuteGraphQLQueryAsync(
                 graphqlUriSuffix: "/graphql",
                 entityName: runtimeConfig.Entities.First().Key,
                 entity: runtimeConfig.Entities.First().Value,
@@ -437,7 +457,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Even though this entity is not under test, it must be supplied enable successful
             // config file creation.
             Entity requiredEntity = new(
-                Health: new(Enabled: enableEntityHealth),
+                Health: new(enabled: enableEntityHealth),
                 Source: new("books", EntitySourceType.Table, null, null),
                 Rest: new(Enabled: enableEntityRest),
                 GraphQL: new("book", "bookLists", enableEntityGraphQL),
@@ -472,7 +492,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Health: new(Enabled: enableGlobalHealth),
+                    Health: new(enabled: enableGlobalHealth),
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: enableGlobalGraphql),
                     Host: hostOptions

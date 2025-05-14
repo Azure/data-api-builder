@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
         /// <param name="field">The field used for the lookup in the mapping.</param>
-        /// <param name="name"/>Out parameter in which we will save backing column name.<param>
+        /// <param name="name"/>Out parameter in which we will save backing column name.</param>
         /// <returns>True if exists, false otherwise.</returns>
         /// <throws>KeyNotFoundException if entity name not found.</throws>
         bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name);
@@ -132,7 +132,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns></returns>
         DatabaseType GetDatabaseType();
 
-        // Method to access the dictionary since DatabaseObject is abstract class
+        /// <summary>
+        /// Method to access the dictionary since DatabaseObject is abstract class
+        /// </summary>
+        /// <param name="key">Key.</param>
+        /// <returns>DatabaseObject.</returns>
         public virtual DatabaseObject GetDatabaseObjectByKey(string key)
         {
             return EntityToDatabaseObject[key];

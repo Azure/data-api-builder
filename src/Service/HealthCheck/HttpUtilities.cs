@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the DB query by establishing a connection to the DB.
-        public async Task<string?> ExecuteDbQuery(string query, string connectionString)
+        public async Task<string?> ExecuteDbQueryAsync(string query, string connectionString)
         {
             string? errorMessage = null;
             // Execute the query on DB and return the response time.
@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the REST query by sending a GET request to the API.
-        public async Task<string?> ExecuteRestQuery(string restUriSuffix, string entityName, int first, string incomingRoleHeader, string incomingRoleToken)
+        public async Task<string?> ExecuteRestQueryAsync(string restUriSuffix, string entityName, int first, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
             try
@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Executes the GraphQL query by sending a POST request to the API.
         // Internally calls the metadata provider to fetch the column names to create the graphql payload.
-        public async Task<string?> ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
+        public async Task<string?> ExecuteGraphQLQueryAsync(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
 

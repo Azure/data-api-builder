@@ -59,7 +59,7 @@ public sealed class BuildRequestStateMiddleware
                         actionType: (context.Request.Query!.ToString().Contains("mutation") ? OperationType.Mutation : OperationType.Query).ToString(),
                         httpURL: string.Empty, // GraphQL has no route
                         queryString: null, // GraphQL has no query-string
-                        userRole: httpContext.Request.Headers["X-MS-API-ROLE"].FirstOrDefault() ?? httpContext.User.FindFirst("role")?.Value,
+                        userRole: httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].FirstOrDefault() ?? httpContext.User.FindFirst("role")?.Value,
                         apiType: apiType);
                 }
             }

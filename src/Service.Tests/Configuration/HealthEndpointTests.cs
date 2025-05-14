@@ -181,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Assert
             Assert.IsNull(errorMessageFromGraphQL);
         }
-        
+
         /// <summary>
         /// Simulates the function call to HttpUtilities.ExecuteGraphQLQueryAsync.
         /// while setting up mock HTTP client to simulate the response from the server to send InternalServerError code.
@@ -206,6 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(errorMessageFromGraphQL);
         }
 
+        #region Helper Methods
         private static HttpUtilities SetupRestTest(RuntimeConfig runtimeConfig, HttpStatusCode httpStatusCode = HttpStatusCode.OK)
         {
             // Arrange
@@ -509,4 +510,5 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 contents: runtimeConfig.ToJson());
         }
     }
+    #endregion
 }

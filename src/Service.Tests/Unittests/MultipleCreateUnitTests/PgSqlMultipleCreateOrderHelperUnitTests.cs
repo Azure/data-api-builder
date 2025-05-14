@@ -4,7 +4,7 @@
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.Unittests
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
     /// Currently, we don't support multiple-create for PostgreSql but the order determination logic for insertions is valid for PostgreSql as well.

@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -10,6 +11,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -187,27 +189,41 @@ namespace Azure.DataApiBuilder.Service.Services
                 // transform it into the runtime type.
                 // We also want to ensure here that we do not unnecessarily convert values to
                 // strings and then force the conversion to parse them.
-                return namedType switch
+                try
                 {
-                    StringType => fieldValue.GetString(), // spec
-                    ByteType => fieldValue.GetByte(),
-                    ShortType => fieldValue.GetInt16(),
-                    IntType => fieldValue.GetInt32(), // spec
-                    LongType => fieldValue.GetInt64(),
-                    FloatType => fieldValue.GetDouble(), // spec
-                    SingleType => fieldValue.GetSingle(),
-                    DecimalType => fieldValue.GetDecimal(),
-                    DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
-                    DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
-                    LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
-                    ByteArrayType => fieldValue.GetBytesFromBase64(),
-                    BooleanType => fieldValue.GetBoolean(), // spec
-                    UrlType => new Uri(fieldValue.GetString()!),
-                    UuidType => fieldValue.GetGuid(),
-                    TimeSpanType => TimeSpan.Parse(fieldValue.GetString()!),
-                    AnyType => fieldValue.ToString(),
-                    _ => fieldValue.GetString()
-                };
+                    return namedType switch
+                    {
+                        StringType => fieldValue.GetString(), // spec
+                        ByteType => fieldValue.GetByte(),
+                        ShortType => fieldValue.GetInt16(),
+                        IntType => fieldValue.GetInt32(), // spec
+                        LongType => fieldValue.GetInt64(),
+                        FloatType => fieldValue.GetDouble(), // spec
+                        SingleType => fieldValue.GetSingle(),
+                        DecimalType => fieldValue.GetDecimal(),
+                        DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
+                        DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
+                        LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
+                        ByteArrayType => fieldValue.GetBytesFromBase64(),
+                        BooleanType => fieldValue.GetBoolean(), // spec
+                        UrlType => new Uri(fieldValue.GetString()!),
+                        UuidType => fieldValue.GetGuid(),
+                        TimeSpanType => TimeSpan.Parse(fieldValue.GetString()!),
+                        AnyType => fieldValue.ToString(),
+                        _ => fieldValue.GetString()
+                    };
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+                {
+                    // this usually means that database column type was changed since generating the GraphQL schema
+                    // for e.g. System.FormatException - One of the identified items was in an invalid format
+                    // System.InvalidOperationException - The requested operation requires an element of type 'Number', but the target element has type 'String'.
+                    throw new DataApiBuilderException(
+                        message: $"The {context.Selection.Field.Name} value could not be parsed for configured GraphQL data type {namedType.Name}",
+                        statusCode: HttpStatusCode.Conflict,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
+                        ex);
+                }
             }
 
             return null;

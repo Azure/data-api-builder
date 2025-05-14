@@ -319,6 +319,13 @@ namespace Azure.DataApiBuilder.Service.Services
                 return null;
             }
 
+            // In case of ListType on scalar types, argumentSchema.Type.TypeName().Value unwraps down to the namednode type and returns the type of the value node.
+            // For example, if the argumentSchema is a list of Ints, the type name will be "Int" and not "[Int]".
+            if (argumentSchema.Type.IsListType())
+            {
+                return value.Value;
+            }
+
             return argumentSchema.Type.TypeName().Value switch
             {
                 SupportedHotChocolateTypes.BYTE_TYPE => ((IntValueNode)value).ToByte(),

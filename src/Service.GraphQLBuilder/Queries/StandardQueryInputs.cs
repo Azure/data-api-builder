@@ -33,7 +33,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 new List<InputValueDefinitionNode> {
                     new(null, new NameNode("eq"), new StringValueNode("Equals"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new BooleanType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -50,7 +51,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new ByteType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -67,7 +69,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new ShortType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -84,7 +87,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new IntType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -101,7 +105,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new LongType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -118,7 +123,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new SingleType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -135,7 +141,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new FloatType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -152,7 +159,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new DecimalType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -169,8 +177,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                    // add IN node for all sclar types
+                    new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new StringType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
@@ -188,7 +195,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("lt"), new StringValueNode("Less Than"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new DateTimeType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -216,7 +224,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                             new(null, new NameNode("lt"), new StringValueNode("Less Than"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
                             new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
                             new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                            new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                            new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new LocalTimeType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 
@@ -233,7 +242,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
                     new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
+                    new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
+                    new(null, new NameNode("in"), new StringValueNode("In"), new ListTypeNode(new UuidType().ToTypeNode()), null, new List<DirectiveNode>())
                 }
             );
 

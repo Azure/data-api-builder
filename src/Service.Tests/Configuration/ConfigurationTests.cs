@@ -1760,7 +1760,7 @@ type Moon {
         /// It also verifies that the expected log message is logged.
         /// </summary>
         [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
-        public async Task TestConfigSchemaIsValid()
+        public void TestConfigSchemaIsValid()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
@@ -1772,7 +1772,7 @@ type Moon {
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             schemaValidatorLogger.Verify(
@@ -1794,7 +1794,7 @@ type Moon {
         [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
         [DataRow(CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD, DisplayName = "Validates schema of the config file with no Authentication field.")]
         [DataRow(CONFIG_FILE_WITH_NO_CORS_FIELD, DisplayName = "Validates schema of the config file with no Cors field.")]
-        public async Task TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
+        public void TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
@@ -1802,7 +1802,7 @@ type Moon {
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             schemaValidatorLogger.Verify(
@@ -1824,7 +1824,7 @@ type Moon {
         [DataRow(CONFIG_FILE_WITH_MISSING_JWT_CHILD_PROPERTIES, DisplayName = "Validates schema of the config file with missing JWT child properties.")]
         [DataRow(CONFIG_FILE_WITH_AUTHENTICATION_PROVIDER_THAT_SHOULD_NOT_HAVE_JWT, DisplayName = "Validates schema of the config file when an auth provider is chosen WITH a JWT property, "
         + "even though the JWT property should not exist.")]
-        public async Task TestConfigWithInvalidAuthProviders(string jsonData)
+        public void TestConfigWithInvalidAuthProviders(string jsonData)
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
@@ -1832,7 +1832,7 @@ type Moon {
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsFalse(result.IsValid);
             Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             schemaValidatorLogger.Verify(
@@ -1850,7 +1850,7 @@ type Moon {
         /// The test asserts that the validation fails and there are validation errors.
         /// It also verifies that the expected error message is logged, indicating that the 'entities' property is required.
         [TestMethod]
-        public async Task TestBasicConfigSchemaWithNoEntityFieldsIsInvalid()
+        public void TestBasicConfigSchemaWithNoEntityFieldsIsInvalid()
         {
             string jsonData = @"{
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
@@ -1866,7 +1866,7 @@ type Moon {
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsFalse(result.IsValid);
             Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             Assert.AreEqual(1, result.ErrorCount);
@@ -1881,14 +1881,14 @@ type Moon {
         /// It also contains an entity where `rest` property is written as `rst`.
         /// </summary>
         [TestMethod("Validates the invalid config file schema."), TestCategory(TestCategory.MSSQL)]
-        public async Task TestConfigSchemaIsInvalid()
+        public void TestConfigSchemaIsInvalid()
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
             Assert.IsFalse(result.IsValid);
             Assert.AreEqual(3, result.ValidationErrors.Count);
 
@@ -1926,7 +1926,7 @@ type Moon {
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, combinedJson);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, combinedJson);
             Assert.IsFalse(result.IsValid);
             Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1"));
             Assert.IsTrue(result.ErrorMessage.Contains("NoAdditionalPropertiesAllowed: #/description"));

@@ -3,12 +3,12 @@
 
 using System.IO.Abstractions;
 using System.Reflection;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Json.Schema;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
-using NJsonSchema.Validation;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -38,21 +38,22 @@ public class JsonConfigSchemaValidator
     /// <param name="jsonData">The JSON data to validate.</param> 
     /// <returns>A tuple containing a boolean indicating
     /// if the validation was successful and a collection of validation errors if there were any.</returns> 
-    public async Task<JsonSchemaValidationResult> ValidateJsonConfigWithSchemaAsync(string jsonSchema, string jsonData)
+    public JsonSchemaValidationResult ValidateJsonConfigWithSchema(string jsonSchema, string jsonData)
     {
         try
         {
-            JsonSchema schema = await JsonSchema.FromJsonAsync(jsonSchema);
-            ICollection<ValidationError> validationErrors = schema.Validate(jsonData, SchemaType.JsonSchema);
+            JsonSchema schema = JsonSchema.FromText(jsonSchema);
+            JsonDocument document = JsonDocument.Parse(jsonData);
+            EvaluationResults evaluationResults = schema.Evaluate(document);
 
-            if (!validationErrors.Any())
+            if (evaluationResults.IsValid)
             {
                 _logger!.LogInformation("The config satisfies the schema requirements.");
                 return new(isValid: true, errors: null);
             }
             else
             {
-                return new(isValid: false, errors: validationErrors);
+                return new(isValid: false, errors: evaluationResults.Errors);
             }
         }
         catch (Exception e)

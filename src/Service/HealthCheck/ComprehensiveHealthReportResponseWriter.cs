@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         /// <param name="context">HttpContext for writing the response.</param>
         /// <returns>Writes the http response to the http context.</returns>
-        public async Task WriteResponse(HttpContext context)
+        public async Task WriteResponseAsync(HttpContext context)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                             key: CACHE_KEY,
                             async (FusionCacheFactoryExecutionContext<string?> ctx, CancellationToken ct) =>
                             {
-                                string? response = await ExecuteHealthCheck(context, config).ConfigureAwait(false);
+                                string? response = await ExecuteHealthCheckAsync(config).ConfigureAwait(false);
                                 ctx.Options.SetDuration(TimeSpan.FromSeconds(config.CacheTtlSecondsForHealthReport));
                                 return response;
                             });
@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 }
                 else
                 {
-                    response = await ExecuteHealthCheck(context, config).ConfigureAwait(false);
+                    response = await ExecuteHealthCheckAsync(config).ConfigureAwait(false);
                     // Return the newly generated response
                     await context.Response.WriteAsync(response);
                 }
@@ -139,9 +139,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return;
         }
 
-        private async Task<string> ExecuteHealthCheck(HttpContext context, RuntimeConfig config)
+        private async Task<string> ExecuteHealthCheckAsync(RuntimeConfig config)
         {
-            ComprehensiveHealthCheckReport dabHealthCheckReport = await _healthCheckHelper.GetHealthCheckResponse(context, config);
+            ComprehensiveHealthCheckReport dabHealthCheckReport = await _healthCheckHelper.GetHealthCheckResponseAsync(config);
             string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
             _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
 

@@ -18,6 +18,14 @@ public class JsonConfigSchemaValidator
     private IFileSystem _fileSystem;
     private HttpClient _httpClient;
 
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = RuntimeConfigLoader.GetSerializationOptions();
+    private static readonly JsonDocumentOptions _jsonDocumentOptions = new()
+    {
+        AllowTrailingCommas = _jsonSerializerOptions.AllowTrailingCommas,
+        CommentHandling = _jsonSerializerOptions.ReadCommentHandling,
+        MaxDepth = _jsonSerializerOptions.MaxDepth
+    };
+
     /// <summary> 
     /// Sets the logger, file system and httpClient for the JSON config schema validator. 
     /// </summary> 
@@ -42,8 +50,8 @@ public class JsonConfigSchemaValidator
     {
         try
         {
-            JsonSchema schema = JsonSchema.FromText(jsonSchema);
-            JsonDocument document = JsonDocument.Parse(jsonData);
+            JsonSchema schema = JsonSchema.FromText(jsonSchema, _jsonSerializerOptions);
+            JsonDocument document = JsonDocument.Parse(jsonData, _jsonDocumentOptions);
             EvaluationResults evaluationResults = schema.Evaluate(document);
 
             if (evaluationResults.IsValid)

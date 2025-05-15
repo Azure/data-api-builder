@@ -1824,7 +1824,7 @@ type Moon {
         [DataRow(CONFIG_FILE_WITH_MISSING_JWT_CHILD_PROPERTIES, DisplayName = "Validates schema of the config file with missing JWT child properties.")]
         [DataRow(CONFIG_FILE_WITH_AUTHENTICATION_PROVIDER_THAT_SHOULD_NOT_HAVE_JWT, DisplayName = "Validates schema of the config file when an auth provider is chosen WITH a JWT property, "
         + "even though the JWT property should not exist.")]
-        public async Task TestBasicConfigWithAuthProviders(string jsonData)
+        public async Task TestConfigWithInvalidAuthProviders(string jsonData)
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 

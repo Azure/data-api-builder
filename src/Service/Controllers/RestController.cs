@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;

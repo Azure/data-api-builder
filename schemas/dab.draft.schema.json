@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema",
+  "$schema": "http://json-schema.org/draft-07/schema",
   "$id": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "title": "Data API builder",
   "description": "Schema for Data API builder engine",

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -272,26 +273,76 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
+            if (Debugger.IsAttached)
+            {
+                Debugger.Launch();
+            }
+
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
-                .ConfigureHttpClient((serviceProvider, client) =>
+            .ConfigureHttpClient((serviceProvider, client) =>
+            {
+                IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                HttpContext? httpContext = httpCtxAccessor.HttpContext;
+
+                if (httpContext is not null)
                 {
-                    IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-                    HttpContext? httpContext = httpContextAccessor.HttpContext;
+                    string scheme = httpContext.Request.Scheme;  // "http" or "https"
+                    string host = httpContext.Request.Host.Host; // e.g. "localhost"
+                    int port = scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 5001 : 5000; // default fallback
 
-                    if (httpContext != null)
+                    string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
+                    if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
                     {
-                        // Build base address from request
-                        string baseUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
-                        client.BaseAddress = new Uri(baseUri);
+                        foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            string trimmed = part.Trim();
 
-                        // Set default Accept header
-                        client.DefaultRequestHeaders.Accept.Clear();
-                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                            if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                int idx = trimmed.LastIndexOf(':');
+                                if (idx > -1 && int.TryParse(trimmed[(idx + 1)..], out int parsedWildcardPort) && parsedWildcardPort > 0)
+                                {
+                                    port = parsedWildcardPort;
+                                    break;
+                                }
+                            }
+
+                            if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) &&
+                                uri.Scheme.Equals(scheme, StringComparison.OrdinalIgnoreCase) &&
+                                uri.Port > 0)
+                            {
+                                port = uri.Port;
+                                break;
+                            }
+                        }
                     }
 
-                    // Optional: Set a timeout
-                    client.Timeout = TimeSpan.FromSeconds(200);
-                });
+                    string baseUri = $"{scheme}://{host}:{port}";
+                    Console.WriteLine($"Base URI: {baseUri}");
+
+                    client.BaseAddress = new Uri(baseUri);
+                }
+
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                client.Timeout = TimeSpan.FromSeconds(200);
+            })
+            .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
+            {
+                bool allowSelfSigned =
+                    Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+                HttpClientHandler handler = new();
+
+                if (allowSelfSigned)
+                {
+                    handler.ServerCertificateCustomValidationCallback =
+                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                }
+
+                return handler;
+            });
 
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
             {

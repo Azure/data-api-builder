@@ -9,7 +9,6 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -29,6 +28,7 @@ using Azure.DataApiBuilder.Service.Telemetry;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
+using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -332,6 +332,7 @@ namespace Azure.DataApiBuilder.Service
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
                 .AddInstrumentation()
+                .AddType(new DateTimeType(disableFormatCheck: graphQLRuntimeOptions?.EnableLegacyDateTimeScalar ?? true))
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
@@ -377,16 +378,10 @@ namespace Azure.DataApiBuilder.Service
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
                     {
-                        error = error.RemoveException()
-                                .WithMessage(thrownException.Message)
-                                .WithCode($"{thrownException.SubStatusCode}");
-
-                        // If user error i.e. validation error or conflict error with datasource, then retain location/path
-                        if (!thrownException.StatusCode.IsClientError())
-                        {
-                            error = error.RemoveLocations()
-                                .RemovePath();
-                        }
+                        error = error
+                            .WithException(null)
+                            .WithMessage(thrownException.Message)
+                            .WithCode($"{thrownException.SubStatusCode}");
                     }
 
                     return error;

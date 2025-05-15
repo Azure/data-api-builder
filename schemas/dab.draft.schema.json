@@ -278,7 +278,7 @@
               "properties": {
                 "provider": {
                   "description": "The name of authentication provider",
-                  "oneOf": [
+                  "anyOf": [
                     {
                       "const": "StaticWebApps",
                       "description": "Authentication provided by Azure Static Web Apps."

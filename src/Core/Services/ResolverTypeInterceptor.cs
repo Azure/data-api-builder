@@ -59,6 +59,11 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
             case OperationType.Subscription:
                 _subscriptionType = (ObjectType)completionContext.Type;
                 break;
+            default:
+                // GraphQL only specifies the operation types Query, Mutation, and Subscription,
+                // so this case will never happen.
+                throw new NotSupportedException(
+                    "The specified operation type is not supported.");
         }
     }
 

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -273,11 +272,6 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            if (Debugger.IsAttached)
-            {
-                Debugger.Launch();
-            }
-
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
             .ConfigureHttpClient((serviceProvider, client) =>
             {
@@ -319,8 +313,6 @@ namespace Azure.DataApiBuilder.Service
                     }
 
                     string baseUri = $"{scheme}://{host}:{port}";
-                    Console.WriteLine($"Base URI: {baseUri}");
-
                     client.BaseAddress = new Uri(baseUri);
                 }
 

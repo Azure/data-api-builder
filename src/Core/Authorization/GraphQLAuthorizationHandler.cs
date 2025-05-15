@@ -36,14 +36,14 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
         AuthorizeDirective directive,
         CancellationToken cancellationToken = default)
     {
-        if (!IsUserAuthenticated(context))
+        if (!IsUserAuthenticated(context.ContextData))
         {
             return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAuthenticated);
         }
 
         // Schemas defining authorization policies are not supported, even when roles are defined appropriately.
         // Requests will be short circuited and rejected (authorization forbidden).
-        if (TryGetApiRoleHeader(context, out string? clientRole) && IsInHeaderDesignatedRole(clientRole, directive.Roles))
+        if (TryGetApiRoleHeader(context.ContextData, out string? clientRole) && IsInHeaderDesignatedRole(clientRole, directive.Roles))
         {
             if (!string.IsNullOrEmpty(directive.Policy))
             {
@@ -56,13 +56,47 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
         return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
     }
 
-    // TODO : check our implementation on this.
+    /// <summary>
+    /// Authorize access to field based on contents of @authorize directive.
+    /// Validates that the requestor is authenticated, and that the
+    /// clientRoleHeader is present.
+    /// Role membership is checked
+    /// and/or (authorize directive may define policy, roles, or both)
+    /// An authorization policy is evaluated, if present.
+    /// </summary>
+    /// <param name="context">The authorization context.</param>
+    /// <param name="directives">The list of authorize directives.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The authorize result.</returns>
     public ValueTask<AuthorizeResult> AuthorizeAsync(
         AuthorizationContext context,
         IReadOnlyList<AuthorizeDirective> directives,
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (!IsUserAuthenticated(context.ContextData))
+        {
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAuthenticated);
+        }
+
+        foreach (AuthorizeDirective directive in directives)
+        {
+            // Schemas defining authorization policies are not supported, even when roles are defined appropriately.
+            // Requests will be short circuited and rejected (authorization forbidden).
+            if (TryGetApiRoleHeader(context.ContextData, out string? clientRole) && IsInHeaderDesignatedRole(clientRole, directive.Roles))
+            {
+                if (!string.IsNullOrEmpty(directive.Policy))
+                {
+                    return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
+                }
+
+                // directive is satisfied, continue to next directive.
+                continue;
+            }
+
+            return new ValueTask<AuthorizeResult>(AuthorizeResult.NotAllowed);
+        }
+
+        return new ValueTask<AuthorizeResult>(AuthorizeResult.Allowed);
     }
 
     /// <summary>
@@ -75,9 +109,9 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
     /// <seealso cref="https://chillicream.com/docs/hotchocolate/v12/server/interceptors#ihttprequestinterceptor"/>
     /// <returns>True, if clientRoleHeader is resolved and clientRole value
     /// False, if clientRoleHeader is not resolved, null clientRole value</returns>
-    private static bool TryGetApiRoleHeader(IMiddlewareContext context, [NotNullWhen(true)] out string? clientRole)
+    private static bool TryGetApiRoleHeader(IDictionary<string, object?> contextData, [NotNullWhen(true)] out string? clientRole)
     {
-        if (context.ContextData.TryGetValue(nameof(HttpContext), out object? value))
+        if (contextData.TryGetValue(nameof(HttpContext), out object? value))
         {
             if (value is not null)
             {
@@ -122,9 +156,9 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
     /// Returns whether the ClaimsPrincipal in the HotChocolate IMiddlewareContext.ContextData is authenticated.
     /// To be authenticated, at least one ClaimsIdentity in ClaimsPrincipal.Identities must be authenticated.
     /// </summary>
-    private static bool IsUserAuthenticated(IMiddlewareContext context)
+    private static bool IsUserAuthenticated(IDictionary<string, object?> contextData)
     {
-        if (context.ContextData.TryGetValue(nameof(ClaimsPrincipal), out object? claimsPrincipalContextObject)
+        if (contextData.TryGetValue(nameof(ClaimsPrincipal), out object? claimsPrincipalContextObject)
             && claimsPrincipalContextObject is ClaimsPrincipal principal
             && principal.Identities.Any(claimsIdentity => claimsIdentity.IsAuthenticated))
         {

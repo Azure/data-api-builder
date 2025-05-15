@@ -164,10 +164,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
                     }
 
-                    if (!string.IsNullOrEmpty(incomingRoleHeader))
-                    {
-                        message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
-                    }
+                if (!string.IsNullOrEmpty(incomingRoleHeader))
+                {
+                    message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
+                }
 
                     HttpResponseMessage response = await _httpClient.SendAsync(message);
 
@@ -192,18 +192,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Executes the GraphQL query by sending a POST request to the API.
         // Internally calls the metadata provider to fetch the column names to create the graphql payload.
-        public async Task<string?> ExecuteGraphQLQuery(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
+        public async Task<string?> ExecuteGraphQLQueryAsync(string graphqlUriSuffix, string entityName, Entity entity, string incomingRoleHeader, string incomingRoleToken)
         {
             string? errorMessage = null;
-            // Base URL of the API that handles SQL operations
-            string apiRoute = Utilities.GetServiceRoute(_apiRoute, graphqlUriSuffix);
-            if (string.IsNullOrEmpty(apiRoute))
-            {
-                _logger.LogError("The API route is not available, hence HealthEndpoint is not available.");
-                return errorMessage;
-            }
 
-            if (!Program.CheckSanityOfUrl(apiRoute))
+            if (!Program.CheckSanityOfUrl($"{_httpClient.BaseAddress}{graphqlUriSuffix}"))
             {
                 _logger.LogError("Blocked outbound request due to invalid or unsafe URI.");
                 return "Blocked outbound request due to invalid or unsafe URI.";
@@ -215,46 +208,43 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 // Fetch Column Names from Metadata Provider
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+                DatabaseObject dbObject = sqlMetadataProvider.GetDatabaseObjectByKey(entityName);
                 List<string> columnNames = dbObject.SourceDefinition.Columns.Keys.ToList();
 
                 // In case of GraphQL API, use the plural value specified in [entity.graphql.type.plural].
                 // Further, we need to camel case this plural value to match the GraphQL object name.                  
-                string graphqlObjectName = LowerFirstLetter(entity.GraphQL.Plural.Pascalize());
+                string graphqlObjectName = GraphQLNaming.GenerateListQueryName(entityName, entity);
 
                 // In case any primitive column names are present, execute the query
                 if (columnNames.Any())
                 {
-                    using (HttpClient client = CreateClient(apiRoute))
+                    string jsonPayload = Utilities.CreateHttpGraphQLQuery(graphqlObjectName, columnNames, entity.EntityFirst);
+                    HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
+
+                    HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: graphqlUriSuffix)
                     {
-                        string jsonPayload = Utilities.CreateHttpGraphQLQuery(graphqlObjectName, columnNames, entity.EntityFirst);
-                        HttpContent content = new StringContent(jsonPayload, Encoding.UTF8, Utilities.JSON_CONTENT_TYPE);
+                        Content = content
+                    };
 
-                        HttpRequestMessage message = new(method: HttpMethod.Post, requestUri: apiRoute)
-                        {
-                            Content = content
-                        };
+                    if (!string.IsNullOrEmpty(incomingRoleToken))
+                    {
+                        message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
+                    }
 
-                        if (!string.IsNullOrEmpty(incomingRoleToken))
-                        {
-                            message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, incomingRoleToken);
-                        }
+                    if (!string.IsNullOrEmpty(incomingRoleHeader))
+                    {
+                        message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
+                    }
 
-                        if (!string.IsNullOrEmpty(incomingRoleHeader))
-                        {
-                            message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, incomingRoleHeader);
-                        }
+                    HttpResponseMessage response = await _httpClient.SendAsync(message);
 
-                        HttpResponseMessage response = await client.SendAsync(message);
-
-                        if (response.IsSuccessStatusCode)
-                        {
-                            _logger.LogTrace("The GraphQL HealthEndpoint query executed successfully.");
-                        }
-                        else
-                        {
-                            errorMessage = $"The GraphQL HealthEndpoint query failed with code: {response.StatusCode}.";
-                        }
+                    if (response.IsSuccessStatusCode)
+                    {
+                        _logger.LogTrace("The GraphQL HealthEndpoint query executed successfully.");
+                    }
+                    else
+                    {
+                        errorMessage = $"The GraphQL HealthEndpoint query failed with code: {response.StatusCode}.";
                     }
                 }
 
@@ -265,35 +255,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 _logger.LogError($"An exception occurred while executing the GraphQL health check query: {ex.Message}");
                 return ex.Message;
             }
-        }
-
-        /// <summary>
-        /// Creates a <see cref="HttpClient" /> for processing HTTP requests/responses with the test server.
-        /// </summary>
-        public HttpClient CreateClient(string apiRoute)
-        {
-            return new HttpClient()
-            {
-                // Set the base URL for the client
-                BaseAddress = new Uri(apiRoute),
-                DefaultRequestHeaders =
-                {
-                    Accept = { new MediaTypeWithQualityHeaderValue(Utilities.JSON_CONTENT_TYPE) }
-                },
-                Timeout = TimeSpan.FromSeconds(200),
-            };
-        }
-
-        // Updates the entity key name to camel case for the health check report.
-        public static string LowerFirstLetter(string input)
-        {
-            if (string.IsNullOrEmpty(input) || char.IsLower(input[0]))
-            {
-                // If the input is null or empty, or if the first character is already lowercase, return the input as is.
-                return input;
-            }
-
-            return char.ToLower(input[0]) + input.Substring(1);
         }
     }
 }

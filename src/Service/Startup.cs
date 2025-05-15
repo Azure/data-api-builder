@@ -4,11 +4,13 @@
 using System;
 using System.IO.Abstractions;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -270,6 +272,27 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
+            services.AddHttpClient("ContextConfiguredHealthCheckClient")
+                .ConfigureHttpClient((serviceProvider, client) =>
+                {
+                    IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                    HttpContext? httpContext = httpContextAccessor.HttpContext;
+
+                    if (httpContext != null)
+                    {
+                        // Build base address from request
+                        string baseUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+                        client.BaseAddress = new Uri(baseUri);
+
+                        // Set default Accept header
+                        client.DefaultRequestHeaders.Accept.Clear();
+                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    }
+
+                    // Optional: Set a timeout
+                    client.Timeout = TimeSpan.FromSeconds(200);
+                });
+
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
             {
                 // Development mode implies support for "Hot Reload". The V2 authentication function
@@ -377,11 +400,16 @@ namespace Azure.DataApiBuilder.Service
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
                     {
-                        return error.RemoveException()
-                                .RemoveLocations()
-                                .RemovePath()
+                        error = error.RemoveException()
                                 .WithMessage(thrownException.Message)
                                 .WithCode($"{thrownException.SubStatusCode}");
+
+                        // If user error i.e. validation error or conflict error with datasource, then retain location/path
+                        if (!thrownException.StatusCode.IsClientError())
+                        {
+                            error = error.RemoveLocations()
+                                .RemovePath();
+                        }
                     }
 
                     return error;
@@ -501,6 +529,7 @@ namespace Azure.DataApiBuilder.Service
                 {
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                 }
+
             });
 
             app.UseAuthentication();

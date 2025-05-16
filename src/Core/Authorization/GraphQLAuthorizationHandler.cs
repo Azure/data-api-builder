@@ -27,6 +27,7 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
     /// </summary>
     /// <param name="context">The current middleware context.</param>
     /// <param name="directive">The authorization directive.</param>
+    /// <param name="cancellationToken">The cancellation token - not used here.</param>
     /// <returns>
     /// Returns a value indicating if the current session is authorized to
     /// access the resolver data.
@@ -62,7 +63,7 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
     /// clientRoleHeader is present.
     /// Role membership is checked
     /// and/or (authorize directive may define policy, roles, or both)
-    /// An authorization policy is evaluated, if present.
+    /// an authorization policy is evaluated, if present.
     /// </summary>
     /// <param name="context">The authorization context.</param>
     /// <param name="directives">The list of authorize directives.</param>
@@ -104,7 +105,7 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
     /// HttpContext will be present in IMiddlewareContext.ContextData
     /// when HotChocolate is configured to use HttpRequestInterceptor
     /// </summary>
-    /// <param name="context">HotChocolate Middleware Context</param>
+    /// <param name="contextData">HotChocolate Middleware Context data.</param>
     /// <param name="clientRole">Value of the client role header.</param>
     /// <seealso cref="https://chillicream.com/docs/hotchocolate/v12/server/interceptors#ihttprequestinterceptor"/>
     /// <returns>True, if clientRoleHeader is resolved and clientRole value

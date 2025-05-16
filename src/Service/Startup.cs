@@ -42,6 +42,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -52,7 +53,10 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using StackExchange.Redis;
 using ZiggyCreatures.Caching.Fusion;
+using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
+using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
@@ -143,6 +147,9 @@ namespace Azure.DataApiBuilder.Service
                 .WithMetrics(metrics =>
                 {
                     metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                        // TODO: should we also add FusionCache metrics?
+                        // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
+                        // .AddFusionCacheInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
@@ -155,6 +162,9 @@ namespace Azure.DataApiBuilder.Service
                 {
                     tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                         .AddHttpClientInstrumentation()
+                        // TODO: should we also add FusionCache traces?
+                        // To do so we just need to add the package ZiggyCreatures.FusionCache.OpenTelemetry and call
+                        // .AddFusionCacheInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
                             configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
@@ -329,16 +339,72 @@ namespace Azure.DataApiBuilder.Service
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event
             _hotReloadEventHandler.Subscribe(DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, (sender, args) => RefreshGraphQLSchema(services));
 
-            services.AddFusionCache()
+            // Cache config
+            IFusionCacheBuilder fusionCacheBuilder = services.AddFusionCache()
                 .WithOptions(options =>
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
                     options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                    string? cachePartition = runtimeConfig?.Runtime?.Cache?.Level2?.Partition;
+                    if (string.IsNullOrWhiteSpace(cachePartition) == false)
+                    {
+                        options.CacheKeyPrefix = cachePartition + "_";
+                        options.BackplaneChannelPrefix = cachePartition + "_";
+                    }
                 })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {
-                    Duration = TimeSpan.FromSeconds(5)
+                    Duration = TimeSpan.FromSeconds(RuntimeCacheOptions.DEFAULT_TTL_SECONDS),
+                    ReThrowBackplaneExceptions = false,
+                    ReThrowDistributedCacheExceptions = false,
+                    ReThrowSerializationExceptions = false,
                 });
+
+            // Level2 cache config
+            bool isLevel2Enabled = runtimeConfigAvailable
+                && (runtimeConfig?.Runtime?.IsCachingEnabled ?? false)
+                && (runtimeConfig?.Runtime?.Cache?.Level2?.Enabled ?? false);
+
+            if (isLevel2Enabled)
+            {
+                RuntimeCacheLevel2Options level2CacheOptions = runtimeConfig!.Runtime!.Cache!.Level2!;
+                string level2CacheProvider = level2CacheOptions.Provider ?? "redis";
+
+                switch (level2CacheProvider)
+                {
+                    case "redis":
+                        if (string.IsNullOrWhiteSpace(level2CacheOptions.ConnectionString))
+                        {
+                            throw new Exception($"Cache Provider: the \"redis\" level2 cache provider requires a valid connection-string. Please provide one.");
+                        }
+                        else
+                        {
+                            // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
+                            Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(level2CacheOptions.ConnectionString);
+
+                            fusionCacheBuilder
+                                .WithSerializer(new FusionCacheSystemTextJsonSerializer())
+                                .WithDistributedCache(new RedisCache(new RedisCacheOptions
+                                {
+                                    ConnectionMultiplexerFactory = async () =>
+                                    {
+                                        return await connectionMultiplexerTask;
+                                    }
+                                }))
+                                .WithBackplane(new RedisBackplane(new RedisBackplaneOptions
+                                {
+                                    ConnectionMultiplexerFactory = async () =>
+                                    {
+                                        return await connectionMultiplexerTask;
+                                    }
+                                }));
+                        }
+
+                        break;
+                    default:
+                        throw new Exception($"Cache Provider: ${level2CacheOptions.Provider} not supported. Please provide a valid cache provider.");
+                }
+            }
 
             services.AddSingleton<DabCacheService>();
             services.AddControllers();

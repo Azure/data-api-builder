@@ -36,10 +36,11 @@ jobs:
 
   - task: NuGetToolInstaller@1
 
-  - task: NuGetCommand@2
+  - task: DotNetCoreCLI@2
     displayName: Restore NuGet packages
     inputs:
-      restoreSolution: '$(solution)'
+      command: restore
+      projects: '$(solution)'
       feedsToUse: config
       nugetConfigPath: Nuget.config
 

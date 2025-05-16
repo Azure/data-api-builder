@@ -1,13 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -21,15 +24,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         private readonly ILogger<ComprehensiveHealthReportResponseWriter> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly HealthCheckHelper _healthCheckHelper;
+        private readonly IFusionCache _cache;
+        private const string CACHE_KEY = "HealthCheckResponse";
 
         public ComprehensiveHealthReportResponseWriter(
             ILogger<ComprehensiveHealthReportResponseWriter> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            HealthCheckHelper healthCheckHelper)
+            HealthCheckHelper healthCheckHelper,
+            IFusionCache cache)
         {
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
             _healthCheckHelper = healthCheckHelper;
+            _cache = cache;
         }
 
         /* {
@@ -62,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// </summary>
         /// <param name="context">HttpContext for writing the response.</param>
         /// <returns>Writes the http response to the http context.</returns>
-        public Task WriteResponse(HttpContext context)
+        public async Task WriteResponseAsync(HttpContext context)
         {
             RuntimeConfig config = _runtimeConfigProvider.GetConfig();
 
@@ -74,20 +81,71 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     _logger.LogError("Comprehensive Health Check Report is not allowed: 403 Forbidden due to insufficient permissions.");
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                    return context.Response.CompleteAsync();
+                    await context.Response.CompleteAsync();
+                    return;
                 }
 
-                ComprehensiveHealthCheckReport dabHealthCheckReport = _healthCheckHelper.GetHealthCheckResponse(context, config);
-                string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
-                _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
-                return context.Response.WriteAsync(response);
+                string? response;
+                // Check if the cache is enabled 
+                if (config.CacheTtlSecondsForHealthReport > 0)
+                {
+                    try
+                    {
+                        response = await _cache.GetOrSetAsync<string?>(
+                            key: CACHE_KEY,
+                            async (FusionCacheFactoryExecutionContext<string?> ctx, CancellationToken ct) =>
+                            {
+                                string? response = await ExecuteHealthCheckAsync(config).ConfigureAwait(false);
+                                ctx.Options.SetDuration(TimeSpan.FromSeconds(config.CacheTtlSecondsForHealthReport));
+                                return response;
+                            });
+
+                        _logger.LogTrace($"Health check response is fetched from cache with key: {CACHE_KEY} and TTL: {config.CacheTtlSecondsForHealthReport} seconds.");
+                    }
+                    catch (Exception ex)
+                    {
+                        response = null; // Set response to null in case of an error
+                        _logger.LogError($"Error in caching health check response: {ex.Message}");
+                    }
+
+                    // Ensure cachedResponse is not null before calling WriteAsync
+                    if (response != null)
+                    {
+                        // Return the cached or newly generated response
+                        await context.Response.WriteAsync(response);
+                    }
+                    else
+                    {
+                        // Handle the case where cachedResponse is still null
+                        _logger.LogError("Error: The health check response is null.");
+                        context.Response.StatusCode = 500; // Internal Server Error
+                        await context.Response.WriteAsync("Failed to generate health check response.");
+                    }
+                }
+                else
+                {
+                    response = await ExecuteHealthCheckAsync(config).ConfigureAwait(false);
+                    // Return the newly generated response
+                    await context.Response.WriteAsync(response);
+                }
             }
             else
             {
                 _logger.LogError("Comprehensive Health Check Report Not Found: 404 Not Found.");
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return context.Response.CompleteAsync();
+                await context.Response.CompleteAsync();
             }
+
+            return;
+        }
+
+        private async Task<string> ExecuteHealthCheckAsync(RuntimeConfig config)
+        {
+            ComprehensiveHealthCheckReport dabHealthCheckReport = await _healthCheckHelper.GetHealthCheckResponseAsync(config);
+            string response = JsonSerializer.Serialize(dabHealthCheckReport, options: new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+            _logger.LogTrace($"Health check response writer writing status as: {dabHealthCheckReport.Status}");
+
+            return response;
         }
     }
 }

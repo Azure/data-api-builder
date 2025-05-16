@@ -55,7 +55,7 @@ public abstract class DatabaseObject
     /// <summary>
     /// Get the underlying SourceDefinition based on database object source type
     /// </summary>
-    public SourceDefinition SourceDefinition
+    public virtual SourceDefinition SourceDefinition
     {
         get
         {

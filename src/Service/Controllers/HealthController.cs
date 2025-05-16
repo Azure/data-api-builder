@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             if (IHttpContextAccessor != null && IHttpContextAccessor.HttpContext != null)
             {
-                await ComprehensiveHealthReportResponseWriter.WriteResponse(IHttpContextAccessor.HttpContext);
+                await ComprehensiveHealthReportResponseWriter.WriteResponseAsync(IHttpContextAccessor.HttpContext);
             }
 
             return;

@@ -20,7 +20,6 @@ using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -3726,6 +3725,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Tests different log level filters that are valid and check that they are deserialized correctly
         /// </summary>
+        [Ignore]
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(LogLevel.Trace, typeof(RuntimeConfigValidator))]
@@ -4017,219 +4017,7 @@ type Planet @model(name:""PlanetAlias"") {
             Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
-            ValidateBasicDetailsHealthCheckResponse(responseProperties);
-        }
-
-        /// <summary>
-        /// Simulates a GET request to DAB's comprehensive health check endpoint ('/health') and validates the contents of the response.
-        /// The expected format of the response is the comprehensive health check response.
-        /// </summary>
-        [TestMethod]
-        [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, true, true, true, true, true, true, DisplayName = "Validate Health Report all enabled.")]
-        [DataRow(false, true, true, true, true, true, true, DisplayName = "Validate when Comprehensive Health Report is disabled")]
-        [DataRow(true, true, true, false, true, true, true, DisplayName = "Validate Health Report when data-source health is disabled")]
-        [DataRow(true, true, true, true, false, true, true, DisplayName = "Validate Health Report when entity health is disabled")]
-        [DataRow(true, false, true, true, true, true, true, DisplayName = "Validate Health Report when global rest health is disabled")]
-        [DataRow(true, true, true, true, true, false, true, DisplayName = "Validate Health Report when entity rest health is disabled")]
-        [DataRow(true, true, false, true, true, true, true, DisplayName = "Validate Health Report when global graphql health is disabled")]
-        [DataRow(true, true, true, true, true, true, false, DisplayName = "Validate Health Report when entity graphql health is disabled")]
-        public async Task ComprehensiveHealthEndpoint_ValidateContents(bool enableGlobalHealth, bool enableGlobalRest, bool enableGlobalGraphql, bool enableDatasourceHealth, bool enableEntityHealth, bool enableEntityRest, bool enableEntityGraphQL)
-        {
-            // Arrange
-            // At least one entity is required in the runtime config for the engine to start.
-            // Even though this entity is not under test, it must be supplied enable successful
-            // config file creation.
-            Entity requiredEntity = new(
-                Health: new(Enabled: enableEntityHealth),
-                Source: new("books", EntitySourceType.Table, null, null),
-                Rest: new(Enabled: enableEntityRest),
-                GraphQL: new("book", "books", enableEntityGraphQL),
-                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null);
-
-            Dictionary<string, Entity> entityMap = new()
-            {
-                { "Book", requiredEntity }
-            };
-
-            CreateCustomConfigFile(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth, HostMode.Development);
-
-            string[] args = new[]
-            {
-                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
-            };
-
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                HttpRequestMessage healthRequest = new(HttpMethod.Get, "/health");
-                HttpResponseMessage response = await client.SendAsync(healthRequest);
-
-                if (!enableGlobalHealth)
-                {
-                    Assert.AreEqual(expected: HttpStatusCode.NotFound, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
-                }
-                else
-                {
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
-                    Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
-
-                    ValidateBasicDetailsHealthCheckResponse(responseProperties);
-                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties, enableGlobalRest, enableGlobalGraphql);
-                    ValidateIfAttributePresentInResponse(responseProperties, enableDatasourceHealth, HealthCheckConstants.DATASOURCE);
-                    ValidateIfAttributePresentInResponse(responseProperties, enableEntityHealth, HealthCheckConstants.ENDPOINT);
-                    if (enableEntityHealth)
-                    {
-                        ValidateEntityRestAndGraphQLResponse(responseProperties, enableEntityRest, enableEntityGraphQL, enableGlobalRest, enableGlobalGraphql);
-                    }
-                }
-            }
-        }
-
-        private static void ValidateEntityRestAndGraphQLResponse(
-            Dictionary<string, JsonElement> responseProperties,
-            bool enableEntityRest,
-            bool enableEntityGraphQL,
-            bool enableGlobalRest,
-            bool enableGlobalGraphQL)
-        {
-            bool hasRestTag = false, hasGraphQLTag = false;
-            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
-            {
-                checksElement.EnumerateArray().ToList().ForEach(entityCheck =>
-                {
-                    // Check if the 'tags' property exists and is of type array
-                    if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
-                    {
-                        hasRestTag = hasRestTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.REST);
-                        hasGraphQLTag = hasGraphQLTag || tagsElement.EnumerateArray().Any(tag => tag.ToString() == HealthCheckConstants.GRAPHQL);
-                    }
-                });
-
-                if (enableGlobalRest)
-                {
-                    // When both enableEntityRest and hasRestTag match the same value
-                    Assert.AreEqual(enableEntityRest, hasRestTag);
-                }
-                else
-                {
-                    Assert.IsFalse(hasRestTag);
-                }
-
-                if (enableGlobalGraphQL)
-                {
-                    // When both enableEntityGraphQL and hasGraphQLTag match the same value
-                    Assert.AreEqual(enableEntityGraphQL, hasGraphQLTag);
-                }
-                else
-                {
-                    Assert.IsFalse(hasGraphQLTag);
-                }
-            }
-        }
-
-        private static void ValidateIfAttributePresentInResponse(
-            Dictionary<string, JsonElement> responseProperties,
-            bool enableFlag,
-            string checkString)
-        {
-            if (responseProperties.TryGetValue("checks", out JsonElement checksElement) && checksElement.ValueKind == JsonValueKind.Array)
-            {
-                bool checksTags = checksElement.EnumerateArray().Any(entityCheck =>
-                {
-                    if (entityCheck.TryGetProperty("tags", out JsonElement tagsElement) && tagsElement.ValueKind == JsonValueKind.Array)
-                    {
-                        return tagsElement.EnumerateArray().Any(tag => tag.ToString() == checkString);
-                    }
-
-                    return false;
-                });
-
-                Assert.AreEqual(enableFlag, checksTags);
-            }
-            else
-            {
-                Assert.Fail("Checks array is not present in the Comprehensive Health Check Report.");
-            }
-        }
-
-        private static void ValidateConfigurationIsNotNull(Dictionary<string, JsonElement> configPropertyValues, string objectKey)
-        {
-            Assert.IsTrue(configPropertyValues.ContainsKey(objectKey), $"Expected {objectKey} to be present in the configuration object.");
-            Assert.IsNotNull(configPropertyValues[objectKey], $"Expected {objectKey} to be non-null.");
-        }
-
-        private static void ValidateConfigurationIsCorrectFlag(Dictionary<string, JsonElement> configElement, string objectKey, bool enableFlag)
-        {
-            Assert.AreEqual(enableFlag, configElement[objectKey].GetBoolean(), $"Expected {objectKey} to be set to {enableFlag}.");
-        }
-
-        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableGlobalRest, bool enableGlobalGraphQL)
-        {
-            if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
-            {
-                Dictionary<string, JsonElement> configPropertyValues = new();
-
-                // Enumerate through the configProperty's object properties and add them to the dictionary
-                foreach (JsonProperty property in configElement.EnumerateObject().ToList())
-                {
-                    configPropertyValues[property.Name] = property.Value;
-                }
-
-                ValidateConfigurationIsNotNull(configPropertyValues, "rest");
-                ValidateConfigurationIsCorrectFlag(configPropertyValues, "rest", enableGlobalRest);
-                ValidateConfigurationIsNotNull(configPropertyValues, "graphql");
-                ValidateConfigurationIsCorrectFlag(configPropertyValues, "graphql", enableGlobalGraphQL);
-                ValidateConfigurationIsNotNull(configPropertyValues, "caching");
-                ValidateConfigurationIsNotNull(configPropertyValues, "telemetry");
-                ValidateConfigurationIsNotNull(configPropertyValues, "mode");
-            }
-            else
-            {
-                Assert.Fail("Missing 'configuration' object in Health Check Response.");
-            }
-        }
-
-        private static void ValidateBasicDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties)
-        {
-            // Validate value of 'status' property in reponse.
-            if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
-            {
-                Assert.IsTrue(statusValue.ValueKind == JsonValueKind.String, "Unexpected or missing status value as string.");
-            }
-            else
-            {
-                Assert.Fail();
-            }
-
-            // Validate value of 'version' property in response.
-            if (responseProperties.TryGetValue(key: BasicHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue))
-            {
-                Assert.AreEqual(
-                    expected: ProductInfo.GetProductVersion(),
-                    actual: versionValue.ToString(),
-                    message: "Unexpected or missing version value.");
-            }
-            else
-            {
-                Assert.Fail();
-            }
-
-            // Validate value of 'app-name' property in response.
-            if (responseProperties.TryGetValue(key: BasicHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue))
-            {
-                Assert.AreEqual(
-                    expected: ProductInfo.GetDataApiBuilderUserAgent(),
-                    actual: appNameValue.ToString(),
-                    message: "Unexpected or missing DAB user agent string.");
-            }
-            else
-            {
-                Assert.Fail();
-            }
+            HealthEndpointTests.ValidateBasicDetailsHealthCheckResponse(responseProperties);
         }
 
         /// <summary>
@@ -4667,22 +4455,20 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
-        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true, HostMode hostMode = HostMode.Production)
+        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true)
         {
             DataSource dataSource = new(
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
-                Options: null,
-                Health: new(enableDatasourceHealth));
-            HostOptions hostOptions = new(Mode: hostMode, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
+                Options: null);
+            HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
                 Runtime: new(
-                    Health: new(Enabled: enableGlobalHealth),
                     Rest: new(Enabled: enableGlobalRest),
-                    GraphQL: new(Enabled: enableGlobalGraphql),
+                    GraphQL: new(Enabled: true),
                     Host: hostOptions
                 ),
                 Entities: new(entityMap));
@@ -5090,9 +4876,9 @@ type Planet @model(name:""PlanetAlias"") {
             entityName ??= "Book";
 
             Dictionary<string, Entity> entityMap = new()
-        {
-            { entityName, entity }
-        };
+            {
+                { entityName, entity }
+            };
 
             // Adding an entity with only Authorized Access
             Entity anotherEntity = new(

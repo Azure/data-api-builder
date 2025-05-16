@@ -1,0 +1,51 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {
+          Audience: ,
+          Issuer: 
+        }
+      }
+    }
+  },
+  Entities: [
+    {
+      MyEntity: {
+        Source: {
+          Object: MyTable,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: MyEntity,
+          Plural: MyEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Cache: {
+          Enabled: true,
+          TtlSeconds: 1
+        }
+      }
+    }
+  ]
+}

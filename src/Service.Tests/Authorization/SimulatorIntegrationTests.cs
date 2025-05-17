@@ -33,10 +33,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         public static void SetupAsync(TestContext context)
         {
             SetupCustomRuntimeConfiguration();
-            string[] args = new[]
-            {
+            string[] args =
+            [
                 $"--ConfigFileName={SIMULATOR_CONFIG}"
-            };
+            ];
 
             _server = new(Program.CreateWebHostBuilder(args));
             _client = _server.CreateClient();
@@ -66,16 +66,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("Anonymous", true, HttpStatusCode.Forbidden, DisplayName = "Simulator - Anonymous role does not have proper permissions.")]
-        [DataRow("Authenticated", true, HttpStatusCode.Forbidden, DisplayName = "Simulator - Authenticated but Authenticated role does not have proper permissions.")]
-        [DataRow("authorizationHandlerTester", false, HttpStatusCode.OK, DisplayName = "Simulator - Successful access with role: AuthorizationHandlerTester")]
+        [DataRow("Anonymous", true, HttpStatusCode.Forbidden,
+            DisplayName = "Simulator - Anonymous role does not have proper permissions.")]
+        [DataRow("Authenticated", true, HttpStatusCode.Forbidden,
+            DisplayName = "Simulator - Authenticated but Authenticated role does not have proper permissions.")]
+        [DataRow("authorizationHandlerTester", false, HttpStatusCode.OK,
+            DisplayName = "Simulator - Successful access with role: AuthorizationHandlerTester")]
         public async Task TestSimulatorRequests(string clientRole, bool expectError, HttpStatusCode expectedStatusCode)
         {
             string graphQLQueryName = "journal_by_pk";
             string graphQLQuery = @"{
                 journal_by_pk(id: 1) {
                     id,
-                    journalname 
+                    journalname
                 }
                 }";
             string expectedResult = @"{ ""id"":1,""journalname"":""Journal1""}";
@@ -87,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 queryName: graphQLQueryName,
                 variables: null,
                 clientRoleHeader: clientRole
-                );
+            );
 
             if (expectError)
             {
@@ -111,19 +114,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private static void SetupCustomRuntimeConfiguration()
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            RuntimeConfigProvider configProvider =
+                TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 
-            AuthenticationOptions authenticationOptions = new(Provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION, null);
+            AuthenticationOptions authenticationOptions =
+                new(Provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION, null);
             RuntimeConfig configWithCustomHostMode = config
                 with
             {
-                Runtime = config.Runtime
-                with
+                Runtime = config.Runtime with
                 {
-                    Host = config.Runtime.Host
-                with
-                    { Authentication = authenticationOptions }
+                    Host = config.Runtime.Host with
+                    {
+                        Authentication = authenticationOptions
+                    }
                 }
             };
 

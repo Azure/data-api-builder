@@ -8,7 +8,6 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry;
 using HotChocolate.Execution;
-using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
@@ -56,7 +55,7 @@ public sealed class BuildRequestStateMiddleware
                     activity.TrackMainControllerActivityStarted(
                         httpMethod: method,
                         userAgent: httpContext.Request.Headers["User-Agent"].ToString(),
-                        actionType: (context.Request.Query!.ToString().Contains("mutation") ? OperationType.Mutation : OperationType.Query).ToString(),
+                        actionType: context.Request.OperationName ?? "GraphQL",
                         httpURL: string.Empty, // GraphQL has no route
                         queryString: null, // GraphQL has no query-string
                         userRole: httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].FirstOrDefault() ?? httpContext.User.FindFirst("role")?.Value,
@@ -91,12 +90,7 @@ public sealed class BuildRequestStateMiddleware
                         statusCode = HttpStatusCode.InternalServerError;
                     }
 
-                    Exception ex = new();
-                    if (context.Result.Errors is not null)
-                    {
-                        string errorMessage = context.Result.Errors[0].Message;
-                        ex = new(errorMessage);
-                    }
+                    Exception ex = new("An error occurred in executing GraphQL operation.");
 
                     // Activity will track error
                     activity?.TrackMainControllerActivityFinishedWithException(ex, statusCode);

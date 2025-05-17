@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -142,7 +143,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // the runtime config doesn't define default value, the request is invalid.
                 // Ideally should check if a default is set in sql, but no easy way to do so - would have to parse procedure's object definition
                 // See https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-parameters-transact-sql?view=sql-server-ver16#:~:text=cursor%2Dreference%20parameter.-,has_default_value,-bit
-                // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant. 
+                // For SQL Server not populating this metadata for us; MySQL doesn't seem to allow parameter defaults so not relevant.
                 if (spRequestCtx.ResolvedParameters!.ContainsKey(paramKey)
                     || paramDefinition.HasConfigDefault)
                 {

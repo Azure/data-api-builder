@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow("Test1", "Test1")]
         public void EntityNameBecomesObjectName(string entityName, string expected)
         {
-            DatabaseObject dbObject = new DatabaseTable() { TableDefinition = new() };
+            DatabaseObject dbObject = new DatabaseTable { TableDefinition = new SourceDefinition() };
 
             ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 entityName,

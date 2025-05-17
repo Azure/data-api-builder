@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             FieldNode? queryField = _ctx.Selection.SyntaxNode;
 
             IOutputType outputType = schemaField.Type;
-            _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+            _underlyingFieldType = outputType.NamedType<ObjectType>();
 
             PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
 
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
-                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+                _underlyingFieldType = outputType.NamedType<ObjectType>();
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -387,7 +387,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
-            _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+            _underlyingFieldType = outputType.NamedType<ObjectType>();
 
             // extract the query argument schemas before switching schemaField to point to *Connetion.items
             // since the pagination arguments are not placed on the items, but on the pagination query
@@ -409,7 +409,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 schemaField = ExtractItemsSchemaField(schemaField);
 
                 outputType = schemaField.Type;
-                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+                _underlyingFieldType = outputType.NamedType<ObjectType>();
 
                 // this is required to correctly keep track of which pagination metadata
                 // refers to what section of the json
@@ -702,6 +702,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// takes place which is required to fetch nested data.
         /// </summary>
         /// <param name="selections">Fields selection in the GraphQL Query.</param>
+        // TODO : This is inefficient and could lead to errors. we should rewrite this to use the ISelection API.
         private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections, RuntimeConfigProvider runtimeConfigProvider)
         {
             foreach (ISelectionNode node in selections)
@@ -717,7 +718,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     FragmentSpreadNode fragmentSpread = (FragmentSpreadNode)node;
-                    DocumentNode document = _ctx.Document;
+                    DocumentNode document = _ctx.Operation.Document;
                     FragmentDefinitionNode fragmentDocumentNode = document.GetNodes()
                         .Where(n => n.Kind == SyntaxKind.FragmentDefinition)
                         .Cast<FragmentDefinitionNode>()
@@ -831,12 +832,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Processes the groupBy field and populates GroupByMetadata.
-        /// 
+        ///
         /// Steps:
         /// 1. Extract the 'fields' argument.
         ///    - For each field argument, add it as a column in the query and to GroupByMetadata.
         /// 2. Process the selections (fields and aggregations).
-        /// 
+        ///
         /// Example:
         /// groupBy(fields: [categoryid]) {
         ///   fields {
@@ -946,11 +947,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IObjectField schemaField = ctx.Selection.Field;
 
             // Get the 'group by' field from the schema's entity type
-            IObjectField groupByField = GraphQLUtils.UnderlyingGraphQLEntityType(schemaField.Type)
+            IObjectField groupByField = schemaField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_FIELD_NAME];
 
             // Get the 'aggregations' field from the 'group by' entity type
-            IObjectField aggregationsObjectField = GraphQLUtils.UnderlyingGraphQLEntityType(groupByField.Type)
+            IObjectField aggregationsObjectField = groupByField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME];
 
             // Iterate through each selection in the aggregation field
@@ -1010,7 +1011,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)havingArg.Value.Value!;
 
                         // Retrieve the corresponding aggregation operation field from the schema
-                        IObjectField operationObjectField = GraphQLUtils.UnderlyingGraphQLEntityType(aggregationsObjectField.Type)
+                        IObjectField operationObjectField = aggregationsObjectField.Type.NamedType<ObjectType>()
                             .Fields[operation.ToString()];
 
                         // Parse the filtering conditions and apply them to the aggregation

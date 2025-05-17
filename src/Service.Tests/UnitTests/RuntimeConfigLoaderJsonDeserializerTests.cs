@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="envVarName">The name of the environment variable.</param>
         /// <param name="replaceEnvVar">A boolean indicating whether to replace the environment variable with its value.</param>
         /// <returns>
-        /// If replacement is enabled, the value of the environment variable. 
+        /// If replacement is enabled, the value of the environment variable.
         /// Otherwise, a placeholder string in the format "@env('variableName')".
         /// </returns>
         private static string GetExpectedPropertyValue(string envVarName, bool replaceEnvVar)
@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Method to validate that FilenotFoundexception is thrown if sub-data source file is not found.
+        /// Method to validate that FileNotFoundException is thrown if sub-data source file is not found.
         /// </summary>
         [TestMethod]
         public void TestLoadRuntimeConfigSubFilesFails()
@@ -362,7 +362,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                             ""set-session-context"": true
                                         },
                                     ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
-    
+
                                     },
                                     ""data-source-files"":[""FileNotFound.json""],
                                     ""entities"":{ }
@@ -421,7 +421,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ""create"": {
             ""enabled"": false
         }
-      }      
+      }
     },
     ""host"": {
       ""mode"": ""development"",
@@ -544,10 +544,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 case "cosmosdb_nosql":
                     databaseTypeEnvVariable = $"@env('COSMOS_DB_TYPE')";
                     options = @",
-                        ""options"": { 
+                        ""options"": {
                             ""database"": ""@env('DATABASE_NAME')"",
                             ""container"": ""@env('DATABASE_CONTAINER')"",
-                            ""schema"": ""@env('GRAPHQL_SCHEMA_PATH')"" 
+                            ""schema"": ""@env('GRAPHQL_SCHEMA_PATH')""
                           }";
                     break;
                 case "mysql":

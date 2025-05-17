@@ -348,9 +348,7 @@ namespace Azure.DataApiBuilder.Service
         /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
-        /// <param name="graphQLRuntimeOptions">
-        /// The GraphQL runtime options.
-        /// </param>
+        /// <param name="graphQLRuntimeOptions">The GraphQL runtime options.</param>
         private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()

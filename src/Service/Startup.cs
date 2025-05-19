@@ -409,9 +409,6 @@ namespace Azure.DataApiBuilder.Service
                         // If user error i.e. validation error or conflict error with datasource, then retain location/path
                         if (!thrownException.StatusCode.IsClientError())
                         {
-                            // Replace the problematic line with the correct method call for the IError interface.
-                            // The `RemoveLocations` method does not exist in the IError interface. Instead, you can use the `WithLocations` method to clear locations by passing an empty list.
-
                             error = error.WithLocations(Array.Empty<Location>());
                         }
                     }

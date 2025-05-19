@@ -3,6 +3,7 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -273,68 +274,39 @@ namespace Azure.DataApiBuilder.Service
             services.AddHttpContextAccessor();
 
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
-            .ConfigureHttpClient((serviceProvider, client) =>
-            {
-                IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-                HttpContext? httpContext = httpCtxAccessor.HttpContext;
-
-                if (httpContext is not null)
+                .ConfigureHttpClient((serviceProvider, client) =>
                 {
-                    string scheme = httpContext.Request.Scheme;  // "http" or "https"
-                    string host = httpContext.Request.Host.Host; // e.g. "localhost"
-                    int port = scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 5001 : 5000; // default fallback
+                    IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                    HttpContext? httpContext = httpCtxAccessor.HttpContext;
 
-                    string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-
-                    if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
+                    if (httpContext is not null)
                     {
-                        foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-                        {
-                            string trimmed = part.Trim();
-
-                            if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
-                            {
-                                int idx = trimmed.LastIndexOf(':');
-                                if (idx > -1 && int.TryParse(trimmed[(idx + 1)..], out int parsedWildcardPort) && parsedWildcardPort > 0)
-                                {
-                                    port = parsedWildcardPort;
-                                    break;
-                                }
-                            }
-
-                            if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) &&
-                                uri.Scheme.Equals(scheme, StringComparison.OrdinalIgnoreCase) &&
-                                uri.Port > 0)
-                            {
-                                port = uri.Port;
-                                break;
-                            }
-                        }
+                        string scheme = httpContext.Request.Scheme;  // "http" or "https"
+                        string host = httpContext.Request.Host.Host; // e.g. "localhost"
+                        int port = GetContainerInternalPort(httpContext); // e.g. 5000
+                        string baseUri = $"{scheme}://{host}:{port}";
+                        client.BaseAddress = new Uri(baseUri);
                     }
 
-                    string baseUri = $"{scheme}://{host}:{port}";
-                    client.BaseAddress = new Uri(baseUri);
-                }
-
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                client.Timeout = TimeSpan.FromSeconds(200);
-            })
-            .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
-            {
-                bool allowSelfSigned =
-                    Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-
-                HttpClientHandler handler = new();
-
-                if (allowSelfSigned)
+                    client.DefaultRequestHeaders.Accept.Clear();
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    client.Timeout = TimeSpan.FromSeconds(200);
+                })
+                .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
                 {
-                    handler.ServerCertificateCustomValidationCallback =
-                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-                }
+                    bool allowSelfSigned =
+                        Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
-                return handler;
-            });
+                    HttpClientHandler handler = new();
+
+                    if (allowSelfSigned)
+                    {
+                        handler.ServerCertificateCustomValidationCallback =
+                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                    }
+
+                    return handler;
+                });
 
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
             {
@@ -983,6 +955,53 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(IAuthorizationHandler).FullName);
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
             LoggerFilters.AddFilter("default");
+        }
+
+        /// <summary>
+        /// Get the internal port of the container.
+        /// </summary>
+        /// <param name="httpContext">The HttpContext</param>
+        /// <returns>The internal container port</returns>
+        private static int GetContainerInternalPort(HttpContext httpContext)
+        {
+            // if PORT specified as enviornment variable, use that
+            string? envPort = Environment.GetEnvironmentVariable("PORT");
+            if (int.TryParse(envPort, out int port) && port > 0)
+            {
+                return port;
+            }
+
+            // use default port 5000 or 5001 based on scheme
+            string scheme = httpContext.Request.Scheme;
+            int defaultPort = scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 5001 : 5000;
+
+            // check if ASPNETCORE_URLS is set, and if so, parse it and use the port from there
+            string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+            if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
+            {
+                foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string trimmed = part.Trim();
+
+                    // match format like http://+:5000
+                    if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (int.TryParse(trimmed.Split(':').Last(), out int wildcardPort) && wildcardPort > 0)
+                        {
+                            return wildcardPort;
+                        }
+                    }
+
+                    if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) &&
+                        uri.Scheme.Equals(scheme, StringComparison.OrdinalIgnoreCase) &&
+                        uri.Port > 0)
+                    {
+                        return uri.Port;
+                    }
+                }
+            }
+
+            return defaultPort;
         }
     }
 }

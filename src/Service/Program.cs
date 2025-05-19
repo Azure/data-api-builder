@@ -82,6 +82,8 @@ namespace Azure.DataApiBuilder.Service
                     ILogger<Startup>? startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
+                    string port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+                    webBuilder.UseUrls($"http://+:{port}");
                 });
         }
 

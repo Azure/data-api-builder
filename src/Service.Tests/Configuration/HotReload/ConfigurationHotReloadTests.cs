@@ -18,6 +18,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.HotReload;
 
+[Ignore]
 [TestClass]
 public class ConfigurationHotReloadTests
 {

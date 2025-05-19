@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -27,6 +28,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Telemetry;
+using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
@@ -403,6 +405,15 @@ namespace Azure.DataApiBuilder.Service
                             .WithException(null)
                             .WithMessage(thrownException.Message)
                             .WithCode($"{thrownException.SubStatusCode}");
+
+                        // If user error i.e. validation error or conflict error with datasource, then retain location/path
+                        if (!thrownException.StatusCode.IsClientError())
+                        {
+                            // Replace the problematic line with the correct method call for the IError interface.
+                            // The `RemoveLocations` method does not exist in the IError interface. Instead, you can use the `WithLocations` method to clear locations by passing an empty list.
+
+                            error = error.WithLocations(Array.Empty<Location>());
+                        }
                     }
 
                     return error;

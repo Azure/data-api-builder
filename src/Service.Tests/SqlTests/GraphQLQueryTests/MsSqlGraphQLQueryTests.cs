@@ -64,6 +64,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string msSqlQuery = $"SELECT id, title FROM books where id IN (1,2) ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithVariables(msSqlQuery);
+        }
+
+        [TestMethod]
         public async Task MultipleResultQueryWithMappings()
         {
             string msSqlQuery = @"
@@ -102,6 +109,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ,INCLUDE_NULL_VALUES";
 
             await OneToOneJoinQuery(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test In operator with a One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterInOneToOneJoinQuery()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[id] AS [id]
+                    ,[table0].[title] AS [title]
+                    ,JSON_QUERY([table1_subq].[data]) AS [websiteplacement]
+                FROM [dbo].[books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[price] AS [price]
+                    FROM [dbo].[book_website_placements] AS [table1]
+                    WHERE [table1].[book_id] = [table0].[id]
+                    ORDER BY [table1].[id] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                        ,WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE (
+                        [table0].[title] IN ('Awesome book', 'Also Awesome book')
+                        AND EXISTS (
+                            SELECT 1
+                            FROM [dbo].[book_website_placements] AS [table6]
+                            WHERE [table6].[book_id] IN (1, 2)
+                              AND [table6].[book_id] = [table0].[id]
+                              AND [table0].[id] = [table6].[book_id]
+                        )
+                    )
+                ORDER BY [table0].[id] ASC
+                FOR JSON PATH
+                    ,INCLUDE_NULL_VALUES";
+
+            await InFilterOneToOneJoinQuery(msSqlQuery);
         }
 
         /// <summary>

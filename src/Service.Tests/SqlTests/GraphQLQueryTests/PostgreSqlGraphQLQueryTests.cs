@@ -61,6 +61,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(postgresQuery);
         }
 
+        [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books WHERE id IN (1,2) ORDER BY id asc LIMIT 100) as table0";
+            await InQueryWithVariables(postgresQuery);
+        }
+
         /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
@@ -83,12 +90,21 @@ FROM
                WHERE ""table1"".""book_id"" = ""table0"".""id""
                ORDER BY ""table1"".""id"" ASC
                LIMIT 1) AS ""subq6"") AS ""table1_subq"" ON TRUE
-     WHERE 1 = 1
+     WHERE (
+        ""table0"".""title"" IN ('Awesome book', 'Also Awesome book')
+        AND EXISTS (
+            SELECT 1
+            FROM ""public"".""book_website_placements"" AS ""table6""
+            WHERE ""table6"".""book_id"" IN (1, 2)
+                AND ""table6"".""book_id"" = ""table0"".""id""
+                AND ""table0"".""id"" = ""table6"".""book_id""
+        )
+    )
      ORDER BY ""table0"".""id"" ASC
      LIMIT 100) AS ""subq7""
             ";
 
-            await OneToOneJoinQuery(postgresQuery);
+            await InFilterOneToOneJoinQuery(postgresQuery);
         }
 
         /// <summary>

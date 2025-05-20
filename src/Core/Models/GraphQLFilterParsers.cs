@@ -718,7 +718,13 @@ public static class FieldFilterParser
 
     private static object? PreprocessInOperatorValues(object value)
     {
-        if (value is not List<IValueNode> inValues || inValues.Count > 100)
+        if (value is not List<IValueNode> inValues)
+        {
+            throw new DataApiBuilderException(
+                message: "Bad syntax: Invalid IN operator values",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        } else if (inValues.Count > 100)
         {
             throw new DataApiBuilderException(
                 message: "IN operator filter object cannot process more than 100 values at a time.",
@@ -726,7 +732,7 @@ public static class FieldFilterParser
                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
         }
 
-        List<IValueNode> filteredNodes = inValues.Where(node => node.Value != null).ToList();
+            List<IValueNode> filteredNodes = inValues.Where(node => node.Value != null).ToList();
         return filteredNodes.Count == 0 ? null : filteredNodes;
     }
 

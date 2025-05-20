@@ -29,6 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
                 FROM
                   (SELECT `table0`.`id` AS `id`,
+
                           `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
@@ -99,6 +100,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(mySqlQuery);
         }
 
+        [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`title` AS `title`
+                   FROM `books` AS `table0`
+                   WHERE `table1`.`id` IN (1,2)
+                   ORDER BY `table0`.`id` asc
+                   LIMIT 100) AS `subq1`";
+
+            await InQueryWithVariables(mySqlQuery);
+        }
+
         /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
@@ -120,12 +137,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                             WHERE `table1`.`book_id` = `table0`.`id`
                             ORDER BY `table1`.`id` ASC LIMIT 1
                             ) AS `subq6`) AS `table1_subq` ON TRUE
-                    WHERE 1 = 1
+                    WHERE (
+                        `table0`.`title` IN ('Awesome book', 'Also Awesome book')
+                        AND EXISTS (
+                            SELECT 1
+                            FROM `book_website_placements` AS `table6`
+                            WHERE `table6`.`book_id` IN (1, 2)
+                              AND `table6`.`book_id` = `table0`.`id`
+                              AND `table0`.`id` = `table6`.`book_id`
+                        )
+                    )
                     ORDER BY `table0`.`id` ASC LIMIT 100
                     ) AS `subq7`
             ";
 
-            await OneToOneJoinQuery(mySqlQuery);
+            await InFilterOneToOneJoinQuery(mySqlQuery);
         }
 
         /// <summary>

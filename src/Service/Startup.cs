@@ -279,16 +279,25 @@ namespace Azure.DataApiBuilder.Service
                 {
                     IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                     HttpContext? httpContext = httpCtxAccessor.HttpContext;
+                    string baseUri = string.Empty;
 
                     if (httpContext is not null)
                     {
                         string scheme = httpContext.Request.Scheme;  // "http" or "https"
-                        string host = httpContext.Request.Host.Host; // e.g. "localhost"
-                        int port = GetContainerInternalPort(httpContext); // e.g. 5000
-                        string baseUri = $"{scheme}://{host}:{port}";
+                        string host = httpContext.Request.Host.Host ?? "localhost"; // e.g. "localhost"
+                        int port = ResolveInternalPort(httpContext);
+                        baseUri = $"{scheme}://{host}:{port}";
+                        client.BaseAddress = new Uri(baseUri);
+                    }
+                    else
+                    {
+                        // Optional fallback if ever needed in non-request scenarios
+                        baseUri = $"http://localhost:{ResolveInternalPort()}";
                         client.BaseAddress = new Uri(baseUri);
                     }
 
+                    Console.WriteLine("HealthCheck HttpClient BaseAddress: {BaseAddress}", client.BaseAddress);
+                    _logger.LogInformation("Configured HealthCheck HttpClient BaseAddress as {BaseAddress}", baseUri);
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);
@@ -963,46 +972,41 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="httpContext">The HttpContext</param>
         /// <returns>The internal container port</returns>
-        private static int GetContainerInternalPort(HttpContext httpContext)
+        private static int ResolveInternalPort(HttpContext? httpContext = null)
         {
-            // if PORT specified as enviornment variable, use that
-            string? envPort = Environment.GetEnvironmentVariable("PORT");
-            if (int.TryParse(envPort, out int port) && port > 0)
+            // When inside a request, just use the port that was used.
+            if (httpContext?.Request.Host.Port is int livePort && livePort > 0)
             {
-                return port;
+                return livePort;
             }
 
-            // use default port 5000 or 5001 based on scheme
-            string scheme = httpContext.Request.Scheme;
-            int defaultPort = scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 5001 : 5000;
-
-            // check if ASPNETCORE_URLS is set, and if so, parse it and use the port from there
-            string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-            if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
+            // No HttpContext (e.g., background code) → parse ASPNETCORE_URLS
+            string? urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+            if (!string.IsNullOrWhiteSpace(urls))
             {
-                foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                foreach (string part in urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    string trimmed = part.Trim();
+                    // Trim & ignore trailing slash
+                    string trimmed = part.Trim().TrimEnd('/');
 
-                    // match format like http://+:5000
-                    if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (int.TryParse(trimmed.Split(':').Last(), out int wildcardPort) && wildcardPort > 0)
-                        {
-                            return wildcardPort;
-                        }
-                    }
-
-                    if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) &&
-                        uri.Scheme.Equals(scheme, StringComparison.OrdinalIgnoreCase) &&
-                        uri.Port > 0)
+                    // Try absolute URI parse first
+                    if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && uri.Port > 0)
                     {
                         return uri.Port;
+                    }
+
+                    // Fallback: pattern like "http://+:5000" or "https://*:443"
+                    int idx = trimmed.LastIndexOf(':');
+                    if (idx >= 0 && int.TryParse(trimmed[(idx + 1)..], out int parsed) && parsed > 0)
+                    {
+                        return parsed;
                     }
                 }
             }
 
-            return defaultPort;
+            // Fallback/Default if nothing else worked
+            return 5000;
         }
+
     }
 }

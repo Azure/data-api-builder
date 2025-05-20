@@ -3,12 +3,12 @@
 
 using System.IO.Abstractions;
 using System.Reflection;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Json.Schema;
 using Microsoft.Extensions.Logging;
-using NJsonSchema;
-using NJsonSchema.Validation;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -17,6 +17,14 @@ public class JsonConfigSchemaValidator
     private ILogger<JsonConfigSchemaValidator> _logger;
     private IFileSystem _fileSystem;
     private HttpClient _httpClient;
+
+    private static readonly JsonSerializerOptions _jsonSerializerOptions = RuntimeConfigLoader.GetSerializationOptions();
+    private static readonly JsonDocumentOptions _jsonDocumentOptions = new()
+    {
+        AllowTrailingCommas = _jsonSerializerOptions.AllowTrailingCommas,
+        CommentHandling = _jsonSerializerOptions.ReadCommentHandling,
+        MaxDepth = _jsonSerializerOptions.MaxDepth
+    };
 
     /// <summary> 
     /// Sets the logger, file system and httpClient for the JSON config schema validator. 
@@ -38,21 +46,22 @@ public class JsonConfigSchemaValidator
     /// <param name="jsonData">The JSON data to validate.</param> 
     /// <returns>A tuple containing a boolean indicating
     /// if the validation was successful and a collection of validation errors if there were any.</returns> 
-    public async Task<JsonSchemaValidationResult> ValidateJsonConfigWithSchemaAsync(string jsonSchema, string jsonData)
+    public JsonSchemaValidationResult ValidateJsonConfigWithSchema(string jsonSchema, string jsonData)
     {
         try
         {
-            JsonSchema schema = await JsonSchema.FromJsonAsync(jsonSchema);
-            ICollection<ValidationError> validationErrors = schema.Validate(jsonData, SchemaType.JsonSchema);
+            JsonSchema schema = JsonSchema.FromText(jsonSchema, _jsonSerializerOptions);
+            JsonDocument document = JsonDocument.Parse(jsonData, _jsonDocumentOptions);
+            EvaluationResults evaluationResults = schema.Evaluate(document);
 
-            if (!validationErrors.Any())
+            if (evaluationResults.IsValid)
             {
                 _logger!.LogInformation("The config satisfies the schema requirements.");
                 return new(isValid: true, errors: null);
             }
             else
             {
-                return new(isValid: false, errors: validationErrors);
+                return new(isValid: false, errors: evaluationResults.Errors);
             }
         }
         catch (Exception e)

@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             //              userid: 10
             //            }
             //          }){
-            //            <selection_set>   
+            //            <selection_set>
             //          }
             //      }
 
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             //              username: "DAB"
             //            }
             //          }){
-            //            <selection_set>   
+            //            <selection_set>
             //          }
             //      }
 

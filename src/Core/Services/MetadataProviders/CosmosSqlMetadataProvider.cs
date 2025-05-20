@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         ///         stars: [Star],
         ///         sun: Star
         ///     }
-        ///     
+        ///
         ///     type Star {
         ///         id : ID,
         ///         name : String
@@ -163,7 +163,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             // b) Once it is found, start collecting all the paths for each entity and its field.
             foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
             {
-                if (typeDefinition is ObjectTypeDefinitionNode node && node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
+                if (typeDefinition is ObjectTypeDefinitionNode node && node.Directives.Any(a => a.Name.Value == ModelDirective.Names.MODEL))
                 {
                     string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 

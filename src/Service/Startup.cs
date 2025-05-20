@@ -3,6 +3,7 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -272,22 +273,45 @@ namespace Azure.DataApiBuilder.Service
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
                 .ConfigureHttpClient((serviceProvider, client) =>
                 {
-                    IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-                    HttpContext? httpContext = httpContextAccessor.HttpContext;
+                    IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                    HttpContext? httpContext = httpCtxAccessor.HttpContext;
+                    string baseUri = string.Empty;
 
-                    if (httpContext != null)
+                    if (httpContext is not null)
                     {
-                        // Build base address from request
-                        string baseUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+                        string scheme = httpContext.Request.Scheme;  // "http" or "https"
+                        string host = httpContext.Request.Host.Host ?? "localhost"; // e.g. "localhost"
+                        int port = ResolveInternalPort(httpContext);
+                        baseUri = $"{scheme}://{host}:{port}";
                         client.BaseAddress = new Uri(baseUri);
-
-                        // Set default Accept header
-                        client.DefaultRequestHeaders.Accept.Clear();
-                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    }
+                    else
+                    {
+                        // Optional fallback if ever needed in non-request scenarios
+                        baseUri = $"http://localhost:{ResolveInternalPort()}";
+                        client.BaseAddress = new Uri(baseUri);
                     }
 
-                    // Optional: Set a timeout
+                    Console.WriteLine("HealthCheck HttpClient BaseAddress: {BaseAddress}", client.BaseAddress);
+                    _logger.LogInformation("Configured HealthCheck HttpClient BaseAddress as {BaseAddress}", baseUri);
+                    client.DefaultRequestHeaders.Accept.Clear();
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);
+                })
+                .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
+                {
+                    bool allowSelfSigned =
+                        Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+                    HttpClientHandler handler = new();
+
+                    if (allowSelfSigned)
+                    {
+                        handler.ServerCertificateCustomValidationCallback =
+                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                    }
+
+                    return handler;
                 });
 
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
@@ -941,5 +965,47 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
             LoggerFilters.AddFilter("default");
         }
+
+        /// <summary>
+        /// Get the internal port of the container.
+        /// </summary>
+        /// <param name="httpContext">The HttpContext</param>
+        /// <returns>The internal container port</returns>
+        private static int ResolveInternalPort(HttpContext? httpContext = null)
+        {
+            // When inside a request, just use the port that was used.
+            if (httpContext?.Request.Host.Port is int livePort && livePort > 0)
+            {
+                return livePort;
+            }
+
+            // No HttpContext (e.g., background code) → parse ASPNETCORE_URLS
+            string? urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+            if (!string.IsNullOrWhiteSpace(urls))
+            {
+                foreach (string part in urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    // Trim & ignore trailing slash
+                    string trimmed = part.Trim().TrimEnd('/');
+
+                    // Try absolute URI parse first
+                    if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && uri.Port > 0)
+                    {
+                        return uri.Port;
+                    }
+
+                    // Fallback: pattern like "http://+:5000" or "https://*:443"
+                    int idx = trimmed.LastIndexOf(':');
+                    if (idx >= 0 && int.TryParse(trimmed[(idx + 1)..], out int parsed) && parsed > 0)
+                    {
+                        return parsed;
+                    }
+                }
+            }
+
+            // Fallback/Default if nothing else worked
+            return 5000;
+        }
+
     }
 }

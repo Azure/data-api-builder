@@ -296,6 +296,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests nested filter with an IN and OR clause.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterWithOrAndIn()
+        {
+            string defaultSchema = GetPreIndentDefaultSchema();
+
+            string existsPredicate = $@"
+                EXISTS( SELECT 1 FROM {defaultSchema}[publishers] AS [table1]
+                    WHERE [table1].[name] IN ('TBD Publishing One')
+                    AND [table0].[publisher_id] = [table1].[id])
+                OR EXISTS( SELECT 1 FROM {defaultSchema}[authors] AS [table3]
+                           INNER JOIN {defaultSchema}[book_author_link] AS [table5]
+                           ON [table5].[book_id] = [table0].[id]
+                           WHERE [table3].[name] IN ('Aniruddh')
+                           AND [table5].[author_id] = [table3].[id])";
+
+            await TestNestedFilterWithOrAndIN(existsPredicate, roleName: "authenticated");
+        }
+
+        /// <summary>
         /// Gets the default schema for
         /// MsSql.
         /// </summary>

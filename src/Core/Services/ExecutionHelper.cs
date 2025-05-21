@@ -321,7 +321,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             // In case of ListType on scalar types, argumentSchema.Type.TypeName().Value unwraps down to the namednode type and returns the type of the value node.
             // For example, if the argumentSchema is a list of Ints, the type name will be "Int" and not "[Int]".
-            if (argumentSchema.Type.IsListType())
+            if (value.Value is List<IValueNode>  && argumentSchema.Type.IsListType())
             {
                 return value.Value;
             }

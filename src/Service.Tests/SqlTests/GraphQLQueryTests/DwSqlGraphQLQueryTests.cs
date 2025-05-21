@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                         '{' +
                             N'""id"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [id]), 'json'), 'null') + ',' +
                             N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' +
-                            N'""websiteplacement"":' + ISNULL('""' + STRING_ESCAPE([websiteplacement], 'json') + '""', 'null') +
+                            N'""websiteplacement"":' + ISNULL([websiteplacement], 'null') +
                         '}',
                         ', '
                     ) + ']',

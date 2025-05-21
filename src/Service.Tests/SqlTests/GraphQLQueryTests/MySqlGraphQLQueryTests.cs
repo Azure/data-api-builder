@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using HotChocolate.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -109,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                   (SELECT `table0`.`id` AS `id`,
                           `table0`.`title` AS `title`
                    FROM `books` AS `table0`
-                   WHERE `table1`.`id` IN (1,2)
+                   WHERE `table0`.`id` IN (1,2)
                    ORDER BY `table0`.`id` asc
                    LIMIT 100) AS `subq1`";
 
@@ -137,6 +139,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                             WHERE `table1`.`book_id` = `table0`.`id`
                             ORDER BY `table1`.`id` ASC LIMIT 1
                             ) AS `subq6`) AS `table1_subq` ON TRUE
+                    WHERE 1 = 1
+                    ORDER BY `table0`.`id` ASC LIMIT 100
+                    ) AS `subq7`
+            ";
+
+            await OneToOneJoinQuery(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Test IN filter with One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InfilterInOneToOneJoinQuery()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq7`.`id`, 'title', `subq7`.`title`, 'websiteplacement',
+                                `subq7`.`websiteplacement`)), JSON_ARRAY()) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table1_subq`.`data` AS `websiteplacement`
+                    FROM `books` AS `table0`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('price', `subq6`.`price`, 'book_id', `subq6`.`book_id`) AS `data` FROM (
+                            SELECT `table1`.`price` AS `price`,
+                                    `table1`.`book_id` AS `book_id`
+                            FROM `book_website_placements` AS `table1`
+                            WHERE `table1`.`book_id` = `table0`.`id`
+                            ORDER BY `table1`.`id` ASC LIMIT 1
+                            ) AS `subq6`) AS `table1_subq` ON TRUE
                     WHERE (
                         `table0`.`title` IN ('Awesome book', 'Also Awesome book')
                         AND EXISTS (
@@ -147,11 +179,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                               AND `table0`.`id` = `table6`.`book_id`
                         )
                     )
-                    ORDER BY `table0`.`id` ASC LIMIT 100
+                    ORDER BY `table0`.`id` DESC LIMIT 100
                     ) AS `subq7`
             ";
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                  books(filter:  {
+                     title:  {
+                        in: [""Awesome book"", ""Also Awesome book""]
+                     }
+                  } orderBy:  {
+                     id: DESC
+                  }){
+                    items{
+                      id
+                      title
+                      websiteplacement{
+                        price
+                        book_id
+                      }
+                    }
+                  }
+                }";
 
-            await InFilterOneToOneJoinQuery(mySqlQuery);
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>

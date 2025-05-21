@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Test In operator with a One-To-One relationship both directions
+        /// Test In operator and Order by with a One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
         [TestMethod]
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                               AND [table0].[id] = [table6].[book_id]
                         )
                     )
-                ORDER BY [table0].[id] ASC
+                ORDER BY [table0].[id] DESC
                 FOR JSON PATH
                     ,INCLUDE_NULL_VALUES";
 

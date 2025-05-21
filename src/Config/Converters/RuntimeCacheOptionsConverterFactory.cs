@@ -27,7 +27,7 @@ internal class RuntimeCacheOptionsConverterFactory : JsonConverterFactory
     private class RuntimeCacheOptionsConverter : JsonConverter<RuntimeCacheOptions>
     {
         /// <summary>
-        /// Defines how DAB reads a runtime cache options and defines which values are
+        /// Defines how DAB reads the runtime cache options and defines which values are
         /// used to instantiate RuntimeCacheOptions.
         /// </summary>
         /// <exception cref="JsonException">Thrown when improperly formatted cache options are provided.</exception>

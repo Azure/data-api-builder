@@ -8,7 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 namespace Azure.DataApiBuilder.Config.Converters;
 
 /// <summary>
-/// Defines how DAB reads and writes a runtime cache options (JSON).
+/// Defines how DAB reads and writes a runtime cache options L2 (JSON).
 /// </summary>
 internal class RuntimeCacheLevel2OptionsConverterFactory : JsonConverterFactory
 {

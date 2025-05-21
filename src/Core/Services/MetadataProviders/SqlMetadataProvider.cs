@@ -1322,7 +1322,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     SystemType = (Type)columnInfoFromAdapter["DataType"],
                     // An auto-increment column is also considered as a read-only column. For other types of read-only columns,
                     // the flag is populated later via PopulateColumnDefinitionsWithReadOnlyFlag() method.
-                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"]
+                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"],
+                    Length = GetDatabaseType() is DatabaseType.MSSQL ? (int)columnInfoFromAdapter["ColumnSize"] : null
                 };
 
                 // Tests may try to add the same column simultaneously

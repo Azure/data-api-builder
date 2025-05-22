@@ -350,6 +350,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // Do not store result even if valid, still get from cache if available.
                         case SqlQueryStructure.CACHE_CONTROL_NO_STORE:
                             maybeResult = _cache.TryGet<JsonElement?>(queryMetadata);
+                            // maybeResult is a nullable wrapper so we must check hasValue at outer and inner layer.
                             if (maybeResult.HasValue && maybeResult.Value.HasValue)
                             {
                                 result = maybeResult.Value.Value;

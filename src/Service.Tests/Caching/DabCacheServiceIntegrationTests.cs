@@ -631,7 +631,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 Assert.AreEqual(expected: HttpStatusCode.GatewayTimeout, actual: dabEx.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ItemNotFound, dabEx.SubStatusCode);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Assert.Fail($"Unexpected exception type thrown: {ex.GetType().Name}. Message: {ex.Message}");
             }

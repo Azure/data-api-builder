@@ -498,6 +498,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             JsonDocument? result = await (Task<JsonDocument?>)method!.Invoke(
                 queryEngine,
+
                 // Elements of this array are the arguments passed to ExecuteAsync.
                 new object[]
                 {
@@ -552,6 +553,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             JsonDocument? result = await (Task<JsonDocument?>)method!.Invoke(
                 queryEngine,
+
                 // Elements of this array are the arguments passed to ExecuteAsync.
                 new object[]
                 {
@@ -611,6 +613,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             {
                 result = await (Task<JsonDocument?>)method!.Invoke(
                     queryEngine,
+
                     // Elements of this array are the arguments passed to ExecuteAsync.
                     new object[]
                     {
@@ -622,6 +625,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             }
             catch (DataApiBuilderException dabEx)
             {
+
                 // Assert
                 // Validates correct exception is returned for cache miss.
                 Assert.AreEqual(expected: HttpStatusCode.GatewayTimeout, actual: dabEx.StatusCode);
@@ -638,6 +642,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Mock<SqlQueryStructure> mockStructureToSetCache = CreateMockSqlQueryStructure(entityName, dataSourceName, SqlQueryStructure.CACHE_CONTROL_NO_CACHE);
             result = await (Task<JsonDocument?>)method!.Invoke(
                 queryEngine,
+
                 // Elements of this array are the arguments passed to ExecuteAsync.
                 new object[]
                 {
@@ -649,6 +654,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             result = await (Task<JsonDocument?>)method!.Invoke(
                 queryEngine,
+
                 // Elements of this array are the arguments passed to ExecuteAsync.
                 new object[]
                 {

@@ -504,7 +504,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                     mockStructure.Object,
                     dataSourceName,
                     isMultipleCreateOperation
-                })!;
+                }
+            )!;
 
             JsonElement? cachedResult = dabCache.TryGet<JsonElement>(queryMetadata);
 

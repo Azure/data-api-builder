@@ -85,6 +85,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableAggregation);
         // Ignore the AllowedRolesForHealth as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowedRolesForHealth);
+        // Ignore the CacheTtlSeconds as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CacheTtlSecondsForHealthReport);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableAggregation);
         // Ignore the EnableDwNto1JoinOpt as that's unimportant from a test standpoint.
@@ -101,6 +103,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<HostOptions>(options => options.UserProvidedMaxResponseSizeMB);
         // Ignore UserProvidedDepthLimit as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.UserProvidedDepthLimit);
+        // Ignore EnableLegacyDateTimeScalar as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableLegacyDateTimeScalar);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

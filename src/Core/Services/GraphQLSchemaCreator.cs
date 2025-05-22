@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddDocument(root)
                 .AddAuthorizeDirectiveType()
                 // Add our custom directives
-                .AddDirectiveType<ModelDirectiveType>()
+                .AddType<ModelDirective>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
                 .AddDirectiveType<ReferencingFieldDirectiveType>()
@@ -145,14 +145,14 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach ((string entityName, _) in _entities)
             {
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-                ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+                ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 if (!dataSourceNames.Contains(dataSourceName))
                 {
-                    entityToDbObjects = entityToDbObjects.Concat(metadataprovider.EntityToDatabaseObject).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    entityToDbObjects = entityToDbObjects.Concat(metadataProvider.EntityToDatabaseObject).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                     dataSourceNames.Add(dataSourceName);
                 }
 
-                entityToDatabaseType.TryAdd(entityName, metadataprovider.GetDatabaseType());
+                entityToDatabaseType.TryAdd(entityName, metadataProvider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects
             DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isAggregationEnabled);
@@ -172,7 +172,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public ISchemaBuilder InitializeSchemaAndResolvers(ISchemaBuilder schemaBuilder)
         {
             (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = GenerateGraphQLObjects();
-
             return Parse(schemaBuilder, root, inputTypes);
         }
 

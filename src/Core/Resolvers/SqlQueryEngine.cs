@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName)
         {
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
+            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name, out string? entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parentMetadata = paginationObjectMetadata;
                 }
 
-                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
                 metadata = currentMetadata;
 
                 if (currentMetadata.IsPaginated)
@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            // In certain cirumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
+            // In certain circumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
             // of JsonValueKind.Object. In this case, we need to parse the JSON. This snippet can be removed when DW result is consistent
             // with MSSQL result.
             if (element.ValueKind is JsonValueKind.String)
@@ -264,7 +264,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (metadata is not null)
             {
                 PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-                parentMetadata.Subqueries.TryGetValue(fieldSchema.Name.Value, out PaginationMetadata? currentMetadata);
+                parentMetadata.Subqueries.TryGetValue(fieldSchema.Name, out PaginationMetadata? currentMetadata);
                 metadata = currentMetadata;
             }
 
@@ -404,6 +404,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 httpContext: _httpContextAccessor.HttpContext!,
                 args: null,
                 dataSourceName: dataSourceName);
+
             return response;
         }
 
@@ -416,7 +417,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
-        // As such, this could feasibly be moved to the mutation engine. 
+        // As such, this could feasibly be moved to the mutation engine.
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName)
         {

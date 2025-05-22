@@ -459,6 +459,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
 
+        /// <summary>
+        /// Validates that the cache works correctly when the request headers include the cache control option, "no-cache."
+        /// In this scenario we do not get from the cache, but we still store the retrieved value in the cache, updating
+        /// it's value. Therefore, we first set the cache to an empty value with the same cache key as is used in the test,
+        /// and we validate that we get our expected value back as a result as well as stored in the cache.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task RequestHeaderContainsCacheControlOptionNoCache()
         {
@@ -474,6 +481,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             DatabaseQueryMetadata queryMetadata = new(queryText: queryText, dataSource: dataSourceName, queryParameters: new());
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 60);
             DabCacheService dabCache = CreateDabCacheService(cache);
+            dabCache.Set<JsonElement>(queryMetadata, cacheEntryTtl: 60, cacheValue: new JsonElement());
             SqlQueryEngine queryEngine = CreateQueryEngine(dabCache, queryText, expectedDatabaseResponse, entityName);
             Mock<SqlQueryStructure> mockStructure = CreateMockSqlQueryStructure(entityName, dataSourceName, cacheControlOption);
 
@@ -506,6 +514,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: cachedResult.ToString());
         }
 
+        /// <summary>
+        /// Validates that the cache works correctly when the request headers include the cache control option, "no-store."
+        /// In this scenario we do not store the response in the cache. We therefore execute our query and then validate
+        /// that the cache remains empty.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task RequestHeaderContainsCacheControlOptionNoStore()
         {
@@ -556,6 +570,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Assert.AreEqual(expected: false, actual: cachedResult!.Value.HasValue);
         }
 
+        /// <summary>
+        /// Validates that the cache works correctly when the request headers include the cache control option, "only-if-cached."
+        /// In this scenario we only return a value if it exists in the cache, and in all other cases we throw an exception. Therefore,
+        /// we first validate that the correct exception is returned, we then store something in the cache, and finally we validate
+        /// that we are able to retrieve that correct value from the cache.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task RequestHeaderContainsCacheControlOptionOnlyIfCached()
         {

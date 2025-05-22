@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(operation, name.Value)}"),
                 /// There is a difference between CosmosDb for NoSql and relational databases on generating required simple field types for update mutations.
                 /// Cosmos is calling replace item whereas for sql is doing incremental update.
-                /// That's why sql allows nullable update input fields even for non-nullable simple fields. 
+                /// That's why sql allows nullable update input fields even for non-nullable simple fields.
                 (databaseType is DatabaseType.CosmosDB_NoSQL && operation != EntityActionOperation.Patch) ? f.Type : f.Type.NullableType(),
                 defaultValue: null,
                 new List<DirectiveNode>()
@@ -255,7 +255,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>()));
 
             // Create authorize directive denoting allowed roles
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode(ModelDirectiveType.ModelNameArgument, dbEntityName)) };
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new()
+            {
+                new DirectiveNode(
+                    ModelDirective.Names.MODEL,
+                    new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, dbEntityName))
+            };
 
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowedForMutation,

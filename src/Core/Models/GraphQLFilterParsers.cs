@@ -28,8 +28,6 @@ public class GQLFilterParser
     private readonly RuntimeConfigProvider _configProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
 
-    private IncrementingInteger? _tableCounter;
-
     /// <summary>
     /// Constructor for GQLFilterParser
     /// </summary>
@@ -39,7 +37,6 @@ public class GQLFilterParser
     {
         _configProvider = runtimeConfigProvider;
         _metadataProviderFactory = metadataProviderFactory;
-        _tableCounter = new IncrementingInteger();
     }
 
     /// <summary>
@@ -175,7 +172,7 @@ public class GQLFilterParser
 
                 // A non-standard InputType is inferred to be referencing an entity.
                 // Example: {entityName}FilterInput
-                if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
+                if (!StandardQueryInputs.IsFilterType(filterInputObjectType.Name))
                 {
                     if (sourceDefinition.PrimaryKey.Count != 0)
                     {

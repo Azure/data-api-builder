@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// continue to the next page. These can then be used to form the pagination
         /// columns that will be needed for the actual query.
         /// </summary>
-        protected class NextLinkField
+        private class NextLinkField
         {
             public string EntityName { get; set; }
             public string FieldName { get; set; }

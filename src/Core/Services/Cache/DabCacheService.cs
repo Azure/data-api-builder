@@ -90,6 +90,7 @@ public class DabCacheService
     public MaybeValue<JsonElement>? TryGet<JsonElement>(DatabaseQueryMetadata queryMetadata)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
+        //JsonElement cacheValue = _cache.TryGet<JsonElement>(key: cacheKey);
         return _cache.TryGet<JsonElement>(key: cacheKey);
     }
 
@@ -99,6 +100,7 @@ public class DabCacheService
     /// <typeparam name="JsonElement">The type of value in the cache</typeparam>
     /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
     /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
+    /// <param name="cacheValue"">The value to store in the cache.</param>
     public void Set<JsonElement>(
         DatabaseQueryMetadata queryMetadata,
         int cacheEntryTtl,

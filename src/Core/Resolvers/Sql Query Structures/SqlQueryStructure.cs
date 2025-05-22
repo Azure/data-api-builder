@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public GroupByMetadata GroupByMetadata { get; private set; }
 
-        public string? CacheControlOption { get; set; }
+        public virtual string? CacheControlOption { get; set; }
 
         public const string CACHE_CONTROL = "Cache-Control";
 
@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public const string CACHE_CONTROL_ONLY_IF_CACHED = "only-if-cached";
 
         public HashSet<string> cacheControlHeaderOptions = new(
-            new[] { CACHE_CONTROL, CACHE_CONTROL_NO_STORE, CACHE_CONTROL_NO_CACHE, CACHE_CONTROL_ONLY_IF_CACHED },
+            new[] { CACHE_CONTROL_NO_STORE, CACHE_CONTROL_NO_CACHE, CACHE_CONTROL_ONLY_IF_CACHED },
             StringComparer.OrdinalIgnoreCase);
 
         /// <summary>

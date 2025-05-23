@@ -498,7 +498,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             JsonDocument? result = await (Task<JsonDocument?>)method!.Invoke(
                 queryEngine,
-                
                 // Elements of this array are the arguments passed to ExecuteAsync.
                 new object[]
                 {

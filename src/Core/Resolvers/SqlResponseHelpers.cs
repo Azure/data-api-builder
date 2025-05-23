@@ -51,13 +51,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   ? DetermineExtraFieldsInResponse(findOperationResponse, context.FieldsToBeReturned)
                                                   : DetermineExtraFieldsInResponse(findOperationResponse.EnumerateArray().First(), context.FieldsToBeReturned);
 
-            //Remove RecordCOunt from extraFieldsInResponse if present
-            /*
-            if (extraFieldsInResponse.Contains("RecordCount"))
-            {
-                extraFieldsInResponse.Remove("RecordCount");
-            }
-            */
             uint defaultPageSize = runtimeConfig.DefaultPageSize();
             uint maxPageSize = runtimeConfig.MaxPageSize();
 

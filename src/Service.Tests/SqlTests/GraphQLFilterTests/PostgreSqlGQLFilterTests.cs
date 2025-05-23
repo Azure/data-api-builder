@@ -189,6 +189,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestStringFiltersEqWithMappings(postgresQuery);
         }
 
+        /// <summary>
+        /// Test IN operator when mappings are configured for GraphQL entity.
+        /// </summary>
         [TestMethod]
         public async Task TestStringFiltersINWithMappings()
         {

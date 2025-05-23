@@ -655,7 +655,7 @@ public static class FieldFilterParser
                 case "in":
                     op = PredicateOperation.IN;
                     value = PreprocessInOperatorValues(value);
-                    if (value == null)
+                    if (value == null) // nothing to process and retuns empty result set
                     {
                         continue;
                     }
@@ -718,7 +718,7 @@ public static class FieldFilterParser
         if (value is not List<IValueNode> inValues)
         {
             throw new DataApiBuilderException(
-                message: "Bad syntax: Invalid IN operator values",
+                message: "Bad syntax: Invalid IN operator type value",
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
         } else if (inValues.Count > 100)
@@ -729,7 +729,8 @@ public static class FieldFilterParser
                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
         }
 
-            List<IValueNode> filteredNodes = inValues.Where(node => node.Value != null).ToList();
+        // does not match any rows even for values NULL because SQL engine is completely ignoring it
+        List<IValueNode> filteredNodes = inValues.Where(node => node.Value != null).ToList();
         return filteredNodes.Count == 0 ? null : filteredNodes;
     }
 

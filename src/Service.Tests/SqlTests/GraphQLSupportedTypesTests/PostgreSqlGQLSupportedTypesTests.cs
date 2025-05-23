@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// MSSQL filter Type with IN operator Tests.
+        /// PostgreSQL filter Type with IN operator Tests.
         /// </summary>
         /// <param name="type">GraphQL Type</param>
         /// <param name="filterOperator">Comparison operator: IN</param>

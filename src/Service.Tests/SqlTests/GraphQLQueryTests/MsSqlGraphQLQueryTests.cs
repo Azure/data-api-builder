@@ -63,6 +63,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(msSqlQuery);
         }
 
+        /// <summary>
+        /// Tests In operator using query variables
+        /// </summary>
         [TestMethod]
         public async Task InQueryWithVariables()
         {

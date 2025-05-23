@@ -74,6 +74,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestStringFiltersEqWithMappings(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test IN operator when mappings are configured for GraphQL entity.
+        /// </summary>
         [TestMethod]
         public async Task TestStringFiltersINWithMappings()
         {

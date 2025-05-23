@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Gets array of results for querying more than one item using query variables
+        /// Tests In operator using query variables
         /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
         /// </summary>
         [TestMethod]

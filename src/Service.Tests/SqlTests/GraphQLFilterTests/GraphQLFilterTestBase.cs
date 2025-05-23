@@ -888,6 +888,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             }
         }
 
+        /// <summary>
+        /// Test Nested Filter with IN clause for Many-One relationship.
+        /// </summary>
         [TestMethod]
         public async Task TestNestedFilterWithInForManyOne(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
         {
@@ -1150,7 +1153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             string gqlQuery = @"{
                 booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
                     @": { or: [{
-                        publishers: { name: { in: ""TBD Publishing One"" } } }
+                        publishers: { name: { eq: ""TBD Publishing One"" } } }
                         { authors : {
                           name: { eq: ""Aniruddh""}}}
                       ]
@@ -1187,7 +1190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
-        /// Tests nested filter alongwith an OR clause.
+        /// Tests nested filter with IN and OR clause.
         /// </summary>
         [TestMethod]
         public async Task TestNestedFilterWithOrAndIN(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")

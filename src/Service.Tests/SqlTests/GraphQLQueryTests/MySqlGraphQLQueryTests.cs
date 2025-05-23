@@ -31,7 +31,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
                 FROM
                   (SELECT `table0`.`id` AS `id`,
-
                           `table0`.`title` AS `title`
                    FROM `books` AS `table0`
                    WHERE 1 = 1
@@ -102,6 +101,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(mySqlQuery);
         }
 
+        /// <summary>
+        /// Tests In operator using query variables
+        /// </summary>
         [TestMethod]
         public async Task InQueryWithVariables()
         {

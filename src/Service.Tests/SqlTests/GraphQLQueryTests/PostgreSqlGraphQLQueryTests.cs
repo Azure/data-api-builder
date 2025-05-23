@@ -61,6 +61,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(postgresQuery);
         }
 
+        /// <summary>
+        /// Tests In operator using query variables
+        /// </summary>
         [TestMethod]
         public async Task InQueryWithVariables()
         {
@@ -74,6 +77,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         [TestMethod]
         public async Task OneToOneJoinQuery()
+        {
+            string postgresQuery = @"
+SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""
+FROM
+    (SELECT ""table0"".""id"" AS ""id"",
+            ""table0"".""title"" AS ""title"",
+            ""table1_subq"".""data"" AS ""websiteplacement""
+     FROM ""public"".""books"" AS ""table0""
+     LEFT OUTER JOIN LATERAL
+         (SELECT to_jsonb(""subq6"") AS ""data""
+          FROM
+              (SELECT ""table1"".""price"" AS ""price""
+               FROM ""public"".""book_website_placements"" AS ""table1""
+               WHERE ""table1"".""book_id"" = ""table0"".""id""
+               ORDER BY ""table1"".""id"" ASC
+               LIMIT 1) AS ""subq6"") AS ""table1_subq"" ON TRUE
+     WHERE 1 = 1
+     ORDER BY ""table0"".""id"" ASC
+     LIMIT 100) AS ""subq7""
+            ";
+
+            await OneToOneJoinQuery(postgresQuery);
+        }
+
+        /// <summary>
+        /// Test IN operator in One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterInOneToOneJoinQuery()
         {
             string postgresQuery = @"
 SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""

@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                 authorizationResolver,
                 gQLFilterParser,
-                httpRequestHeaders: httpContext.Request.Headers,
+                httpRequestHeaders: httpContext?.Request.Headers,
                 predicates: null,
                 entityName: context.EntityName,
                 counter: new IncrementingInteger(),

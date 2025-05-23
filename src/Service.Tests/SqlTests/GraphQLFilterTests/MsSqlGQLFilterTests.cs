@@ -45,6 +45,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestNestedFilterManyOne(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
         }
 
+        /// <summary>
+        /// Test Nested Filter with IN operator for Many-One relationship.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
+        public async Task TestNestedFilterWithInForManyOne(string roleName, bool expectsError, string errorMessageFragment)
+        {
+            string existsPredicate = $@"
+                EXISTS( SELECT 1
+                        FROM {GetPreIndentDefaultSchema()}[series] AS [table1]
+                        WHERE [table1].[name] IN ('Foundation')
+                        AND [table0].[series_id] = [table1].[id] )";
+
+            await TestNestedFilterWithInForManyOne(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
+        }
+
         [TestMethod]
         public async Task TestStringFiltersEqWithMappings()
         {
@@ -56,6 +72,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             await TestStringFiltersEqWithMappings(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test IN operator when mappings are configured for GraphQL entity.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersINWithMappings()
+        {
+            string msSqlQuery = @"
+                SELECT [__column1] AS [column1], [__column2] AS [column2]
+                FROM GQLMappings
+                WHERE [__column2] IN ('Filtered Record')
+                ORDER BY [__column1] asc
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            await TestStringFiltersINWithMappings(msSqlQuery);
         }
 
         /// <summary>
@@ -264,6 +296,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                            AND [table5].[author_id] = [table3].[id])";
 
             await TestNestedFilterWithOr(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
+        }
+
+        /// <summary>
+        /// Tests nested filter with an IN and OR clause.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterWithOrAndIn()
+        {
+            string defaultSchema = GetPreIndentDefaultSchema();
+
+            string existsPredicate = $@"
+                EXISTS( SELECT 1 FROM {defaultSchema}[publishers] AS [table1]
+                    WHERE [table1].[name] IN ('TBD Publishing One')
+                    AND [table0].[publisher_id] = [table1].[id])
+                OR EXISTS( SELECT 1 FROM {defaultSchema}[authors] AS [table3]
+                           INNER JOIN {defaultSchema}[book_author_link] AS [table5]
+                           ON [table5].[book_id] = [table0].[id]
+                           WHERE [table3].[name] IN ('Aniruddh')
+                           AND [table5].[author_id] = [table3].[id])";
+
+            await TestNestedFilterWithOrAndIN(existsPredicate, roleName: "authenticated");
         }
 
         /// <summary>

@@ -16,7 +16,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
-
 namespace Azure.DataApiBuilder.Core.Models;
 
 /// <summary>
@@ -653,6 +652,15 @@ public static class FieldFilterParser
                 case "gte":
                     op = PredicateOperation.GreaterThanOrEqual;
                     break;
+                case "in":
+                    op = PredicateOperation.IN;
+                    value = PreprocessInOperatorValues(value);
+                    if (value == null) // nothing to process and retuns empty result set
+                    {
+                        continue;
+                    }
+
+                    break;
                 case "contains":
                     if (isListType)
                     {
@@ -698,11 +706,57 @@ public static class FieldFilterParser
             predicates.Push(new PredicateOperand(new Predicate(
                 new PredicateOperand(column),
                 op,
-                new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
-                ));
+                GenerateRightOperand(ctx, argumentObject, name, processLiterals, value, processLiteral) // right operand
+                )));
         }
 
         return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);
+    }
+
+    private static object? PreprocessInOperatorValues(object value)
+    {
+        if (value is not List<IValueNode> inValues)
+        {
+            throw new DataApiBuilderException(
+                message: "Bad syntax: Invalid IN operator type value",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        } else if (inValues.Count > 100)
+        {
+            throw new DataApiBuilderException(
+                message: "IN operator filter object cannot process more than 100 values at a time.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        }
+
+        // does not match any rows even for values NULL because SQL engine is completely ignoring it
+        List<IValueNode> filteredNodes = inValues.Where(node => node.Value != null).ToList();
+        return filteredNodes.Count == 0 ? null : filteredNodes;
+    }
+
+    private static PredicateOperand GenerateRightOperand(
+    IMiddlewareContext ctx,
+    InputObjectType argumentObject,
+    string operationName,
+    Func<object, string?, string> processLiterals,
+    object value,
+    bool processLiteral)
+    {
+        if (operationName.Equals("in", StringComparison.OrdinalIgnoreCase))
+        {
+            List<string> encodedParams = ((List<IValueNode>)value)
+                .Select(listValue => ExecutionHelper.ExtractValueFromIValueNode(
+                    listValue,
+                    argumentObject.Fields[operationName],
+                    ctx.Variables))
+                .Where(inValue => inValue is not null)
+                .Select(inValue => processLiterals(inValue!, null))
+                .ToList();
+
+            return new PredicateOperand("(" + string.Join(", ", encodedParams) + ")");
+        }
+
+        return new PredicateOperand(processLiteral ? processLiterals(value, null) : value.ToString());
     }
 
     private static string EscapeLikeString(string input)

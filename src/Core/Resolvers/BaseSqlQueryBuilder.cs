@@ -314,6 +314,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return "IS NOT";
                 case PredicateOperation.EXISTS:
                     return "EXISTS";
+                case PredicateOperation.IN:
+                    return "IN";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }

@@ -66,6 +66,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
+        [TestMethod]
+        public async Task InQueryWithVariables(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query ($inVar: Int!) {
+                books(filter: { id:  { in: [$inVar, 2] } }  orderBy:  { id: ASC }) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", 1 } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
         /// <summary>
         /// Tests that the following "Find Many" query is properly handled by the engine given that it references
         /// mapped column names "column1" and "column2" and NOT "__column1" nor "__column2"
@@ -568,6 +587,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
               }
             }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Test IN Operator in a relationship, for example, in a One -> One relationship
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterOneToOneJoinQuery(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                  books(filter:  {
+                     title:  {
+                        in: [""Awesome book"", ""Also Awesome book""]
+                     },
+                     websiteplacement:  {
+                        book_id:  {
+                           in: [1, 2]
+                        }
+                     }
+                  } orderBy:  {
+                     id: DESC
+                  }){
+                    items{
+                      id
+                      title
+                      websiteplacement{
+                        price
+                        book_id
+                      }
+                    }
+                  }
+                }";
 
             JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);

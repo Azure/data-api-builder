@@ -48,6 +48,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -296,16 +297,15 @@ namespace Azure.DataApiBuilder.Service
                         client.BaseAddress = new Uri(baseUri);
                     }
 
-                    Console.WriteLine("HealthCheck HttpClient BaseAddress: {BaseAddress}", client.BaseAddress);
-                    _logger.LogInformation("Configured HealthCheck HttpClient BaseAddress as {BaseAddress}", baseUri);
+                    _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);
                 })
                 .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
                 {
-                    bool allowSelfSigned =
-                        Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+                    // For debug purpose, USE_SELF_SIGNED_CERT can be set to true in Environment variables
+                    bool allowSelfSigned = Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
                     HttpClientHandler handler = new();
 
@@ -974,39 +974,35 @@ namespace Azure.DataApiBuilder.Service
         /// <returns>The internal container port</returns>
         private static int ResolveInternalPort(HttpContext? httpContext = null)
         {
-            // When inside a request, just use the port that was used.
-            if (httpContext?.Request.Host.Port is int livePort && livePort > 0)
+            // Try X-Forwarded-Port if context is present
+            if (httpContext is not null &&
+                httpContext.Request.Headers.TryGetValue("X-Forwarded-Port", out StringValues fwdPortVal) &&
+                int.TryParse(fwdPortVal.ToString(), out int fwdPort) &&
+                fwdPort > 0)
             {
-                return livePort;
+                return fwdPort;
             }
 
-            // No HttpContext (e.g., background code) → parse ASPNETCORE_URLS
-            string? urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-            if (!string.IsNullOrWhiteSpace(urls))
-            {
-                foreach (string part in urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    // Trim & ignore trailing slash
-                    string trimmed = part.Trim().TrimEnd('/');
+            // Infer scheme from context if available, else default to "http"
+            string scheme = httpContext?.Request.Scheme ?? "http";
 
-                    // Try absolute URI parse first
-                    if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && uri.Port > 0)
+            // Check ASPNETCORE_URLS env var (can be set as Environment variable or baked in within Docker file)
+            string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
+            if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
+            {
+                foreach (string url in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (url.StartsWith($"{scheme}://", StringComparison.OrdinalIgnoreCase) &&
+                        Uri.TryCreate(url.Trim(), UriKind.Absolute, out Uri? uri))
                     {
                         return uri.Port;
-                    }
-
-                    // Fallback: pattern like "http://+:5000" or "https://*:443"
-                    int idx = trimmed.LastIndexOf(':');
-                    if (idx >= 0 && int.TryParse(trimmed[(idx + 1)..], out int parsed) && parsed > 0)
-                    {
-                        return parsed;
                     }
                 }
             }
 
-            // Fallback/Default if nothing else worked
-            return 5000;
+            // Fallback default ports
+            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 5000;
         }
-
     }
 }

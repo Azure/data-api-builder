@@ -985,23 +985,39 @@ namespace Azure.DataApiBuilder.Service
             // Infer scheme from context if available, else default to "http"
             string scheme = httpContext?.Request.Scheme ?? "http";
 
-            // Check ASPNETCORE_URLS env var (can be set as Environment variable or baked in within Docker file)
+            // Check ASPNETCORE_URLS env var
             string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
 
             if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
             {
-                foreach (string url in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    if (url.StartsWith($"{scheme}://", StringComparison.OrdinalIgnoreCase) &&
-                        Uri.TryCreate(url.Trim(), UriKind.Absolute, out Uri? uri))
+                    string trimmed = part.Trim();
+
+                    // Handle wildcard format (e.g. http://+:5002)
+                    if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int colonIndex = trimmed.LastIndexOf(':');
+                        if (colonIndex != -1 &&
+                            int.TryParse(trimmed.Substring(colonIndex + 1), out int wildcardPort) &&
+                            wildcardPort > 0)
+                        {
+                            return wildcardPort;
+                        }
+                    }
+
+                    // Handle standard URI format
+                    if (trimmed.StartsWith($"{scheme}://", StringComparison.OrdinalIgnoreCase) &&
+                        Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri))
                     {
                         return uri.Port;
                     }
                 }
             }
 
-            // Fallback default ports
+            // Fallback
             return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 5000;
         }
+
     }
 }

@@ -8,7 +8,6 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 
@@ -19,7 +18,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The Entity name associated with this query as appears in the config file.
         /// </summary>
-        public string EntityName { get; set; }
+        public virtual string EntityName { get; set; }
 
         /// <summary>
         /// The alias of the entity as used in the generated query.
@@ -74,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
+        public virtual Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         public const string PARAM_NAME_PREFIX = "@";
 
@@ -156,7 +155,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Returns the SourceDefinitionDefinition for the entity(table/view) of this query.
         /// </summary>
-        public SourceDefinition GetUnderlyingSourceDefinition()
+        public virtual SourceDefinition GetUnderlyingSourceDefinition()
         {
             return MetadataProvider.GetSourceDefinition(EntityName);
         }
@@ -201,7 +200,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
-            return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+            return connectionSchemaField.Type.NamedType<ObjectType>().Fields[QueryBuilder.PAGINATION_FIELD_NAME];
         }
     }
 }

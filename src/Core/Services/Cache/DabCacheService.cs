@@ -47,27 +47,27 @@ public class DabCacheService
     /// Attempts to fetch response from cache. If there is a cache miss, call the 'factory method' to get a response
     /// from the backing database.
     /// </summary>
-    /// <typeparam name="JsonElement">Response payload</typeparam>
+    /// <typeparam name="T">Response payload</typeparam>
     /// <param name="queryExecutor">Factory method. Only executed after a cache miss.</param>
     /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
     /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
     /// <returns>JSON Response</returns>
     /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
-    public async ValueTask<JsonElement?> GetOrSetAsync<JsonElement>(
+    public async ValueTask<T?> GetOrSetAsync<T>(
         IQueryExecutor queryExecutor,
         DatabaseQueryMetadata queryMetadata,
         int cacheEntryTtl)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
-        JsonElement? result = await _cache.GetOrSetAsync(
+        T? result = await _cache.GetOrSetAsync(
                key: cacheKey,
-               async (FusionCacheFactoryExecutionContext<JsonElement?> ctx, CancellationToken ct) =>
+               async (FusionCacheFactoryExecutionContext<T?> ctx, CancellationToken ct) =>
                {
                    // Need to handle undesirable results like db errors or null.
-                   JsonElement? result = await queryExecutor.ExecuteQueryAsync(
+                   T? result = await queryExecutor.ExecuteQueryAsync(
                        sqltext: queryMetadata.QueryText,
                        parameters: queryMetadata.QueryParameters,
-                       dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
+                       dataReaderHandler: queryExecutor.GetJsonResultAsync<T>,
                        httpContext: _httpContextAccessor.HttpContext!,
                        args: null,
                        dataSourceName: queryMetadata.DataSource);
@@ -79,6 +79,41 @@ public class DabCacheService
                });
 
         return result;
+    }
+
+    /// <summary>
+    /// Try to get cacheValue from the cache with the derived cache key.
+    /// </summary>
+    /// <typeparam name="JsonElement">The type of value in the cache</typeparam>
+    /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
+    /// <returns>JSON Response</returns>
+    public MaybeValue<JsonElement>? TryGet<JsonElement>(DatabaseQueryMetadata queryMetadata)
+    {
+        string cacheKey = CreateCacheKey(queryMetadata);
+        return _cache.TryGet<JsonElement>(key: cacheKey);
+    }
+
+    /// <summary>
+    /// Store cacheValue into the cache with the derived cache key.
+    /// </summary>
+    /// <typeparam name="JsonElement">The type of value in the cache</typeparam>
+    /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
+    /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
+    /// <param name="cacheValue"">The value to store in the cache.</param>
+    public void Set<JsonElement>(
+        DatabaseQueryMetadata queryMetadata,
+        int cacheEntryTtl,
+        JsonElement? cacheValue)
+    {
+        string cacheKey = CreateCacheKey(queryMetadata);
+        _cache.Set(
+            key: cacheKey,
+            value: cacheValue,
+            (FusionCacheEntryOptions options) =>
+            {
+                options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: cacheValue?.ToString()));
+                options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
+            });
     }
 
     /// <summary>

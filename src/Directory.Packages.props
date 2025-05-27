@@ -67,5 +67,5 @@
     </ItemGroup>
     <ItemGroup>
         <GlobalPackageReference Include="StyleCop.Analyzers" Version="1.1.118" />
-        </ItemGroup>
+    </ItemGroup>
 </Project>

@@ -15,7 +15,6 @@
     <PackageReference Include="HotChocolate.AspNetCore" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
     <PackageReference Include="HotChocolate.Types.NodaTime" />
-    <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.IdentityModel.Validators" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
@@ -28,6 +27,7 @@
     <PackageReference Include="MSTest.TestFramework" />
     <PackageReference Include="MySqlConnector" />
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Newtonsoft.Json.Schema" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Polly" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />

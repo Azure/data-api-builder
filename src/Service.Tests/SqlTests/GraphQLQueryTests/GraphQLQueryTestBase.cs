@@ -70,8 +70,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task InQueryWithVariables(string dbQuery)
         {
             string graphQLQueryName = "books";
-            string graphQLQuery = @"query ($inVar: Int!) {
-                books(filter: { id:  { in: [$inVar, 2] } }  orderBy:  { id: ASC }) {
+            string graphQLQuery = @"query ($inVar: [Int]!) {
+                books(filter: { id:  { in: $inVar } }  orderBy:  { id: ASC }) {
                     items {
                         id
                         title
@@ -79,7 +79,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", 1 } });
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", new List<int>([1, 2]) } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        [TestMethod]
+        public async Task InQueryWithNullAndEmptyvalues(string dbQuery)
+        {
+            string graphQLQueryName = "supportedTypes";
+            string graphQLQuery = @"query ($inVar: [String]!) {
+                supportedTypes(filter: { string_types:  { in: $inVar } }) {
+                    items {
+                        string_types
+                    }
+                }
+            }";
+
+            
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", new List<string>(["test string", string.Empty, null]) } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());

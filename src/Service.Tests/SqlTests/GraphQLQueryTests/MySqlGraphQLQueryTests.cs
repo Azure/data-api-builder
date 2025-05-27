@@ -121,6 +121,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Tests IN operator with aggregations
+        /// </summary>
+        [TestMethod]
+        public async Task INOperatorWithAggregations()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('publisher_id', `subq1`.`publisher_id`, 'publisherCount', `subq1`.`publisherCount`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`publisher_id` AS `publisher_id`,
+                          count(`table0`.`id`) AS `publisherCount`
+                   FROM `books` AS `table0`
+                   WHERE 1 = 1
+                   GROUP BY `table0`.`publisher_id`
+                   HAVING count(`table0`.`id`) IN (1, 2)) AS `subq1`";
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                      books {
+                        groupBy(fields: [publisher_id]) {
+                          fields{
+                            publisher_id
+                          }
+                          aggregations{
+                            publisherCount: count(field: id, having:  {
+                               in: [1, 2]
+                            })
+                          }
+                        }
+                      }
+                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests In operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task TestInQueryWithNullAndEmptyValues()
+        {
+            string mySqlQuery = $"SELECT string_types FROM type_table where string_types IN ('test string', ' ', NULL) ORDER BY string_types FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithNullAndEmptyvalues(mySqlQuery);
+        }
+
+        /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>

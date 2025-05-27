@@ -61,6 +61,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Tests In operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task TestInQueryWithNullAndEmptyValues()
+        {
+            string msSqlQuery = $"SELECT string_types FROM type_table where string_types IN ('test string', ' ', NULL) ORDER BY string_types FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithNullAndEmptyvalues(msSqlQuery);
+        }
+
+        /// <summary>
         /// Gets array of results for querying more than one item using query mappings.
         /// </summary>
         [TestMethod]
@@ -73,6 +84,53 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             await MultipleResultQueryWithMappings(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests IN operator with aggregations
+        /// </summary>
+        [TestMethod]
+        public async Task INOperatorWithAggregations()
+        {
+            string dbQuery = @"
+                SELECT COALESCE(
+                    '[' + STRING_AGG(
+                        '{' +
+                        N'""publisher_id"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [publisher_id]), 'json'), 'null') + ', ' +
+                        N'""publisherCount"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [publisherCount]), 'json'), 'null') +
+                        '}', ', '
+                    ) + ']', '[]'
+                )
+                FROM (
+                    SELECT TOP 100
+                        [table0].[publisher_id] AS [publisher_id],
+                        COUNT([table0].[id]) AS [publisherCount]
+                    FROM [dbo].[books] AS [table0]
+                    WHERE 1 = 1
+                    GROUP BY [table0].[publisher_id]
+                    HAVING COUNT([table0].[id]) IN (1, 2)
+                ) AS [table0];";
+
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                      books {
+                        groupBy(fields: [publisher_id]) {
+                          fields{
+                            publisher_id
+                          }
+                          aggregations{
+                            publisherCount: count(field: id, having:  {
+                               in: [1, 2]
+                            })
+                          }
+                        }
+                      }
+                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
         }
 
         /// <summary>

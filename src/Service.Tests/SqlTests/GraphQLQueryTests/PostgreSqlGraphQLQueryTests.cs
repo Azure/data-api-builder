@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -69,6 +70,57 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books WHERE id IN (1,2) ORDER BY id asc LIMIT 100) as table0";
             await InQueryWithVariables(postgresQuery);
+        }
+
+        /// <summary>
+        /// Tests In operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task TestInQueryWithNullAndEmptyValues()
+        {
+            string postgresQuery = $"SELECT string_types FROM type_table where string_types IN ('test string', ' ', NULL) ORDER BY string_types FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithNullAndEmptyvalues(postgresQuery);
+        }
+
+        /// <summary>
+        /// Tests IN operator with aggregations
+        /// </summary>
+        [TestMethod]
+        public async Task INOperatorWithAggregations()
+        {
+
+            string postgresQuery = @"
+                SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""
+                FROM
+                    (SELECT ""table0"".""publisher_id"" AS ""publisher_id"",
+                            count(""table0"".""id"") AS ""publisherCount""
+                     FROM ""public"".""books"" AS ""table0""
+                     WHERE 1 = 1
+                     GROUP BY ""table0"".""publisher_id""
+                    HAVING count(""table0"".""id"")  IN (1, 2)) AS ""subq7""
+                            ";
+
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                      books {
+                        groupBy(fields: [publisher_id]) {
+                          fields{
+                            publisher_id
+                          }
+                          aggregations{
+                            publisherCount: count(field: id, having:  {
+                               in: [1, 2]
+                            })
+                          }
+                        }
+                      }
+                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(postgresQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
         }
 
         /// <summary>

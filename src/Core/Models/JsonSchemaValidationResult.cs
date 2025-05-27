@@ -25,10 +25,9 @@ public class JsonSchemaValidationResult
 
     /// <summary>
     /// It formats and returns a string that includes the total count of validation errors
-    /// and details of each error. The details of each error include the
-    /// error message, line number, and line position where the error occurred.
+    /// and details of each error.
     /// </summary>
-    /// <param name="validationErrors">list of schema validation errors</param>
+    /// <param name="validationErrors">List of schema validation errors.</param>
     private static string FormatSchemaValidationErrorMessage(IReadOnlyDictionary<string, string> validationErrors)
     {
         return $"> Total schema validation errors: {validationErrors.Count}";

@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Core.Services
@@ -81,7 +82,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
-        public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
+        public virtual Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
         protected readonly ILogger<ISqlMetadataProvider> _logger;
@@ -1875,7 +1876,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         // 2. Config Defined:
                         //      - Two ForeignKeyDefinition objects:
                         //        1.  Referencing table: Source entity, Referenced table: Target entity
-                        //        2.  Referencing table: Target entity, Referenced table: Source entity 
+                        //        2.  Referencing table: Target entity, Referenced table: Source entity
                         List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
                         relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }

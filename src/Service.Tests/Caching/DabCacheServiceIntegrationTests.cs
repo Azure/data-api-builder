@@ -6,16 +6,27 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -35,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         private const string ERROR_UNEXPECTED_INVOCATIONS = "Unexpected number of queryExecutor invocations.";
         private const string ERROR_UNEXPECTED_RESULT = "Unexpected result returned by cache service.";
         private const string ERROR_FAILED_ARG_PASSTHROUGH = "arg was not passed through to the executor as expected.";
-        private enum ExecutorReturnType { Json, Null, Exception };
+        private enum ExecutorReturnType { Json, Null, Exception, NonNullableJson };
 
         /// <summary>
         /// Validates that the first invocation of the cache service results in a cache miss because
@@ -449,6 +460,354 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         }
 
         /// <summary>
+        /// Validates that the cache works correctly when the request headers include the cache control option, "no-cache."
+        /// In this scenario we do not get from the cache, but we still store the retrieved value in the cache, updating
+        /// it's value. Therefore, we first set the cache to an empty value with the same cache key as is used in the test,
+        /// and we validate that we get our expected value back as a result as well as stored in the cache.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task RequestHeaderContainsCacheControlOptionNoCache()
+        {
+            // Arrange
+            bool isMultipleCreateOperation = false;
+            string cacheControlOption = SqlQueryStructure.CACHE_CONTROL_NO_CACHE;
+            string entityName = "TestEntity";
+            string dataSourceName = "dataSource1";
+            string queryText = "select * from MyTable";
+            string key = "key";
+            string value = "value";
+            string expectedDatabaseResponse = $@"{{""{key}"": ""{value}""}}";
+            DatabaseQueryMetadata queryMetadata = new(queryText: queryText, dataSource: dataSourceName, queryParameters: new());
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 60);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+            dabCache.Set<JsonElement>(queryMetadata, cacheEntryTtl: 60, cacheValue: new JsonElement());
+            SqlQueryEngine queryEngine = CreateQueryEngine(dabCache, queryText, expectedDatabaseResponse, entityName);
+            Mock<SqlQueryStructure> mockStructure = CreateMockSqlQueryStructure(entityName, dataSourceName, cacheControlOption);
+
+            // Act
+            // We are testing a private method in the SqlQuery Engine, therefore use reflection to
+            // get the information for the method we will need to invoke for testing.
+            MethodInfo? method = typeof(SqlQueryEngine).GetMethod(
+                "ExecuteAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                types: new[] { typeof(SqlQueryStructure), typeof(string), typeof(bool) },
+                modifiers: null
+            );
+
+            JsonDocument? result = await (Task<JsonDocument?>)method!.Invoke(
+                queryEngine,
+                // Elements of this array are the arguments passed to ExecuteAsync.
+                new object[]
+                {
+                    mockStructure.Object,
+                    dataSourceName,
+                    isMultipleCreateOperation
+                }
+            )!;
+
+            JsonElement? cachedResult = dabCache.TryGet<JsonElement>(queryMetadata);
+
+            // Assert
+            // Validates that the expected database response is returned by the query engine and is correct within the cache service.
+            Assert.AreEqual(expected: value, actual: result!.RootElement.GetProperty(key).GetString());
+            Assert.AreEqual(expected: expectedDatabaseResponse, actual: cachedResult.ToString());
+        }
+
+        /// <summary>
+        /// Validates that the cache works correctly when the request headers include the cache control option, "no-store."
+        /// In this scenario we do not store the response in the cache. We therefore execute our query and then validate
+        /// that the cache remains empty.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task RequestHeaderContainsCacheControlOptionNoStore()
+        {
+            // Arrange
+            bool isMultipleCreateOperation = false;
+            string cacheControlOption = SqlQueryStructure.CACHE_CONTROL_NO_STORE;
+            string entityName = "TestEntity";
+            string dataSourceName = "dataSource1";
+            string queryText = "select * from MyTable";
+            string key = "key";
+            string value = "value";
+            string expectedDatabaseResponse = $@"{{""{key}"": ""{value}""}}";
+            DatabaseQueryMetadata queryMetadata = new(queryText: queryText, dataSource: dataSourceName, queryParameters: new());
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 60);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+            SqlQueryEngine queryEngine = CreateQueryEngine(dabCache, queryText, expectedDatabaseResponse, entityName);
+            Mock<SqlQueryStructure> mockStructure = CreateMockSqlQueryStructure(entityName, dataSourceName, cacheControlOption);
+
+            // Act
+            // We are testing a private method in the SqlQuery Engine, therefore use reflection to
+            // get the information for the method we will need to invoke for testing.
+            MethodInfo? method = typeof(SqlQueryEngine).GetMethod(
+                "ExecuteAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                types: new[] { typeof(SqlQueryStructure), typeof(string), typeof(bool) },
+                modifiers: null
+            );
+
+            JsonDocument? result = await (Task<JsonDocument?>)method!.Invoke(
+                queryEngine,
+
+                // Elements of this array are the arguments passed to ExecuteAsync.
+                new object[]
+                {
+                    mockStructure.Object,
+                    dataSourceName,
+                    isMultipleCreateOperation
+                })!;
+
+            MaybeValue<JsonElement>? cachedResult = dabCache.TryGet<JsonElement>(queryMetadata);
+
+            // Assert
+            // Validates that the expected database response is returned by the query engine and that nothing was cached.
+            Assert.AreEqual(expected: value, actual: result!.RootElement.GetProperty(key).GetString());
+            // Validates outer wrapper was instantiated correctly.
+            Assert.AreEqual(expected: true, actual: cachedResult.HasValue);
+            // Validates no value returned from cache.
+            Assert.AreEqual(expected: false, actual: cachedResult!.Value.HasValue);
+        }
+
+        /// <summary>
+        /// Validates that the cache works correctly when the request headers include the cache control option, "only-if-cached."
+        /// In this scenario we only return a value if it exists in the cache, and in all other cases we throw an exception. Therefore,
+        /// we first validate that the correct exception is returned, we then store something in the cache, and finally we validate
+        /// that we are able to retrieve that correct value from the cache.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task RequestHeaderContainsCacheControlOptionOnlyIfCached()
+        {
+            // Arrange
+            bool isMultipleCreateOperation = false;
+            string cacheControlOption = SqlQueryStructure.CACHE_CONTROL_ONLY_IF_CACHED;
+            string entityName = "TestEntity";
+            string dataSourceName = "dataSource1";
+            string queryText = "select * from MyTable";
+            string key = "key";
+            string value = "value";
+            string expectedDatabaseResponse = $@"{{""{key}"": ""{value}""}}";
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 60);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+            SqlQueryEngine queryEngine = CreateQueryEngine(dabCache, queryText, expectedDatabaseResponse, entityName);
+            Mock<SqlQueryStructure> mockStructure = CreateMockSqlQueryStructure(entityName, dataSourceName, cacheControlOption);
+
+            // Act
+            // We are testing a private method in the SqlQuery Engine, therefore use reflection to
+            // get the information for the method we will need to invoke for testing.
+            MethodInfo? method = typeof(SqlQueryEngine).GetMethod(
+                "ExecuteAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                types: new[] { typeof(SqlQueryStructure), typeof(string), typeof(bool) },
+                modifiers: null
+            );
+
+            JsonDocument? result;
+            try
+            {
+                result = await (Task<JsonDocument?>)method!.Invoke(
+                    queryEngine,
+
+                    // Elements of this array are the arguments passed to ExecuteAsync.
+                    new object[]
+                    {
+                        mockStructure.Object,
+                        dataSourceName,
+                        isMultipleCreateOperation
+                    }
+                )!;
+            }
+            catch (DataApiBuilderException dabEx)
+            {
+
+                // Assert
+                // Validates correct exception is returned for cache miss.
+                Assert.AreEqual(expected: HttpStatusCode.GatewayTimeout, actual: dabEx.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ItemNotFound, dabEx.SubStatusCode);
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"Unexpected exception type thrown: {ex.GetType().Name}. Message: {ex.Message}");
+            }
+
+            // Act
+            // We now store a value in the cache and validate that we can again call the QueryExecutor with
+            // CACHE_CONTROL_ONLY_IF_CACHED but this time retrieve the expected value instead of the previous dab exception. 
+            Mock<SqlQueryStructure> mockStructureToSetCache = CreateMockSqlQueryStructure(entityName, dataSourceName, SqlQueryStructure.CACHE_CONTROL_NO_CACHE);
+            result = await (Task<JsonDocument?>)method!.Invoke(
+                queryEngine,
+
+                // Elements of this array are the arguments passed to ExecuteAsync.
+                new object[]
+                {
+                    mockStructureToSetCache.Object,
+                    dataSourceName,
+                    isMultipleCreateOperation
+                }
+            )!;
+
+            result = await (Task<JsonDocument?>)method!.Invoke(
+                queryEngine,
+
+                // Elements of this array are the arguments passed to ExecuteAsync.
+                new object[]
+                {
+                    mockStructure.Object,
+                    dataSourceName,
+                    isMultipleCreateOperation
+                }
+            )!;
+
+            // Assert
+            // Validates that the expected database response is returned by the query engine.
+            Assert.AreEqual(expected: value, actual: result!.RootElement.GetProperty(key).GetString());
+        }
+
+        private static Mock<SqlQueryStructure> CreateMockSqlQueryStructure(string entityName, string dataSourceName, string? cacheControlOption)
+        {
+            Dictionary<EntityActionOperation, string?> mockPolicyDict = new()
+            {
+                { EntityActionOperation.Read, string.Empty }
+            };
+
+            SourceDefinition sourceDefinition = new()
+            {
+                PrimaryKey = new List<string>()
+            };
+
+            bool isValidateOnly = false;
+            DefaultHttpContext httpContext = new();
+            httpContext.Request.Headers[SqlQueryStructure.CACHE_CONTROL] = cacheControlOption;
+            httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = string.Empty;
+            Dictionary<string, DatabaseObject> entityToDatabaseObject = new();
+            entityToDatabaseObject.Add(entityName, new DatabaseTable());
+
+            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = CreateMockRuntimeConfigProvider(entityName);
+            Mock<IAbstractQueryManagerFactory> mockQueryFactory = new();
+            Mock<ILogger<ISqlMetadataProvider>> mockLogger = new();
+            Mock<MsSqlMetadataProvider> mockSqlMetadataProvider = new(
+                mockRuntimeConfigProvider.Object,
+                mockQueryFactory.Object,
+                mockLogger.Object,
+                dataSourceName,
+                isValidateOnly);
+            mockSqlMetadataProvider
+                .Setup(s => s.EntityToDatabaseObject)
+                .Returns(entityToDatabaseObject);
+            Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
+            Mock<IAuthorizationResolver> mockAuthorizationResolver = new();
+            Mock<RestRequestContext> mockRestRequestContext = new(
+                entityName,
+                new DatabaseTable());
+            mockRestRequestContext
+                .Setup(r => r.PrimaryKeyValuePairs)
+                .Returns(new Dictionary<string, object>());
+            Mock<GQLFilterParser> mockFilterParser = new(
+                mockRuntimeConfigProvider.Object,
+                mockMetadataProviderFactory.Object);
+            Mock<SqlQueryStructure> mockStructure = new(
+                mockRestRequestContext.Object,
+                mockSqlMetadataProvider.Object,
+                mockAuthorizationResolver.Object,
+                mockRuntimeConfigProvider.Object,
+                mockFilterParser.Object,
+                httpContext);
+            mockStructure.Setup(s => s.CacheControlOption).Returns(cacheControlOption);
+            mockStructure.Setup(s => s.DbPolicyPredicatesForOperations).Returns(mockPolicyDict);
+            mockStructure.Setup(s => s.EntityName).Returns(entityName);
+            mockStructure.Setup(s => s.GetUnderlyingSourceDefinition()).Returns(sourceDefinition);
+
+            return mockStructure;
+        }
+
+        private static Mock<RuntimeConfigProvider> CreateMockRuntimeConfigProvider(string entityName)
+        {
+            Entity entity = new(
+                Source: new EntitySource(string.Empty, null, null, null),
+                GraphQL: new EntityGraphQLOptions(string.Empty, string.Empty),
+                Rest: new EntityRestOptions(),
+                Permissions: Array.Empty<EntityPermission>(),
+                Mappings: new Dictionary<string, string>(),
+                Relationships: new Dictionary<string, EntityRelationship>(),
+                Cache: new EntityCacheOptions { Enabled = true },
+                IsLinkingEntity: false,
+                Health: null
+            );
+
+            DataSource dataSource = new(DatabaseType.MSSQL, string.Empty);
+
+            RuntimeEntities entities = new(
+            new Dictionary<string, Entity>
+            {
+                { entityName, entity }
+            });
+
+            Mock<RuntimeConfig> mockRuntimeConfig = new(
+                string.Empty,
+                dataSource,
+                entities,
+                null,
+                null
+            );
+            mockRuntimeConfig
+                .Setup(c => c.GetDataSourceFromDataSourceName(It.IsAny<string>()))
+                .Returns(dataSource);
+            mockRuntimeConfig
+                .Setup(c => c.Entities)
+                .Returns(entities);
+            mockRuntimeConfig
+                .Setup(c => c.CanUseCache())
+                .Returns(true);
+            mockRuntimeConfig
+                .Setup(c => c.GetEntityCacheEntryTtl(It.IsAny<string>()))
+                .Returns(60);
+            Mock<RuntimeConfigLoader> mockLoader = new(null, null);
+            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(mockLoader.Object);
+            mockRuntimeConfigProvider
+                .Setup(provider => provider.GetConfig())
+                .Returns(mockRuntimeConfig.Object);
+            return mockRuntimeConfigProvider;
+        }
+
+        private static SqlQueryEngine CreateQueryEngine(DabCacheService cache, string queryText, string expectedDatabaseResponse, string entityName)
+        {
+            using JsonDocument executorJsonResponse = JsonDocument.Parse(expectedDatabaseResponse);
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(expectedDatabaseResponse, ExecutorReturnType.NonNullableJson);
+            Mock<IQueryBuilder> mockQueryBuilder = new();
+            mockQueryBuilder
+                .Setup(builder => builder.Build(It.IsAny<SqlQueryStructure>()))
+                .Returns(queryText);
+            Mock<IAbstractQueryManagerFactory> mockQueryFactory = new();
+            mockQueryFactory
+                .Setup(factory => factory.GetQueryExecutor(It.IsAny<DatabaseType>()))
+                .Returns(mockQueryExecutor.Object);
+            mockQueryFactory
+                .Setup(factory => factory.GetQueryBuilder(It.IsAny<DatabaseType>()))
+                .Returns(mockQueryBuilder.Object);
+            Mock<IMetadataProviderFactory> mockMetadataProviderFactory = new();
+            Mock<IHttpContextAccessor> mockHttpContextAccessor = new();
+            Mock<IAuthorizationResolver> mockAuthorizationResolver = new();
+            Mock<ILogger<IQueryEngine>> mockLogger = new();
+            Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = CreateMockRuntimeConfigProvider(entityName);
+            Mock<GQLFilterParser> mockFilterParser = new(mockRuntimeConfigProvider.Object, mockMetadataProviderFactory.Object);
+
+            return new(
+                mockQueryFactory.Object,
+                mockMetadataProviderFactory.Object,
+                mockHttpContextAccessor.Object,
+                mockAuthorizationResolver.Object,
+                mockFilterParser.Object,
+                mockLogger.Object,
+                mockRuntimeConfigProvider.Object,
+                cache);
+        }
+
+        /// <summary>
         /// FusionCache instance which caller is responsible for disposing.
         /// Creates a memorycache instance with the desired options for use within FusionCache.
         /// </summary>
@@ -523,6 +882,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                             statusCode: HttpStatusCode.InternalServerError,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed));
                     break;
+                case ExecutorReturnType.NonNullableJson:
+                    mockQueryExecutor.Setup(x => x.ExecuteQueryAsync<JsonElement>(
+                        It.IsAny<string>(),
+                        It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                        It.IsAny<Func<DbDataReader, List<string>?, Task<JsonElement>>>(),
+                        It.IsAny<string>(),
+                        It.IsAny<HttpContext?>(),
+                        It.IsAny<List<string>?>()))
+                        .ReturnsAsync(executorJsonResponse.RootElement.Clone());
+                    break;
                 case ExecutorReturnType.Json:
                 default:
                     mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
@@ -534,6 +903,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                         args).Result)
                         .Returns(executorJsonResponse.RootElement.Clone());
                     break;
+
             }
 
             // Create a Mock Func<arg1, arg2, arg3> so when the mock ExecuteQueryAsync method

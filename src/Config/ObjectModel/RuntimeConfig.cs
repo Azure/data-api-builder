@@ -22,7 +22,7 @@ public record RuntimeConfig
 
     public RuntimeOptions? Runtime { get; init; }
 
-    public RuntimeEntities Entities { get; init; }
+    public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
 
@@ -325,7 +325,7 @@ public record RuntimeConfig
     /// <param name="dataSourceName">Name of datasource.</param>
     /// <returns>DataSource object.</returns>
     /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public DataSource GetDataSourceFromDataSourceName(string dataSourceName)
+    public virtual DataSource GetDataSourceFromDataSourceName(string dataSourceName)
     {
         CheckDataSourceNamePresent(dataSourceName);
         return _dataSourceNameToDataSource[dataSourceName];
@@ -430,7 +430,7 @@ public record RuntimeConfig
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
     /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
-    public int GetEntityCacheEntryTtl(string entityName)
+    public virtual int GetEntityCacheEntryTtl(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
@@ -464,7 +464,7 @@ public record RuntimeConfig
     /// - whether the datasource is SQL and session context is disabled.
     /// </summary>
     /// <returns>Whether cache operations should proceed.</returns>
-    public bool CanUseCache()
+    public virtual bool CanUseCache()
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
         return IsCachingEnabled && !setSessionContextEnabled;

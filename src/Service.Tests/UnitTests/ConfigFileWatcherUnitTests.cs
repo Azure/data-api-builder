@@ -209,7 +209,7 @@ public class ConfigFileWatcherUnitTests
         fileWatcher.NewFileContentsDetected += (sender, e) =>
         {
             // For testing, modification of fileChangeNotificationsRecieved
-            // should be atomic. 
+            // should be atomic.
             Interlocked.Increment(ref fileChangeNotificationsReceived);
         };
 
@@ -288,7 +288,7 @@ public class ConfigFileWatcherUnitTests
         fileWatcher.NewFileContentsDetected += (sender, e) =>
         {
             // For testing, modification of fileChangeNotificationsRecieved
-            // should be atomic. 
+            // should be atomic.
             Interlocked.Increment(ref fileChangeNotificationsReceived);
         };
 

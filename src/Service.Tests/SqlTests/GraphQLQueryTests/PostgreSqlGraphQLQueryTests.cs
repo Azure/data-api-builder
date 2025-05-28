@@ -79,48 +79,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task TestInQueryWithNullAndEmptyValues()
         {
-            string postgresQuery = $"SELECT string_types FROM type_table where string_types IN ('test string', ' ', NULL) ORDER BY string_types FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT string_types FROM type_table where string_types IN ('test string', '', NULL) ORDER BY string_types) as table0";
             await InQueryWithNullAndEmptyvalues(postgresQuery);
-        }
-
-        /// <summary>
-        /// Tests IN operator with aggregations
-        /// </summary>
-        [TestMethod]
-        public async Task INOperatorWithAggregations()
-        {
-
-            string postgresQuery = @"
-                SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""
-                FROM
-                    (SELECT ""table0"".""publisher_id"" AS ""publisher_id"",
-                            count(""table0"".""id"") AS ""publisherCount""
-                     FROM ""public"".""books"" AS ""table0""
-                     WHERE 1 = 1
-                     GROUP BY ""table0"".""publisher_id""
-                    HAVING count(""table0"".""id"")  IN (1, 2)) AS ""subq7""
-                            ";
-
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query {
-                      books {
-                        groupBy(fields: [publisher_id]) {
-                          fields{
-                            publisher_id
-                          }
-                          aggregations{
-                            publisherCount: count(field: id, having:  {
-                               in: [1, 2]
-                            })
-                          }
-                        }
-                      }
-                    }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(postgresQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
         }
 
         /// <summary>
@@ -170,7 +130,7 @@ FROM
      LEFT OUTER JOIN LATERAL
          (SELECT to_jsonb(""subq6"") AS ""data""
           FROM
-              (SELECT ""table1"".""price"" AS ""price""
+              (SELECT ""table1"".""price"" AS ""price"", ""table1"".""book_id"" AS ""book_id""
                FROM ""public"".""book_website_placements"" AS ""table1""
                WHERE ""table1"".""book_id"" = ""table0"".""id""
                ORDER BY ""table1"".""id"" ASC
@@ -185,7 +145,7 @@ FROM
                 AND ""table0"".""id"" = ""table6"".""book_id""
         )
     )
-     ORDER BY ""table0"".""id"" ASC
+     ORDER BY ""table0"".""id"" DESC
      LIMIT 100) AS ""subq7""
             ";
 

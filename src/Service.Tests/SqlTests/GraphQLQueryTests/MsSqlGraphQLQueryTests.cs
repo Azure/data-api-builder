@@ -207,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ,JSON_QUERY([table1_subq].[data]) AS [websiteplacement]
                 FROM [dbo].[books] AS [table0]
                 OUTER APPLY (
-                    SELECT TOP 1 [table1].[price] AS [price]
+                    SELECT TOP 1 [table1].[price] AS [price], [table1].[book_id] AS [book_id]
                     FROM [dbo].[book_website_placements] AS [table1]
                     WHERE [table1].[book_id] = [table0].[id]
                     ORDER BY [table1].[id] ASC

@@ -407,12 +407,10 @@ INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, strin
     (3, 0, -32768, -2147483648, -9223372036854775808, '', -3.4E38, -1.7E308, 2.929292E-19, true, '1753-01-01 00:00:00.000', 0x00000000),
     (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, true, '9999-12-31 23:59:59', 0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-    (6, 1, 2, 2, 2, 'test string', 'test nvarchar', 0.44, 0.44, 0.444444, 0,
-    '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54', '10:23:54.9999999',
-    0xABCDEF0123),
-    (7, 1, 2, 2, 2, 'test varchar', 'test other nvarchar', 0.44, 0.44, 0.444444, 0,
-    '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54', '10:23:54.9999999',
-    0xABCDEF0123);
+    (6, 1, 2, 2, 2, 'test string', 0.44, 0.44, 0.444444, false,
+    '1999-01-08 10:23:54', 0xABCDEF0123),
+    (7, 1, 2, 2, 2, 'test varchar',  0.44, 0.44, 0.444444, false,
+    '1999-01-08 10:23:54', 0xABCDEF0123);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO trees(treeId, species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');
 INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');

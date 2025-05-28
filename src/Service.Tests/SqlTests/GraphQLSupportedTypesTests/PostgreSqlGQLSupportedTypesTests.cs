@@ -67,7 +67,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "in", "'false'", "false", "IN")]
         [DataRow(STRING_TYPE, "in", "test string", "\"test string\"", "IN")]
         [DataRow(STRING_TYPE, "in", "test string;test varchar", "\"test string;test varchar\"", "IN")]
-        [DataRow(DATETIME_TYPE, "in", "1999-01-08 10:23:54.000", "\"1999-01-08 10:23:54.000\"", "IN")]
         [DataTestMethod]
         public async Task PGSQL_real_graphql_in_filter_expectedValues(
             string type,

@@ -889,49 +889,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
-        /// Test Nested Filter with IN clause for Many-One relationship.
-        /// </summary>
-        [TestMethod]
-        public async Task TestNestedFilterWithInForManyOne(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
-        {
-            string graphQLQueryName = "comics";
-            // Gets all the comics that have their series name = 'Foundation'
-            string gqlQuery = @"{
-                comics (" + QueryBuilder.FILTER_FIELD_NAME + ": {" +
-                    @"myseries: { name: { in: [""Foundation""] }}})
-                    {
-                      items {
-                        id
-                        title
-                      }
-                    }
-                }";
-
-            string dbQuery = MakeQueryOn(
-                table: "comics",
-                queriedColumns: new List<string> { "id", "title" },
-                existsPredicate,
-                GetDefaultSchema());
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                gqlQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: roleName,
-                expectsError: expectsError);
-
-            if (expectsError)
-            {
-                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
-            }
-            else
-            {
-                string expected = await GetDatabaseResultAsync(dbQuery);
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
-            }
-        }
-
-        /// <summary>
         /// Test Nested Filter for One-Many relationship
         /// </summary>
         [TestMethod]

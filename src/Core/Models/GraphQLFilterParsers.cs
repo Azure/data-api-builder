@@ -721,7 +721,8 @@ public static class FieldFilterParser
                 message: "Bad syntax: Invalid IN operator type value",
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-        } else if (inValues.Count > 100)
+        }
+        else if (inValues.Count > 100)
         {
             throw new DataApiBuilderException(
                 message: "IN operator filter object cannot process more than 100 values at a time.",

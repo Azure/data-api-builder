@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
         /// </summary>
         [TestMethod]
-        public async Task TestInQueryWithVariables()
+        public async Task InQueryWithVariables()
         {
             string msSqlQuery = $"SELECT id, title FROM books  where id IN (1, 2) ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await InQueryWithVariables(msSqlQuery);
@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
         /// </summary>
         [TestMethod]
-        public async Task TestInQueryWithNullAndEmptyValues()
+        public async Task InQueryWithNullAndEmptyvalues()
         {
             string msSqlQuery = $"SELECT string_types FROM type_table where string_types IN ('test string', ' ', NULL) ORDER BY string_types FOR JSON PATH, INCLUDE_NULL_VALUES";
             await InQueryWithNullAndEmptyvalues(msSqlQuery);
@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
         [TestMethod]
-        public async Task InFilterInOneToOneJoinQuery()
+        public async Task InFilterOneToOneJoinQuery()
         {
             string dwSqlQuery = @"
                 SELECT COALESCE(

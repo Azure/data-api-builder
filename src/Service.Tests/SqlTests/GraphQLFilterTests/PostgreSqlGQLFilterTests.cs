@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// Tests nested filter with an IN and OR clause.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithOrAndIn()
+        public async Task TestNestedFilterWithOrAndIN()
         {
             string defaultSchema = GetPreIndentDefaultSchema();
 

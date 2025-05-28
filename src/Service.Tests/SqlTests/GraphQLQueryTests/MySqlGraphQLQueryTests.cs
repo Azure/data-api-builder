@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
         /// </summary>
         [TestMethod]
-        public async Task TestInQueryWithNullAndEmptyValues()
+        public async Task InQueryWithNullAndEmptyvalues()
         {
             string mySqlQuery = @"SELECT COALESCE(
                             JSON_ARRAYAGG(

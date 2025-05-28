@@ -1,14 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
-using Sprache;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 {
@@ -101,8 +100,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", numbers } });
-            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), "IN operator filter object cannot process more than 100 values at a time.");
-            
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), "IN operator filter object cannot process more than 100 values at a time.");   
         }
 
         /// <summary>
@@ -110,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
         /// </summary>
         [TestMethod]
-        public async Task TestInQueryWithNullAndEmptyValues()
+        public async Task InQueryWithNullAndEmptyvalues()
         {
             string msSqlQuery = $"SELECT string_types FROM type_table where string_types IN ('test string', ' ', NULL) ORDER BY string_types FOR JSON PATH, INCLUDE_NULL_VALUES";
             await InQueryWithNullAndEmptyvalues(msSqlQuery);
@@ -198,7 +196,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
         [TestMethod]
-        public async Task InFilterInOneToOneJoinQuery()
+        public async Task InFilterOneToOneJoinQuery()
         {
             string msSqlQuery = @"
                 SELECT TOP 100 [table0].[id] AS [id]

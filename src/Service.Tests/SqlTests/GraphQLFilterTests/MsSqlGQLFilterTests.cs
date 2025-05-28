@@ -3,8 +3,10 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
@@ -58,7 +60,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         WHERE [table1].[name] IN ('Foundation')
                         AND [table0].[series_id] = [table1].[id] )";
 
-            await TestNestedFilterWithInForManyOne(existsPredicate, roleName, expectsError, errorMsgFragment: errorMessageFragment);
+            string graphQLQueryName = "comics";
+            // Gets all the comics that have their series name = 'Foundation'
+            string gqlQuery = @"{
+                comics (" + QueryBuilder.FILTER_FIELD_NAME + ": {" +
+                    @"myseries: { name: { in: [""Foundation""] }}})
+                    {
+                      items {
+                        id
+                        title
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "comics",
+                queriedColumns: new List<string> { "id", "title" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMessageFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
         }
 
         [TestMethod]
@@ -302,7 +338,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// Tests nested filter with an IN and OR clause.
         /// </summary>
         [TestMethod]
-        public async Task TestNestedFilterWithOrAndIn()
+        public async Task TestNestedFilterWithOrAndIN()
         {
             string defaultSchema = GetPreIndentDefaultSchema();
 

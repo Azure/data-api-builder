@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
         /// </summary>
         [TestMethod]
-        public async Task TestInQueryWithNullAndEmptyValues()
+        public async Task InQueryWithNullAndEmptyvalues()
         {
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT string_types FROM type_table where string_types IN ('test string', '', NULL) ORDER BY string_types) as table0";
             await InQueryWithNullAndEmptyvalues(postgresQuery);
@@ -118,7 +118,7 @@ FROM
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
         [TestMethod]
-        public async Task InFilterInOneToOneJoinQuery()
+        public async Task InFilterOneToOneJoinQuery()
         {
             string postgresQuery = @"
 SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""

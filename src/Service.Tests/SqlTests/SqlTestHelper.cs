@@ -94,7 +94,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 .Select(gb =>
                 {
                     JObject obj = new ();
-
                     JObject fields = gb["fields"] as JObject;
                     if (fields != null)
                     {

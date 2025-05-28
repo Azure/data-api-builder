@@ -103,7 +103,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", numbers } });
             SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), "IN operator filter object cannot process more than 100 values at a time.");
             
-            
         }
 
         /// <summary>

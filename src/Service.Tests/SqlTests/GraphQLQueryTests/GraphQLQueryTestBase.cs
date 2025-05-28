@@ -97,7 +97,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
             }";
 
-            
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", new List<string>(["test string", string.Empty, null]) } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 

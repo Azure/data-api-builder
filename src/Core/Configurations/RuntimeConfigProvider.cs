@@ -117,7 +117,7 @@ public class RuntimeConfigProvider
     /// <returns>The RuntimeConfig instance.</returns>
     /// <remark>Dont use this method if environment variable references need to be retained.</remark>
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
-    public RuntimeConfig GetConfig()
+    public virtual RuntimeConfig GetConfig()
     {
         if (_configLoader.RuntimeConfig is not null)
         {

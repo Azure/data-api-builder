@@ -92,6 +92,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public GroupByMetadata GroupByMetadata { get; private set; }
 
+        public virtual string? CacheControlOption { get; set; }
+
+        public const string CACHE_CONTROL = "Cache-Control";
+
+        public const string CACHE_CONTROL_NO_STORE = "no-store";
+
+        public const string CACHE_CONTROL_NO_CACHE = "no-cache";
+
+        public const string CACHE_CONTROL_ONLY_IF_CACHED = "only-if-cached";
+
+        public HashSet<string> cacheControlHeaderOptions = new(
+            new[] { CACHE_CONTROL_NO_STORE, CACHE_CONTROL_NO_CACHE, CACHE_CONTROL_ONLY_IF_CACHED },
+            StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
@@ -150,6 +164,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
+                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx).Request.Headers,
                   predicates: null,
                   entityName: entityName,
                   counter: counter)
@@ -217,6 +232,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
+
             // Process Authorization Policy of the entity being processed.
             AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
 
@@ -255,6 +271,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                 authorizationResolver,
                 gQLFilterParser,
+                httpRequestHeaders: httpContext?.Request.Headers,
                 predicates: null,
                 entityName: context.EntityName,
                 counter: new IncrementingInteger(),
@@ -380,10 +397,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
+                  gQLFilterParser.GetHttpContextFromMiddlewareContext(ctx).Request.Headers,
                   predicates: null,
                   entityName: entityName,
-                  counter: counter
-                  )
+                  counter: counter)
         {
             _ctx = ctx;
             IOutputType outputType = schemaField.Type;
@@ -541,6 +558,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
+            IHeaderDictionary? httpRequestHeaders,
             List<Predicate>? predicates = null,
             string entityName = "",
             IncrementingInteger? counter = null,
@@ -559,6 +577,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ColumnLabelToParam = new();
             FilterPredicates = string.Empty;
             OrderByColumns = new();
+            AddCacheControlOptions(httpRequestHeaders);
+        }
+
+        private void AddCacheControlOptions(IHeaderDictionary? httpRequestHeaders)
+        {
+            // Set the cache control based on the request header if it exists.
+            if (httpRequestHeaders is not null && httpRequestHeaders.TryGetValue(CACHE_CONTROL, out Microsoft.Extensions.Primitives.StringValues cacheControlOption))
+            {
+                CacheControlOption = cacheControlOption;
+            }
+
+            if (!string.IsNullOrEmpty(CacheControlOption) &&
+                !cacheControlHeaderOptions.Contains(CacheControlOption))
+            {
+                throw new DataApiBuilderException(
+                    message: "Request Header Cache-Control is invalid: " + CacheControlOption,
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>

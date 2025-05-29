@@ -91,16 +91,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string msSqlQuery = $"SELECT id, title FROM books where id IN ${(result)} ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             string graphQLQueryName = "books";
             string graphQLQuery = @"query ($inVar: [Int]!) {
-                books(filter: { id:  { in: $inVar } }  orderBy:  { id: ASC }) {
-                    items {
-                        id
-                        title
-                    }
-                }
-            }";
+		        books(filter: { id:  { in: $inVar } }  orderBy:  { id: ASC }) {
+			        items {
+				        id
+				        title
+			        }
+		        }
+	        }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", numbers } });
-            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), "IN operator filter object cannot process more than 100 values at a time.");   
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), "IN operator filter object cannot process more than 100 values at a time.");
         }
 
         /// <summary>

@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             IEnumerable<JObject> flatActualArray = actualToken["groupBy"]
                 .Select(gb =>
                 {
-                    JObject obj = new ();
+                    JObject obj = new();
                     JObject fields = gb["fields"] as JObject;
                     if (fields != null)
                     {

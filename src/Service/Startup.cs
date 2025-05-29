@@ -4,6 +4,7 @@
 using System;
 using System.IO.Abstractions;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -21,6 +22,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
@@ -44,6 +46,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -61,9 +64,9 @@ namespace Azure.DataApiBuilder.Service
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
         public static bool IsLogLevelOverriddenByCli;
-        public static OpenTelemetryOptions OpenTelemetryOptions = new();
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
+        public static OpenTelemetryOptions OpenTelemetryOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
         private HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
@@ -119,11 +122,38 @@ namespace Azure.DataApiBuilder.Service
                 && runtimeConfig?.Runtime?.Telemetry?.OpenTelemetry is not null
                 && runtimeConfig.Runtime.Telemetry.OpenTelemetry.Enabled)
             {
+                services.Configure<OpenTelemetryLoggerOptions>(options =>
+                {
+                    options.IncludeScopes = true;
+                    options.ParseStateValues = true;
+                    options.IncludeFormattedMessage = true;
+                });
                 services.AddOpenTelemetry()
+                .WithLogging(logging =>
+                {
+                    logging.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
+                    .AddOtlpExporter(configure =>
+                    {
+                        configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                        configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                        configure.Protocol = OtlpExportProtocol.Grpc;
+                    });
+
+                })
                 .WithMetrics(metrics =>
                 {
                     metrics.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        .AddAspNetCoreInstrumentation()
+                        .AddOtlpExporter(configure =>
+                        {
+                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
+                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
+                            configure.Protocol = OtlpExportProtocol.Grpc;
+                        })
+                        .AddMeter(TelemetryMetricsHelper.MeterName);
+                })
+                .WithTracing(tracing =>
+                {
+                    tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
                         .AddHttpClientInstrumentation()
                         .AddOtlpExporter(configure =>
                         {
@@ -131,19 +161,7 @@ namespace Azure.DataApiBuilder.Service
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
-                        .AddRuntimeInstrumentation();
-                })
-                .WithTracing(tracing =>
-                {
-                    tracing.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(runtimeConfig.Runtime.Telemetry.OpenTelemetry.ServiceName!))
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
-                        .AddOtlpExporter(configure =>
-                        {
-                            configure.Endpoint = new Uri(runtimeConfig.Runtime.Telemetry.OpenTelemetry.Endpoint!);
-                            configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
-                            configure.Protocol = OtlpExportProtocol.Grpc;
-                        });
+                        .AddSource(TelemetryTracesHelper.DABActivitySource.Name);
                 });
             }
 
@@ -254,6 +272,49 @@ namespace Azure.DataApiBuilder.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
+
+            services.AddHttpClient("ContextConfiguredHealthCheckClient")
+                .ConfigureHttpClient((serviceProvider, client) =>
+                {
+                    IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                    HttpContext? httpContext = httpCtxAccessor.HttpContext;
+                    string baseUri = string.Empty;
+
+                    if (httpContext is not null)
+                    {
+                        string scheme = httpContext.Request.Scheme;  // "http" or "https"
+                        string host = httpContext.Request.Host.Host ?? "localhost"; // e.g. "localhost"
+                        int port = ResolveInternalPort(httpContext);
+                        baseUri = $"{scheme}://{host}:{port}";
+                        client.BaseAddress = new Uri(baseUri);
+                    }
+                    else
+                    {
+                        // Optional fallback if ever needed in non-request scenarios
+                        baseUri = $"http://localhost:{ResolveInternalPort()}";
+                        client.BaseAddress = new Uri(baseUri);
+                    }
+
+                    _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
+                    client.DefaultRequestHeaders.Accept.Clear();
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    client.Timeout = TimeSpan.FromSeconds(200);
+                })
+                .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
+                {
+                    // For debug purpose, USE_SELF_SIGNED_CERT can be set to true in Environment variables
+                    bool allowSelfSigned = Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+                    HttpClientHandler handler = new();
+
+                    if (allowSelfSigned)
+                    {
+                        handler.ServerCertificateCustomValidationCallback =
+                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                    }
+
+                    return handler;
+                });
 
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
             {
@@ -395,6 +456,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Configure Application Insights Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
+                ConfigureOpenTelemetry(runtimeConfig);
 
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -485,6 +547,7 @@ namespace Azure.DataApiBuilder.Service
                 {
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                 }
+
             });
 
             app.UseAuthentication();
@@ -713,6 +776,37 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
+        /// Configure Open Telemetry based on the loaded runtime configuration. If Open Telemetry
+        /// is enabled, we can track different events and metrics.
+        /// </summary>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
+        private void ConfigureOpenTelemetry(RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig?.Runtime?.Telemetry is not null
+                && runtimeConfig.Runtime.Telemetry.OpenTelemetry is not null)
+            {
+                OpenTelemetryOptions = runtimeConfig.Runtime.Telemetry.OpenTelemetry;
+
+                if (!OpenTelemetryOptions.Enabled)
+                {
+                    _logger.LogInformation("Open Telemetry are disabled.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(OpenTelemetryOptions?.Endpoint))
+                {
+                    _logger.LogWarning("Logs won't be sent to Open Telemetry because an Open Telemetry connection string is not available in the runtime config.");
+                    return;
+                }
+
+                // Updating Startup Logger to Log from Startup Class.
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+                _logger = loggerFactory.CreateLogger<Startup>();
+            }
+        }
+
+        /// <summary>
         /// Sets Static Web Apps EasyAuth as the authentication scheme for the engine.
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
@@ -865,5 +959,59 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
             LoggerFilters.AddFilter("default");
         }
+
+        /// <summary>
+        /// Get the internal port of the container.
+        /// </summary>
+        /// <param name="httpContext">The HttpContext</param>
+        /// <returns>The internal container port</returns>
+        private static int ResolveInternalPort(HttpContext? httpContext = null)
+        {
+            // Try X-Forwarded-Port if context is present
+            if (httpContext is not null &&
+                httpContext.Request.Headers.TryGetValue("X-Forwarded-Port", out StringValues fwdPortVal) &&
+                int.TryParse(fwdPortVal.ToString(), out int fwdPort) &&
+                fwdPort > 0)
+            {
+                return fwdPort;
+            }
+
+            // Infer scheme from context if available, else default to "http"
+            string scheme = httpContext?.Request.Scheme ?? "http";
+
+            // Check ASPNETCORE_URLS env var
+            string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
+            if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
+            {
+                foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string trimmed = part.Trim();
+
+                    // Handle wildcard format (e.g. http://+:5002)
+                    if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int colonIndex = trimmed.LastIndexOf(':');
+                        if (colonIndex != -1 &&
+                            int.TryParse(trimmed.Substring(colonIndex + 1), out int wildcardPort) &&
+                            wildcardPort > 0)
+                        {
+                            return wildcardPort;
+                        }
+                    }
+
+                    // Handle standard URI format
+                    if (trimmed.StartsWith($"{scheme}://", StringComparison.OrdinalIgnoreCase) &&
+                        Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri))
+                    {
+                        return uri.Port;
+                    }
+                }
+            }
+
+            // Fallback
+            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 5000;
+        }
+
     }
 }

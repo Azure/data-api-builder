@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             var payload = new
             {
                 //{"query":"{publishers(first:4) {items {id name} }}"}
-                query = $"{{{entityName.ToLowerInvariant()} (first: {first}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
+                query = $"{{{entityName} (first: {first}) {{items {{ {string.Join(" ", columnNames)} }}}}}}"
             };
 
             // Serialize the payload to a JSON string
@@ -48,20 +48,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         public static string CreateHttpRestQuery(string entityName, int first)
         {
             // Create the payload for the REST HTTP request.
-            // "/EntityName?$first=4"
+            // "EntityName?$first=4"
             return $"/{entityName}?$first={first}";
-        }
-
-        public static string GetServiceRoute(string route, string uriSuffix)
-        {
-            // The RuntimeConfigProvider enforces the expectation that the configured REST and GraphQL path starts with a
-            // forward slash '/'. This is to ensure that the path is always relative to the base URL.
-            if (uriSuffix == string.Empty)
-            {
-                return string.Empty;
-            }
-
-            return $"{route}{uriSuffix.ToLowerInvariant()}";
         }
     }
 }

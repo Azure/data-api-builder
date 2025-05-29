@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -8,6 +9,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -17,6 +19,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types.NodaTime;
 using NodaTime.Text;
+using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -50,6 +53,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </param>
         public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
         {
+            using Activity? activity = StartQueryActivity(context);
+
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
@@ -91,6 +96,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </param>
         public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
         {
+            using Activity? activity = StartQueryActivity(context);
+
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
@@ -125,6 +132,31 @@ namespace Azure.DataApiBuilder.Service.Services
                 SetContextResult(context, result.Item1);
                 SetNewMetadata(context, result.Item2);
             }
+        }
+
+        /// <summary>
+        /// Starts the activity for the query
+        /// </summary>
+        /// <param name="context">
+        /// The middleware context.
+        /// </param>
+        private Activity? StartQueryActivity(IMiddlewareContext context)
+        {
+            string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
+            Kestral method = Kestral.Post;
+
+            Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}");
+
+            if (activity is not null)
+            {
+                string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+                DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+                activity.TrackQueryActivityStarted(
+                    databaseType: ds.DatabaseType,
+                    dataSourceName: dataSourceName);
+            }
+
+            return activity;
         }
 
         /// <summary>
@@ -425,7 +457,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public static InputObjectType InputObjectTypeFromIInputField(IInputField field)
         {
-            return (InputObjectType)(InnerMostType(field.Type));
+            return (InputObjectType)InnerMostType(field.Type);
         }
 
         /// <summary>

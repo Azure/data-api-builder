@@ -48,6 +48,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -272,22 +273,44 @@ namespace Azure.DataApiBuilder.Service
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
                 .ConfigureHttpClient((serviceProvider, client) =>
                 {
-                    IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-                    HttpContext? httpContext = httpContextAccessor.HttpContext;
+                    IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                    HttpContext? httpContext = httpCtxAccessor.HttpContext;
+                    string baseUri = string.Empty;
 
-                    if (httpContext != null)
+                    if (httpContext is not null)
                     {
-                        // Build base address from request
-                        string baseUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
+                        string scheme = httpContext.Request.Scheme;  // "http" or "https"
+                        string host = httpContext.Request.Host.Host ?? "localhost"; // e.g. "localhost"
+                        int port = ResolveInternalPort(httpContext);
+                        baseUri = $"{scheme}://{host}:{port}";
                         client.BaseAddress = new Uri(baseUri);
-
-                        // Set default Accept header
-                        client.DefaultRequestHeaders.Accept.Clear();
-                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    }
+                    else
+                    {
+                        // Optional fallback if ever needed in non-request scenarios
+                        baseUri = $"http://localhost:{ResolveInternalPort()}";
+                        client.BaseAddress = new Uri(baseUri);
                     }
 
-                    // Optional: Set a timeout
+                    _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
+                    client.DefaultRequestHeaders.Accept.Clear();
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);
+                })
+                .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
+                {
+                    // For debug purpose, USE_SELF_SIGNED_CERT can be set to true in Environment variables
+                    bool allowSelfSigned = Environment.GetEnvironmentVariable("USE_SELF_SIGNED_CERT")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+                    HttpClientHandler handler = new();
+
+                    if (allowSelfSigned)
+                    {
+                        handler.ServerCertificateCustomValidationCallback =
+                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                    }
+
+                    return handler;
                 });
 
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
@@ -941,5 +964,59 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
             LoggerFilters.AddFilter("default");
         }
+
+        /// <summary>
+        /// Get the internal port of the container.
+        /// </summary>
+        /// <param name="httpContext">The HttpContext</param>
+        /// <returns>The internal container port</returns>
+        private static int ResolveInternalPort(HttpContext? httpContext = null)
+        {
+            // Try X-Forwarded-Port if context is present
+            if (httpContext is not null &&
+                httpContext.Request.Headers.TryGetValue("X-Forwarded-Port", out StringValues fwdPortVal) &&
+                int.TryParse(fwdPortVal.ToString(), out int fwdPort) &&
+                fwdPort > 0)
+            {
+                return fwdPort;
+            }
+
+            // Infer scheme from context if available, else default to "http"
+            string scheme = httpContext?.Request.Scheme ?? "http";
+
+            // Check ASPNETCORE_URLS env var
+            string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
+            if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
+            {
+                foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string trimmed = part.Trim();
+
+                    // Handle wildcard format (e.g. http://+:5002)
+                    if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int colonIndex = trimmed.LastIndexOf(':');
+                        if (colonIndex != -1 &&
+                            int.TryParse(trimmed.Substring(colonIndex + 1), out int wildcardPort) &&
+                            wildcardPort > 0)
+                        {
+                            return wildcardPort;
+                        }
+                    }
+
+                    // Handle standard URI format
+                    if (trimmed.StartsWith($"{scheme}://", StringComparison.OrdinalIgnoreCase) &&
+                        Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri))
+                    {
+                        return uri.Port;
+                    }
+                }
+            }
+
+            // Fallback
+            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 5000;
+        }
+
     }
 }

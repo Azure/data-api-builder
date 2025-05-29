@@ -483,7 +483,7 @@ public class GQLFilterParser
         string schemaName,
         string tableName,
         string tableAlias,
-        Func<object, string?, string> processLiterals,
+        Func<object, string?, bool, string> processLiterals,
         bool isListType = false)
     {
         Column column = new(schemaName, tableName, columnName: fieldName, tableAlias);
@@ -611,7 +611,7 @@ public static class FieldFilterParser
         IInputField argumentSchema,
         Column column,
         List<ObjectFieldNode> fields,
-        Func<object, string?, string> processLiterals,
+        Func<object, string?, bool, string> processLiterals,
         bool isListType = false)
     {
         List<PredicateOperand> predicates = new();
@@ -631,6 +631,8 @@ public static class FieldFilterParser
             {
                 continue;
             }
+
+            bool lengthOverride = false;
 
             PredicateOperation op;
             switch (name)
@@ -662,6 +664,7 @@ public static class FieldFilterParser
                     {
                         op = PredicateOperation.LIKE;
                         value = $"%{EscapeLikeString((string)value)}%";
+                        lengthOverride = true;
                     }
 
                     break;
@@ -674,16 +677,19 @@ public static class FieldFilterParser
                     {
                         op = PredicateOperation.NOT_LIKE;
                         value = $"%{EscapeLikeString((string)value)}%";
+                        lengthOverride = true;
                     }
 
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;
                     value = $"{EscapeLikeString((string)value)}%";
+                    lengthOverride = true;
                     break;
                 case "endsWith":
                     op = PredicateOperation.LIKE;
                     value = $"%{EscapeLikeString((string)value)}";
+                    lengthOverride = true;
                     break;
                 case "isNull":
                     processLiteral = false;
@@ -696,10 +702,10 @@ public static class FieldFilterParser
             }
 
             predicates.Push(new PredicateOperand(new Predicate(
-                new PredicateOperand(column),
+                new(column),
                 op,
-                new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
-                ));
+                new(processLiteral ? $"{processLiterals(value, column.ColumnName, lengthOverride)}" : value.ToString())
+                )));
         }
 
         return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);

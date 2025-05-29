@@ -4,7 +4,6 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using HotChocolate.Execution;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
@@ -138,8 +137,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                         FROM (
                             SELECT `string_types`
                             FROM `type_table`
-                            WHERE (`string_types` IN ('test string', '', null))
-                            ORDER BY `string_types`
+                            WHERE (`string_types` IN ('lksa;jdflasdf;alsdflksdfkldj', '', null))
                         ) AS `subq7`;
                         ";
             await InQueryWithNullAndEmptyvalues(mySqlQuery);
@@ -179,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
         [TestMethod]
-        public async Task InfilterInOneToOneJoinQuery()
+        public async Task InFilterOneToOneJoinQuery()
         {
             string mySqlQuery = @"
                 SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq7`.`id`, 'title', `subq7`.`title`, 'websiteplacement',
@@ -209,30 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ORDER BY `table0`.`id` DESC LIMIT 100
                     ) AS `subq7`
             ";
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query {
-                  books(filter:  {
-                     title:  {
-                        in: [""Awesome book"", ""Also Awesome book""]
-                     }
-                  } orderBy:  {
-                     id: DESC
-                  }){
-                    items{
-                      id
-                      title
-                      websiteplacement{
-                        price
-                        book_id
-                      }
-                    }
-                  }
-                }";
-
-            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = await GetDatabaseResultAsync(mySqlQuery);
-
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+            await InFilterOneToOneJoinQuery(mySqlQuery);
         }
 
         /// <summary>

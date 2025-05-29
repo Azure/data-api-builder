@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task InQueryWithNullAndEmptyvalues()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT string_types FROM type_table where string_types IN ('test string', '', NULL) ORDER BY string_types) as table0";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT string_types FROM type_table where string_types IN ('lksa;jdflasdf;alsdflksdfkldj', '', NULL)) as table0";
             await InQueryWithNullAndEmptyvalues(postgresQuery);
         }
 

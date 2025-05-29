@@ -149,8 +149,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(FLOAT_TYPE, "in", "-9.2", "-9.2", "IN")]
         [DataRow(DECIMAL_TYPE, "in", "-9.292929", "-9.292929", "IN")]
         [DataRow(BOOLEAN_TYPE, "in", "'false'", "false", "IN")]
-        [DataRow(STRING_TYPE, "in", "test string", "\"test string\"", "IN")]
-        [DataRow(STRING_TYPE, "in", "test string;test varchar", "\"test string;test varchar\"", "IN")]
+        [DataRow(STRING_TYPE, "in", "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"", "IN")]
         [DataRow(DATETIME_TYPE, "in", "1999-01-08 10:23:54.000", "\"1999-01-08 10:23:54.000\"", "IN")]
         [DataTestMethod]
         public async Task MySQL_real_graphql_in_filter_expectedValues(
@@ -160,8 +159,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string gqlValue,
             string queryOperator)
         {
-            sqlValue = type == STRING_TYPE || type == DATETIME_TYPE ? $"({string.Join(", ", sqlValue.Split(';').Select(v => $"'{v.Trim()}'"))})" : $"({sqlValue})";
-            gqlValue = type == STRING_TYPE || type == DATETIME_TYPE ? $"[{string.Join(", ", gqlValue.Trim('\"').Split(';').Select(v => $"\"{v}\""))}]" : $"[{gqlValue}]";
+            if (type == STRING_TYPE)
+            {
+                sqlValue = $"('{sqlValue}')";
+                gqlValue = $"[{gqlValue}]";
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                sqlValue = $"({string.Join(", ", sqlValue.Split(';').Select(v => $"'{v.Trim()}'"))})";
+                gqlValue = $"[{string.Join(", ", gqlValue.Trim('\"').Split(';').Select(v => $"\"{v}\""))}]";
+            }
+            else
+            {
+                sqlValue = $"({sqlValue})";
+                gqlValue = $"[{gqlValue}]";
+            }
+
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 

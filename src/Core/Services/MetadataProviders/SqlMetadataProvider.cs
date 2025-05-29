@@ -82,7 +82,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
-        public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
+        public virtual Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
         protected readonly ILogger<ISqlMetadataProvider> _logger;

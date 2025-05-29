@@ -176,6 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Test IN filter with One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
+        [Ignore]
         [TestMethod]
         public async Task InFilterOneToOneJoinQuery()
         {

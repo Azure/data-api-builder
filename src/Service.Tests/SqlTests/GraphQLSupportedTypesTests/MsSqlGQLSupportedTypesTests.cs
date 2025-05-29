@@ -56,23 +56,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <param name="sqlValue">Value to be set in "expected value" sql query.</param>
         /// <param name="gqlValue">GraphQL input value supplied.</param>
         /// <param name="queryOperator">Query operator for "expected value" sql query.</param>
-        [DataRow(BYTE_TYPE, "in", "1", "1", "IN")]
-        [DataRow(SHORT_TYPE, "in", "-1", "-1", "IN")]
-        [DataRow(INT_TYPE, "in", "-1", "-1", "IN")]
-        [DataRow(LONG_TYPE, "in", "-1", "-1", "IN")]
-        [DataRow(FLOAT_TYPE, "in", "-9.2", "-9.2", "IN")]
-        [DataRow(DECIMAL_TYPE, "in", "-9.292929", "-9.292929", "IN")]
-        [DataRow(UUID_TYPE, "in", "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"", "IN")]
-        [DataRow(BOOLEAN_TYPE, "in", "'false'", "false", "IN")]
-        [DataRow(STRING_TYPE, "in", "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"", "IN")]
-        [DataRow(DATETIME_TYPE, "in", "1999-01-08 10:23:54.000", "\"1999-01-08 10:23:54.000\"", "IN")]
+        [DataRow(BYTE_TYPE, "1", "1")]
+        [DataRow(SHORT_TYPE, "-1", "-1")]
+        [DataRow(INT_TYPE, "-1", "-1")]
+        [DataRow(LONG_TYPE, "-1", "-1")]
+        [DataRow(FLOAT_TYPE, "-9.2", "-9.2")]
+        [DataRow(DECIMAL_TYPE, "-9.292929", "-9.292929")]
+        [DataRow(UUID_TYPE, "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"")]
+        [DataRow(BOOLEAN_TYPE, "'false'", "false")]
+        [DataRow(STRING_TYPE, "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"")]
+        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54.000", "\"1999-01-08 10:23:54.000\"")]
         [DataTestMethod]
         public async Task MSSQL_real_graphql_in_filter_expectedValues(
             string type,
-            string filterOperator,
             string sqlValue,
-            string gqlValue,
-            string queryOperator)
+            string gqlValue)
         {
             if (type == STRING_TYPE)
             {
@@ -90,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 gqlValue = $"[{gqlValue}]";
             }
 
-            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+            await QueryTypeColumnFilterAndOrderBy(type, "in", sqlValue, gqlValue, "IN");
         }
 
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)

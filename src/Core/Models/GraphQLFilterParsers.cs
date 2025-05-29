@@ -713,6 +713,18 @@ public static class FieldFilterParser
         return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);
     }
 
+    /// <summary>
+    /// Preprocesses the values provided to the "IN" operator in a filter expression.
+    /// Validates that the input is a list of <see cref="IValueNode"/> and that the list does not exceed 100 items.
+    /// Throws a <see cref="DataApiBuilderException"/> if the input is not a valid list or exceeds the allowed size.
+    /// </summary>
+    /// <param name="value">The value to preprocess, expected to be a list of <see cref="IValueNode"/>.</param>
+    /// <returns>
+    /// A filtered list of <see cref="IValueNode"/> with non-null values, or null if the list is empty.
+    /// </returns>
+    /// <exception cref="DataApiBuilderException">
+    /// Thrown if the input is not a list of <see cref="IValueNode"/> or if the list contains more than 100 items.
+    /// </exception>
     private static object? PreprocessInOperatorValues(object value)
     {
         if (value is not List<IValueNode> inValues)
@@ -735,6 +747,20 @@ public static class FieldFilterParser
         return filteredNodes.Count == 0 ? null : filteredNodes;
     }
 
+    /// <summary>
+    /// Generates the right operand for a predicate based on the operation name and value.
+    /// For the "in" operation, it extracts and encodes each value in the list using the provided processLiterals function,
+    /// and returns a comma-separated string representation suitable for use in a SQL IN clause.
+    /// For other operations, it either processes the literal value or returns its string representation,
+    /// depending on the processLiteral flag.
+    /// </summary>
+    /// <param name="ctx">The GraphQL middleware context, used to resolve variable values.</param>
+    /// <param name="argumentObject">The input object type describing the argument schema.</param>
+    /// <param name="operationName">The name of the filter operation (e.g., "eq", "in").</param>
+    /// <param name="processLiterals">A function to encode or parameterize literal values for database queries.</param>
+    /// <param name="value">The value to be used as the right operand in the predicate.</param>
+    /// <param name="processLiteral">Indicates whether to process the value as a literal using processLiterals, or use its string representation directly.</param>
+    /// <returns>A <see cref="PredicateOperand"/> representing the right operand for the predicate.</returns>
     private static PredicateOperand GenerateRightOperand(
     IMiddlewareContext ctx,
     InputObjectType argumentObject,

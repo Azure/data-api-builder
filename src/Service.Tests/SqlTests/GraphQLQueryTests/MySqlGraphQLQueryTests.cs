@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -175,7 +176,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Test IN filter with One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
-        [Ignore]
         [TestMethod]
         public async Task InFilterOneToOneJoinQuery()
         {
@@ -196,18 +196,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                             ) AS `subq6`) AS `table1_subq` ON TRUE
                     WHERE (
                         `table0`.`title` IN ('Awesome book', 'Also Awesome book')
-                        AND EXISTS (
-                            SELECT 1
-                            FROM `book_website_placements` AS `table6`
-                            WHERE `table6`.`book_id` IN (1, 2)
-                              AND `table6`.`book_id` = `table0`.`id`
-                              AND `table0`.`id` = `table6`.`book_id`
-                        )
                     )
                     ORDER BY `table0`.`id` DESC LIMIT 100
                     ) AS `subq7`
             ";
-            await InFilterOneToOneJoinQuery(mySqlQuery);
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                  books(filter:  {
+                     title:  {
+                        in: [""Awesome book"", ""Also Awesome book""]
+                     }
+                  } orderBy:  {
+                     id: DESC
+                  }){
+                    items{
+                      id
+                      title
+                      websiteplacement{
+                        price
+                        book_id
+                      }
+                    }
+                  }
+                }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>

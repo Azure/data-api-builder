@@ -62,6 +62,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Tests In operator using query variables
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT id, title FROM books WHERE id IN (1,2) ORDER BY id asc LIMIT 100) as table0";
+            await InQueryWithVariables(postgresQuery);
+        }
+
+        /// <summary>
+        /// Tests In operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithNullAndEmptyvalues()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT string_types FROM type_table where string_types IN ('lksa;jdflasdf;alsdflksdfkldj', '', NULL)) as table0";
+            await InQueryWithNullAndEmptyvalues(postgresQuery);
+        }
+
+        /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
@@ -89,6 +110,45 @@ FROM
             ";
 
             await OneToOneJoinQuery(postgresQuery);
+        }
+
+        /// <summary>
+        /// Test IN operator in One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterOneToOneJoinQuery()
+        {
+            string postgresQuery = @"
+SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""
+FROM
+    (SELECT ""table0"".""id"" AS ""id"",
+            ""table0"".""title"" AS ""title"",
+            ""table1_subq"".""data"" AS ""websiteplacement""
+     FROM ""public"".""books"" AS ""table0""
+     LEFT OUTER JOIN LATERAL
+         (SELECT to_jsonb(""subq6"") AS ""data""
+          FROM
+              (SELECT ""table1"".""price"" AS ""price"", ""table1"".""book_id"" AS ""book_id""
+               FROM ""public"".""book_website_placements"" AS ""table1""
+               WHERE ""table1"".""book_id"" = ""table0"".""id""
+               ORDER BY ""table1"".""id"" ASC
+               LIMIT 1) AS ""subq6"") AS ""table1_subq"" ON TRUE
+     WHERE (
+        ""table0"".""title"" IN ('Awesome book', 'Also Awesome book')
+        AND EXISTS (
+            SELECT 1
+            FROM ""public"".""book_website_placements"" AS ""table6""
+            WHERE ""table6"".""book_id"" IN (1, 2)
+                AND ""table6"".""book_id"" = ""table0"".""id""
+                AND ""table0"".""id"" = ""table6"".""book_id""
+        )
+    )
+     ORDER BY ""table0"".""id"" DESC
+     LIMIT 100) AS ""subq7""
+            ";
+
+            await InFilterOneToOneJoinQuery(postgresQuery);
         }
 
         /// <summary>

@@ -47,6 +47,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         private static readonly StringValueNode _endsWithDescription = new("Ends With");
         private static readonly NameNode _caseInsensitive = new("caseInsensitive");
         private static readonly StringValueNode _caseInsensitiveDescription = new("Case Insensitive");
+        private static readonly NameNode _in = new("in");
+        private static readonly StringValueNode _inDescription = new("In");
 
         private static InputObjectTypeDefinitionNode IdInputType() =>
             CreateSimpleEqualsFilter("IdFilterInput", "Input type for adding ID filters", _id);
@@ -110,7 +112,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                [
                    new(null, _eq, _eqDescription, type, null, []),
                    new(null, _neq, _neqDescription, type, null, []),
-                   new(null, _isNull, _isNullDescription, _boolean, null, [])
+                   new(null, _isNull, _isNullDescription, _boolean, null, []),
+                   new(null, _in, _inDescription, new ListTypeNode(type), null, [])
                ]
            );
 
@@ -131,6 +134,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, _lte, _lteDescription, type, null, []),
                     new(null, _neq, _neqDescription, type, null, []),
                     new(null, _isNull, _isNullDescription, _boolean, null, []),
+                    new(null, _in, _inDescription, new ListTypeNode(type), null, [])
                 ]
             );
 
@@ -152,6 +156,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     new(null, _neq, _neqDescription, type, null, []),
                     new(null, _caseInsensitive, _caseInsensitiveDescription, type, null, []),
                     new(null, _isNull, _isNullDescription, _boolean, null, []),
+                    new(null, _in, _inDescription, new ListTypeNode(type), null, [])
                 ]
             );
 

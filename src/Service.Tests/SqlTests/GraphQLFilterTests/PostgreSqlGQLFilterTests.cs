@@ -160,12 +160,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             await TestNestedFilterWithOr(existsPredicate, roleName: "authenticated");
         }
 
+        /// <summary>
+        /// Tests nested filter with an IN and OR clause.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterWithOrAndIN()
+        {
+            string defaultSchema = GetPreIndentDefaultSchema();
+
+            string existsPredicate = $@"
+                EXISTS( SELECT 1 FROM {defaultSchema}publishers AS table1
+                    WHERE table1.name IN ('TBD Publishing One')
+                    AND table0.publisher_id = table1.id)
+                OR EXISTS( SELECT 1 FROM {defaultSchema}authors AS table3
+                           INNER JOIN {defaultSchema}book_author_link AS table5
+                           ON table5.book_id = table0.id
+                           WHERE table3.name IN ('Aniruddh')
+                           AND table5.author_id = table3.id)";
+
+            await TestNestedFilterWithOrAndIN(existsPredicate, roleName: "authenticated");
+        }
+
         [TestMethod]
         public async Task TestStringFiltersEqWithMappings()
         {
             string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings WHERE __column2 = 'Filtered Record' ORDER BY __column1 asc LIMIT 100) as table0";
 
             await TestStringFiltersEqWithMappings(postgresQuery);
+        }
+
+        /// <summary>
+        /// Test IN operator when mappings are configured for GraphQL entity.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersINWithMappings()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT __column1 AS column1, __column2 AS column2 FROM GQLMappings WHERE __column2 = 'Filtered Record' ORDER BY __column1 asc LIMIT 100) as table0";
+
+            await TestStringFiltersINWithMappings(postgresQuery);
         }
 
         /// <summary>

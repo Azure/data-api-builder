@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -100,6 +101,49 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Tests In operator using query variables
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq1`.`id`, 'title', `subq1`.`title`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`id` AS `id`,
+                          `table0`.`title` AS `title`
+                   FROM `books` AS `table0`
+                   WHERE `table0`.`id` IN (1,2)
+                   ORDER BY `table0`.`id` asc
+                   LIMIT 100) AS `subq1`";
+
+            await InQueryWithVariables(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Tests In operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithNullAndEmptyvalues()
+        {
+            string mySqlQuery = @"SELECT COALESCE(
+                            JSON_ARRAYAGG(
+                                JSON_OBJECT(
+                                    'string_types', `subq7`.`string_types`
+                                )
+                            ), 
+                            JSON_ARRAY()
+                        ) AS `data`
+                        FROM (
+                            SELECT `string_types`
+                            FROM `type_table`
+                            WHERE (`string_types` IN ('lksa;jdflasdf;alsdflksdfkldj', '', null))
+                        ) AS `subq7`;
+                        ";
+            await InQueryWithNullAndEmptyvalues(mySqlQuery);
+        }
+
+        /// <summary>
         /// Test One-To-One relationship both directions
         /// (book -> website placement, website placememnt -> book)
         /// <summary>
@@ -126,6 +170,60 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await OneToOneJoinQuery(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Test IN filter with One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterOneToOneJoinQuery()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq7`.`id`, 'title', `subq7`.`title`, 'websiteplacement',
+                                `subq7`.`websiteplacement`)), JSON_ARRAY()) AS `data`
+                FROM (
+                    SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
+                        `table1_subq`.`data` AS `websiteplacement`
+                    FROM `books` AS `table0`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('price', `subq6`.`price`, 'book_id', `subq6`.`book_id`) AS `data` FROM (
+                            SELECT `table1`.`price` AS `price`,
+                                    `table1`.`book_id` AS `book_id`
+                            FROM `book_website_placements` AS `table1`
+                            WHERE `table1`.`book_id` = `table0`.`id`
+                            ORDER BY `table1`.`id` ASC LIMIT 1
+                            ) AS `subq6`) AS `table1_subq` ON TRUE
+                    WHERE (
+                        `table0`.`title` IN ('Awesome book', 'Also Awesome book')
+                    )
+                    ORDER BY `table0`.`id` DESC LIMIT 100
+                    ) AS `subq7`
+            ";
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                  books(filter:  {
+                     title:  {
+                        in: [""Awesome book"", ""Also Awesome book""]
+                     }
+                  } orderBy:  {
+                     id: DESC
+                  }){
+                    items{
+                      id
+                      title
+                      websiteplacement{
+                        price
+                        book_id
+                      }
+                    }
+                  }
+                }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(mySqlQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>

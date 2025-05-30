@@ -134,6 +134,48 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await QueryTypeColumnFilterAndOrderBy(graphqlDataType, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
+        /// <summary>
+        /// MySQL filter Type with IN operator Tests.
+        /// </summary>
+        /// <param name="type">GraphQL Type</param>
+        /// <param name="filterOperator">Comparison operator: IN</param>
+        /// <param name="sqlValue">Value to be set in "expected value" sql query.</param>
+        /// <param name="gqlValue">GraphQL input value supplied.</param>
+        /// <param name="queryOperator">Query operator for "expected value" sql query.</param>
+        [DataRow(BYTE_TYPE, "1", "1")]
+        [DataRow(SHORT_TYPE, "-1", "-1")]
+        [DataRow(INT_TYPE, "-1", "-1")]
+        [DataRow(LONG_TYPE, "-1", "-1")]
+        [DataRow(FLOAT_TYPE, "-9.2", "-9.2")]
+        [DataRow(DECIMAL_TYPE, "-9.292929", "-9.292929")]
+        [DataRow(BOOLEAN_TYPE, "'false'", "false")]
+        [DataRow(STRING_TYPE, "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"")]
+        [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54.000", "\"1999-01-08 10:23:54.000\"")]
+        [DataTestMethod]
+        public async Task MySQL_real_graphql_in_filter_expectedValues(
+            string type,
+            string sqlValue,
+            string gqlValue)
+        {
+            if (type == STRING_TYPE)
+            {
+                sqlValue = $"('{sqlValue}')";
+                gqlValue = $"[{gqlValue}]";
+            }
+            else if (type == DATETIME_TYPE)
+            {
+                sqlValue = $"({string.Join(", ", sqlValue.Split(';').Select(v => $"'{v.Trim()}'"))})";
+                gqlValue = $"[{string.Join(", ", gqlValue.Trim('\"').Split(';').Select(v => $"\"{v}\""))}]";
+            }
+            else
+            {
+                sqlValue = $"({sqlValue})";
+                gqlValue = $"[{gqlValue}]";
+            }
+
+            await QueryTypeColumnFilterAndOrderBy(type, "in", sqlValue, gqlValue, "IN");
+        }
+
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
         {
             return MakeQueryOnTypeTable(queryFields, filterValue: id.ToString(), filterField: "id");

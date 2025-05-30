@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using NJsonSchema.Validation;
+using Newtonsoft.Json.Schema;
 
 namespace Azure.DataApiBuilder.Core.Models;
 

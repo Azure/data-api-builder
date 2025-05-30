@@ -27,6 +27,7 @@
         <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.10" />
         <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.38.1" />
+        <PackageVersion Include="Newtonsoft.Json.Schema" Version="4.0.1" />
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0" />
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
@@ -51,10 +52,9 @@
         <PackageVersion Include="MSTest.TestAdapter" Version="3.3.1" />
         <PackageVersion Include="MSTest.TestFramework" Version="3.3.1" />
         <PackageVersion Include="MySqlConnector" Version="2.1.5" />
-        <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
+        <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
         <PackageVersion Include="Npgsql" Version="8.0.3" />
         <PackageVersion Include="Polly" Version="7.2.3" />
-        <PackageVersion Include="NJsonSchema" Version="10.9.0" />
         <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.5.0" />
         <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
         <PackageVersion Include="System.Drawing.Common" Version="8.0.3" />

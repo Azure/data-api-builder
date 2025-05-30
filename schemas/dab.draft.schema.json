@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema",
+  "$schema": "http://json-schema.org/draft-07/schema",
   "$id": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "title": "Data API builder",
   "description": "Schema for Data API builder engine",
@@ -277,8 +277,33 @@
               "additionalProperties": false,
               "properties": {
                 "provider": {
-                  "type": "string",
                   "description": "The name of authentication provider",
+                  "oneOf": [
+                    {
+                      "const": "StaticWebApps",
+                      "description": "Authentication provided by Azure Static Web Apps."
+                    },
+                    {
+                      "const": "EntraID",
+                      "description": "Authentication provided by Microsoft Entra ID (formerly Azure AD). Use the JWT property to configure this provider."
+                    },
+                    {
+                      "const": "Simulator",
+                      "description": "Simulated authentication for development and testing purposes."
+                    },
+                    {
+                      "const": "AppService",
+                      "description": "Authentication provided by Azure App Service."
+                    },
+                    {
+                      "const": "AzureAD",
+                      "description": "Synonymous with the EntraID value. Use the JWT property to configure this provider."
+                    },
+                    {
+                      "const": "Custom",
+                      "description": "Custom authentication provider defined by the user. Use the JWT property to configure the custom provider."
+                    }
+                  ],
                   "default": "StaticWebApps"
                 },
                 "jwt": {
@@ -291,9 +316,29 @@
                     "issuer": {
                       "type": "string"
                     }
-                  }
+                  },
+                  "required": ["audience", "issuer"]
                 }
-              }
+              },
+              "allOf": [
+                {
+                  "$comment": "We want the user to provide the JWT property when the provider requires it, and omit JWT when the provider does not require it.",
+                  "if": {
+                    "properties": {
+                      "provider": {
+                        "anyOf": [
+                          { "const": "EntraID" },
+                          { "const": "AzureAD" },
+                          { "const": "Custom" }
+                        ]
+                      }
+                    },
+                    "required": ["provider"]
+                  },
+                  "then": { "required": ["jwt"] },
+                  "else": { "properties": { "jwt": false } }
+                }
+              ]
             }
           }
         },

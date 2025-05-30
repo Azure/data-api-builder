@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -24,7 +25,6 @@ using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using Azure.Identity;
 using HotChocolate;
 using HotChocolate.Execution;
-using HotChocolate.Execution.Processing;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -34,7 +34,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
-namespace Azure.DataApiBuilder.Service.Tests.Unittests
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     [TestClass]
     public class MultiSourceQueryExecutionUnitTests
@@ -98,10 +98,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             // Using a sample schema file to test multi-source query.
             // Schema file contains some sample entities that we can test against.
-            string graphQLSchema = File.ReadAllText("MultiSourceTestSchema.gql");
+            string graphQLSchema = await File.ReadAllTextAsync("MultiSourceTestSchema.gql");
             ISchemaBuilder schemaBuilder = SchemaBuilder.New().AddDocumentFromString(graphQLSchema)
                 .AddAuthorizeDirectiveType()
-                .AddDirectiveType<ModelDirectiveType>() // Add custom directives used by DAB.
+                .AddType<ModelDirective>() // Add custom directives used by DAB.
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()
                 .AddDirectiveType<DefaultValueDirectiveType>()
@@ -117,19 +117,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should be invoked for multi-source query as an entity belongs to sql db.");
             Assert.AreEqual(1, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should be invoked for multi-source query as an entity belongs to cosmos db.");
 
-            Assert.IsNull(result.Errors, "There should be no errors in processing of multisource query.");
-            QueryResult queryResult = (QueryResult)result;
-            Assert.IsNotNull(queryResult.Data, "Data should be returned for multisource query.");
-            IReadOnlyDictionary<string, object> data = queryResult.Data;
+            OperationResult singleResult = result.ExpectOperationResult();
+            Assert.IsNull(singleResult.Errors, "There should be no errors in processing of multisource query.");
+            Assert.IsNotNull(singleResult.Data, "Data should be returned for multisource query.");
+            IReadOnlyDictionary<string, object> data = singleResult.Data;
             Assert.IsTrue(data.TryGetValue(QUERY_NAME_1, out object queryNode1), $"Query node for {QUERY_NAME_1} should have data populated.");
             Assert.IsTrue(data.TryGetValue(QUERY_NAME_2, out object queryNode2), $"Query node for {QUERY_NAME_2} should have data populated.");
 
-            ResultMap queryMap1 = (ResultMap)queryNode1;
-            ResultMap queryMap2 = (ResultMap)queryNode2;
+            KeyValuePair<string, object> firstEntryMap1 = ((IReadOnlyDictionary<string, object>)queryNode1).FirstOrDefault();
+            KeyValuePair<string, object> firstEntryMap2 = ((IReadOnlyDictionary<string, object>)queryNode2).FirstOrDefault();
 
-            // validate that the data returend for the queries we did matches the moq data we set up for the respective query engines.
-            Assert.AreEqual("db1", queryMap1[0].Value, $"Data returned for {QUERY_NAME_1} is incorrect for multi-source query");
-            Assert.AreEqual("db2", queryMap2[0].Value, $"Data returned for {QUERY_NAME_2} is incorrect for multi-source query");
+            // validate that the data returned for the queries we did matches the moq data we set up for the respective query engines.
+            Assert.AreEqual("db1", firstEntryMap1.Value, $"Data returned for {QUERY_NAME_1} is incorrect for multi-source query");
+            Assert.AreEqual("db2", firstEntryMap2.Value, $"Data returned for {QUERY_NAME_2} is incorrect for multi-source query");
         }
 
         /// <summary>

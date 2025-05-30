@@ -13,7 +13,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Azure.DataApiBuilder.Service.Tests.Unittests
+namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     [TestClass]
     [TestCategory("Serialization and Deserialization using SqlMetadataProvider converters")]

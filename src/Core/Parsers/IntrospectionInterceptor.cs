@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         public override ValueTask OnCreateAsync(
             HttpContext context,
             IRequestExecutor requestExecutor,
-            IQueryRequestBuilder requestBuilder,
+            OperationRequestBuilder requestBuilder,
             CancellationToken cancellationToken)
         {
             if (_runtimeConfigProvider.GetConfig().AllowIntrospection)

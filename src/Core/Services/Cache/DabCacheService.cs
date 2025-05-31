@@ -91,6 +91,55 @@ public class DabCacheService
     }
 
     /// <summary>
+    /// Try to get cacheValue from the cache with the derived cache key.
+    /// </summary>
+    /// <typeparam name="JsonElement">The type of value in the cache</typeparam>
+    /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
+    /// <returns>JSON Response</returns>
+    public MaybeValue<JsonElement>? TryGet<JsonElement>(DatabaseQueryMetadata queryMetadata, EntityCacheLevel cacheEntryLevel)
+    {
+        string cacheKey = CreateCacheKey(queryMetadata);
+        FusionCacheEntryOptions options = new();
+
+        if (cacheEntryLevel == EntityCacheLevel.L1)
+        {
+            options.SetSkipDistributedCache(true, true);
+        }
+
+        return _cache.TryGet<JsonElement>(key: cacheKey);
+    }
+
+    /// <summary>
+    /// Store cacheValue into the cache with the derived cache key.
+    /// </summary>
+    /// <typeparam name="JsonElement">The type of value in the cache</typeparam>
+    /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
+    /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
+    /// <param name="cacheValue"">The value to store in the cache.</param>
+    public void Set<JsonElement>(
+        DatabaseQueryMetadata queryMetadata,
+        int cacheEntryTtl,
+        JsonElement? cacheValue,
+        EntityCacheLevel cacheEntryLevel)
+    {
+        string cacheKey = CreateCacheKey(queryMetadata);
+        _cache.Set(
+            key: cacheKey,
+            value: cacheValue,
+            (FusionCacheEntryOptions options) =>
+            {
+                options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: cacheValue?.ToString()));
+                options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
+
+                if (cacheEntryLevel == EntityCacheLevel.L1)
+                {
+                    options.SetSkipDistributedCache(true, true);
+                }
+
+            });
+    }
+
+    /// <summary>
     /// Attempts to fetch response from cache. If there is a cache miss, invoke executeQueryAsync Func to get a response
     /// </summary>
     /// <typeparam name="TResult">Response payload Type</typeparam>

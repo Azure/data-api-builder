@@ -1,268 +1,215 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using HotChocolate.Types.NodaTime;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
 {
-    public static class StandardQueryInputs
+    public sealed class StandardQueryInputs
     {
-        public static InputObjectTypeDefinitionNode IdInputType() =>
-            new(
-                location: null,
-                new NameNode("IdFilterInput"),
-                new StringValueNode("Input type for adding ID filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new IdType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IdType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static readonly ITypeNode _id = new NamedTypeNode(ScalarNames.ID);
+        private static readonly ITypeNode _boolean = new NamedTypeNode(ScalarNames.Boolean);
+        private static readonly ITypeNode _byte = new NamedTypeNode(ScalarNames.Byte);
+        private static readonly ITypeNode _short = new NamedTypeNode(ScalarNames.Short);
+        private static readonly ITypeNode _int = new NamedTypeNode(ScalarNames.Int);
+        private static readonly ITypeNode _long = new NamedTypeNode(ScalarNames.Long);
+        private static readonly ITypeNode _single = new NamedTypeNode("Single");
+        private static readonly ITypeNode _float = new NamedTypeNode(ScalarNames.Float);
+        private static readonly ITypeNode _decimal = new NamedTypeNode(ScalarNames.Decimal);
+        private static readonly ITypeNode _string = new NamedTypeNode(ScalarNames.String);
+        private static readonly ITypeNode _dateTime = new NamedTypeNode(ScalarNames.DateTime);
+        private static readonly ITypeNode _localTime = new NamedTypeNode(ScalarNames.LocalTime);
+        private static readonly ITypeNode _uuid = new NamedTypeNode(ScalarNames.UUID);
 
-        public static InputObjectTypeDefinitionNode BooleanInputType() =>
-            new(
-                location: null,
-                new NameNode("BooleanFilterInput"),
-                new StringValueNode("Input type for adding Boolean filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static readonly NameNode _eq = new("eq");
+        private static readonly StringValueNode _eqDescription = new("Equals");
+        private static readonly NameNode _neq = new("neq");
+        private static readonly StringValueNode _neqDescription = new("Not Equals");
+        private static readonly NameNode _isNull = new("isNull");
+        private static readonly StringValueNode _isNullDescription = new("Not null test");
+        private static readonly NameNode _gt = new("gt");
+        private static readonly StringValueNode _gtDescription = new("Greater Than");
+        private static readonly NameNode _gte = new("gte");
+        private static readonly StringValueNode _gteDescription = new("Greater Than or Equal To");
+        private static readonly NameNode _lt = new("lt");
+        private static readonly StringValueNode _ltDescription = new("Less Than");
+        private static readonly NameNode _lte = new("lte");
+        private static readonly StringValueNode _lteDescription = new("Less Than or Equal To");
+        private static readonly NameNode _contains = new("contains");
+        private static readonly StringValueNode _containsDescription = new("Contains");
+        private static readonly NameNode _notContains = new("notContains");
+        private static readonly StringValueNode _notContainsDescription = new("Not Contains");
+        private static readonly NameNode _startsWith = new("startsWith");
+        private static readonly StringValueNode _startsWithDescription = new("Starts With");
+        private static readonly NameNode _endsWith = new("endsWith");
+        private static readonly StringValueNode _endsWithDescription = new("Ends With");
+        private static readonly NameNode _caseInsensitive = new("caseInsensitive");
+        private static readonly StringValueNode _caseInsensitiveDescription = new("Case Insensitive");
+        private static readonly NameNode _in = new("in");
+        private static readonly StringValueNode _inDescription = new("In");
 
-        public static InputObjectTypeDefinitionNode ByteInputType() =>
-            new(
-                location: null,
-                new NameNode("ByteFilterInput"),
-                new StringValueNode("Input type for adding Byte filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new ByteType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode IdInputType() =>
+            CreateSimpleEqualsFilter("IdFilterInput", "Input type for adding ID filters", _id);
 
-        public static InputObjectTypeDefinitionNode ShortInputType() =>
-            new(
-                location: null,
-                new NameNode("ShortFilterInput"),
-                new StringValueNode("Input type for adding Short filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new ShortType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode BooleanInputType() =>
+            CreateSimpleEqualsFilter("BooleanFilterInput", "Input type for adding Boolean filters", _boolean);
 
-        public static InputObjectTypeDefinitionNode IntInputType() =>
-            new(
-                location: null,
-                new NameNode("IntFilterInput"),
-                new StringValueNode("Input type for adding Int filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new IntType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode ByteInputType() =>
+            CreateComparableFilter("ByteFilterInput", "Input type for adding Byte filters", _byte);
 
-        public static InputObjectTypeDefinitionNode LongInputType() =>
-            new(
-                location: null,
-                new NameNode("LongFilterInput"),
-                new StringValueNode("Input type for adding Long filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new LongType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode ShortInputType() =>
+            CreateComparableFilter("ShortFilterInput", "Input type for adding Short filters", _short);
 
-        public static InputObjectTypeDefinitionNode SingleInputType() =>
-            new(
-                location: null,
-                new NameNode("SingleFilterInput"),
-                new StringValueNode("Input type for adding Single filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new SingleType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode IntInputType() =>
+            CreateComparableFilter("IntFilterInput", "Input type for adding Int filters", _int);
 
-        public static InputObjectTypeDefinitionNode FloatInputType() =>
-            new(
-                location: null,
-                new NameNode("FloatFilterInput"),
-                new StringValueNode("Input type for adding Float filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new FloatType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode LongInputType() =>
+            CreateComparableFilter("LongFilterInput", "Input type for adding Long filters", _long);
 
-        public static InputObjectTypeDefinitionNode DecimalInputType() =>
-            new(
-                location: null,
-                new NameNode("DecimalFilterInput"),
-                new StringValueNode("Input type for adding Decimal filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new DecimalType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode SingleInputType() =>
+            CreateComparableFilter("SingleFilterInput", "Input type for adding Single filters", _single);
 
-        public static InputObjectTypeDefinitionNode StringInputType() =>
-            new(
-                location: null,
-                new NameNode("StringFilterInput"),
-                new StringValueNode("Input type for adding String filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("contains"), new StringValueNode("Contains"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("notContains"), new StringValueNode("Not Contains"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new StringType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode FloatInputType() =>
+            CreateComparableFilter("FloatFilterInput", "Input type for adding Float filters", _float);
 
-        public static InputObjectTypeDefinitionNode DateTimeInputType() =>
-            new(
-                location: null,
-                new NameNode("DateTimeFilterInput"),
-                new StringValueNode("Input type for adding DateTime filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lt"), new StringValueNode("Less Than"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new DateTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Not null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
-            );
+        private static InputObjectTypeDefinitionNode DecimalInputType() =>
+            CreateComparableFilter("DecimalFilterInput", "Input type for adding Decimal filters", _decimal);
+
+        private static InputObjectTypeDefinitionNode StringInputType() =>
+            CreateStringFilter("StringFilterInput", "Input type for adding String filters", _string);
+
+        private static InputObjectTypeDefinitionNode DateTimeInputType() =>
+            CreateComparableFilter("DateTimeFilterInput", "Input type for adding DateTime filters", _dateTime);
 
         public static InputObjectTypeDefinitionNode ByteArrayInputType() =>
             new(
                 location: null,
                 new NameNode("ByteArrayFilterInput"),
                 new StringValueNode("Input type for adding ByteArray filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
+                [],
+                [
+                    new(null, _isNull, _isNullDescription, _boolean, null, []),
+                ]
             );
 
-        public static InputObjectTypeDefinitionNode LocalTimeInputType() =>
+        private static InputObjectTypeDefinitionNode LocalTimeInputType() =>
+            CreateComparableFilter("LocalTimeFilterInput", "Input type for adding LocalTime filters", _localTime);
+
+        private static InputObjectTypeDefinitionNode UuidInputType() =>
+            CreateStringFilter("UuidFilterInput", "Input type for adding Uuid filters", _uuid);
+
+        private static InputObjectTypeDefinitionNode CreateSimpleEqualsFilter(
+           string name,
+           string description,
+           ITypeNode type) =>
+           new(
+               location: null,
+               new NameNode(name),
+               new StringValueNode(description),
+               [],
+               [
+                   new(null, _eq, _eqDescription, type, null, []),
+                   new(null, _neq, _neqDescription, type, null, []),
+                   new(null, _isNull, _isNullDescription, _boolean, null, []),
+                   new(null, _in, _inDescription, new ListTypeNode(type), null, [])
+               ]
+           );
+
+        private static InputObjectTypeDefinitionNode CreateComparableFilter(
+            string name,
+            string description,
+            ITypeNode type) =>
             new(
                 location: null,
-                new NameNode("LocalTimeFilterInput"),
-                new StringValueNode("Input type for adding LocalTime filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                            new(null, new NameNode("eq"), new StringValueNode("Equals"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new(null, new NameNode("gt"), new StringValueNode("Greater Than"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new(null, new NameNode("gte"), new StringValueNode("Greater Than or Equal To"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new(null, new NameNode("lt"), new StringValueNode("Less Than"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new(null, new NameNode("lte"), new StringValueNode("Less Than or Equal To"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new LocalTimeType().ToTypeNode(), null, new List<DirectiveNode>()),
-                            new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
+                new NameNode(name),
+                new StringValueNode(description),
+                [],
+                [
+                    new(null, _eq, _eqDescription, type, null, []),
+                    new(null, _gt, _gtDescription, type, null, []),
+                    new(null, _gte, _gteDescription, type, null, []),
+                    new(null, _lt, _ltDescription, type, null, []),
+                    new(null, _lte, _lteDescription, type, null, []),
+                    new(null, _neq, _neqDescription, type, null, []),
+                    new(null, _isNull, _isNullDescription, _boolean, null, []),
+                    new(null, _in, _inDescription, new ListTypeNode(type), null, [])
+                ]
             );
 
-        public static InputObjectTypeDefinitionNode UuidInputType() =>
+        private static InputObjectTypeDefinitionNode CreateStringFilter(
+            string name,
+            string description,
+            ITypeNode type) =>
             new(
                 location: null,
-                new NameNode("UuidFilterInput"),
-                new StringValueNode("Input type for adding Uuid filters"),
-                new List<DirectiveNode>(),
-                new List<InputValueDefinitionNode> {
-                    new(null, new NameNode("eq"), new StringValueNode("Equals"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("contains"), new StringValueNode("Contains"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("notContains"), new StringValueNode("Not Contains"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("startsWith"), new StringValueNode("Starts With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("endsWith"), new StringValueNode("Ends With"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("neq"), new StringValueNode("Not Equals"), new UuidType().ToTypeNode(), null, new List<DirectiveNode>()),
-                    new(null, new NameNode("isNull"), new StringValueNode("Is null test"), new BooleanType().ToTypeNode(), null, new List<DirectiveNode>())
-                }
+                new NameNode(name),
+                new StringValueNode(description),
+                [],
+                [
+                    new(null, _eq, _eqDescription, type, null, []),
+                    new(null, _contains, _containsDescription, type, null, []),
+                    new(null, _notContains, _notContainsDescription, type, null, []),
+                    new(null, _startsWith, _startsWithDescription, type, null, []),
+                    new(null, _endsWith, _endsWithDescription, type, null, []),
+                    new(null, _neq, _neqDescription, type, null, []),
+                    new(null, _caseInsensitive, _caseInsensitiveDescription, type, null, []),
+                    new(null, _isNull, _isNullDescription, _boolean, null, []),
+                    new(null, _in, _inDescription, new ListTypeNode(type), null, [])
+                ]
             );
-
-        public static Dictionary<string, InputObjectTypeDefinitionNode> InputTypes = new()
-        {
-            { "ID", IdInputType() },
-            { UUID_TYPE, UuidInputType() },
-            { BYTE_TYPE, ByteInputType() },
-            { SHORT_TYPE, ShortInputType() },
-            { INT_TYPE, IntInputType() },
-            { LONG_TYPE, LongInputType() },
-            { SINGLE_TYPE, SingleInputType() },
-            { FLOAT_TYPE, FloatInputType() },
-            { DECIMAL_TYPE, DecimalInputType() },
-            { BOOLEAN_TYPE, BooleanInputType() },
-            { STRING_TYPE, StringInputType() },
-            { DATETIME_TYPE, DateTimeInputType() },
-            { BYTEARRAY_TYPE, ByteArrayInputType() },
-            { LOCALTIME_TYPE, LocalTimeInputType() },
-        };
 
         /// <summary>
-        /// Returns true if the given inputObjectTypeName is one
-        /// of the values in the InputTypes dictionary i.e.
-        /// any of the scalar inputs like String, Boolean, Integer, Id etc.
+        /// Gets a filter input object type by the corresponding scalar type name.
         /// </summary>
-        public static bool IsStandardInputType(string inputObjectTypeName)
+        /// <param name="scalarTypeName">
+        /// The scalar type name.
+        /// </param>
+        /// <returns>
+        /// The filter input object type.
+        /// </returns>
+        public static InputObjectTypeDefinitionNode GetFilterTypeByScalar(string scalarTypeName)
+            => _instance._inputMap[scalarTypeName];
+
+        /// <summary>
+        /// Specifies if the given type name is a standard filter input object type.
+        /// </summary>
+        /// <param name="filterTypeName">
+        /// The type name to check.
+        /// </param>
+        /// <returns>
+        /// <c>true</c> if the type name is a standard filter input object type; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsFilterType(string filterTypeName)
+            => _instance._standardQueryInputNames.Contains(filterTypeName);
+
+        private static readonly StandardQueryInputs _instance = new();
+        private readonly Dictionary<string, InputObjectTypeDefinitionNode> _inputMap = [];
+        private readonly HashSet<string> _standardQueryInputNames = [];
+
+        private StandardQueryInputs()
         {
-            HashSet<string> standardQueryInputNames =
-                InputTypes.Values.ToList().Select(x => x.Name.Value).ToHashSet();
-            return standardQueryInputNames.Contains(inputObjectTypeName);
+            AddInputType(ScalarNames.ID, IdInputType());
+            AddInputType(ScalarNames.UUID, UuidInputType());
+            AddInputType(ScalarNames.Byte, ByteInputType());
+            AddInputType(ScalarNames.Short, ShortInputType());
+            AddInputType(ScalarNames.Int, IntInputType());
+            AddInputType(ScalarNames.Long, LongInputType());
+            AddInputType(SINGLE_TYPE, SingleInputType());
+            AddInputType(ScalarNames.Float, FloatInputType());
+            AddInputType(ScalarNames.Decimal, DecimalInputType());
+            AddInputType(ScalarNames.Boolean, BooleanInputType());
+            AddInputType(ScalarNames.String, StringInputType());
+            AddInputType(ScalarNames.DateTime, DateTimeInputType());
+            AddInputType(ScalarNames.ByteArray, ByteArrayInputType());
+            AddInputType(ScalarNames.LocalTime, LocalTimeInputType());
+
+            void AddInputType(string inputTypeName, InputObjectTypeDefinitionNode inputType)
+            {
+                _inputMap.Add(inputTypeName, inputType);
+                _standardQueryInputNames.Add(inputType.Name.Value);
+            }
         }
     }
 }

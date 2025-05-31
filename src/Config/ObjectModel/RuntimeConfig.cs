@@ -22,7 +22,7 @@ public record RuntimeConfig
 
     public RuntimeOptions? Runtime { get; init; }
 
-    public RuntimeEntities Entities { get; init; }
+    public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
 
@@ -153,6 +153,10 @@ public record RuntimeConfig
     [JsonIgnore]
     public HashSet<string> AllowedRolesForHealth =>
         Runtime?.Health?.Roles ?? new HashSet<string>();
+
+    [JsonIgnore]
+    public int CacheTtlSecondsForHealthReport =>
+        Runtime?.Health?.CacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS;
 
     /// <summary>
     /// Retrieves the value of runtime.graphql.dwnto1joinopt.enabled property if present, default is false.
@@ -321,7 +325,7 @@ public record RuntimeConfig
     /// <param name="dataSourceName">Name of datasource.</param>
     /// <returns>DataSource object.</returns>
     /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public DataSource GetDataSourceFromDataSourceName(string dataSourceName)
+    public virtual DataSource GetDataSourceFromDataSourceName(string dataSourceName)
     {
         CheckDataSourceNamePresent(dataSourceName);
         return _dataSourceNameToDataSource[dataSourceName];
@@ -426,7 +430,7 @@ public record RuntimeConfig
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
     /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
-    public int GetEntityCacheEntryTtl(string entityName)
+    public virtual int GetEntityCacheEntryTtl(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
@@ -461,7 +465,7 @@ public record RuntimeConfig
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Cache level that a cache entry should be stored in.</returns>
     /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
-    public EntityCacheLevel GetEntityCacheEntryLevel(string entityName)
+    public virtual EntityCacheLevel GetEntityCacheEntryLevel(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
@@ -495,7 +499,7 @@ public record RuntimeConfig
     /// - whether the datasource is SQL and session context is disabled.
     /// </summary>
     /// <returns>Whether cache operations should proceed.</returns>
-    public bool CanUseCache()
+    public virtual bool CanUseCache()
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
         return IsCachingEnabled && !setSessionContextEnabled;

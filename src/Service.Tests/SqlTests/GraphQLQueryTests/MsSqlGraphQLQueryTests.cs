@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -63,6 +66,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(msSqlQuery);
         }
 
+        /// <summary>
+        /// Tests IN operator using query variables
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string msSqlQuery = $"SELECT id, title FROM books where id IN (1,2) ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithVariables(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests IN operator with > 100 values
+        /// Expects to return a DAB exepcetion with bad request status code
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithExceedingValueCount()
+        {
+            Random rnd = new();
+            string result = string.Join(", ", Enumerable.Range(0, 105).Select(_ => rnd.Next(1, 21)));
+            List<int> numbers = result.Split(',')
+                         .Select(s => int.Parse(s.Trim()))
+                         .ToList();
+            string msSqlQuery = $"SELECT id, title FROM books where id IN ${(result)} ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query ($inVar: [Int]!) {
+		        books(filter: { id:  { in: $inVar } }  orderBy:  { id: ASC }) {
+			        items {
+				        id
+				        title
+			        }
+		        }
+	        }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", numbers } });
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), "IN operator filter object cannot process more than 100 values at a time.");
+        }
+
+        /// <summary>
+        /// Tests IN operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithNullAndEmptyvalues()
+        {
+            string msSqlQuery = $"SELECT string_types FROM type_table where string_types IN ('lksa;jdflasdf;alsdflksdfkldj', ' ', NULL) FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithNullAndEmptyvalues(msSqlQuery);
+        }
+
         [TestMethod]
         public async Task MultipleResultQueryWithMappings()
         {
@@ -73,6 +124,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             await MultipleResultQueryWithMappings(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests IN operator with aggregations
+        /// </summary>
+        [TestMethod]
+        public async Task INOperatorWithAggregations()
+        {
+            string dbQuery = @"
+                SELECT TOP 100 [table0].[publisher_id] AS [publisher_id] ,
+                                count([table0].[id])  AS [publisherCount]
+                        FROM [dbo].[books] AS [table0]
+                        WHERE 1 = 1
+                        GROUP BY [table0].[publisher_id]
+                        HAVING count([table0].[id])  IN (1, 2) FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                      books {
+                        groupBy(fields: [publisher_id]) {
+                          fields{
+                            publisher_id
+                          }
+                          aggregations{
+                            publisherCount: count(field: id, having:  {
+                               in: [1, 2]
+                            })
+                          }
+                        }
+                      }
+                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
         }
 
         /// <summary>
@@ -102,6 +189,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ,INCLUDE_NULL_VALUES";
 
             await OneToOneJoinQuery(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test In operator and Order by with a One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterOneToOneJoinQuery()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[id] AS [id]
+                    ,[table0].[title] AS [title]
+                    ,JSON_QUERY([table1_subq].[data]) AS [websiteplacement]
+                FROM [dbo].[books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[price] AS [price], [table1].[book_id] AS [book_id]
+                    FROM [dbo].[book_website_placements] AS [table1]
+                    WHERE [table1].[book_id] = [table0].[id]
+                    ORDER BY [table1].[id] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                        ,WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE (
+                        [table0].[title] IN ('Awesome book', 'Also Awesome book')
+                        AND EXISTS (
+                            SELECT 1
+                            FROM [dbo].[book_website_placements] AS [table6]
+                            WHERE [table6].[book_id] IN (1, 2)
+                              AND [table6].[book_id] = [table0].[id]
+                              AND [table0].[id] = [table6].[book_id]
+                        )
+                    )
+                ORDER BY [table0].[id] DESC
+                FOR JSON PATH
+                    ,INCLUDE_NULL_VALUES";
+
+            await InFilterOneToOneJoinQuery(msSqlQuery);
         }
 
         /// <summary>

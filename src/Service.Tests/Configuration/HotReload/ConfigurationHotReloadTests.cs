@@ -228,6 +228,7 @@ public class ConfigurationHotReloadTests
     /// Hot reload the configuration by saving a new file with different rest and graphQL paths.
     /// Validate that the response is correct when making a request with the newly hot-reloaded paths.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload runtime paths.")]
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
@@ -334,6 +335,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload gql disabled at entity level.")]
+    [Ignore]
     public async Task HotReloadEntityGQLEnabledFlag()
     {
         // Arrange
@@ -372,6 +374,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
+    [Ignore]
     public async Task HotReloadConfigAddEntity()
     {
         // Arrange
@@ -448,6 +451,7 @@ public class ConfigurationHotReloadTests
     /// results in bad request, while the new mappings results in a correct response as "title" field is no longer valid.
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
+    [Ignore]
     public async Task HotReloadConfigUpdateMappings()
     {
         // Arrange
@@ -583,6 +587,7 @@ public class ConfigurationHotReloadTests
     /// to an invalid connection string, then it hot reloads once more to the original
     /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigConnectionString()

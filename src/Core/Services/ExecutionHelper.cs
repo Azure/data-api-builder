@@ -1,22 +1,27 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Execution;
+using HotChocolate.Execution.Processing;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using HotChocolate.Types.NodaTime;
 using NodaTime.Text;
+using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -50,6 +55,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </param>
         public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
         {
+            using Activity? activity = StartQueryActivity(context);
+
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
@@ -69,6 +76,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         {
                             document.Dispose();
                         }
+
+                        return ValueTask.CompletedTask;
                     });
 
                 context.Result = result.Item1.Select(t => t.RootElement).ToArray();
@@ -91,6 +100,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </param>
         public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
         {
+            using Activity? activity = StartQueryActivity(context);
+
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
@@ -112,6 +123,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         {
                             document.Dispose();
                         }
+
+                        return ValueTask.CompletedTask;
                     });
 
                 context.Result = result.Item1.Select(t => t.RootElement).ToArray();
@@ -128,6 +141,31 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
+        /// Starts the activity for the query
+        /// </summary>
+        /// <param name="context">
+        /// The middleware context.
+        /// </param>
+        private Activity? StartQueryActivity(IMiddlewareContext context)
+        {
+            string route = _runtimeConfigProvider.GetConfig().GraphQLPath.Trim('/');
+            Kestral method = Kestral.Post;
+
+            Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{method} /{route}");
+
+            if (activity is not null)
+            {
+                string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+                DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+                activity.TrackQueryActivityStarted(
+                    databaseType: ds.DatabaseType,
+                    dataSourceName: dataSourceName);
+            }
+
+            return activity;
+        }
+
+        /// <summary>
         /// Represents a pure resolver for a leaf field.
         /// This resolver extracts the field value from the json object.
         /// </summary>
@@ -137,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>
         /// Returns the runtime field value.
         /// </returns>
-        public static object? ExecuteLeafField(IPureResolverContext context)
+        public static object? ExecuteLeafField(IResolverContext context)
         {
             // This means this field is a scalar, so we don't need to do
             // anything for it.
@@ -155,27 +193,41 @@ namespace Azure.DataApiBuilder.Service.Services
                 // transform it into the runtime type.
                 // We also want to ensure here that we do not unnecessarily convert values to
                 // strings and then force the conversion to parse them.
-                return namedType switch
+                try
                 {
-                    StringType => fieldValue.GetString(), // spec
-                    ByteType => fieldValue.GetByte(),
-                    ShortType => fieldValue.GetInt16(),
-                    IntType => fieldValue.GetInt32(), // spec
-                    LongType => fieldValue.GetInt64(),
-                    FloatType => fieldValue.GetDouble(), // spec
-                    SingleType => fieldValue.GetSingle(),
-                    DecimalType => fieldValue.GetDecimal(),
-                    DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
-                    DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
-                    LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
-                    ByteArrayType => fieldValue.GetBytesFromBase64(),
-                    BooleanType => fieldValue.GetBoolean(), // spec
-                    UrlType => new Uri(fieldValue.GetString()!),
-                    UuidType => fieldValue.GetGuid(),
-                    TimeSpanType => TimeSpan.Parse(fieldValue.GetString()!),
-                    AnyType => fieldValue.ToString(),
-                    _ => fieldValue.GetString()
-                };
+                    return namedType switch
+                    {
+                        StringType => fieldValue.GetString(), // spec
+                        ByteType => fieldValue.GetByte(),
+                        ShortType => fieldValue.GetInt16(),
+                        IntType => fieldValue.GetInt32(), // spec
+                        LongType => fieldValue.GetInt64(),
+                        FloatType => fieldValue.GetDouble(), // spec
+                        SingleType => fieldValue.GetSingle(),
+                        DecimalType => fieldValue.GetDecimal(),
+                        DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" (double quotes) due to stringagg parsing and hence we need to ensure parsing is correct.
+                        DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
+                        HotChocolate.Types.NodaTime.LocalTimeType => fieldValue.GetString()!.Equals("null", StringComparison.OrdinalIgnoreCase) ? null : LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
+                        ByteArrayType => fieldValue.GetBytesFromBase64(),
+                        BooleanType => fieldValue.GetBoolean(), // spec
+                        UrlType => new Uri(fieldValue.GetString()!),
+                        UuidType => fieldValue.GetGuid(),
+                        TimeSpanType => TimeSpan.Parse(fieldValue.GetString()!),
+                        AnyType => fieldValue.ToString(),
+                        _ => fieldValue.GetString()
+                    };
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+                {
+                    // this usually means that database column type was changed since generating the GraphQL schema
+                    // for e.g. System.FormatException - One of the identified items was in an invalid format
+                    // System.InvalidOperationException - The requested operation requires an element of type 'Number', but the target element has type 'String'.
+                    throw new DataApiBuilderException(
+                        message: $"The {context.Selection.Field.Name} value could not be parsed for configured GraphQL data type {namedType.Name}",
+                        statusCode: HttpStatusCode.Conflict,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
+                        ex);
+                }
             }
 
             return null;
@@ -191,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>
         /// Returns a new json object.
         /// </returns>
-        public object? ExecuteObjectField(IPureResolverContext context)
+        public object? ExecuteObjectField(IResolverContext context)
         {
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
@@ -227,7 +279,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <returns>The resolved list, a JSON array, returned as type 'object?'.</returns>
         /// <remarks>Return type is 'object?' instead of a 'List of JsonElements' because when this function returns JsonElement,
         /// the HC12 engine doesn't know how to handle the JsonElement and results in requests failing at runtime.</remarks>
-        public object? ExecuteListField(IPureResolverContext context)
+        public object? ExecuteListField(IResolverContext context)
         {
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
             DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
@@ -255,7 +307,11 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             if (result is not null)
             {
-                context.RegisterForCleanup(() => result.Dispose());
+                context.RegisterForCleanup(() =>
+                {
+                    result.Dispose();
+                    return ValueTask.CompletedTask;
+                });
                 // The disposal could occur before we were finished using the value from the jsondocument,
                 // thus needing to ensure copying the root element. Hence, we clone the root element.
                 context.Result = result.RootElement.Clone();
@@ -267,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         private static bool TryGetPropertyFromParent(
-            IPureResolverContext context,
+            IResolverContext context,
             out JsonElement propertyValue)
         {
             JsonElement parent = context.Parent<JsonElement>();
@@ -277,15 +333,15 @@ namespace Azure.DataApiBuilder.Service.Services
                 propertyValue = default;
                 return false;
             }
-            else if (context.Path is NamePathSegment namePathSegment && namePathSegment.Parent is NamePathSegment parentSegment && parentSegment.Name.Value == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME &&
-                parentSegment.Parent?.Parent is NamePathSegment grandParentSegment && grandParentSegment.Name.Value.StartsWith(QueryBuilder.GROUP_BY_FIELD_NAME, StringComparison.OrdinalIgnoreCase))
+            else if (context.Path is NamePathSegment namePathSegment && namePathSegment.Parent is NamePathSegment parentSegment && parentSegment.Name == QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME &&
+                parentSegment.Parent?.Parent is NamePathSegment grandParentSegment && grandParentSegment.Name.StartsWith(QueryBuilder.GROUP_BY_FIELD_NAME, StringComparison.OrdinalIgnoreCase))
             {
                 // verify that current selection is part of a groupby query and within that an aggregation and then get the key which would be the operation name or its alias (eg: max, max_price etc)
-                string propertyName = namePathSegment.Name.Value;
+                string propertyName = namePathSegment.Name;
                 return parent.TryGetProperty(propertyName, out propertyValue);
             }
 
-            return parent.TryGetProperty(context.Selection.Field.Name.Value, out propertyValue);
+            return parent.TryGetProperty(context.Selection.Field.Name, out propertyValue);
         }
 
         /// <summary>
@@ -319,7 +375,14 @@ namespace Azure.DataApiBuilder.Service.Services
                 return null;
             }
 
-            return argumentSchema.Type.TypeName().Value switch
+            // In case of ListType on scalar types(except string), argumentSchema.Type.TypeName() unwraps down to the namednode type and returns the type of the value node.
+            // For example, if the argumentSchema is a list of Ints, the type name will be "Int" and not "[Int]".
+            if (value.Value is List<IValueNode> && argumentSchema.Type.IsListType())
+            {
+                return value.Value;
+            }
+
+            return argumentSchema.Type.TypeName() switch
             {
                 SupportedHotChocolateTypes.BYTE_TYPE => ((IntValueNode)value).ToByte(),
                 SupportedHotChocolateTypes.SHORT_TYPE => ((IntValueNode)value).ToInt16(),
@@ -370,7 +433,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 if (argument.DefaultValue != null)
                 {
                     collectedParameters.Add(
-                        argument.Name.Value,
+                        argument.Name,
                         ExtractValueFromIValueNode(
                             value: argument.DefaultValue,
                             argumentSchema: argument,
@@ -425,7 +488,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public static InputObjectType InputObjectTypeFromIInputField(IInputField field)
         {
-            return (InputObjectType)(InnerMostType(field.Type));
+            return (InputObjectType)InnerMostType(field.Type);
         }
 
         /// <summary>
@@ -451,9 +514,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// CosmosDB does not utilize pagination metadata. So this function will return null
         /// when executing GraphQl queries against CosmosDB.
         /// </summary>
-        private static IMetadata? GetMetadata(IPureResolverContext context)
+        private static IMetadata? GetMetadata(IResolverContext context)
         {
-            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent is not null)
+            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && !context.Path.IsRootField())
             {
                 // entering this block means that:
                 // context.Selection.ResponseName: items
@@ -467,7 +530,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // The nuance here is that HC counts the depth when the path is expanded as
                 // /books/items/items[idx]/authors -> Depth: 3 (0-indexed) which maps to the
                 // pagination metadata for the "authors/items" subquery.
-                string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth;
+                string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth();
                 return (IMetadata?)context.ContextData[paginationObjectParentName];
             }
 
@@ -475,7 +538,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // { planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) { tags } }
             // where nested entities like the entity 'tags' are not nested within an "items" field
             // like for SQL databases.
-            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
 
             if (context.ContextData.TryGetValue(key: metadataKey, out object? paginationMetadata) && paginationMetadata is not null)
             {
@@ -500,7 +563,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="context">Pure resolver context</param>
         /// <returns>Pagination metadata</returns>
-        private static IMetadata GetMetadataObjectField(IPureResolverContext context)
+        private static IMetadata GetMetadataObjectField(IResolverContext context)
         {
             // Depth Levels:  / 0   /  1  /   2    /   3
             // Example Path: /books/items/items[0]/publishers
@@ -513,40 +576,39 @@ namespace Azure.DataApiBuilder.Service.Services
                 // When context.Path is "/books/items[0]/authors"
                 // Parent -> "/books/items[0]"
                 // Parent -> "/books/items" -> Depth of this path is used to create the key to get
-                // paginationmetadata from context.ContextData
+                // pagination metadata from context.ContextData
                 // The PaginationMetadata fetched has subquery metadata for "authors" from path "/books/items/authors"
-                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Parent!.Depth;
-                return (IMetadata)context.ContextData[objectParentName]!;
-            }
-            else if (context.Path.Parent is not null && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
-            {
-                // This check handles when the current selection is a relationship field because in that case,
-                // there will be no context data entry.
-                // e.g. metadata for index 4 will not exist. only 3. 
-                // Depth: /  0   / 1  /   2    /   3      /   4
-                // Path:  /books/items/items[0]/publishers/books
-                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Depth;
+                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Parent.Depth();
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
-            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+            if (!context.Path.IsRootField() && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
+            {
+                // This check handles when the current selection is a relationship field because in that case,
+                // there will be no context data entry.
+                // e.g. metadata for index 4 will not exist. only 3.
+                // Depth: /  0   / 1  /   2    /   3      /   4
+                // Path:  /books/items/items[0]/publishers/books
+                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
+                return (IMetadata)context.ContextData[objectParentName]!;
+            }
+
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
             return (IMetadata)context.ContextData[metadataKey]!;
         }
 
         private static string GetMetadataKey(HotChocolate.Path path)
         {
-            HotChocolate.Path currentPath = path;
-
-            if (currentPath.Parent is RootPathSegment or null)
+            if (path.Parent.IsRoot)
             {
                 // current: "/entity/items -> "items"
-                return ((NamePathSegment)currentPath).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
+                return ((NamePathSegment)path).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
             }
 
             // If execution reaches this point, the state of currentPath looks something
             // like the following where there exists a Parent path element:
             // "/entity/items -> current.Parent: "entity"
-            return GetMetadataKey(path: currentPath.Parent);
+            return GetMetadataKey(path: path.Parent);
         }
 
         /// <summary>
@@ -556,7 +618,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="rootSelection">Root object field of query.</param>
         /// <returns>"rootObjectName_PURE_RESOLVER_CTX"</returns>
-        private static string GetMetadataKey(IFieldSelection rootSelection)
+        private static string GetMetadataKey(ISelection rootSelection)
         {
             return rootSelection.ResponseName + PURE_RESOLVER_CONTEXT_SUFFIX;
         }
@@ -569,9 +631,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// context.Path -> /books depth(0)
         /// context.Selection -> books { items {id, title}}
         /// </summary>
-        private static void SetNewMetadata(IPureResolverContext context, IMetadata? metadata)
+        private static void SetNewMetadata(IResolverContext context, IMetadata? metadata)
         {
-            string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Depth;
+            string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Depth();
             context.ContextData.Add(metadataKey, metadata);
         }
 
@@ -581,7 +643,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </summary>
         /// <param name="context">Pure resolver context</param>
         /// <param name="metadata">Pagination metadata</param>
-        private static void SetNewMetadataChildren(IPureResolverContext context, IMetadata? metadata)
+        private static void SetNewMetadataChildren(IResolverContext context, IMetadata? metadata)
         {
             // When context.Path is /entity/items the metadata key is "entity"
             // The context key will use the depth of "items" so that the provided
@@ -590,7 +652,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.
-            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.

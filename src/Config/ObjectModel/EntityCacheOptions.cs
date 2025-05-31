@@ -19,7 +19,7 @@ public record EntityCacheOptions
     public const int DEFAULT_TTL_SECONDS = 5;
 
     /// <summary>
-    /// Default ttl value for an entity.
+    /// Default cache level for an entity.
     /// </summary>
     public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1L2;
 

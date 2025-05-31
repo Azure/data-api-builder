@@ -335,7 +335,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     structure,
                     queryString,
                     dataSourceName,
-                    queryExecutor
+                    queryExecutor,
+                    runtimeConfig.GetEntityCacheEntryLevel(structure.EntityName)
                     );
                 }
             }
@@ -356,7 +357,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return response;
         }
 
-        private async Task<JsonDocument?> GetResultInCacheScenario(RuntimeConfig runtimeConfig, SqlQueryStructure structure, string queryString, string dataSourceName, IQueryExecutor queryExecutor)
+        private async Task<JsonDocument?> GetResultInCacheScenario(
+            RuntimeConfig runtimeConfig,
+            SqlQueryStructure structure,
+            string queryString,
+            string dataSourceName,
+            IQueryExecutor queryExecutor,
+            EntityCacheLevel cacheEntryLevel)
         {
             DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
             JsonElement? result;
@@ -375,12 +382,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _cache.Set<JsonElement?>(
                         queryMetadata,
                         cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
-                        result);
+                        result,
+                        cacheEntryLevel);
                     return ParseResultIntoJsonDocument(result);
 
                 // Do not store result even if valid, still get from cache if available.
                 case SqlQueryStructure.CACHE_CONTROL_NO_STORE:
-                    maybeResult = _cache.TryGet<JsonElement?>(queryMetadata);
+                    maybeResult = _cache.TryGet<JsonElement?>(queryMetadata, cacheEntryLevel);
                     // maybeResult is a nullable wrapper so we must check hasValue at outer and inner layer.
                     if (maybeResult.HasValue && maybeResult.Value.HasValue)
                     {
@@ -401,7 +409,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // Only return query response if it exists in cache, return gateway timeout otherwise.
                 case SqlQueryStructure.CACHE_CONTROL_ONLY_IF_CACHED:
-                    maybeResult = _cache.TryGet<JsonElement?>(queryMetadata);
+                    maybeResult = _cache.TryGet<JsonElement?>(queryMetadata, cacheEntryLevel);
                     // maybeResult is a nullable wrapper so we must check hasValue at outer and inner layer.
                     if (maybeResult.HasValue && maybeResult.Value.HasValue)
                     {
@@ -421,7 +429,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     result = await _cache.GetOrSetAsync<JsonElement>(
                         queryExecutor,
                         queryMetadata,
-                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        cacheEntryLevel);
                     return ParseResultIntoJsonDocument(result);
             }
         }
@@ -473,7 +482,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             args: null,
                             dataSourceName: dataSourceName),
                         queryMetadata,
-                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName));
 
                     JsonDocument? cacheServiceResponse = null;
 

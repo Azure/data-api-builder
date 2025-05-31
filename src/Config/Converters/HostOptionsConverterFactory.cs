@@ -43,7 +43,7 @@ internal class HostOptionsConvertorFactory : JsonConverterFactory
         /// <summary>
         /// When writing the HostOptions back to a JSON file, only write the MaxResponseSizeMB property
         /// if the property is user provided. This avoids polluting the written JSON file with a property
-        /// the user most likely ommitted when writing the original DAB runtime config file.
+        /// the user most likely omitted when writing the original DAB runtime config file.
         /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.
         /// </summary>
         public override void Write(Utf8JsonWriter writer, HostOptions value, JsonSerializerOptions options)

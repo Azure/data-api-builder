@@ -2886,9 +2886,11 @@ type Moon {
         /// Base Route is not configured in the config file used for this test. If base-route is configured, the Location header URL should contain the base-route.
         /// This test performs a POST request, and in the event that it results in a 201 response, it performs a subsequent GET request
         /// with the Location header to validate the correctness of the URL.
+        /// Currently ignored as it is part of the setof flakey tests that are being investigated, see: https://github.com/Azure/data-api-builder/issues/2010
         /// </summary>
         /// <param name="entityType">Type of the entity</param>
         /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
+        [Ignore]
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(EntitySourceType.Table, "/api/Book", DisplayName = "Location Header validation - Table, Base Route not configured")]

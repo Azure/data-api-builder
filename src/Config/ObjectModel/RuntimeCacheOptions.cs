@@ -7,11 +7,11 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
-/// Entity specific cache configuration.
+/// Runtime specific cache configuration.
 /// Properties are nullable to support DAB CLI merge config
 /// expected behavior.
 /// </summary>
-public record EntityCacheOptions
+public record RuntimeCacheOptions
 {
     /// <summary>
     /// Default ttl value for an entity.
@@ -19,17 +19,7 @@ public record EntityCacheOptions
     public const int DEFAULT_TTL_SECONDS = 5;
 
     /// <summary>
-    /// Default cache level for an entity.
-    /// </summary>
-    public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1L2;
-
-    /// <summary>
-    /// The L2 cache provider we support.
-    /// </summary>
-    public const string L2_CACHE_PROVIDER = "redis";
-
-    /// <summary>
-    /// Whether the cache should be used for the entity.
+    /// Whether the level2 cache should be used.
     /// </summary>
     [JsonPropertyName("enabled")]
     public bool? Enabled { get; init; } = false;
@@ -41,15 +31,14 @@ public record EntityCacheOptions
     public int? TtlSeconds { get; init; } = null;
 
     /// <summary>
-    /// The cache levels to use for a cache entry.
+    /// The options for the level2 cache (and backplane).
     /// </summary>
-    [JsonPropertyName("level")]
-    public EntityCacheLevel? Level { get; init; } = null;
+    [JsonPropertyName("level-2")]
+    public RuntimeCacheLevel2Options? Level2 { get; init; } = null;
 
     [JsonConstructor]
-    public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null, EntityCacheLevel? Level = null)
+    public RuntimeCacheOptions(bool? Enabled = null, int? TtlSeconds = null)
     {
-        // TODO: shouldn't we apply the same "UserProvidedXyz" logic to Enabled, too?
         this.Enabled = Enabled;
 
         if (TtlSeconds is not null)
@@ -60,16 +49,6 @@ public record EntityCacheOptions
         else
         {
             this.TtlSeconds = DEFAULT_TTL_SECONDS;
-        }
-
-        if (Level is not null)
-        {
-            this.Level = Level;
-            UserProvidedLevelOptions = true;
-        }
-        else
-        {
-            this.Level = DEFAULT_LEVEL;
         }
     }
 
@@ -86,18 +65,4 @@ public record EntityCacheOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(TtlSeconds))]
     public bool UserProvidedTtlOptions { get; init; } = false;
-
-    /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write the Level option
-    /// property and value to the runtime config file.
-    /// When user doesn't provide the level property/value, which signals DAB to use the default,
-    /// the DAB CLI should not write the default value to a serialized config.
-    /// This is because the user's intent is to use DAB's default value which could change
-    /// and DAB CLI writing the property and value would lose the user's intent.
-    /// This is because if the user were to use the CLI created config, a level
-    /// property/value specified would be interpreted by DAB as "user explicitly set level."
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Level))]
-    public bool UserProvidedLevelOptions { get; init; } = false;
 }

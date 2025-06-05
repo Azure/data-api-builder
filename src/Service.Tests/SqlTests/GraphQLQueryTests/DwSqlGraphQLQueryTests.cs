@@ -50,6 +50,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Tests In operator using query variables
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string msSqlQuery = $"SELECT id, title FROM books  where id IN (1, 2) ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithVariables(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests In operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithNullAndEmptyvalues()
+        {
+            string msSqlQuery = $"SELECT string_types FROM type_table where string_types IN ('lksa;jdflasdf;alsdflksdfkldj', ' ', NULL) FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithNullAndEmptyvalues(msSqlQuery);
+        }
+
+        /// <summary>
         /// Gets array of results for querying more than one item using query mappings.
         /// </summary>
         [TestMethod]
@@ -62,6 +84,114 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             await MultipleResultQueryWithMappings(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests IN operator with aggregations
+        /// </summary>
+        [TestMethod]
+        public async Task INOperatorWithAggregations()
+        {
+            string dbQuery = @"
+                SELECT COALESCE(
+                    '[' + STRING_AGG(
+                        '{' +
+                        N'""publisher_id"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [publisher_id]), 'json'), 'null') + ', ' +
+                        N'""publisherCount"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [publisherCount]), 'json'), 'null') +
+                        '}', ', '
+                    ) + ']', '[]'
+                )
+                FROM (
+                    SELECT TOP 100
+                        [table0].[publisher_id] AS [publisher_id],
+                        COUNT([table0].[id]) AS [publisherCount]
+                    FROM [dbo].[books] AS [table0]
+                    WHERE 1 = 1
+                    GROUP BY [table0].[publisher_id]
+                    HAVING COUNT([table0].[id]) IN (1, 2)
+                ) AS [table0];";
+
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                      books {
+                        groupBy(fields: [publisher_id]) {
+                          fields{
+                            publisher_id
+                          }
+                          aggregations{
+                            publisherCount: count(field: id, having:  {
+                               in: [1, 2]
+                            })
+                          }
+                        }
+                      }
+                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test IN Operator in a relationship, for example, in a One -> One relationship
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterOneToOneJoinQuery()
+        {
+            string dwSqlQuery = @"
+                SELECT COALESCE(
+                    '[' + STRING_AGG(
+                        '{' +
+                            N'""id"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [id]), 'json'), 'null') + ',' +
+                            N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' +
+                            N'""websiteplacement"":' + ISNULL([websiteplacement], 'null') +
+                        '}',
+                        ', '
+                    ) + ']',
+                    '[]'
+                )
+                FROM (
+                    SELECT TOP 100
+                        [table0].[id] AS [id],
+                        [table0].[title] AS [title],
+                        ([table1_subq].[data]) AS [websiteplacement]
+                    FROM [dbo].[books] AS [table0]
+    
+                    OUTER APPLY (
+                        SELECT STRING_AGG(
+                            '{' +
+                                N'""price"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [price]), 'json'), 'null') + ',' +
+                                N'""book_id"":' + ISNULL(STRING_ESCAPE(CONVERT(NVARCHAR(MAX), [book_id]), 'json'), 'null') +
+                            '}',
+                            ', '
+                        )
+                        FROM (
+                            SELECT TOP 1
+                                [table1].[price] AS [price],
+                                [table1].[book_id] AS [book_id]
+                            FROM [dbo].[book_website_placements] AS [table1]
+                            WHERE [table0].[id] = [table1].[book_id]
+                              AND [table1].[book_id] = [table0].[id]
+                            ORDER BY [table1].[id] ASC
+                        ) AS [table1]
+                    ) AS [table1_subq]([data])
+    
+                    WHERE (
+                        [table0].[title] IN ('Awesome book', 'Also Awesome book')
+                        AND EXISTS (
+                            SELECT 1
+                            FROM [dbo].[book_website_placements] AS [table6]
+                            WHERE [table6].[book_id] IN (1, 2)
+                              AND [table6].[book_id] = [table0].[id]
+                              AND [table0].[id] = [table6].[book_id]
+                        )
+                    )
+                    ORDER BY [table0].[id] DESC
+                ) AS [table0];";
+
+            await InFilterOneToOneJoinQuery(dwSqlQuery);
         }
 
         /// <summary>

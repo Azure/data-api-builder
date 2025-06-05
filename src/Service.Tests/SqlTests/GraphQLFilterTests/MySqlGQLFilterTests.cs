@@ -73,6 +73,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
             throw new System.NotImplementedException("Nested Filtering for MySQL is not yet implemented.");
         }
 
+        [Ignore]
+        [TestMethod]
+        public void TestNestedFilterWithOrAndIN()
+        {
+            throw new System.NotImplementedException("Nested Filtering for MySQL is not yet implemented.");
+        }
+
         [TestMethod]
         public async Task TestStringFiltersEqWithMappings()
         {
@@ -87,6 +94,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                    LIMIT 100) AS `subq1`";
 
             await TestStringFiltersEqWithMappings(mySqlQuery);
+        }
+
+        /// <summary>
+        /// Test IN operator when mappings are configured for GraphQL entity.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersINWithMappings()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('column1', `subq1`.`column1`, 'column2', `subq1`.`column2`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`__column1` AS `column1`,
+                          `table0`.`__column2` AS `column2`
+                   FROM `GQLmappings` AS `table0`
+                   WHERE `table0`.`__column2` IN ('Filtered Record')
+                   ORDER BY `table0`.`__column1` asc
+                   LIMIT 100) AS `subq1`";
+
+            await TestStringFiltersINWithMappings(mySqlQuery);
         }
 
         /// <summary>

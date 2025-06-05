@@ -49,7 +49,9 @@
         ],
         Cache: {
           Enabled: true,
-          TtlSeconds: 1
+          TtlSeconds: 1,
+          Level: L1L2,
+          UserProvidedLevelOptions: false
         }
       }
     }

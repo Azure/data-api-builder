@@ -24,6 +24,11 @@ public record EntityCacheOptions
     public const EntityCacheLevel DEFAULT_LEVEL = EntityCacheLevel.L1L2;
 
     /// <summary>
+    /// The L2 cache provider we support.
+    /// </summary>
+    public const string L2_CACHE_PROVIDER = "redis";
+
+    /// <summary>
     /// Whether the cache should be used for the entity.
     /// </summary>
     [JsonPropertyName("enabled")]

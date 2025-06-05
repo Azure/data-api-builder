@@ -391,12 +391,12 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeCacheLevel2Options level2CacheOptions = runtimeConfig!.Runtime!.Cache!.Level2!;
                 string level2CacheProvider = level2CacheOptions.Provider ?? EntityCacheOptions.L2_CACHE_PROVIDER;
 
-                switch (level2CacheProvider)
+                switch (level2CacheProvider.ToLowerInvariant())
                 {
                     case EntityCacheOptions.L2_CACHE_PROVIDER:
                         if (string.IsNullOrWhiteSpace(level2CacheOptions.ConnectionString))
                         {
-                            throw new Exception($"Cache Provider: the \"redis\" level2 cache provider requires a valid connection-string. Please provide one.");
+                            throw new Exception($"Cache Provider: the \"{EntityCacheOptions.L2_CACHE_PROVIDER}\" level2 cache provider requires a valid connection-string. Please provide one.");
                         }
                         else
                         {

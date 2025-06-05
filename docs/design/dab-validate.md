@@ -51,4 +51,3 @@ The following types of validations are run on the config file (in the order spec
 
 ## Limitations
 1. Currently the `validate` command support is limited to single datasource config file.
-2. `NJsonSchema.Net` package currently has an open issue that overlooks/ ignores "if then else" conditions in json schema for attribute checks. (refer [here](https://github.com/RicoSuter/NJsonSchema/issues/1240))

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFrameworks>net8.0</TargetFrameworks>
@@ -70,7 +70,7 @@
         <PackageReference Include="Microsoft.OData.Core" />
         <PackageReference Include="Microsoft.OpenApi" />
         <PackageReference Include="MySqlConnector" />
-        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Newtonsoft.Json" NoWarn="NU1605" />
         <PackageReference Include="Npgsql" />
         <PackageReference Include="Polly" />
         <PackageReference Include="DotNetEnv" />

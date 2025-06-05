@@ -88,14 +88,14 @@ public record EntityCacheOptions
     public bool UserProvidedTtlOptions { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write ttl-seconds
+    /// Flag which informs CLI and JSON serializer whether to write the Level option
     /// property and value to the runtime config file.
-    /// When user doesn't provide the ttl-seconds property/value, which signals DAB to use the default,
+    /// When user doesn't provide the level property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// This is because the user's intent is to use DAB's default value which could change
     /// and DAB CLI writing the property and value would lose the user's intent.
-    /// This is because if the user were to use the CLI created config, a ttl-seconds
-    /// property/value specified would be interpreted by DAB as "user explicitly set ttl."
+    /// This is because if the user were to use the CLI created config, a level
+    /// property/value specified would be interpreted by DAB as "user explicitly set level."
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(Level))]

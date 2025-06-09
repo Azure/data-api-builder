@@ -124,12 +124,9 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                         case "max-query-parallelism":
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
-                                int parseMaxQueryParallelism = reader.GetInt32();
-                                if (parseMaxQueryParallelism < 4 || parseMaxQueryParallelism > 8)
-                                {
-                                    throw new JsonException($"Invalid value for health max-query-parallelism: {parseMaxQueryParallelism}. Value must be between 4 and 8.");
-                                }
-
+                                // MaxQueryParallelism is an integer that should be between 4 and 8.
+                                int parseMaxQueryParallelism = Math.Min(Math.Max(reader.GetInt32(), EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM),
+                                    EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM_LIMIT);
                                 maxQueryParallelism = parseMaxQueryParallelism;
                             }
 

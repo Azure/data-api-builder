@@ -34,6 +34,11 @@ public record EntityCacheOptions
     public const int DEFAULT_MAX_QUERY_PARALLELISM = 4;
 
     /// <summary>
+    /// Default maximum query parallelism limit for health check.
+    /// </summary>
+    public const int DEFAULT_MAX_QUERY_PARALLELISM_LIMIT = 8;
+
+    /// <summary>
     /// Whether the cache should be used for the entity.
     /// </summary>
     [JsonPropertyName("enabled")]

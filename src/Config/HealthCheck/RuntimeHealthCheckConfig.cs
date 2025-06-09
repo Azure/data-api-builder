@@ -19,7 +19,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     public bool UserProvidedTtlOptions { get; init; } = false;
 
     [JsonPropertyName("max-query-parallelism")]
-    public int MaxQueryParallelism { get; set; }
+    public int MaxQueryParallelism { get; set; } = EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM;
 
     public RuntimeHealthCheckConfig() : base()
     {

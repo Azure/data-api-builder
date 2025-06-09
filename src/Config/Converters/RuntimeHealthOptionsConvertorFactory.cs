@@ -55,12 +55,13 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                 bool? enabled = null;
                 int? cacheTtlSeconds = null;
                 HashSet<string>? roles = null;
+                int? maxQueryParallelism = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new RuntimeHealthCheckConfig(enabled, roles, cacheTtlSeconds);
+                        return new RuntimeHealthCheckConfig(enabled, roles, cacheTtlSeconds, maxQueryParallelism);
                     }
 
                     string? property = reader.GetString();
@@ -120,7 +121,19 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                             }
 
                             break;
+                        case "max-query-parallelism":
+                            if (reader.TokenType is not JsonTokenType.Null)
+                            {
+                                int parseMaxQueryParallelism = reader.GetInt32();
+                                if (parseMaxQueryParallelism < 4 || parseMaxQueryParallelism > 8)
+                                {
+                                    throw new JsonException($"Invalid value for health max-query-parallelism: {parseMaxQueryParallelism}. Value must be between 4 and 8.");
+                                }
 
+                                maxQueryParallelism = parseMaxQueryParallelism;
+                            }
+
+                            break;
                         default:
                             throw new JsonException($"Unexpected property {property}");
                     }

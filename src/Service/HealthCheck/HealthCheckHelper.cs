@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -196,18 +197,52 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Updates the Entity Health Check Results in the response. 
         // Goes through the entities one by one and executes the rest and graphql checks (if enabled).
-        private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
+        private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport report, RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig?.Entities != null && runtimeConfig.Entities.Entities.Any())
+            if (runtimeConfig?.Entities?.Entities?.Any() != true)
             {
-                foreach (KeyValuePair<string, Entity> Entity in runtimeConfig.Entities.Entities)
+                return;
+            }
+
+            List<KeyValuePair<string, Entity>> enabledEntities = runtimeConfig.Entities.Entities
+                .Where(e => e.Value.IsEntityHealthEnabled)
+                .ToList();
+
+            if (enabledEntities.Count == 0)
+            {
+                return;
+            }
+
+            ConcurrentBag<HealthCheckResultEntry> concurrentChecks = new();
+            int maxParallelism = runtimeConfig.Runtime?.Health?.MaxQueryParallelism ?? EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM;
+
+            await Parallel.ForEachAsync(enabledEntities, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (entity, _) =>
+            {
+                try
                 {
-                    if (Entity.Value.IsEntityHealthEnabled)
+                    ComprehensiveHealthCheckReport localReport = new()
                     {
-                        await PopulateEntityHealthAsync(ComprehensiveHealthCheckReport, Entity, runtimeConfig);
+                        Checks = new List<HealthCheckResultEntry>()
+                    };
+
+                    await PopulateEntityHealthAsync(localReport, entity, runtimeConfig);
+
+                    if (localReport.Checks != null)
+                    {
+                        foreach (HealthCheckResultEntry check in localReport.Checks)
+                        {
+                            concurrentChecks.Add(check);
+                        }
                     }
                 }
-            }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Error processing entity '{entity.Key}': {ex.Message}");
+                }
+            });
+
+            report.Checks ??= new List<HealthCheckResultEntry>();
+            report.Checks.AddRange(concurrentChecks);
         }
 
         // Populates the Entity Health Check Results in the response for a particular entity.

@@ -1870,7 +1870,7 @@ type Moon {
             Assert.IsFalse(result.IsValid);
             Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             Assert.AreEqual(1, result.ErrorCount);
-            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> PropertyRequired: #/entities"));
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> Required properties are missing from object: entities."));
         }
 
         /// <summary>

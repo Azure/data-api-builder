@@ -34,7 +34,7 @@ public class JsonSchemaValidationResult
     private static string FormatSchemaValidationErrorMessage(ICollection<ValidationError> validationErrors)
     {
         return $"> Total schema validation errors: {validationErrors.Count}\n" +
-            string.Join("", validationErrors.Select(e => $"> {e} at " +
+            string.Join("", validationErrors.Select(e => $"> {e.Message} at " +
             $"{e.LineNumber}:{e.LinePosition}\n\n"));
     }
 }

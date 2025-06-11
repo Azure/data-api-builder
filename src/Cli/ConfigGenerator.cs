@@ -741,7 +741,7 @@ namespace Cli
             if (options.RuntimeCacheEnabled != null ||
                 options.RuntimeCacheTTL != null)
             {
-                EntityCacheOptions? updatedCacheOptions = runtimeConfig?.Runtime?.Cache ?? new();
+                RuntimeCacheOptions? updatedCacheOptions = runtimeConfig?.Runtime?.Cache ?? new();
                 bool status = TryUpdateConfiguredCacheValues(options, ref updatedCacheOptions);
                 if (status)
                 {
@@ -908,7 +908,7 @@ namespace Cli
         /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
         private static bool TryUpdateConfiguredCacheValues(
             ConfigureOptions options,
-            ref EntityCacheOptions? updatedCacheOptions)
+            ref RuntimeCacheOptions? updatedCacheOptions)
         {
             object? updatedValue;
             try

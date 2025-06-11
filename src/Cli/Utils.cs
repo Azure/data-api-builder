@@ -856,6 +856,7 @@ namespace Cli
                 _logger.LogError("Invalid format for --cache.ttl. Accepted values are any non-negative integer.");
             }
 
+            // This is needed so the cacheTtl is correctly written to config.
             if (cacheTtl is not null)
             {
                 isCacheTtlUserProvided = true;

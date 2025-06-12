@@ -843,6 +843,7 @@ namespace Cli
 
             EntityCacheOptions cacheOptions = new();
             bool isEnabled = false;
+            bool isCacheTtlUserProvided = false;
             int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
 
             if (cacheEnabled is not null && !bool.TryParse(cacheEnabled, out isEnabled))
@@ -855,12 +856,18 @@ namespace Cli
                 _logger.LogError("Invalid format for --cache.ttl. Accepted values are any non-negative integer.");
             }
 
+            // This is needed so the cacheTtl is correctly written to config.
+            if (cacheTtl is not null)
+            {
+                isCacheTtlUserProvided = true;
+            }
+
             // Both cacheEnabled and cacheTtl can not be null here, so if either one
             // is, the other is not, and we return the cacheOptions with just that other
             // value.
             if (cacheEnabled is null)
             {
-                return cacheOptions with { TtlSeconds = ttl };
+                return cacheOptions with { TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
             }
 
             if (cacheTtl is null)
@@ -868,7 +875,7 @@ namespace Cli
                 return cacheOptions with { Enabled = isEnabled };
             }
 
-            return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl };
+            return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
         }
 
         /// <summary>

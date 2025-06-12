@@ -26,7 +26,7 @@
     <PackageReference Include="Microsoft.OpenApi" />
     <PackageReference Include="MSTest.TestFramework" />
     <PackageReference Include="MySqlConnector" />
-    <PackageReference Include="Newtonsoft.Json" NoWarn="NU1605" />
+    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Newtonsoft.Json.Schema" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Polly" />

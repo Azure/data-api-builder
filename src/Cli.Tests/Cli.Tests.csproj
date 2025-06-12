@@ -22,7 +22,7 @@
         <PackageReference Include="Moq" />
         <PackageReference Include="MSTest.TestAdapter" />
         <PackageReference Include="MSTest.TestFramework" />
-        <PackageReference Include="Newtonsoft.Json" NoWarn="NU1605" />
+        <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
         <PackageReference Include="Verify.MSTest" />
         <PackageReference Include="Verify.DiffPlex" />

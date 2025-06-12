@@ -1894,10 +1894,9 @@ type Moon {
 
             string errorMessage = result.ErrorMessage;
             Assert.IsTrue(errorMessage.Contains("Total schema validation errors: 3"));
-            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/data-source-file at 7:31"));
-            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/runtime.Graphql at 13:26"));
-            Assert.IsTrue(errorMessage.Contains("AdditionalPropertiesNotValid: #/entities.Publisher\n"
-                    + "{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
+            Assert.IsTrue(errorMessage.Contains("Property 'data-source-file' has not been defined and the schema does not allow additional properties. at 7:31"));
+            Assert.IsTrue(errorMessage.Contains("Property 'Graphql' has not been defined and the schema does not allow additional properties. at 13:26"));
+            Assert.IsTrue(errorMessage.Contains("Property 'rst' has not been defined and the schema does not allow additional properties. at 44:26"));
         }
 
         /// <summary>
@@ -1929,7 +1928,7 @@ type Moon {
             JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, combinedJson);
             Assert.IsFalse(result.IsValid);
             Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1"));
-            Assert.IsTrue(result.ErrorMessage.Contains("NoAdditionalPropertiesAllowed: #/description"));
+            Assert.IsTrue(result.ErrorMessage.Contains("Property 'description' has not been defined and the schema does not allow additional properties."));
 
             File.WriteAllText(CUSTOM_CONFIG, combinedJson);
             string[] args = new[]

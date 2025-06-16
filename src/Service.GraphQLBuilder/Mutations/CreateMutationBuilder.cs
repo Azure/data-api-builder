@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType">Database type of the relational database to generate input type for.</param>
         /// <param name="entities">Runtime config information.</param>
         /// <param name="IsMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
-        /// <returns>A GraphQL input type with all expected fields mapped as GraphQL inputs.</returns>
+        /// <returns>An optional GraphQL input type with all expected fields mapped as GraphQL inputs.</returns>
         private static InputObjectTypeDefinitionNode? GenerateCreateInputTypeForRelationalDb(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
@@ -63,6 +63,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 .Select(field => GenerateScalarInputType(name, field, IsMultipleCreateOperationEnabled));
 
             // Add scalar input fields to list of input fields for current input type.
+            // Generate the create input type only if there are any scalar fields that are not auto-generated fields.
             if (scalarInputFields.Any())
             {
                 inputFields.AddRange(scalarInputFields);
@@ -311,7 +312,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="objectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
-        /// <returns>A GraphQL input type value.</returns>
+        /// <returns>An Optional GraphQL input type value.</returns>
         private static InputValueDefinitionNode? GenerateComplexInputTypeForRelationalDb(
             string entityName,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,

@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     }
 
                     return GenerateSimpleInputType(name, f, databaseType, operation);
-                }).Where(type => type != null);
+                });
 
             if (inputFields.Any())
             {

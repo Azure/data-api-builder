@@ -80,6 +80,46 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Perform equality for aggregation queries
+        /// Aggregation queries can have fields node and aggregations node and so the stucture is different.
+        /// </summary>
+        /// <param name="expected"></param>
+        /// <param name="actual"></param>
+        public static void PerformTestEqualJsonStringsForAggreagtionQueries(string expected, string actual)
+        {
+            JToken expectedToken = JToken.Parse(expected); // result of db query
+            JToken actualToken = JToken.Parse(actual); // result of gql query
+
+            IEnumerable<JObject> flatActualArray = actualToken["groupBy"]
+                .Select(gb =>
+                {
+                    JObject obj = new();
+                    JObject fields = gb["fields"] as JObject;
+                    if (fields != null)
+                    {
+                        foreach (JProperty prop in fields.Properties())
+                        {
+                            obj[prop.Name] = prop.Value;
+                        }
+                    }
+
+                    JObject aggs = gb["aggregations"] as JObject;
+                    if (aggs != null)
+                    {
+                        foreach (JProperty prop in aggs.Properties())
+                        {
+                            obj[prop.Name] = prop.Value;
+                        }
+                    }
+
+                    return obj;
+                });
+            JToken normalizedActual = new JArray(flatActualArray);
+
+            JsonStringsDeepEqual(expectedToken.ToString(), normalizedActual.ToString());
+        }
+
+        /// <summary>
         /// Compares two JSON strings for equality after converting all DateTime values if present to a consistent format.
         /// Also Adds a useful failure message around the expected == actual operation.
         /// </summary>

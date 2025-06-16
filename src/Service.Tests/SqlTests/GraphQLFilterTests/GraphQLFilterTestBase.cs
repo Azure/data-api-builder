@@ -65,6 +65,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests IN of StringFilterInput when mappings are configured for GraphQL entity.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersINWithMappings(string dbQuery)
+        {
+            string graphQLQueryName = "gQLmappings";
+            string gqlQuery = @"{
+                gQLmappings( " + QueryBuilder.FILTER_FIELD_NAME + @" : {column2: {in: [""Filtered Record""]}})
+                {
+                    items {
+                        column1
+                        column2
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Tests correct rows are returned with filters containing 2 varchar columns one with null and one with non-null values.
         /// </summary>
         [TestMethod]
@@ -1091,6 +1113,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
                         publishers: { name: { eq: ""TBD Publishing One"" } } }
                         { authors : {
                           name: { eq: ""Aniruddh""}}}
+                      ]
+                    })
+                    {
+                      items {
+                        title
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "books",
+                queriedColumns: new List<string> { "title" },
+                existsPredicate,
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: roleName,
+                expectsError: expectsError);
+
+            if (expectsError)
+            {
+                SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), message: errorMsgFragment);
+            }
+            else
+            {
+                string expected = await GetDatabaseResultAsync(dbQuery);
+                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Tests nested filter with IN and OR clause.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterWithOrAndIN(string existsPredicate, string roleName, bool expectsError = false, string errorMsgFragment = "")
+        {
+            string graphQLQueryName = "booksNF";
+
+            // Gets all the books written by Aniruddh OR if their publisher is 'TBD Publishing One'.
+            string gqlQuery = @"{
+                booksNF (" + QueryBuilder.FILTER_FIELD_NAME +
+                    @": { or: [{
+                        publishers: { name: { in: [""TBD Publishing One""] } } }
+                        { authors : {
+                          name: { in: [""Aniruddh""] }}}
                       ]
                     })
                     {

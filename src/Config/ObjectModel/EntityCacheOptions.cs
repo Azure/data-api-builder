@@ -36,7 +36,7 @@ public record EntityCacheOptions
     /// <summary>
     /// Upper limit of maximum query parallelism for health check.
     /// </summary>
-    public const int DEFAULT_MAX_QUERY_PARALLELISM_LIMIT = 8;
+    public const int UPPER_LIMIT_MAX_QUERY_PARALLELISM = 8;
 
     /// <summary>
     /// Whether the cache should be used for the entity.

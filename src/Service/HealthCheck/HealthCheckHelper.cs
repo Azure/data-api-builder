@@ -199,17 +199,13 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Goes through the entities one by one and executes the rest and graphql checks (if enabled).
         private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport report, RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig?.Entities?.Entities?.Any() != true)
-            {
-                return;
-            }
-
             List<KeyValuePair<string, Entity>> enabledEntities = runtimeConfig.Entities.Entities
                 .Where(e => e.Value.IsEntityHealthEnabled)
                 .ToList();
 
             if (enabledEntities.Count == 0)
             {
+                _logger.LogInformation("No enabled entities found for health checks. Skipping entity health checks.");
                 return;
             }
 

@@ -620,7 +620,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                 // 'roles' claim has already been processed. But we preserve the original 'roles' claim.
                 if (claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE))
                 {
-                    if(!resolvedClaims.TryAdd(AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE, new List<Claim>() { claim }))
+                    if (!resolvedClaims.TryAdd(AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE, new List<Claim>() { claim }))
                     {
                         resolvedClaims[AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE].Add(claim);
                     }

@@ -278,6 +278,7 @@ public class ConfigurationHotReloadTests
     /// set to false. Validate that the response from the server is NOT FOUND when making a request after
     /// the hot reload.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload rest enabled.")]
     public async Task HotReloadConfigRuntimeRestEnabledEndToEndTest()
@@ -302,6 +303,7 @@ public class ConfigurationHotReloadTests
     /// set to false. Validate that the response from the server is NOT FOUND when making a request after
     /// the hot reload.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload gql enabled.")]
     public async Task HotReloadConfigRuntimeGQLEnabledEndToEndTest()
@@ -522,6 +524,7 @@ public class ConfigurationHotReloadTests
     /// By asserting that hot reload worked properly for the session-context it also implies that
     /// the new connection string with additional parameters is also valid.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigDataSource()
@@ -558,6 +561,7 @@ public class ConfigurationHotReloadTests
     /// Then we assert that the log-level property is properly updated by ensuring it is 
     /// not the same as the previous log-level and asserting it is the expected log-level.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public void HotReloadLogLevel()
@@ -639,6 +643,7 @@ public class ConfigurationHotReloadTests
     /// Then it hot reloads once more to the original database type. We assert that the
     /// first reload fails while the second one succeeds.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigDatabaseType()

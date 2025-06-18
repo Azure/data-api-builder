@@ -111,7 +111,7 @@ public class AzureLogAnalyticsConfigurationTests
 
         // Act
         string json = JsonSerializer.Serialize(telemetryOptions, RuntimeConfigLoader.GetSerializationOptions());
-        
+
         // Debug output
         System.Console.WriteLine($"Generated JSON: {json}");
 

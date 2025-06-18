@@ -1,16 +1,63 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 
-[TestClass]
+[TestClass, TestCategory(TestCategory.MSSQL)]
 public class AzureLogAnalyticsConfigurationTests
 {
+    private const string CONFIG_WITH_TELEMETRY = "dab-azure-log-analytics-test-config.json";
+    private const string CONFIG_WITHOUT_TELEMETRY = "dab-no-azure-log-analytics-test-config.json";
+    private static RuntimeConfig _configuration;
+
+    /// <summary>
+    /// Creates runtime config file with specified Azure Log Analytics telemetry options.
+    /// </summary>
+    /// <param name="configFileName">Name of the config file to be created.</param>
+    /// <param name="isTelemetryEnabled">Whether Azure Log Analytics telemetry is enabled or not.</param>
+    /// <param name="workspaceId">Azure Log Analytics workspace ID.</param>
+    /// <param name="logType">Custom log table name.</param>
+    /// <param name="flushIntervalSeconds">Flush interval in seconds.</param>
+    public static void SetUpAzureLogAnalyticsInConfig(string configFileName, bool isTelemetryEnabled, string workspaceId, string dcrId = "test-dcr-id", string dceEndpoint = "test-dce-endpoint", string logType = "DabLogs", int flushIntervalSeconds = 5)
+    {
+        DataSource dataSource = new(DatabaseType.MSSQL,
+            GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+        _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new());
+
+        AzureLogAnalyticsAuthOptions authOptions = new(workspaceId, dcrId, dceEndpoint);
+        AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(isTelemetryEnabled, authOptions, logType, flushIntervalSeconds);
+        TelemetryOptions _testTelemetryOptions = new(AzureLogAnalytics: azureLogAnalyticsOptions);
+        _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };
+
+        File.WriteAllText(configFileName, _configuration.ToJson());
+    }
+
+    /// <summary>
+    /// Cleans up the test environment by deleting the runtime config with telemetry options.
+    /// </summary>
+    [TestCleanup]
+    public void CleanUpTelemetryConfig()
+    {
+        if (File.Exists(CONFIG_WITH_TELEMETRY))
+        {
+            File.Delete(CONFIG_WITH_TELEMETRY);
+        }
+
+        if (File.Exists(CONFIG_WITHOUT_TELEMETRY))
+        {
+            File.Delete(CONFIG_WITHOUT_TELEMETRY);
+        }
+
+    }
+
     [TestMethod]
     public void TestAzureLogAnalyticsJsonDeserialization()
     {

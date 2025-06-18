@@ -48,7 +48,7 @@ public class AzureLogAnalyticsConfigurationTests
         Assert.IsNotNull(config.Runtime.Telemetry, "Telemetry should not be null");
         Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics, "AzureLogAnalytics should not be null");
 
-        var azureLogAnalytics = config.Runtime.Telemetry.AzureLogAnalytics;
+        AzureLogAnalyticsOptions azureLogAnalytics = config.Runtime.Telemetry.AzureLogAnalytics;
         Assert.IsTrue(azureLogAnalytics.Enabled, "AzureLogAnalytics should be enabled");
         Assert.IsNotNull(azureLogAnalytics.Auth, "Auth should not be null");
         Assert.AreEqual("test-workspace-id", azureLogAnalytics.Auth.WorkspaceId, "WorkspaceId should match");
@@ -91,7 +91,7 @@ public class AzureLogAnalyticsConfigurationTests
         Assert.IsNotNull(config.Runtime.Telemetry, "Telemetry should not be null");
         Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics, "AzureLogAnalytics should not be null");
 
-        var azureLogAnalytics = config.Runtime.Telemetry.AzureLogAnalytics;
+        AzureLogAnalyticsOptions azureLogAnalytics = config.Runtime.Telemetry.AzureLogAnalytics;
         Assert.IsFalse(azureLogAnalytics.Enabled, "AzureLogAnalytics should be disabled");
         Assert.IsNotNull(azureLogAnalytics.Auth, "Auth should not be null");
         Assert.AreEqual("test-workspace-id", azureLogAnalytics.Auth.WorkspaceId, "WorkspaceId should match");
@@ -105,9 +105,9 @@ public class AzureLogAnalyticsConfigurationTests
     public void TestAzureLogAnalyticsJsonSerialization()
     {
         // Arrange
-        var authOptions = new AzureLogAnalyticsAuthOptions("test-workspace-id", "test-dcr-id", "test-dce-endpoint");
-        var azureLogAnalyticsOptions = new AzureLogAnalyticsOptions(true, authOptions, "CustomLogs", 10);
-        var telemetryOptions = new TelemetryOptions(AzureLogAnalytics: azureLogAnalyticsOptions);
+        AzureLogAnalyticsAuthOptions authOptions = new("test-workspace-id", "test-dcr-id", "test-dce-endpoint");
+        AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(true, authOptions, "CustomLogs", 10);
+        TelemetryOptions telemetryOptions = new(AzureLogAnalytics: azureLogAnalyticsOptions);
 
         // Act
         string json = JsonSerializer.Serialize(telemetryOptions, RuntimeConfigLoader.GetSerializationOptions());

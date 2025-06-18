@@ -29,16 +29,6 @@ public record EntityCacheOptions
     public const string L2_CACHE_PROVIDER = "redis";
 
     /// <summary>
-    /// Default maximum query parallelism for health check.
-    /// </summary>
-    public const int DEFAULT_MAX_QUERY_PARALLELISM = 4;
-
-    /// <summary>
-    /// Upper limit of maximum query parallelism for health check.
-    /// </summary>
-    public const int UPPER_LIMIT_MAX_QUERY_PARALLELISM = 8;
-
-    /// <summary>
     /// Whether the cache should be used for the entity.
     /// </summary>
     [JsonPropertyName("enabled")]

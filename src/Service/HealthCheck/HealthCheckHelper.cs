@@ -211,10 +211,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
             ConcurrentBag<HealthCheckResultEntry> concurrentChecks = new();
 
-            // Use MaxQueryParallelism from RuntimeConfig or default to EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM
-            int maxParallelism = runtimeConfig.Runtime?.Health?.MaxQueryParallelism ?? EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM;
+            // Use MaxQueryParallelism from RuntimeConfig or default to RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM
+            int maxParallelism = runtimeConfig.Runtime?.Health?.MaxQueryParallelism ?? RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM;
 
-            _logger.LogTrace("Executing health checks for {Count} enabled entities with parallelism of {MaxParallelism}.", enabledEntities.Count, maxParallelism);
+            _logger.LogInformation("Executing health checks for {Count} enabled entities with parallelism of {MaxParallelism}.", enabledEntities.Count, maxParallelism);
 
             // Executes health checks for all enabled entities in parallel, with a maximum degree of parallelism
             // determined by configuration (or a default). Each entity's health check runs as an independent task.

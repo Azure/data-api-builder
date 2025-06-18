@@ -126,7 +126,8 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                             {
                                 // Allow user to set values between 1 and 8 (inclusive). If not set, the value will be set to 4 during health check.
                                 int userValue = reader.GetInt32();
-                                int parseMaxQueryParallelism = Math.Clamp(userValue, 1, EntityCacheOptions.UPPER_LIMIT_MAX_QUERY_PARALLELISM);
+                                int parseMaxQueryParallelism = Math.Clamp(userValue, RuntimeHealthCheckConfig.LOWEST_MAX_QUERY_PARALLELISM,
+                                    RuntimeHealthCheckConfig.UPPER_LIMIT_MAX_QUERY_PARALLELISM);
                                 maxQueryParallelism = parseMaxQueryParallelism;
                             }
 

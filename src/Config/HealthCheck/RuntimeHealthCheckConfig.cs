@@ -7,6 +7,20 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record RuntimeHealthCheckConfig : HealthCheckConfig
 {
+    /// <summary>
+    /// Represents the lowest maximum query parallelism for health check.
+    /// </summary>
+    public const int LOWEST_MAX_QUERY_PARALLELISM = 1;
+    /// <summary>
+    /// Default maximum query parallelism for health check.
+    /// </summary>
+    public const int DEFAULT_MAX_QUERY_PARALLELISM = 4;
+
+    /// <summary>
+    /// Upper limit of maximum query parallelism for health check.
+    /// </summary>
+    public const int UPPER_LIMIT_MAX_QUERY_PARALLELISM = 8;
+
     [JsonPropertyName("cache-ttl-seconds")]
     public int CacheTtlSeconds { get; set; }
 
@@ -16,7 +30,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     public bool UserProvidedTtlOptions { get; init; } = false;
 
     [JsonPropertyName("max-query-parallelism")]
-    public int MaxQueryParallelism { get; set; } = EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM;
+    public int MaxQueryParallelism { get; set; } = DEFAULT_MAX_QUERY_PARALLELISM;
 
     public RuntimeHealthCheckConfig() : base()
     {
@@ -36,6 +50,6 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
             this.CacheTtlSeconds = EntityCacheOptions.DEFAULT_TTL_SECONDS;
         }
 
-        this.MaxQueryParallelism = maxQueryParallelism ?? EntityCacheOptions.DEFAULT_MAX_QUERY_PARALLELISM;
+        this.MaxQueryParallelism = maxQueryParallelism ?? DEFAULT_MAX_QUERY_PARALLELISM;
     }
 }

@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record TelemetryOptions(
     ApplicationInsightsOptions? ApplicationInsights = null,
     OpenTelemetryOptions? OpenTelemetry = null,
-    [property: JsonPropertyName("azure-log-analytics")] AzureLogAnalyticsOptions? AzureLogAnalytics = null,
+    AzureLogAnalyticsOptions? AzureLogAnalytics = null,
     Dictionary<string, LogLevel?>? LoggerLevel = null)
 {
     [JsonPropertyName("log-level")]

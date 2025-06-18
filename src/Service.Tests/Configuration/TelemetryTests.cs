@@ -250,8 +250,8 @@ public class TelemetryTests
             Assert.IsTrue(success);
             Assert.IsNotNull(parsedConfig);
             Assert.IsNotNull(parsedConfig.Runtime?.Telemetry?.AzureLogAnalytics);
-            
-            var azureLogAnalyticsConfig = parsedConfig.Runtime.Telemetry.AzureLogAnalytics;
+
+            AzureLogAnalyticsOptions azureLogAnalyticsConfig = parsedConfig.Runtime.Telemetry.AzureLogAnalytics;
             Assert.IsTrue(azureLogAnalyticsConfig.Enabled);
             Assert.IsNotNull(azureLogAnalyticsConfig.Auth);
             Assert.AreEqual(testWorkspaceId, azureLogAnalyticsConfig.Auth.WorkspaceId);
@@ -292,8 +292,8 @@ public class TelemetryTests
             Assert.IsTrue(success);
             Assert.IsNotNull(parsedConfig);
             Assert.IsNotNull(parsedConfig.Runtime?.Telemetry?.AzureLogAnalytics);
-            
-            var azureLogAnalyticsConfig = parsedConfig.Runtime.Telemetry.AzureLogAnalytics;
+
+            AzureLogAnalyticsOptions azureLogAnalyticsConfig = parsedConfig.Runtime.Telemetry.AzureLogAnalytics;
             Assert.IsFalse(azureLogAnalyticsConfig.Enabled); // Should be false as set
             Assert.AreEqual("DabLogs", azureLogAnalyticsConfig.LogType); // Default value
             Assert.AreEqual(5, azureLogAnalyticsConfig.FlushIntervalSeconds); // Default value

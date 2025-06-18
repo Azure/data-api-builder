@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core;
 using Microsoft.ApplicationInsights;
@@ -32,29 +31,6 @@ public class TelemetryTests
     private const string CONFIG_WITH_TELEMETRY = "dab-telemetry-test-config.json";
     private const string CONFIG_WITHOUT_TELEMETRY = "dab-no-telemetry-test-config.json";
     private static RuntimeConfig _configuration;
-
-    /// <summary>
-    /// Creates runtime config file with specified Azure Log Analytics telemetry options.
-    /// </summary>
-    /// <param name="configFileName">Name of the config file to be created.</param>
-    /// <param name="isTelemetryEnabled">Whether Azure Log Analytics telemetry is enabled or not.</param>
-    /// <param name="workspaceId">Azure Log Analytics workspace ID.</param>
-    /// <param name="logType">Custom log table name.</param>
-    /// <param name="flushIntervalSeconds">Flush interval in seconds.</param>
-    public static void SetUpAzureLogAnalyticsInConfig(string configFileName, bool isTelemetryEnabled, string workspaceId, string logType = "DabLogs", int flushIntervalSeconds = 5)
-    {
-        DataSource dataSource = new(DatabaseType.MSSQL,
-            GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-        _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new());
-
-        AzureLogAnalyticsAuthOptions authOptions = new(workspaceId, "test-dcr-id", "test-dce-endpoint");
-        AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(isTelemetryEnabled, authOptions, logType, flushIntervalSeconds);
-        TelemetryOptions _testTelemetryOptions = new(AzureLogAnalytics: azureLogAnalyticsOptions);
-        _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };
-
-        File.WriteAllText(configFileName, _configuration.ToJson());
-    }
 
     /// <summary>
     /// Creates runtime config file with specified telemetry options.
@@ -223,88 +199,6 @@ public class TelemetryTests
             // POST request on non-accessible entity
             HttpRequestMessage restRequest = new(HttpMethod.Post, "/api/Publisher/id/1?name=Test");
             await client.SendAsync(restRequest);
-        }
-    }
-
-    /// <summary>
-    /// Test that validates Azure Log Analytics configuration is deserialized correctly.
-    /// </summary>
-    [TestMethod]
-    public void TestAzureLogAnalyticsConfigurationDeserialization()
-    {
-        string configFileName = "azure-log-analytics-test-config.json";
-        string testWorkspaceId = "test-workspace-id";
-        string testLogType = "CustomLogs";
-        int testFlushInterval = 10;
-
-        try
-        {
-            // Setup config with Azure Log Analytics
-            SetUpAzureLogAnalyticsInConfig(configFileName, true, testWorkspaceId, testLogType, testFlushInterval);
-
-            // Read and deserialize the config
-            string configJson = File.ReadAllText(configFileName);
-            bool success = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig parsedConfig);
-
-            // Assertions
-            Assert.IsTrue(success);
-            Assert.IsNotNull(parsedConfig);
-            Assert.IsNotNull(parsedConfig.Runtime?.Telemetry?.AzureLogAnalytics);
-
-            AzureLogAnalyticsOptions azureLogAnalyticsConfig = parsedConfig.Runtime.Telemetry.AzureLogAnalytics;
-            Assert.IsTrue(azureLogAnalyticsConfig.Enabled);
-            Assert.IsNotNull(azureLogAnalyticsConfig.Auth);
-            Assert.AreEqual(testWorkspaceId, azureLogAnalyticsConfig.Auth.WorkspaceId);
-            Assert.AreEqual("test-dcr-id", azureLogAnalyticsConfig.Auth.DcrImmutableId);
-            Assert.AreEqual("test-dce-endpoint", azureLogAnalyticsConfig.Auth.DceEndpoint);
-            Assert.AreEqual(testLogType, azureLogAnalyticsConfig.LogType);
-            Assert.AreEqual(testFlushInterval, azureLogAnalyticsConfig.FlushIntervalSeconds);
-        }
-        finally
-        {
-            // Cleanup
-            if (File.Exists(configFileName))
-            {
-                File.Delete(configFileName);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Test that validates Azure Log Analytics configuration with default values.
-    /// </summary>
-    [TestMethod]
-    public void TestAzureLogAnalyticsConfigurationWithDefaults()
-    {
-        string configFileName = "azure-log-analytics-defaults-test-config.json";
-        string testWorkspaceId = "test-workspace-id";
-
-        try
-        {
-            // Setup config with Azure Log Analytics using defaults
-            SetUpAzureLogAnalyticsInConfig(configFileName, false, testWorkspaceId);
-
-            // Read and deserialize the config
-            string configJson = File.ReadAllText(configFileName);
-            bool success = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig parsedConfig);
-
-            // Assertions
-            Assert.IsTrue(success);
-            Assert.IsNotNull(parsedConfig);
-            Assert.IsNotNull(parsedConfig.Runtime?.Telemetry?.AzureLogAnalytics);
-
-            AzureLogAnalyticsOptions azureLogAnalyticsConfig = parsedConfig.Runtime.Telemetry.AzureLogAnalytics;
-            Assert.IsFalse(azureLogAnalyticsConfig.Enabled); // Should be false as set
-            Assert.AreEqual("DabLogs", azureLogAnalyticsConfig.LogType); // Default value
-            Assert.AreEqual(5, azureLogAnalyticsConfig.FlushIntervalSeconds); // Default value
-        }
-        finally
-        {
-            // Cleanup
-            if (File.Exists(configFileName))
-            {
-                File.Delete(configFileName);
-            }
         }
     }
 

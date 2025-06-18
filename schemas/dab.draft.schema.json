@@ -449,7 +449,7 @@
                   "default": 5
                 }
               },
-              "required": ["enabled", "auth"]
+              "required": ["auth"]
             },
             "log-level": {
               "type": "object",

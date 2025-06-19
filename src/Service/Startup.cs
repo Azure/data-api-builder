@@ -72,6 +72,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
+        public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
@@ -533,6 +534,7 @@ namespace Azure.DataApiBuilder.Service
                 // Configure Application Insights Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
                 ConfigureOpenTelemetry(runtimeConfig);
+                ConfigureAzureLogAnalytics(runtimeConfig);
 
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -868,13 +870,50 @@ namespace Azure.DataApiBuilder.Service
 
                 if (!OpenTelemetryOptions.Enabled)
                 {
-                    _logger.LogInformation("Open Telemetry are disabled.");
+                    _logger.LogInformation("Open Telemetry is disabled.");
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(OpenTelemetryOptions?.Endpoint))
                 {
                     _logger.LogWarning("Logs won't be sent to Open Telemetry because an Open Telemetry connection string is not available in the runtime config.");
+                    return;
+                }
+
+                // Updating Startup Logger to Log from Startup Class.
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+                _logger = loggerFactory.CreateLogger<Startup>();
+            }
+        }
+
+        /// <summary>
+        /// Configure Azure Log Analytics based on the loaded runtime configuration. If Azure Log Analytics
+        /// is enabled, we can track different events and metrics.
+        /// </summary>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
+        private void ConfigureAzureLogAnalytics(RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig?.Runtime?.Telemetry is not null
+                && runtimeConfig.Runtime.Telemetry.AzureLogAnalytics is not null)
+            {
+                AzureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
+
+                if (!AzureLogAnalyticsOptions.Enabled)
+                {
+                    _logger.LogInformation("Azure Log Analytics is disabled.");
+                    return;
+                }
+
+                if (AzureLogAnalyticsOptions.Auth is null)
+                {
+                    _logger.LogWarning("Logs won't be sent to Azure Log Analytics because the Authorization options are not avaiable in the runtime config.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(AzureLogAnalyticsOptions.Auth.WorkspaceId))
+                {
+                    _logger.LogWarning("Logs won't be sent to Azure Log Analytics because a Workspace Id string is not available in the runtime config.");
                     return;
                 }
 

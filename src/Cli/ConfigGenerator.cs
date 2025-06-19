@@ -551,6 +551,11 @@ namespace Cli
                 return false;
             }
 
+            if (!TryUpdateConfiguredAzureKeyVaultOptions(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
             return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
 
@@ -1989,6 +1994,123 @@ namespace Cli
             };
 
             return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Attempts to update the Azure Key Vault configuration options based on the provided values.
+        /// Validates that any user-provided parameter value is valid and updates the runtime configuration accordingly.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="runtimeConfig">The runtime configuration to be updated.</param>
+        /// <returns>True if the Azure Key Vault options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredAzureKeyVaultOptions(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            try
+            {
+                AzureKeyVaultOptions? updatedAzureKeyVaultOptions = runtimeConfig.AzureKeyVault;
+                RetryPolicyOptions? updatedRetryPolicyOptions = updatedAzureKeyVaultOptions?.RetryPolicy;
+
+                // Azure Key Vault Endpoint
+                if (options.AzureKeyVaultEndpoint is not null)
+                {
+                    updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
+                        ? updatedAzureKeyVaultOptions with { Endpoint = options.AzureKeyVaultEndpoint }
+                        : new AzureKeyVaultOptions { Endpoint = options.AzureKeyVaultEndpoint };
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.endpoint as '{endpoint}'", options.AzureKeyVaultEndpoint);
+                }
+
+                // Retry Policy Mode
+                if (options.AzureKeyVaultRetryPolicyMode is not null)
+                {
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { Mode = options.AzureKeyVaultRetryPolicyMode.Value }
+                        : new RetryPolicyOptions { Mode = options.AzureKeyVaultRetryPolicyMode.Value };
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.mode as '{mode}'", options.AzureKeyVaultRetryPolicyMode.Value);
+                }
+
+                // Retry Policy Max Count
+                if (options.AzureKeyVaultRetryPolicyMaxCount is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyMaxCount.Value < 1)
+                    {
+                        _logger.LogError("Failed to update azure-key-vault.retry-policy.max-count. Value must be at least 1.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { MaxCount = options.AzureKeyVaultRetryPolicyMaxCount.Value }
+                        : new RetryPolicyOptions { MaxCount = options.AzureKeyVaultRetryPolicyMaxCount.Value };
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-count as '{maxCount}'", options.AzureKeyVaultRetryPolicyMaxCount.Value);
+                }
+
+                // Retry Policy Delay Seconds
+                if (options.AzureKeyVaultRetryPolicyDelaySeconds is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyDelaySeconds.Value < 1)
+                    {
+                        _logger.LogError("Failed to update azure-key-vault.retry-policy.delay-seconds. Value must be at least 1.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { DelaySeconds = options.AzureKeyVaultRetryPolicyDelaySeconds.Value }
+                        : new RetryPolicyOptions { DelaySeconds = options.AzureKeyVaultRetryPolicyDelaySeconds.Value };
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.delay-seconds as '{delaySeconds}'", options.AzureKeyVaultRetryPolicyDelaySeconds.Value);
+                }
+
+                // Retry Policy Max Delay Seconds
+                if (options.AzureKeyVaultRetryPolicyMaxDelaySeconds is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value < 1)
+                    {
+                        _logger.LogError("Failed to update azure-key-vault.retry-policy.max-delay-seconds. Value must be at least 1.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { MaxDelaySeconds = options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value }
+                        : new RetryPolicyOptions { MaxDelaySeconds = options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value };
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-delay-seconds as '{maxDelaySeconds}'", options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value);
+                }
+
+                // Retry Policy Network Timeout Seconds
+                if (options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds is not null)
+                {
+                    if (options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value < 1)
+                    {
+                        _logger.LogError("Failed to update azure-key-vault.retry-policy.network-timeout-seconds. Value must be at least 1.");
+                        return false;
+                    }
+
+                    updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
+                        ? updatedRetryPolicyOptions with { NetworkTimeoutSeconds = options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value }
+                        : new RetryPolicyOptions { NetworkTimeoutSeconds = options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value };
+                    _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.network-timeout-seconds as '{networkTimeoutSeconds}'", options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value);
+                }
+
+                // Update Azure Key Vault options with retry policy if retry policy was modified
+                if (updatedRetryPolicyOptions is not null)
+                {
+                    updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
+                        ? updatedAzureKeyVaultOptions with { RetryPolicy = updatedRetryPolicyOptions }
+                        : new AzureKeyVaultOptions { RetryPolicy = updatedRetryPolicyOptions };
+                }
+
+                // Update runtime config if Azure Key Vault options were modified
+                if (updatedAzureKeyVaultOptions is not null)
+                {
+                    runtimeConfig = runtimeConfig with { AzureKeyVault = updatedAzureKeyVaultOptions };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.AzureKeyVault with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
         }
     }
 }

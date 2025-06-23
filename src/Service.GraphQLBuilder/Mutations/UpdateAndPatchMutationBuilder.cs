@@ -215,7 +215,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="entity">Runtime config information for the object type.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A <c>update*ObjectName*</c> field to be added to the Mutation type.</returns>
-        public static FieldDefinitionNode Build(
+        public static FieldDefinitionNode? Build(
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
@@ -248,20 +248,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 description = "The ID of the item being updated.";
             }
 
-            List<InputValueDefinitionNode> inputValues = new();
-            foreach (FieldDefinitionNode idField in idFields)
-            {
-                inputValues.Add(new InputValueDefinitionNode(
-                    location: null,
-                    idField.Name,
-                    new StringValueNode(description),
-                    new NonNullTypeNode(idField.Type.NamedType()),
-                    defaultValue: null,
-                    new List<DirectiveNode>()));
-            }
-
             if(input != null)
             {
+                List<InputValueDefinitionNode> inputValues = new();
+                foreach (FieldDefinitionNode idField in idFields)
+                {
+                    inputValues.Add(new InputValueDefinitionNode(
+                        location: null,
+                        idField.Name,
+                        new StringValueNode(description),
+                        new NonNullTypeNode(idField.Type.NamedType()),
+                        defaultValue: null,
+                        new List<DirectiveNode>()));
+                }
+
                 inputValues.Add(new InputValueDefinitionNode(
                     location: null,
                     new NameNode(INPUT_ARGUMENT_NAME),
@@ -269,32 +269,35 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     new NonNullTypeNode(new NamedTypeNode(input.Name)),
                     defaultValue: null,
                     new List<DirectiveNode>()));
+                
+
+                // Create authorize directive denoting allowed roles
+                List<DirectiveNode> fieldDefinitionNodeDirectives = new()
+                {
+                    new DirectiveNode(
+                        ModelDirective.Names.MODEL,
+                        new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, dbEntityName))
+                };
+
+                if (CreateAuthorizationDirectiveIfNecessary(
+                        rolesAllowedForMutation,
+                        out DirectiveNode? authorizeDirective))
+                {
+                    fieldDefinitionNodeDirectives.Add(authorizeDirective!);
+                }
+
+                string singularName = GetDefinedSingularName(name.Value, entities[dbEntityName]);
+                return new(
+                    location: null,
+                    name: new NameNode($"{operationNamePrefix}{singularName}"),
+                    description: new StringValueNode($"Updates a {singularName}"),
+                    arguments: inputValues,
+                    type: new NamedTypeNode(returnEntityName),
+                    directives: fieldDefinitionNodeDirectives
+                );
             }
 
-            // Create authorize directive denoting allowed roles
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new()
-            {
-                new DirectiveNode(
-                    ModelDirective.Names.MODEL,
-                    new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, dbEntityName))
-            };
-
-            if (CreateAuthorizationDirectiveIfNecessary(
-                    rolesAllowedForMutation,
-                    out DirectiveNode? authorizeDirective))
-            {
-                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
-            }
-
-            string singularName = GetDefinedSingularName(name.Value, entities[dbEntityName]);
-            return new(
-                location: null,
-                name: new NameNode($"{operationNamePrefix}{singularName}"),
-                description: new StringValueNode($"Updates a {singularName}"),
-                arguments: inputValues,
-                type: new NamedTypeNode(returnEntityName),
-                directives: fieldDefinitionNodeDirectives
-            );
+            return null;
         }
     }
 }

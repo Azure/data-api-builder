@@ -84,7 +84,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 // we find that the input object has already been created for the entity.
                 inputs.Add(input.Name, input);
             }
-            
 
             // Generate fields for related entities when
             // 1. Multiple mutation operations are supported for the database type.
@@ -555,7 +554,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                 createMutationNodes.Add(createOneNode);
             }
-            
 
             // Multiple create node is created in the schema only when multiple create operation is enabled.
             if (IsMultipleCreateOperationEnabled && input != null)

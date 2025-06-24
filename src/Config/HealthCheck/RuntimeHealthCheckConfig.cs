@@ -11,6 +11,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     /// Represents the lowest maximum query parallelism for health check.
     /// </summary>
     public const int LOWEST_MAX_QUERY_PARALLELISM = 1;
+
     /// <summary>
     /// Default maximum query parallelism for health check.
     /// </summary>
@@ -51,6 +52,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
             this.CacheTtlSeconds = EntityCacheOptions.DEFAULT_TTL_SECONDS;
         }
 
+        // Allow user to set values between 1 and 8 (inclusive). If not set, the value will be set to 4 during health check.
         this.MaxQueryParallelism = maxQueryParallelism != DEFAULT_MAX_QUERY_PARALLELISM ? maxQueryParallelism : null;
 
     }

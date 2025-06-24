@@ -206,6 +206,41 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(errorMessageFromGraphQL);
         }
 
+        /// <summary>
+        /// Verifies that the <c>max-query-parallelism</c> property in <see cref="RuntimeHealthCheckConfig"/>  is not
+        /// serialized when its value is set to the default, but is serialized when set to a non-default value.
+        /// </summary>
+        /// <remarks>This test ensures that the JSON serialization behavior of <see
+        /// cref="RuntimeHealthCheckConfig"/>  adheres to the expected behavior where default values are omitted from
+        /// the output.</remarks>
+        [TestMethod]
+        public void HealthEndpointConfigShouldNotSerializeDefaultMaxQueryParallelism()
+        {
+            JsonSerializerOptions options = new() { WriteIndented = false };
+
+            // Case 1: Default value (should NOT appear in output)
+            RuntimeHealthCheckConfig configWithDefault = new(
+                enabled: true,
+                roles: null,
+                cacheTtlSeconds: null,
+                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM // default value
+            );
+
+            string json1 = JsonSerializer.Serialize(configWithDefault, options);
+            Assert.IsFalse(json1.Contains("\"max-query-parallelism\""), "Default value should not be serialized.");
+
+            // Case 2: Non-default value (should appear in output)
+            RuntimeHealthCheckConfig configWithCustomValue = new(
+                enabled: true,
+                roles: null,
+                cacheTtlSeconds: null,
+                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM + 1 // non-default value
+            );
+
+            string json2 = JsonSerializer.Serialize(configWithCustomValue, options);
+            Assert.IsTrue(json2.Contains("\"max-query-parallelism\""), "Non-default value should be serialized.");
+        }
+
         #region Helper Methods
         private static HttpUtilities SetupRestTest(RuntimeConfig runtimeConfig, HttpStatusCode httpStatusCode = HttpStatusCode.OK)
         {

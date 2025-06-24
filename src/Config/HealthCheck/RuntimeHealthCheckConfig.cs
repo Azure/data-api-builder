@@ -30,7 +30,8 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     public bool UserProvidedTtlOptions { get; init; } = false;
 
     [JsonPropertyName("max-query-parallelism")]
-    public int MaxQueryParallelism { get; set; } = DEFAULT_MAX_QUERY_PARALLELISM;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MaxQueryParallelism { get; set; }
 
     public RuntimeHealthCheckConfig() : base()
     {
@@ -50,6 +51,7 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
             this.CacheTtlSeconds = EntityCacheOptions.DEFAULT_TTL_SECONDS;
         }
 
-        this.MaxQueryParallelism = maxQueryParallelism ?? DEFAULT_MAX_QUERY_PARALLELISM;
+        this.MaxQueryParallelism = maxQueryParallelism != DEFAULT_MAX_QUERY_PARALLELISM ? maxQueryParallelism : null;
+
     }
 }

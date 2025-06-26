@@ -151,6 +151,7 @@ public class ValidateConfigTests
     [DataTestMethod]
     [DataRow("AzureAD")]
     [DataRow("EntraID")]
+    [DataRow("Custom")]
     public void TestMissingJwtProperties(string authScheme)
     {
         string ConfigWithJwtAuthentication = $"{{{SAMPLE_SCHEMA_DATA_SOURCE}, {RUNTIME_SECTION_JWT_AUTHENTICATION_PLACEHOLDER}, \"entities\": {{ }}}}";

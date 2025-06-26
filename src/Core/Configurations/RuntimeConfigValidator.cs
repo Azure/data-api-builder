@@ -219,7 +219,7 @@ public class RuntimeConfigValidator : IConfigValidator
             return new JsonSchemaValidationResult(isValid: false, errors: null);
         }
 
-        return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+        return jsonConfigSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
     }
 
     /// <summary>

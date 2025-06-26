@@ -52,9 +52,13 @@
         <PackageVersion Include="MSTest.TestFramework" Version="3.3.1" />
         <PackageVersion Include="MySqlConnector" Version="2.1.5" />
         <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
+        <!--
+            We use an older version of Newtonsoft.Json.Schema because newer versions depend on Newtonsoft.Json >=13.0.3
+            which is not (and can not be made) available in Microsoft Private Nuget Feeds
+        -->
+        <PackageVersion Include="Newtonsoft.Json.Schema" Version="3.0.14" />
         <PackageVersion Include="Npgsql" Version="8.0.3" />
         <PackageVersion Include="Polly" Version="7.2.3" />
-        <PackageVersion Include="NJsonSchema" Version="10.9.0" />
         <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.5.0" />
         <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
         <PackageVersion Include="System.Drawing.Common" Version="8.0.3" />
@@ -63,7 +67,10 @@
         <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="21.0.2" />
         <PackageVersion Include="Verify.MsTest" Version="23.6.0" />
         <PackageVersion Include="Verify.DiffPlex" Version="2.3.0" />
-        <PackageVersion Include="ZiggyCreatures.FusionCache" Version="1.0.0" />
+        <PackageVersion Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
+        <PackageVersion Include="ZiggyCreatures.FusionCache.Serialization.SystemTextJson" Version="2.1.0" />
+        <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.3" />
+        <PackageVersion Include="ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis" Version="2.1.0" />
     </ItemGroup>
     <ItemGroup>
         <GlobalPackageReference Include="StyleCop.Analyzers" Version="1.1.118" />

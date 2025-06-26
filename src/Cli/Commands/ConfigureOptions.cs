@@ -43,7 +43,7 @@ namespace Cli.Commands
             string? runtimeHostAuthenticationJwtAudience = null,
             string? runtimeHostAuthenticationJwtIssuer = null,
             string? azureKeyVaultEndpoint = null,
-            RetryPolicyMode? azureKeyVaultRetryPolicyMode = null,
+            AKVRetryPolicyMode? azureKeyVaultRetryPolicyMode = null,
             int? azureKeyVaultRetryPolicyMaxCount = null,
             int? azureKeyVaultRetryPolicyDelaySeconds = null,
             int? azureKeyVaultRetryPolicyMaxDelaySeconds = null,
@@ -157,7 +157,7 @@ namespace Cli.Commands
         public string? AzureKeyVaultEndpoint { get; }
 
         [Option("azure-key-vault.retry-policy.mode", Required = false, HelpText = "Configure the retry policy mode. Allowed values: fixed, exponential. Default: exponential.")]
-        public RetryPolicyMode? AzureKeyVaultRetryPolicyMode { get; }
+        public AKVRetryPolicyMode? AzureKeyVaultRetryPolicyMode { get; }
 
         [Option("azure-key-vault.retry-policy.max-count", Required = false, HelpText = "Configure the maximum number of retry attempts. Default: 3.")]
         public int? AzureKeyVaultRetryPolicyMaxCount { get; }

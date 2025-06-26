@@ -22,12 +22,12 @@ public record RuntimeConfig
 
     public RuntimeOptions? Runtime { get; init; }
 
+    [JsonPropertyName("azure-key-vault")]
+    public AzureKeyVaultOptions? AzureKeyVault { get; init; }
+
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
-
-    [JsonPropertyName("azure-key-vault")]
-    public AzureKeyVaultOptions? AzureKeyVault { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool CosmosDataSourceUsed { get; private set; }
@@ -225,8 +225,8 @@ public record RuntimeConfig
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = Entities;
         this.AzureKeyVault = AzureKeyVault;
+        this.Entities = Entities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         if (this.DataSource is null)

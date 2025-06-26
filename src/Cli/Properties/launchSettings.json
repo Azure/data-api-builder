@@ -2,7 +2,11 @@
   "profiles": {
     "Cli": {
       "commandName": "Project",
-      "commandLineArgs": "start",
+      "commandLineArgs": "configure --azure-key-vault.retry-policy.mode exponential",
+      "workingDirectory": "D:\\repos\\data-api-builder\\src\\Cli",
+      "environmentVariables": {
+        "DAB_ENVIRONMENT": "mssql"
+      },
       "httpPort": 5002
     }
   }

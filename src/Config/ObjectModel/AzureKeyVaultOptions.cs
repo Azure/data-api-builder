@@ -11,5 +11,5 @@ public record AzureKeyVaultOptions
     public string? Endpoint { get; init; }
 
     [JsonPropertyName("retry-policy")]
-    public RetryPolicyOptions? RetryPolicy { get; init; }
+    public AKVRetryPolicyOptions? RetryPolicy { get; init; }
 }

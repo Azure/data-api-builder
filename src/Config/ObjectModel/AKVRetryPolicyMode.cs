@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum RetryPolicyMode
+public enum AKVRetryPolicyMode
 {
     Fixed,
     Exponential

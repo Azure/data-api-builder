@@ -46,21 +46,22 @@ public record AzureLogAnalyticsOptions
     /// <summary>
     /// Interval between log batch pushes (in seconds).
     /// </summary>
-    public int? FlushIntervalSeconds { get; init; }
+    [JsonPropertyName("flush-interval-seconds")]
+    public int? FlushIntervalSeconds { get; init; } = null;
 
     [JsonConstructor]
-    public AzureLogAnalyticsOptions(bool? enabled = null, AzureLogAnalyticsAuthOptions? auth = null, string? logType = null, int? flushIntervalSeconds = null)
+    public AzureLogAnalyticsOptions(bool? Enabled = null, AzureLogAnalyticsAuthOptions? Auth = null, string? LogType = null, int? FlushIntervalSeconds = null)
     {
-        Auth = auth;
+        this.Auth = Auth;
 
-        if (enabled is not null)
+        if (Enabled is not null)
         {
-            Enabled = (bool)enabled;
+            this.Enabled = Enabled;
             UserProvidedEnabled = true;
         }
         else
         {
-            Enabled = DEFAULT_ENABLED;
+            this.Enabled = DEFAULT_ENABLED;
         }
 
         if (logType is not null)
@@ -70,17 +71,17 @@ public record AzureLogAnalyticsOptions
         }
         else
         {
-            LogType = DEFAULT_LOG_TYPE;
+            this.LogType = DEFAULT_LOG_TYPE;
         }
 
-        if (flushIntervalSeconds is not null)
+        if (FlushIntervalSeconds is not null)
         {
-            FlushIntervalSeconds = flushIntervalSeconds;
+            this.FlushIntervalSeconds = FlushIntervalSeconds;
             UserProvidedFlushIntervalSeconds = true;
         }
         else
         {
-            FlushIntervalSeconds = DEFAULT_FLUSH_INTERVAL_SECONDS;
+            this.FlushIntervalSeconds = DEFAULT_FLUSH_INTERVAL_SECONDS;
         }
     }
 

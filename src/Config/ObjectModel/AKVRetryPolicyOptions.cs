@@ -53,7 +53,7 @@ public record AKVRetryPolicyOptions
     [MemberNotNullWhen(true, nameof(NetworkTimeoutSeconds))]
     public bool UserProvidedNetworkTimeoutSeconds { get; init; } = false;
 
-    public AKVRetryPolicyOptions (
+    public AKVRetryPolicyOptions(
         AKVRetryPolicyMode? mode = null,
         int? maxCount = null,
         int? delaySeconds = null,
@@ -107,8 +107,7 @@ public record AKVRetryPolicyOptions
         }
         else
         {
-            this.NetworkTimeoutSeconds= DEFAULT_NETWORK_TIMEOUT_SECONDS;
+            this.NetworkTimeoutSeconds = DEFAULT_NETWORK_TIMEOUT_SECONDS;
         }
-
     }
 }

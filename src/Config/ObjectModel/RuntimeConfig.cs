@@ -26,6 +26,9 @@ public record RuntimeConfig
 
     public DataSourceFiles? DataSourceFiles { get; init; }
 
+    [JsonPropertyName("azure-key-vault")]
+    public AzureKeyVaultOptions? AzureKeyVault { get; init; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool CosmosDataSourceUsed { get; private set; }
 
@@ -216,12 +219,14 @@ public record RuntimeConfig
         DataSource DataSource,
         RuntimeEntities Entities,
         RuntimeOptions? Runtime = null,
-        DataSourceFiles? DataSourceFiles = null)
+        DataSourceFiles? DataSourceFiles = null,
+        AzureKeyVaultOptions? AzureKeyVault = null)
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
+        this.AzureKeyVault = AzureKeyVault;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         if (this.DataSource is null)
@@ -305,7 +310,7 @@ public record RuntimeConfig
     /// <param name="DataSourceNameToDataSource">Dictionary mapping datasourceName to datasource object.</param>
     /// <param name="EntityNameToDataSourceName">Dictionary mapping entityName to datasourceName.</param>
     /// <param name="DataSourceFiles">Datasource files which represent list of child runtimeconfigs for multi-db scenario.</param>
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, string DefaultDataSourceName, Dictionary<string, DataSource> DataSourceNameToDataSource, Dictionary<string, string> EntityNameToDataSourceName, DataSourceFiles? DataSourceFiles = null)
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, string DefaultDataSourceName, Dictionary<string, DataSource> DataSourceNameToDataSource, Dictionary<string, string> EntityNameToDataSourceName, DataSourceFiles? DataSourceFiles = null, AzureKeyVaultOptions? AzureKeyVault = null)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
@@ -315,6 +320,7 @@ public record RuntimeConfig
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;
+        this.AzureKeyVault = AzureKeyVault;
 
         SetupDataSourcesUsed();
     }

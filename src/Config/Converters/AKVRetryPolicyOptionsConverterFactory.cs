@@ -49,8 +49,8 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
         }
 
         /// <summary>
-        /// Defines how DAB reads an entity's cache options and defines which values are
-        /// used to instantiate EntityCacheOptions.
+        /// Defines how DAB reads AKV Retry Policy options and defines which values are
+        /// used to instantiate those options.
         /// </summary>
         /// <exception cref="JsonException">Thrown when improperly formatted cache options are provided.</exception>
         public override AKVRetryPolicyOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -162,8 +162,8 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
         }
 
         /// <summary>
-        /// When writing the EntityCacheOptions back to a JSON file, only write the ttl-seconds
-        /// and level properties and values when EntityCacheOptions.Enabled is true.
+        /// When writing the AKVRetryPolicyOptions back to a JSON file, only write the properties and values
+        /// when those AKVRetryPolicyOptions are user provided.
         /// This avoids polluting the written JSON file with a property the user most likely
         /// omitted when writing the original DAB runtime config file.
         /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.

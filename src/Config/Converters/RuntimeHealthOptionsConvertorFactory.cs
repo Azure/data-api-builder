@@ -160,7 +160,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                     JsonSerializer.Serialize(writer, value.Roles, options);
                 }
 
-                if(value?.UserProvidedMaxQueryParallelism is true)
+                if (value?.UserProvidedMaxQueryParallelism is true)
                 {
                     writer.WritePropertyName("max-query-parallelism");
                     JsonSerializer.Serialize(writer, value.MaxQueryParallelism, options);

@@ -207,8 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Verifies that the <c>max-query-parallelism</c> property in <see cref="RuntimeHealthCheckConfig"/>  is not
-        /// serialized when its value is set to the default, but is serialized when set to a non-default value.
+        /// Tests the serialization behavior of <see cref="RuntimeHealthCheckConfig"/> for the <see cref="RuntimeHealthCheckConfig.MaxQueryParallelism"/> property."
         /// </summary>
         /// <remarks>This test ensures that the JSON serialization behavior of <see
         /// cref="RuntimeHealthCheckConfig"/>  adheres to the expected behavior where default values are omitted from
@@ -216,8 +215,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod]
         public void MaxQueryParallelismSerializationDependsOnUserInput()
         {
-            JsonSerializerOptions options = new() { WriteIndented = false };
-
             // Case 1: default value NOT explicitly provided => should NOT serialize
             RuntimeHealthCheckConfig configWithDefault = new(
                 enabled: true,

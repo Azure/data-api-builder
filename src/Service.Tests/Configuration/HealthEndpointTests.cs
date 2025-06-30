@@ -214,31 +214,39 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// cref="RuntimeHealthCheckConfig"/>  adheres to the expected behavior where default values are omitted from
         /// the output.</remarks>
         [TestMethod]
-        public void HealthEndpointConfigShouldNotSerializeDefaultMaxQueryParallelism()
+        public void MaxQueryParallelismSerializationDependsOnUserInput()
         {
             JsonSerializerOptions options = new() { WriteIndented = false };
 
-            // Case 1: Default value (should NOT appear in output)
+            // Case 1: default value NOT explicitly provided => should NOT serialize
             RuntimeHealthCheckConfig configWithDefault = new(
                 enabled: true,
                 roles: null,
                 cacheTtlSeconds: null,
-                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM // default value
+                maxQueryParallelism: null // implicit default
             );
 
-            string json1 = JsonSerializer.Serialize(configWithDefault, options);
-            Assert.IsFalse(json1.Contains("\"max-query-parallelism\""), "Default value should not be serialized.");
+            Assert.IsFalse(configWithDefault.UserProvidedMaxQueryParallelism, "UserProvidedMaxQueryParallelism should be false for default value.");
 
-            // Case 2: Non-default value (should appear in output)
+            // Case 2: default value EXPLICITLY provided => should serialize
+            RuntimeHealthCheckConfig configWithExplicitDefault = new(
+                enabled: true,
+                roles: null,
+                cacheTtlSeconds: null,
+                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM
+            );
+
+            Assert.IsTrue(configWithExplicitDefault.UserProvidedMaxQueryParallelism, "UserProvidedMaxQueryParallelism should be true for explicit default value.");
+
+            // Case 3: non-default value => should serialize
             RuntimeHealthCheckConfig configWithCustomValue = new(
                 enabled: true,
                 roles: null,
                 cacheTtlSeconds: null,
-                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM + 1 // non-default value
+                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM + 1
             );
 
-            string json2 = JsonSerializer.Serialize(configWithCustomValue, options);
-            Assert.IsTrue(json2.Contains("\"max-query-parallelism\""), "Non-default value should be serialized.");
+            Assert.IsTrue(configWithCustomValue.UserProvidedMaxQueryParallelism, "UserProvidedMaxQueryParallelism should be true for custom value.");
         }
 
         #region Helper Methods

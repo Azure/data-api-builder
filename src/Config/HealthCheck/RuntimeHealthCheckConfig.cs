@@ -30,8 +30,16 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool UserProvidedTtlOptions { get; init; } = false;
 
+    /// <summary>
+    /// Flag to indicate if the user has provided a value for MaxQueryParallelism.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool UserProvidedMaxQueryParallelism { get; init; } = false;
+
+    /// <summary>
+    /// Gets or sets the maximum number of queries that can be executed in parallel.
+    /// </summary>
     [JsonPropertyName("max-query-parallelism")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? MaxQueryParallelism { get; set; }
 
     public RuntimeHealthCheckConfig() : base()
@@ -53,7 +61,15 @@ public record RuntimeHealthCheckConfig : HealthCheckConfig
         }
 
         // Allow user to set values between 1 and 8 (inclusive). If not set, the value will be set to 4 during health check.
-        this.MaxQueryParallelism = maxQueryParallelism != DEFAULT_MAX_QUERY_PARALLELISM ? maxQueryParallelism : null;
+        if (maxQueryParallelism is not null)
+        {
+            this.MaxQueryParallelism = maxQueryParallelism;
+            UserProvidedMaxQueryParallelism = true;
+        }
+        else
+        {
+            this.MaxQueryParallelism = DEFAULT_MAX_QUERY_PARALLELISM;
+        }
 
     }
 }

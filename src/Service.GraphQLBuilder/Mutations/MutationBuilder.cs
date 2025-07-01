@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             {
                                 mutationFields.Add(cosmosMutationField);
                             }
-                            
+
                         }
 
                         break;

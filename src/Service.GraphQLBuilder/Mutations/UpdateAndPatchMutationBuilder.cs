@@ -248,7 +248,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 description = "The ID of the item being updated.";
             }
 
-            if(input != null)
+            if (input != null)
             {
                 List<InputValueDefinitionNode> inputValues = new();
                 foreach (FieldDefinitionNode idField in idFields)

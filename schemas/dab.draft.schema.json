@@ -37,7 +37,7 @@
         },
         "health": {
           "description": "Health check configuration",
-          "type": [ "object", "null" ],
+          "type": [ "object", "null"],
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -92,10 +92,10 @@
                     "type": "string"
                   }
                 },
-                "required": [ "database", "schema" ]
+                "required": ["database", "schema"]
               }
             },
-            "required": [ "options" ]
+            "required": ["options"]
           }
         },
         {
@@ -126,7 +126,7 @@
           "if": {
             "properties": {
               "database-type": {
-                "enum": [ "mysql", "postgresql", "cosmosdb_postgresql" ]
+                "enum": ["mysql", "postgresql", "cosmosdb_postgresql"]
               }
             }
           },
@@ -142,7 +142,7 @@
           }
         }
       ],
-      "required": [ "database-type", "connection-string" ]
+      "required": ["database-type", "connection-string"]
     },
     "data-source-files": {
       "type": "array",
@@ -158,13 +158,13 @@
           "type": "object",
           "properties": {
             "max-page-size": {
-              "type": [ "integer", "null" ],
+              "type": ["integer", "null"],
               "description": "Defines the maximum number of records that can be returned in a single page of results. If set to null, the default value is 100,000.",
               "default": 100000,
               "minimum": 1
             },
             "default-page-size": {
-              "type": [ "integer", "null" ],
+              "type": ["integer", "null"],
               "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
               "default": 100,
               "minimum": 1
@@ -209,7 +209,7 @@
               "description": "Allow enabling/disabling GraphQL requests for all entities."
             },
             "depth-limit": {
-              "type": [ "integer", "null" ],
+              "type": ["integer", "null"],
               "description": "Maximum allowed depth of a GraphQL query.",
               "default": null
             },
@@ -240,7 +240,7 @@
           "additionalProperties": false,
           "properties": {
             "max-response-size-mb": {
-              "type": [ "integer", "null" ],
+              "type": ["integer", "null"],
               "description": "Specifies the maximum size, in megabytes, of the database response allowed in a single result. If set to null, the default value is 158 MB.",
               "default": 158,
               "minimum": 1,
@@ -248,12 +248,12 @@
             },
             "mode": {
               "description": "Set if running in Development or Production mode",
-              "type": [ "string", "null" ],
+              "type": ["string", "null"],
               "default": "production",
-              "enum": [ "production", "development" ]
+              "enum": ["production", "development"]
             },
             "cors": {
-              "type": [ "object", "null" ],
+              "type": ["object", "null"],
               "description": "Configure CORS",
               "additionalProperties": false,
               "properties": {
@@ -273,7 +273,7 @@
               }
             },
             "authentication": {
-              "type": [ "object", "null" ],
+              "type": ["object", "null"],
               "additionalProperties": false,
               "properties": {
                 "provider": {
@@ -317,7 +317,7 @@
                       "type": "string"
                     }
                   },
-                  "required": [ "audience", "issuer" ]
+                  "required": ["audience", "issuer"]
                 }
               },
               "allOf": [
@@ -333,9 +333,9 @@
                         ]
                       }
                     },
-                    "required": [ "provider" ]
+                    "required": ["provider"]
                   },
-                  "then": { "required": [ "jwt" ] },
+                  "then": { "required": ["jwt"] },
                   "else": { "properties": { "jwt": false } }
                 }
               ]
@@ -377,7 +377,7 @@
                   "default": true
                 }
               },
-              "required": [ "connection-string" ]
+              "required": ["connection-string"]
             },
             "open-telemetry": {
               "type": "object",
@@ -400,7 +400,7 @@
                   "type": "string",
                   "description": "Open Telemetry protocol",
                   "default": "grpc",
-                  "enum": [ "grpc", "httpprotobuf" ]
+                  "enum": ["grpc", "httpprotobuf"]
                 },
                 "enabled": {
                   "type": "boolean",
@@ -408,7 +408,7 @@
                   "default": true
                 }
               },
-              "required": [ "endpoint" ]
+              "required": ["endpoint"]
             },
             "log-level": {
               "type": "object",
@@ -478,7 +478,7 @@
           "properties": {
             "mode": {
               "type": "string",
-              "enum": [ "fixed", "exponential" ],
+              "enum": ["fixed", "exponential"],
               "default": "exponential",
               "description": "Retry mode: fixed or exponential backoff"
             },
@@ -560,7 +560,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "enum": [ "table", "view", "stored-procedure" ],
+                      "enum": ["table", "view", "stored-procedure"],
                       "description": "Database object type"
                     },
                     "object": {
@@ -594,7 +594,7 @@
                       "description": "List of fields to be used as primary keys. Mandatory field for views when generated through the CLI."
                     }
                   },
-                  "required": [ "type", "object" ]
+                  "required": ["type", "object"]
                 }
               ]
             },
@@ -614,7 +614,7 @@
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "enum": [ "get", "post", "put", "patch", "delete" ]
+                        "enum": ["get", "post", "put", "patch", "delete"]
                       }
                     },
                     "enabled": {
@@ -625,13 +625,13 @@
                   },
                   "anyOf": [
                     {
-                      "required": [ "path" ]
+                      "required": ["path"]
                     },
                     {
-                      "required": [ "methods" ]
+                      "required": ["methods"]
                     },
                     {
-                      "required": [ "enabled" ]
+                      "required": ["enabled"]
                     }
                   ]
                 }
@@ -651,7 +651,7 @@
                     },
                     "operation": {
                       "type": "string",
-                      "enum": [ "mutation", "query" ]
+                      "enum": ["mutation", "query"]
                     },
                     "enabled": {
                       "type": "boolean",
@@ -661,13 +661,13 @@
                   },
                   "anyOf": [
                     {
-                      "required": [ "type" ]
+                      "required": ["type"]
                     },
                     {
-                      "required": [ "operation" ]
+                      "required": ["operation"]
                     },
                     {
-                      "required": [ "enabled" ]
+                      "required": ["enabled"]
                     }
                   ]
                 }
@@ -694,7 +694,7 @@
                   "properties": {
                     "cardinality": {
                       "type": "string",
-                      "enum": [ "one", "many" ]
+                      "enum": ["one", "many"]
                     },
                     "target.entity": {
                       "type": "string"
@@ -728,7 +728,7 @@
                       }
                     }
                   },
-                  "required": [ "cardinality", "target.entity" ]
+                  "required": ["cardinality", "target.entity"]
                 }
               }
             },
@@ -837,7 +837,7 @@
                     }
                   }
                 },
-                "required": [ "role", "actions" ]
+                "required": ["role", "actions"]
               }
             }
           },
@@ -865,7 +865,7 @@
                             "oneOf": [
                               {
                                 "type": "string",
-                                "enum": [ "execute", "*" ]
+                                "enum": ["execute", "*"]
                               },
                               {
                                 "type": "object",
@@ -873,7 +873,7 @@
                                 "properties": {
                                   "action": {
                                     "type": "string",
-                                    "enum": [ "execute", "*" ]
+                                    "enum": ["execute", "*"]
                                   },
                                   "fields": {
                                     "type": "object",
@@ -913,26 +913,26 @@
                     }
                   }
                 },
-                "required": [ "role", "actions" ]
+                "required": ["role", "actions"]
               }
             }
           },
-          "required": [ "source", "permissions" ]
+          "required": ["source", "permissions"]
         }
       }
     }
   },
   "if": {
-    "required": [ "azure-key-vault" ]
+    "required": ["azure-key-vault"]
   },
   "then": {
     "properties": {
       "azure-key-vault": {
-        "required": [ "endpoint" ]
+        "required": ["endpoint"]
       }
     }
   },
-  "required": [ "data-source", "entities" ],
+  "required": ["data-source", "entities"],
   "$defs": {
     "singular-plural": {
       "oneOf": [
@@ -950,7 +950,7 @@
               "type": "string"
             }
           },
-          "required": [ "singular" ]
+          "required": ["singular"]
         }
       ]
     },
@@ -958,7 +958,7 @@
       "oneOf": [
         {
           "type": "string",
-          "enum": [ "create", "read", "update", "delete" ]
+          "enum": ["create", "read", "update", "delete"]
         },
         {
           "type": "string",

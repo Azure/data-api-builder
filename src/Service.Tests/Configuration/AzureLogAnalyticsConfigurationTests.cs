@@ -117,13 +117,13 @@ public class AzureLogAnalyticsConfigurationTests
         // Check within the azure-log-analytics section specifically
         Assert.IsTrue(json.Contains("\"auth\""), "Auth options should be included in serialized JSON");
         Assert.IsTrue(json.Contains("\"azure-log-analytics\""), "Azure log analytics section should exist");
-        
+
         // Extract just the azure-log-analytics section for more precise checks
         int startIndex = json.IndexOf("\"azure-log-analytics\"");
         int openBrace = json.IndexOf('{', startIndex);
         int closeBrace = json.IndexOf('}', openBrace);
         string azureLogAnalyticsSection = json.Substring(openBrace, closeBrace - openBrace + 1);
-        
+
         Assert.IsFalse(azureLogAnalyticsSection.Contains("\"enabled\""), "Enabled should not be included when using default value");
         Assert.IsFalse(azureLogAnalyticsSection.Contains("\"log-type\""), "Log-type should not be included when using default value");
         Assert.IsFalse(azureLogAnalyticsSection.Contains("\"flush-interval-seconds\""), "Flush-interval-seconds should not be included when using default value");

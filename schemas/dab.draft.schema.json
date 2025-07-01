@@ -922,158 +922,16 @@
       }
     }
   },
-  "allOf": [
-    {
-      "if": {
-        "required": [ "azure-key-vault" ],
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "retry-policy" ],
-            "properties": {
-              "retry-policy": {
-                "required": [ "mode" ]
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "endpoint" ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "required": [ "azure-key-vault" ],
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "retry-policy" ],
-            "properties": {
-              "retry-policy": {
-                "required": [ "max-count" ]
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "endpoint" ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "required": [ "azure-key-vault" ],
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "retry-policy" ],
-            "properties": {
-              "retry-policy": {
-                "required": [ "delay-seconds" ]
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "endpoint" ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "required": [ "azure-key-vault" ],
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "retry-policy" ],
-            "properties": {
-              "retry-policy": {
-                "required": [ "network-timeout-seconds" ]
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "endpoint" ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "required": [ "azure-key-vault" ],
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "retry-policy" ],
-            "properties": {
-              "retry-policy": {
-                "required": [ "max-delay-seconds" ],
-                "properties": {
-                  "mode": {
-                    "const": "exponential"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "endpoint" ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "required": [ "azure-key-vault" ],
-        "properties": {
-          "azure-key-vault": {
-            "required": [ "retry-policy" ],
-            "properties": {
-              "retry-policy": {
-                "required": [ "max-delay-seconds" ],
-                "properties": {
-                  "mode": {
-                    "not": {
-                      "const": "exponential"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "azure-key-vault": {
-            "properties": {
-              "retry-policy": {
-                "not": {
-                  "required": [ "max-delay-seconds" ]
-                }
-              }
-            }
-          }
-        }
+  "if": {
+    "required": [ "azure-key-vault" ]
+  },
+  "then": {
+    "properties": {
+      "azure-key-vault": {
+        "required": [ "endpoint" ]
       }
     }
-  ],
+  },
   "required": [ "data-source", "entities" ],
   "$defs": {
     "singular-plural": {

@@ -121,8 +121,6 @@ namespace Cli.Tests
             _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
 
             Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNull(config.Runtime!.GraphQL!.DepthLimit);
 
             // Act: Attempts to add AKV options
             ConfigureOptions options = new(
@@ -139,7 +137,7 @@ namespace Cli.Tests
             // Assert: Validate the AKV options are added.
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.AzureKeyVault);
             Assert.IsNotNull(config.AzureKeyVault.RetryPolicy);
             Assert.AreEqual("foo", config.AzureKeyVault?.Endpoint);

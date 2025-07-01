@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else if (!_accessToken.ContainsKey(dataSourceName))
                     {
-                        client = new CosmosClient(accountEndPoint, new DefaultAzureCredential(), options);
+                        client = new CosmosClient(accountEndPoint, new DefaultAzureCredential(), options); // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
                     }
                     else
                     {

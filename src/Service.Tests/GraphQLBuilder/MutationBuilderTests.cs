@@ -215,7 +215,7 @@ type Foo @model(name:""Foo"") {
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
                 entityNameToDatabasetype,
-                new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
+                new (new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
 

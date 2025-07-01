@@ -75,8 +75,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         inputName,
                         new StringValueNode($"Input type for creating {name}"),
                         new List<DirectiveNode>(),
-                        inputFields!
-                    );
+                        inputFields!);
                 // Add input object to the dictionary of entities for which input object has already been created.
                 // This input object currently holds only scalar fields.
                 // The complex fields (for related entities) would be added later when we return from recursion.
@@ -532,7 +531,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             string singularName = GetDefinedSingularName(name.Value, entity);
 
-            if(input != null)
+            if (input != null)
             {
                 // Create one node.
                 FieldDefinitionNode createOneNode = new(

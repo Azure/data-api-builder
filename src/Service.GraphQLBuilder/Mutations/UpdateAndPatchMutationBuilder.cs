@@ -269,7 +269,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     new NonNullTypeNode(new NamedTypeNode(input.Name)),
                     defaultValue: null,
                     new List<DirectiveNode>()));
-                
 
                 // Create authorize directive denoting allowed roles
                 List<DirectiveNode> fieldDefinitionNodeDirectives = new()

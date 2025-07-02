@@ -74,6 +74,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
         ValidateLoggerFilters(runtimeConfig);
+        ValidateAzureLogAnalyticsAuth(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -145,6 +146,26 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     throw new NotSupportedException($"Log level filter {logger.Key} needs to be of a valid log class.");
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The auth options in Azure Log Analytics are required if it is enabled.
+    /// </summary>
+    public void ValidateAzureLogAnalyticsAuth(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.AzureLogAnalytics is not null)
+        {
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
+            AzureLogAnalyticsAuthOptions? azureLogAnalyticsAuthOptions = azureLogAnalyticsOptions.Auth;
+            if (azureLogAnalyticsOptions.Enabled && (azureLogAnalyticsAuthOptions is null || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.WorkspaceId) ||
+                string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DcrImmutableId) || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DceEndpoint)))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Azure Log Analytics Auth options 'workspace-id', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
     }

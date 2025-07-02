@@ -216,8 +216,7 @@ type Foo @model(name:""Foo"") {
                 root,
                 entityNameToDatabasetype,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
-                entityPermissionsMap: _entityPermissions
-                );
+                entityPermissionsMap: _entityPermissions);
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             List<String> fieldNames = query.Fields.Select(f => f.Name.Value).ToList();

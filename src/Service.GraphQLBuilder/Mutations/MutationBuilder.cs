@@ -179,7 +179,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                                                     dbEntityName,
                                                     databaseType,
                                                     returnEntityName,
-                                                    rolesAllowedForMutation);
+                                                    rolesAllowedForMutation,
+                                                    EntityActionOperation.Patch,
+                                                    operationNamePrefix: "patch");
 
                             if (cosmosMutationField != null)
                             {

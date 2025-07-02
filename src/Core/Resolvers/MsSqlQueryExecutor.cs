@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
             => base.ConnectionStringBuilders;
 
-        public DefaultAzureCredential AzureCredential { get; set; } = new();
+        public DefaultAzureCredential AzureCredential { get; set; } = new();  // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
 
         /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials

@@ -106,7 +106,7 @@ public class AzureLogAnalyticsConfigurationTests
 
         // Only provide auth options, other properties should use defaults but not be serialized
         AzureLogAnalyticsAuthOptions authOptions = new("test-workspace-id", "test-dcr-id", "test-dce-endpoint");
-        AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(Auth: authOptions);
+        AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(auth: authOptions);
         TelemetryOptions telemetryOptions = new(AzureLogAnalytics: azureLogAnalyticsOptions);
         config = config with { Runtime = config.Runtime with { Telemetry = telemetryOptions } };
 

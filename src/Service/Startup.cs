@@ -899,7 +899,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 AzureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
 
-                if (!(AzureLogAnalyticsOptions.Enabled ?? false))
+                if (!(AzureLogAnalyticsOptions.Enabled))
                 {
                     _logger.LogInformation("Azure Log Analytics is disabled.");
                     return;
@@ -907,7 +907,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (AzureLogAnalyticsOptions.Auth is null)
                 {
-                    _logger.LogWarning("Logs won't be sent to Azure Log Analytics because the Authorization options are not avaiable in the runtime config.");
+                    _logger.LogWarning("Logs won't be sent to Azure Log Analytics because the Authorization options are not available in the runtime config.");
                     return;
                 }
 

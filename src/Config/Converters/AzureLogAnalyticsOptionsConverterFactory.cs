@@ -12,6 +12,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private bool _replaceEnvVar;
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -21,11 +25,29 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new AzureLogAnalyticsOptionsConverter();
+        return new AzureLogAnalyticsOptionsConverter(_replaceEnvVar);
+    }
+
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
+    internal AzureLogAnalyticsOptionsConverterFactory(bool replaceEnvVar)
+    {
+        _replaceEnvVar = replaceEnvVar;
     }
 
     private class AzureLogAnalyticsOptionsConverter : JsonConverter<AzureLogAnalyticsOptions>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private bool _replaceEnvVar;
+
+        /// <param name="replaceEnvVar">Whether to replace environment variable with its
+        /// value or not while deserializing.</param>
+        internal AzureLogAnalyticsOptionsConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         /// <summary>
         /// Defines how DAB reads Azure Log Analytics options and defines which values are
         /// used to instantiate AzureLogAnalyticsOptions.
@@ -34,10 +56,98 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
         /// <exception cref="JsonException">Thrown when improperly formatted Azure Log Analytics options are provided.</exception>
         public override AzureLogAnalyticsOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            // Remove the converter so we don't recurse.
-            JsonSerializerOptions jsonSerializerOptions = new(options);
-            jsonSerializerOptions.Converters.Remove(jsonSerializerOptions.Converters.First(c => c is AzureLogAnalyticsOptionsConverterFactory));
-            return JsonSerializer.Deserialize<AzureLogAnalyticsOptions>(ref reader, jsonSerializerOptions);
+            if (reader.TokenType is JsonTokenType.StartObject)
+            {
+                AzureLogAnalyticsOptions azureLogAnalyticsOptions = new();
+                AzureLogAnalyticsAuthOptionsConverter authOptionsConverter = new(_replaceEnvVar);
+
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonTokenType.EndObject)
+                    {
+                        break;
+                    }
+
+                    string? propertyName = reader.GetString();
+
+                    if (propertyName is null)
+                    {
+                        throw new JsonException("Invalid property : null");
+                    }
+
+                    reader.Read();
+                    switch (propertyName)
+                    {
+                        case "enabled":
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = reader.GetBoolean() };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unsupported value entered for the property 'enabled': {reader.TokenType}");
+                            }
+
+                            break;
+
+                        case "auth":
+                            azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Auth = authOptionsConverter.Read(ref reader, typeToConvert, options) };
+                            break;
+
+                        case "log-type":
+                            if (reader.TokenType is JsonTokenType.String)
+                            {
+                                string? logType = reader.DeserializeString(_replaceEnvVar);
+                                if (logType is null)
+                                {
+                                    logType = "DabLogs";
+                                }
+
+                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = logType };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for log-type: {reader.TokenType}");
+                            }
+
+                            break;
+
+                        case "flush-interval-seconds":
+                            if (reader.TokenType is JsonTokenType.Number)
+                            {
+                                int flushIntSec;
+                                try
+                                {
+                                    flushIntSec = reader.GetInt32();
+                                }
+                                catch (FormatException)
+                                {
+                                    throw new JsonException($"The JSON token value is of the incorrect numeric format.");
+                                }
+
+                                if (flushIntSec <= 0)
+                                {
+                                    throw new JsonException($"Invalid flush-interval-seconds: {flushIntSec}. Specify a number > 0.");
+                                }
+
+                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = flushIntSec };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unsupported value entered for flush-interval-seconds: {reader.TokenType}");
+                            }
+
+                            break;
+
+                        default:
+                            throw new JsonException($"Unexpected property {propertyName}");
+                    }
+                }
+
+                return azureLogAnalyticsOptions;
+            }
+
+            throw new JsonException("Failed to read the Azure Log Analytics Options");
         }
 
         /// <summary>
@@ -58,8 +168,10 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
 
             if (value?.Auth is not null)
             {
-                writer.WritePropertyName("auth");
-                JsonSerializer.Serialize(writer, value.Auth, options);
+                AzureLogAnalyticsAuthOptionsConverter authOptionsConverter = options.GetConverter(typeof(AzureLogAnalyticsAuthOptions)) as AzureLogAnalyticsAuthOptionsConverter ??
+                                    throw new JsonException("Failed to get azure-log-analytics.auth options converter");
+
+                authOptionsConverter.Write(writer, value.Auth, options);
             }
 
             if (value?.UserProvidedLogType is true)

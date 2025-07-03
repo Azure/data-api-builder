@@ -93,6 +93,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             if (inputFields.Any())
             {
                 List<InputValueDefinitionNode> inputFieldsList = inputFields
+                    .Where(i => i != null)
                     .Select(i => i!)
                     .ToList();
                 input =

@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private Dictionary<string, string?> _accessTokensFromConfiguration;
 
-        public DefaultAzureCredential AzureCredential { get; set; } = new();
+        public DefaultAzureCredential AzureCredential { get; set; } = new(); // CodeQL [SM05137]: DefaultAzureCredential will use Managed Identity if available or fallback to default.
 
         /// <summary>
         /// The PostgreSql specific connection string builders.

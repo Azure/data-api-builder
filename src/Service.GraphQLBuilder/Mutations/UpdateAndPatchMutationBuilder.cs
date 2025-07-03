@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return true;
         }
 
-        private static InputObjectTypeDefinitionNode GenerateUpdateInputType(
+        private static InputObjectTypeDefinitionNode? GenerateUpdateInputType(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,
@@ -65,13 +65,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             EntityActionOperation operation)
         {
             NameNode inputName = GenerateInputTypeName(operation, name.Value);
+            InputObjectTypeDefinitionNode? input;
 
             if (inputs.ContainsKey(inputName))
             {
                 return inputs[inputName];
             }
 
-            IEnumerable<InputValueDefinitionNode> inputFields =
+            IEnumerable<InputValueDefinitionNode?> inputFields =
                 objectTypeDefinitionNode.Fields
                 .Where(f => FieldAllowedOnUpdateInput(f, databaseType, definitions, operation, objectTypeDefinitionNode))
                 .Select(f =>
@@ -89,17 +90,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     return GenerateSimpleInputType(name, f, databaseType, operation);
                 });
 
-            InputObjectTypeDefinitionNode input =
+            if (inputFields.Any())
+            {
+                List<InputValueDefinitionNode> inputFieldsList = inputFields
+                    .Where(i => i != null)
+                    .Select(i => i!)
+                    .ToList();
+                input =
                 new(
                     location: null,
                     inputName,
                     new StringValueNode($"Input type for updating {name}"),
                     new List<DirectiveNode>(),
-                    inputFields.ToList()
+                    inputFieldsList
                 );
 
-            inputs.Add(input.Name, input);
-            return input;
+                inputs.Add(input.Name, input);
+                return input;
+            }
+
+            return null;
         }
 
         private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType, EntityActionOperation operation)
@@ -117,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             );
         }
 
-        private static InputValueDefinitionNode GetComplexInputType(
+        private static InputValueDefinitionNode? GetComplexInputType(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             FieldDefinitionNode f,
@@ -127,7 +137,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType,
             EntityActionOperation operation)
         {
-            InputObjectTypeDefinitionNode node;
+            InputObjectTypeDefinitionNode? node;
             NameNode inputTypeName = GenerateInputTypeName(operation, typeName);
 
             if (!inputs.ContainsKey(inputTypeName))
@@ -139,35 +149,40 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 node = inputs[inputTypeName];
             }
 
-            ITypeNode type = new NamedTypeNode(node.Name);
-
-            // For a type like [Bar!]! we have to first unpack the outer non-null
-            if (f.Type.IsNonNullType())
+            if ((node != null))
             {
-                // The innerType is the raw List, scalar or object type without null settings
-                ITypeNode innerType = f.Type.InnerType();
+                ITypeNode type = new NamedTypeNode(node.Name);
 
-                if (innerType.IsListType())
+                // For a type like [Bar!]! we have to first unpack the outer non-null
+                if (f.Type.IsNonNullType())
                 {
-                    type = GenerateListType(type, innerType);
+                    // The innerType is the raw List, scalar or object type without null settings
+                    ITypeNode innerType = f.Type.InnerType();
+
+                    if (innerType.IsListType())
+                    {
+                        type = GenerateListType(type, innerType);
+                    }
+
+                    // Wrap the input with non-null to match the field definition
+                    type = new NonNullTypeNode((INullableTypeNode)type);
+                }
+                else if (f.Type.IsListType())
+                {
+                    type = GenerateListType(type, f.Type);
                 }
 
-                // Wrap the input with non-null to match the field definition
-                type = new NonNullTypeNode((INullableTypeNode)type);
-            }
-            else if (f.Type.IsListType())
-            {
-                type = GenerateListType(type, f.Type);
+                return new(
+                    location: null,
+                    f.Name,
+                    new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
+                    type,
+                    defaultValue: null,
+                    f.Directives
+                );
             }
 
-            return new(
-                location: null,
-                f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {inputTypeName}"),
-                type,
-                defaultValue: null,
-                f.Directives
-            );
+            return null;
         }
 
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)
@@ -201,7 +216,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="entity">Runtime config information for the object type.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A <c>update*ObjectName*</c> field to be added to the Mutation type.</returns>
-        public static FieldDefinitionNode Build(
+        public static FieldDefinitionNode? Build(
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
@@ -214,7 +229,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             EntityActionOperation operation = EntityActionOperation.Update,
             string operationNamePrefix = UPDATE_MUTATION_PREFIX)
         {
-            InputObjectTypeDefinitionNode input = GenerateUpdateInputType(
+            InputObjectTypeDefinitionNode? input = GenerateUpdateInputType(
                 inputs,
                 objectTypeDefinitionNode,
                 name,
@@ -234,19 +249,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 description = "The ID of the item being updated.";
             }
 
-            List<InputValueDefinitionNode> inputValues = new();
-            foreach (FieldDefinitionNode idField in idFields)
+            if (input != null)
             {
-                inputValues.Add(new InputValueDefinitionNode(
-                    location: null,
-                    idField.Name,
-                    new StringValueNode(description),
-                    new NonNullTypeNode(idField.Type.NamedType()),
-                    defaultValue: null,
-                    new List<DirectiveNode>()));
-            }
+                List<InputValueDefinitionNode> inputValues = new();
+                foreach (FieldDefinitionNode idField in idFields)
+                {
+                    inputValues.Add(new InputValueDefinitionNode(
+                        location: null,
+                        idField.Name,
+                        new StringValueNode(description),
+                        new NonNullTypeNode(idField.Type.NamedType()),
+                        defaultValue: null,
+                        new List<DirectiveNode>()));
+                }
 
-            inputValues.Add(new InputValueDefinitionNode(
+                inputValues.Add(new InputValueDefinitionNode(
                     location: null,
                     new NameNode(INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for updating {name}"),
@@ -254,30 +271,33 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     defaultValue: null,
                     new List<DirectiveNode>()));
 
-            // Create authorize directive denoting allowed roles
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new()
-            {
-                new DirectiveNode(
-                    ModelDirective.Names.MODEL,
-                    new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, dbEntityName))
-            };
+                // Create authorize directive denoting allowed roles
+                List<DirectiveNode> fieldDefinitionNodeDirectives = new()
+                {
+                    new DirectiveNode(
+                        ModelDirective.Names.MODEL,
+                        new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, dbEntityName))
+                };
 
-            if (CreateAuthorizationDirectiveIfNecessary(
-                    rolesAllowedForMutation,
-                    out DirectiveNode? authorizeDirective))
-            {
-                fieldDefinitionNodeDirectives.Add(authorizeDirective!);
+                if (CreateAuthorizationDirectiveIfNecessary(
+                        rolesAllowedForMutation,
+                        out DirectiveNode? authorizeDirective))
+                {
+                    fieldDefinitionNodeDirectives.Add(authorizeDirective!);
+                }
+
+                string singularName = GetDefinedSingularName(name.Value, entities[dbEntityName]);
+                return new(
+                    location: null,
+                    name: new NameNode($"{operationNamePrefix}{singularName}"),
+                    description: new StringValueNode($"Updates a {singularName}"),
+                    arguments: inputValues,
+                    type: new NamedTypeNode(returnEntityName),
+                    directives: fieldDefinitionNodeDirectives
+                );
             }
 
-            string singularName = GetDefinedSingularName(name.Value, entities[dbEntityName]);
-            return new(
-                location: null,
-                name: new NameNode($"{operationNamePrefix}{singularName}"),
-                description: new StringValueNode($"Updates a {singularName}"),
-                arguments: inputValues,
-                type: new NamedTypeNode(returnEntityName),
-                directives: fieldDefinitionNodeDirectives
-            );
+            return null;
         }
     }
 }

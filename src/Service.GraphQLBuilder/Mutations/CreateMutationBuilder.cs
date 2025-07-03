@@ -31,8 +31,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType">Database type of the relational database to generate input type for.</param>
         /// <param name="entities">Runtime config information.</param>
         /// <param name="IsMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
-        /// <returns>A GraphQL input type with all expected fields mapped as GraphQL inputs.</returns>
-        private static InputObjectTypeDefinitionNode GenerateCreateInputTypeForRelationalDb(
+        /// <returns>An optional GraphQL input type with all expected fields mapped as GraphQL inputs.</returns>
+        private static InputObjectTypeDefinitionNode? GenerateCreateInputTypeForRelationalDb(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             string entityName,
@@ -44,6 +44,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             bool IsMultipleCreateOperationEnabled)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
+            InputObjectTypeDefinitionNode? input = null;
 
             if (inputs.TryGetValue(inputName, out InputObjectTypeDefinitionNode? db))
             {
@@ -54,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // 1. Scalar input fields corresponding to columns which belong to the table.
             // 2. Complex input fields corresponding to related (target) entities (table backed entities, for now)
             // which are defined in the runtime config.
-            List<InputValueDefinitionNode> inputFields = new();
+            List<InputValueDefinitionNode?> inputFields = new();
 
             // 1. Scalar input fields.
             IEnumerable<InputValueDefinitionNode> scalarInputFields = objectTypeDefinitionNode.Fields
@@ -62,24 +63,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 .Select(field => GenerateScalarInputType(name, field, IsMultipleCreateOperationEnabled));
 
             // Add scalar input fields to list of input fields for current input type.
-            inputFields.AddRange(scalarInputFields);
+            // Generate the create input type only if there are any scalar fields that are not auto-generated fields.
+            if (scalarInputFields.Any())
+            {
+                inputFields.AddRange(scalarInputFields);
 
-            // Create input object for this entity.
-            InputObjectTypeDefinitionNode input =
-                new(
-                    location: null,
-                    inputName,
-                    new StringValueNode($"Input type for creating {name}"),
-                    new List<DirectiveNode>(),
-                    inputFields
-                );
-
-            // Add input object to the dictionary of entities for which input object has already been created.
-            // This input object currently holds only scalar fields.
-            // The complex fields (for related entities) would be added later when we return from recursion.
-            // Adding the input object to the dictionary ensures that we don't go into infinite recursion and return whenever
-            // we find that the input object has already been created for the entity.
-            inputs.Add(input.Name, input);
+                // Create input object for this entity.
+                input =
+                    new(
+                        location: null,
+                        inputName,
+                        new StringValueNode($"Input type for creating {name}"),
+                        new List<DirectiveNode>(),
+                        inputFields!);
+                // Add input object to the dictionary of entities for which input object has already been created.
+                // This input object currently holds only scalar fields.
+                // The complex fields (for related entities) would be added later when we return from recursion.
+                // Adding the input object to the dictionary ensures that we don't go into infinite recursion and return whenever
+                // we find that the input object has already been created for the entity.
+                inputs.Add(input.Name, input);
+            }
 
             // Generate fields for related entities when
             // 1. Multiple mutation operations are supported for the database type.
@@ -88,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             {
                 // 2. Complex input fields.
                 // Evaluate input objects for related entities.
-                IEnumerable<InputValueDefinitionNode> complexInputFields =
+                IEnumerable<InputValueDefinitionNode?> complexInputFields =
                     objectTypeDefinitionNode.Fields
                     .Where(field => !IsBuiltInType(field.Type) && IsComplexFieldAllowedForCreateInputInRelationalDb(field, definitions))
                     .Select(field =>
@@ -148,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             databaseType: databaseType,
                             entities: entities,
                             IsMultipleCreateOperationEnabled: IsMultipleCreateOperationEnabled);
-                    });
+                    }).Where(complexInputType => complexInputType != null);
                 // Append relationship fields to the input fields.
                 inputFields.AddRange(complexInputFields);
             }
@@ -307,8 +310,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="objectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
-        /// <returns>A GraphQL input type value.</returns>
-        private static InputValueDefinitionNode GenerateComplexInputTypeForRelationalDb(
+        /// <returns>An Optional GraphQL input type value.</returns>
+        private static InputValueDefinitionNode? GenerateComplexInputTypeForRelationalDb(
             string entityName,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
@@ -320,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             RuntimeEntities entities,
             bool IsMultipleCreateOperationEnabled)
         {
-            InputObjectTypeDefinitionNode node;
+            InputObjectTypeDefinitionNode? node;
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
@@ -340,7 +343,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 node = inputs[inputTypeName];
             }
 
-            return GetComplexInputType(field, node, inputTypeName, IsMultipleCreateOperationEnabled);
+            return node == null ? null : GetComplexInputType(field, node, inputTypeName, IsMultipleCreateOperationEnabled);
         }
 
         /// <summary>
@@ -487,7 +490,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         {
             List<FieldDefinitionNode> createMutationNodes = new();
             Entity entity = entities[dbEntityName];
-            InputObjectTypeDefinitionNode input;
+            InputObjectTypeDefinitionNode? input;
             if (!IsRelationalDb(databaseType))
             {
                 input = GenerateCreateInputTypeForNonRelationalDb(
@@ -528,12 +531,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             string singularName = GetDefinedSingularName(name.Value, entity);
 
-            // Create one node.
-            FieldDefinitionNode createOneNode = new(
-                location: null,
-                name: new NameNode(GetPointCreateMutationNodeName(name.Value, entity)),
-                description: new StringValueNode($"Creates a new {singularName}"),
-                arguments: new List<InputValueDefinitionNode> {
+            if (input != null)
+            {
+                // Create one node.
+                FieldDefinitionNode createOneNode = new(
+                    location: null,
+                    name: new NameNode(GetPointCreateMutationNodeName(name.Value, entity)),
+                    description: new StringValueNode($"Creates a new {singularName}"),
+                    arguments: new List<InputValueDefinitionNode> {
                         new(
                             location : null,
                         new NameNode(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME),
@@ -541,15 +546,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         new NonNullTypeNode(new NamedTypeNode(input.Name)),
                         defaultValue: null,
                         new List<DirectiveNode>())
-                },
-                type: new NamedTypeNode(returnEntityName),
-                directives: fieldDefinitionNodeDirectives
-            );
+                    },
+                    type: new NamedTypeNode(returnEntityName),
+                    directives: fieldDefinitionNodeDirectives
+                );
 
-            createMutationNodes.Add(createOneNode);
+                createMutationNodes.Add(createOneNode);
+            }
 
             // Multiple create node is created in the schema only when multiple create operation is enabled.
-            if (IsMultipleCreateOperationEnabled)
+            if (IsMultipleCreateOperationEnabled && input != null)
             {
                 // Create multiple node.
                 FieldDefinitionNode createMultipleNode = new(

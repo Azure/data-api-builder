@@ -152,31 +152,42 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         break;
                     case EntityActionOperation.Update:
                         // Generate Mutation operation for Patch and Update both for CosmosDB
-                        mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
-                            name,
-                            inputs,
-                            objectTypeDefinitionNode,
-                            root,
-                            entities,
-                            dbEntityName,
-                            databaseType,
-                            returnEntityName,
-                            rolesAllowedForMutation));
+                        FieldDefinitionNode? mutationField = UpdateAndPatchMutationBuilder.Build(
+                                                    name,
+                                                    inputs,
+                                                    objectTypeDefinitionNode,
+                                                    root,
+                                                    entities,
+                                                    dbEntityName,
+                                                    databaseType,
+                                                    returnEntityName,
+                                                    rolesAllowedForMutation);
+
+                        if (mutationField != null)
+                        {
+                            mutationFields.Add(mutationField);
+                        }
 
                         if (databaseType is DatabaseType.CosmosDB_NoSQL)
                         {
-                            mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
-                            name,
-                            inputs,
-                            objectTypeDefinitionNode,
-                            root,
-                            entities,
-                            dbEntityName,
-                            databaseType,
-                            returnEntityName,
-                            rolesAllowedForMutation,
-                            EntityActionOperation.Patch,
-                            operationNamePrefix: "patch"));
+                            FieldDefinitionNode? cosmosMutationField = UpdateAndPatchMutationBuilder.Build(
+                                                    name,
+                                                    inputs,
+                                                    objectTypeDefinitionNode,
+                                                    root,
+                                                    entities,
+                                                    dbEntityName,
+                                                    databaseType,
+                                                    returnEntityName,
+                                                    rolesAllowedForMutation,
+                                                    EntityActionOperation.Patch,
+                                                    operationNamePrefix: "patch");
+
+                            if (cosmosMutationField != null)
+                            {
+                                mutationFields.Add(cosmosMutationField);
+                            }
+
                         }
 
                         break;

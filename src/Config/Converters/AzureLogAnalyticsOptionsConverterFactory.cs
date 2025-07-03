@@ -70,11 +70,6 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
 
                     string? propertyName = reader.GetString();
 
-                    if (propertyName is null)
-                    {
-                        throw new JsonException("Invalid property : null");
-                    }
-
                     reader.Read();
                     switch (propertyName)
                     {

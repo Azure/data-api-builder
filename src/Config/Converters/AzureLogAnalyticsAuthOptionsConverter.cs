@@ -15,7 +15,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
 
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    internal AzureLogAnalyticsAuthOptionsConverter(bool replaceEnvVar)
+    public AzureLogAnalyticsAuthOptionsConverter(bool replaceEnvVar)
     {
         _replaceEnvVar = replaceEnvVar;
     }
@@ -40,11 +40,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                 }
 
                 string? propertyName = reader.GetString();
-
-                if (propertyName is null)
-                {
-                    throw new JsonException("Invalid property : null");
-                }
 
                 reader.Read();
                 switch (propertyName)

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -196,18 +197,56 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Updates the Entity Health Check Results in the response. 
         // Goes through the entities one by one and executes the rest and graphql checks (if enabled).
-        private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport ComprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
+        private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport report, RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig?.Entities != null && runtimeConfig.Entities.Entities.Any())
+            List<KeyValuePair<string, Entity>> enabledEntities = runtimeConfig.Entities.Entities
+                .Where(e => e.Value.IsEntityHealthEnabled)
+                .ToList();
+
+            if (enabledEntities.Count == 0)
             {
-                foreach (KeyValuePair<string, Entity> Entity in runtimeConfig.Entities.Entities)
+                _logger.LogInformation("No enabled entities found for health checks. Skipping entity health checks.");
+                return;
+            }
+
+            ConcurrentBag<HealthCheckResultEntry> concurrentChecks = new();
+
+            // Use MaxQueryParallelism from RuntimeConfig or default to RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM
+            int maxParallelism = runtimeConfig.Runtime?.Health?.MaxQueryParallelism ?? RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM;
+
+            _logger.LogInformation("Executing health checks for {Count} enabled entities with parallelism of {MaxParallelism}.", enabledEntities.Count, maxParallelism);
+
+            // Executes health checks for all enabled entities in parallel, with a maximum degree of parallelism
+            // determined by configuration (or a default). Each entity's health check runs as an independent task.
+            // Results are collected in a thread-safe ConcurrentBag. This approach significantly improves performance
+            // for large numbers of entities by utilizing available CPU and I/O resources efficiently.
+            await Parallel.ForEachAsync(enabledEntities, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (entity, _) =>
+            {
+                try
                 {
-                    if (Entity.Value.IsEntityHealthEnabled)
+                    ComprehensiveHealthCheckReport localReport = new()
                     {
-                        await PopulateEntityHealthAsync(ComprehensiveHealthCheckReport, Entity, runtimeConfig);
+                        Checks = new List<HealthCheckResultEntry>()
+                    };
+
+                    await PopulateEntityHealthAsync(localReport, entity, runtimeConfig);
+
+                    if (localReport.Checks != null)
+                    {
+                        foreach (HealthCheckResultEntry check in localReport.Checks)
+                        {
+                            concurrentChecks.Add(check);
+                        }
                     }
                 }
-            }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing entity '{EntityKey}'", entity.Key);
+                }
+            });
+
+            report.Checks ??= new List<HealthCheckResultEntry>();
+            report.Checks.AddRange(concurrentChecks);
         }
 
         // Populates the Entity Health Check Results in the response for a particular entity.

@@ -206,6 +206,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsNotNull(errorMessageFromGraphQL);
         }
 
+        /// <summary>
+        /// Tests the serialization behavior of <see cref="RuntimeHealthCheckConfig"/> for the <see cref="RuntimeHealthCheckConfig.MaxQueryParallelism"/> property."
+        /// </summary>
+        /// <remarks>This test ensures that the JSON serialization behavior of <see
+        /// cref="RuntimeHealthCheckConfig"/>  adheres to the expected behavior where default values are omitted from
+        /// the output.</remarks>
+        [TestMethod]
+        public void MaxQueryParallelismSerializationDependsOnUserInput()
+        {
+            // Case 1: default value NOT explicitly provided => should NOT serialize
+            RuntimeHealthCheckConfig configWithDefault = new(
+                enabled: true,
+                roles: null,
+                cacheTtlSeconds: null,
+                maxQueryParallelism: null // implicit default
+            );
+
+            Assert.IsFalse(configWithDefault.UserProvidedMaxQueryParallelism, "UserProvidedMaxQueryParallelism should be false for default value.");
+
+            // Case 2: default value EXPLICITLY provided => should serialize
+            RuntimeHealthCheckConfig configWithExplicitDefault = new(
+                enabled: true,
+                roles: null,
+                cacheTtlSeconds: null,
+                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM
+            );
+
+            Assert.IsTrue(configWithExplicitDefault.UserProvidedMaxQueryParallelism, "UserProvidedMaxQueryParallelism should be true for explicit default value.");
+
+            // Case 3: non-default value => should serialize
+            RuntimeHealthCheckConfig configWithCustomValue = new(
+                enabled: true,
+                roles: null,
+                cacheTtlSeconds: null,
+                maxQueryParallelism: RuntimeHealthCheckConfig.DEFAULT_MAX_QUERY_PARALLELISM + 1
+            );
+
+            Assert.IsTrue(configWithCustomValue.UserProvidedMaxQueryParallelism, "UserProvidedMaxQueryParallelism should be true for custom value.");
+        }
+
         #region Helper Methods
         private static HttpUtilities SetupRestTest(RuntimeConfig runtimeConfig, HttpStatusCode httpStatusCode = HttpStatusCode.OK)
         {

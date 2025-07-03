@@ -773,6 +773,29 @@ namespace Cli
                 }
             }
 
+            // Telemetry File: Enabled, Path, Rolling-Interval, Retained-File-Count-Limit, File-Size-Limit-Bytes
+            if (options.RuntimeTelemetryFileEnabled != null ||
+                options.RuntimeTelemetryFilePath != null ||
+                options.RuntimeTelemetryFileRollingInterval != null ||
+                options.RuntimeTelemetryFileRetainedFileCountLimit != null ||
+                options.RuntimeTelemetryFileFileSizeLimitBytes != null)
+            {
+                TelemetryOptions? currentTelemetryOptions = runtimeConfig?.Runtime?.Telemetry;
+                Azure.DataApiBuilder.Config.ObjectModel.FileOptions? updatedFileOptions = currentTelemetryOptions?.File ?? new();
+                bool status = TryUpdateConfiguredTelemetryFileValues(options, ref updatedFileOptions);
+                if (status)
+                {
+                    TelemetryOptions updatedTelemetryOptions = currentTelemetryOptions is null
+                        ? new TelemetryOptions(File: updatedFileOptions)
+                        : currentTelemetryOptions with { File = updatedFileOptions };
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = updatedTelemetryOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             return runtimeConfig != null;
         }
 
@@ -1989,6 +2012,80 @@ namespace Cli
             };
 
             return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Telemetry File runtime settings based on the provided value.
+        /// Validates that any user-provided parameter value is valid and then returns true if the updated File options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedFileOptions">updatedFileOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredTelemetryFileValues(
+            ConfigureOptions options,
+            ref Azure.DataApiBuilder.Config.ObjectModel.FileOptions? updatedFileOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.Telemetry.File.Enabled
+                updatedValue = options?.RuntimeTelemetryFileEnabled;
+                if (updatedValue != null)
+                {
+                    updatedFileOptions = updatedFileOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Telemetry.File.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Telemetry.File.Path
+                updatedValue = options?.RuntimeTelemetryFilePath;
+                if (updatedValue != null)
+                {
+                    updatedFileOptions = updatedFileOptions! with { Path = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Telemetry.File.Path as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Telemetry.File.Rolling-Interval
+                updatedValue = options?.RuntimeTelemetryFileRollingInterval;
+                if (updatedValue != null)
+                {
+                    updatedFileOptions = updatedFileOptions! with { RollingInterval = (RollingInterval)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Telemetry.File.Rolling-Interval as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Telemetry.File.Retained-File-Count-Limit
+                updatedValue = options?.RuntimeTelemetryFileRetainedFileCountLimit;
+                if (updatedValue != null)
+                {
+                    if ((int)updatedValue < 1)
+                    {
+                        _logger.LogError("Runtime.Telemetry.File.Retained-File-Count-Limit must be at least 1. Provided value: {updatedValue}", updatedValue);
+                        return false;
+                    }
+                    updatedFileOptions = updatedFileOptions! with { RetainedFileCountLimit = (int)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Telemetry.File.Retained-File-Count-Limit as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Telemetry.File.File-Size-Limit-Bytes
+                updatedValue = options?.RuntimeTelemetryFileFileSizeLimitBytes;
+                if (updatedValue != null)
+                {
+                    if ((int)updatedValue < 1)
+                    {
+                        _logger.LogError("Runtime.Telemetry.File.File-Size-Limit-Bytes must be at least 1. Provided value: {updatedValue}", updatedValue);
+                        return false;
+                    }
+                    updatedFileOptions = updatedFileOptions! with { FileSizeLimitBytes = (int)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Telemetry.File.File-Size-Limit-Bytes as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Telemetry.File with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
         }
     }
 }

@@ -819,5 +819,220 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
         }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.telemetry.file.enabled" on a config with various values results
+        /// in runtime config update. Takes in updated value for telemetry file enabled and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "Enable file sink telemetry.")]
+        [DataRow(false, DisplayName = "Disable file sink telemetry.")]
+        public void TestUpdateTelemetryFileEnabled(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update file enabled flag
+            ConfigureOptions options = new(
+                runtimeTelemetryFileEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Enabled Flag is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Telemetry?.File?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Telemetry.File.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.telemetry.file.path" on a config with various values results
+        /// in runtime config update. Takes in updated value for telemetry file path and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("/logs/custom-dab.log", DisplayName = "Update file path to custom location.")]
+        [DataRow("/var/log/dab-application.log", DisplayName = "Update file path to var log directory.")]
+        [DataRow("./logs/dab.log", DisplayName = "Update file path to relative location.")]
+        public void TestUpdateTelemetryFilePath(string updatedPathValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update file path value
+            ConfigureOptions options = new(
+                runtimeTelemetryFilePath: updatedPathValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Path is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Telemetry?.File?.Path);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Telemetry.File.Path);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.telemetry.file.rolling-interval" on a config with various values results
+        /// in runtime config update. Takes in updated value for telemetry file rolling interval and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(RollingInterval.Hour, DisplayName = "Update rolling interval to Hour.")]
+        [DataRow(RollingInterval.Day, DisplayName = "Update rolling interval to Day.")]
+        [DataRow(RollingInterval.Week, DisplayName = "Update rolling interval to Week.")]
+        public void TestUpdateTelemetryFileRollingInterval(RollingInterval updatedRollingIntervalValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update rolling interval value
+            ConfigureOptions options = new(
+                runtimeTelemetryFileRollingInterval: updatedRollingIntervalValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Rolling Interval is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Telemetry?.File?.RollingInterval);
+            Assert.AreEqual(updatedRollingIntervalValue, runtimeConfig.Runtime.Telemetry.File.RollingInterval);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.telemetry.file.retained-file-count-limit" on a config with various values results
+        /// in runtime config update. Takes in updated value for retained file count limit and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(1, DisplayName = "Update retained file count limit to 1.")]
+        [DataRow(7, DisplayName = "Update retained file count limit to 7.")]
+        [DataRow(30, DisplayName = "Update retained file count limit to 30.")]
+        public void TestUpdateTelemetryFileRetainedFileCountLimit(int updatedRetainedFileCountLimitValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update retained file count limit value
+            ConfigureOptions options = new(
+                runtimeTelemetryFileRetainedFileCountLimit: updatedRetainedFileCountLimitValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Retained File Count Limit is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Telemetry?.File?.RetainedFileCountLimit);
+            Assert.AreEqual(updatedRetainedFileCountLimitValue, runtimeConfig.Runtime.Telemetry.File.RetainedFileCountLimit);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.telemetry.file.file-size-limit-bytes" on a config with various values results
+        /// in runtime config update. Takes in updated value for file size limit bytes and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(1048576, DisplayName = "Update file size limit to 1MB.")]
+        [DataRow(10485760, DisplayName = "Update file size limit to 10MB.")]
+        [DataRow(104857600, DisplayName = "Update file size limit to 100MB.")]
+        public void TestUpdateTelemetryFileFileSizeLimitBytes(int updatedFileSizeLimitBytesValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update file size limit bytes value
+            ConfigureOptions options = new(
+                runtimeTelemetryFileFileSizeLimitBytes: updatedFileSizeLimitBytesValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the File Size Limit Bytes is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Telemetry?.File?.FileSizeLimitBytes);
+            Assert.AreEqual(updatedFileSizeLimitBytesValue, runtimeConfig.Runtime.Telemetry.File.FileSizeLimitBytes);
+        }
+
+        /// <summary>
+        /// Tests that validation fails when invalid values are provided for retained file count limit and file size limit
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, "retained-file-count-limit", DisplayName = "Fail when retained file count limit is 0.")]
+        [DataRow(-1, "retained-file-count-limit", DisplayName = "Fail when retained file count limit is negative.")]
+        [DataRow(0, "file-size-limit-bytes", DisplayName = "Fail when file size limit is 0.")]
+        [DataRow(-1, "file-size-limit-bytes", DisplayName = "Fail when file size limit is negative.")]
+        public void TestTelemetryFileConfigurationValidationFailures(int invalidValue, string optionType)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options;
+            if (optionType == "retained-file-count-limit")
+            {
+                options = new ConfigureOptions(
+                    runtimeTelemetryFileRetainedFileCountLimit: invalidValue,
+                    config: TEST_RUNTIME_CONFIG_FILE
+                );
+            }
+            else
+            {
+                options = new ConfigureOptions(
+                    runtimeTelemetryFileFileSizeLimitBytes: invalidValue,
+                    config: TEST_RUNTIME_CONFIG_FILE
+                );
+            }
+
+            // Act: Attempts to update with invalid value
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate that configuration fails
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests that multiple file sink telemetry options can be configured in a single command
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateMultipleTelemetryFileOptions()
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update multiple file options at once
+            ConfigureOptions options = new(
+                runtimeTelemetryFileEnabled: true,
+                runtimeTelemetryFilePath: "/var/log/custom-dab.log",
+                runtimeTelemetryFileRollingInterval: RollingInterval.Week,
+                runtimeTelemetryFileRetainedFileCountLimit: 14,
+                runtimeTelemetryFileFileSizeLimitBytes: 52428800,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate all options are updated correctly
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            
+            Assert.IsNotNull(runtimeConfig.Runtime?.Telemetry?.File);
+            var fileOptions = runtimeConfig.Runtime.Telemetry.File;
+            
+            Assert.AreEqual(true, fileOptions.Enabled);
+            Assert.AreEqual("/var/log/custom-dab.log", fileOptions.Path);
+            Assert.AreEqual(RollingInterval.Week, fileOptions.RollingInterval);
+            Assert.AreEqual(14, fileOptions.RetainedFileCountLimit);
+            Assert.AreEqual(52428800, fileOptions.FileSizeLimitBytes);
+        }
     }
 }

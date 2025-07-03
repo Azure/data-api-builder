@@ -13,6 +13,7 @@ public record TelemetryOptions(
     ApplicationInsightsOptions? ApplicationInsights = null,
     OpenTelemetryOptions? OpenTelemetry = null,
     AzureLogAnalyticsOptions? AzureLogAnalytics = null,
+    FileOptions? File = null,
     Dictionary<string, LogLevel?>? LoggerLevel = null)
 {
     [JsonPropertyName("log-level")]

@@ -42,11 +42,6 @@ namespace Cli.Commands
             string? runtimeHostAuthenticationProvider = null,
             string? runtimeHostAuthenticationJwtAudience = null,
             string? runtimeHostAuthenticationJwtIssuer = null,
-            bool? runtimeTelemetryFileEnabled = null,
-            string? runtimeTelemetryFilePath = null,
-            RollingIntervalMode? runtimeTelemetryFileRollingInterval = null,
-            int? runtimeTelemetryFileRetainedFileCountLimit = null,
-            int? runtimeTelemetryFileFileSizeLimitBytes = null,
             string? config = null)
             : base(config)
         {

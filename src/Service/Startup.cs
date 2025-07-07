@@ -1061,7 +1061,8 @@ namespace Azure.DataApiBuilder.Service
             {
                 foreach (string part in urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    if (Uri.TryCreate(part.Trim(), UriKind.Absolute, out Uri? uri) && uri.Port > 0)
+                    string processedPart = part.Trim().Replace("http://+:", "http://localhost:").Replace("https://+:", "https://localhost:");
+                    if (Uri.TryCreate(processedPart, UriKind.Absolute, out Uri? uri) && uri.Port > 0)
                     {
                         return uri.Port;
                     }

@@ -283,26 +283,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
                 .ConfigureHttpClient((serviceProvider, client) =>
                 {
-                    IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-                    HttpContext? httpContext = httpCtxAccessor.HttpContext;
-                    string baseUri = string.Empty;
-
-                    if (httpContext is not null)
-                    {
-                        string scheme = httpContext.Request.Scheme;  // "http" or "https"
-                        string host = httpContext.Request.Host.Host ?? "localhost"; // e.g. "localhost"
-                        int port = ResolveInternalPort(httpContext);
-                        baseUri = $"{scheme}://{host}:{port}";
-                        client.BaseAddress = new Uri(baseUri);
-                    }
-                    else
-                    {
-                        // Optional fallback if ever needed in non-request scenarios
-                        baseUri = $"http://localhost:{ResolveInternalPort()}";
-                        client.BaseAddress = new Uri(baseUri);
-                    }
-
-                    _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
+                    int port = ResolveInternalPort();
+                    client.BaseAddress = new Uri($"http://localhost:{port}");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);
@@ -561,10 +543,11 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            if (!Program.IsHttpsRedirectionDisabled)
-            {
-                app.UseHttpsRedirection();
-            }
+            // Use HTTPS redirection for all endpoints except /health and /graphql.
+            app.UseWhen(
+                context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
+                appBuilder => appBuilder.UseHttpsRedirection()
+            );
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
@@ -1034,44 +1017,42 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Get the internal port of the container.
         /// </summary>
-        /// <param name="httpContext">The HttpContext</param>
         /// <returns>The internal container port</returns>
-        private static int ResolveInternalPort(HttpContext? httpContext = null)
+        private static int ResolveInternalPort()
         {
-            // X-Forwarded-Port header (ingress controller)
-            if (httpContext?.Request.Headers.TryGetValue(
-                    "X-Forwarded-Port",
-                    out StringValues fwdPort) == true &&
-                int.TryParse(fwdPort, out int parsedFwd) &&
-                parsedFwd > 0)
-            {
-                return parsedFwd;
-            }
-
-            // Host header Port
-            if (httpContext?.Request.Host.Port is int hostPort && hostPort > 0)
-            {
-                return hostPort;
-            }
-
-            // ASPNETCORE_URLS environment variable (used by Kestrel)
+            // Use explicit type names for clarity.
             string? urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-
             if (!string.IsNullOrWhiteSpace(urls))
             {
-                foreach (string part in urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                string[] parts = urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string part in parts)
                 {
-                    if (Uri.TryCreate(part.Trim(), UriKind.Absolute, out Uri? uri) && uri.Port > 0)
+                    string trimmedPart = part.Trim();
+                    
+                    // Handle wildcard bindings like "http://+:1234" or "http://*:1234"
+                    if (trimmedPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Extract port from URL like "http://+:1234" or "http://*:1234"
+                        int colonIndex = trimmedPart.LastIndexOf(':');
+                        if (colonIndex > 0)
+                        {
+                            string portString = trimmedPart.Substring(colonIndex + 1);
+                            if (int.TryParse(portString, out int port) && port > 0)
+                            {
+                                return port;
+                            }
+                        }
+                    }
+                    
+                    // Fallback to Uri.TryCreate for standard URLs
+                    if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) && uri.Scheme == "http")
                     {
                         return uri.Port;
                     }
                 }
             }
-
-            // Default to HTTP or HTTPS port based on the scheme
-            string scheme = httpContext?.Request.Scheme ?? "http";
-
-            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 80;
+            // Default Kestrel port if not specified.
+            return 5000;
         }
 
     }

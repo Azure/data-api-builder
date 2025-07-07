@@ -2078,22 +2078,21 @@ namespace Cli
                 ServiceName: options.OpenTelemetryServiceName
             );
 
+            FileSinkOptions fileSinkOptions = new(
+                Enabled: options.FileSinkEnabled is CliBool.True ? true : false,
+                Path: options.FileSinkPath,
+                RollingInterval: options.FileSinkRollingInterval,
+                RetainedFileCountLimit: options.FileSinkRetainedFileCountLimit,
+                FileSizeLimitBytes: options.FileSinkFileSizeLimitBytes
+            );
+
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with
                 {
                     Telemetry = runtimeConfig.Runtime.Telemetry is null
-                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions)
-                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions }
-                }
-            };
-            runtimeConfig = runtimeConfig with
-            {
-                Runtime = runtimeConfig.Runtime with
-                {
-                    Telemetry = runtimeConfig.Runtime.Telemetry is null
-                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
-                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions, File: fileSinkOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions, File = fileSinkOptions }
                 }
             };
 

@@ -78,6 +78,10 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                             {
                                 azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = reader.GetBoolean() };
                             }
+                            else if (reader.TokenType is JsonTokenType.Null)
+                            {
+                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = false };
+                            }
                             else
                             {
                                 throw new JsonException($"Unsupported value entered for the property 'enabled': {reader.TokenType}");
@@ -93,12 +97,11 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                             if (reader.TokenType is JsonTokenType.String)
                             {
                                 string? logType = reader.DeserializeString(_replaceEnvVar);
-                                if (logType is null)
-                                {
-                                    logType = "DabLogs";
-                                }
-
                                 azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = logType };
+                            }
+                            else if (reader.TokenType is JsonTokenType.Null)
+                            {
+                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = AzureLogAnalyticsOptions.DEFAULT_LOG_TYPE };
                             }
                             else
                             {
@@ -126,6 +129,10 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                                 }
 
                                 azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = flushIntSec };
+                            }
+                            else if (reader.TokenType is JsonTokenType.Null)
+                            {
+                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = AzureLogAnalyticsOptions.DEFAULT_FLUSH_INTERVAL_SECONDS };
                             }
                             else
                             {

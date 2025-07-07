@@ -1038,50 +1038,40 @@ namespace Azure.DataApiBuilder.Service
         /// <returns>The internal container port</returns>
         private static int ResolveInternalPort(HttpContext? httpContext = null)
         {
-            // Try X-Forwarded-Port if context is present
-            if (httpContext is not null &&
-                httpContext.Request.Headers.TryGetValue("X-Forwarded-Port", out StringValues fwdPortVal) &&
-                int.TryParse(fwdPortVal.ToString(), out int fwdPort) &&
-                fwdPort > 0)
+            // X-Forwarded-Port header (ingress controller)
+            if (httpContext?.Request.Headers.TryGetValue(
+                    "X-Forwarded-Port",
+                    out StringValues fwdPort) == true &&
+                int.TryParse(fwdPort, out int parsedFwd) &&
+                parsedFwd > 0)
             {
-                return fwdPort;
+                return parsedFwd;
             }
 
-            // Infer scheme from context if available, else default to "http"
-            string scheme = httpContext?.Request.Scheme ?? "http";
-
-            // Check ASPNETCORE_URLS env var
-            string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-
-            if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
+            // Host header Port
+            if (httpContext?.Request.Host.Port is int hostPort && hostPort > 0)
             {
-                foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+                return hostPort;
+            }
+
+            // ASPNETCORE_URLS environment variable (used by Kestrel)
+            string? urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
+            if (!string.IsNullOrWhiteSpace(urls))
+            {
+                foreach (string part in urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    string trimmed = part.Trim();
-
-                    // Handle wildcard format (e.g. http://+:5002)
-                    if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        int colonIndex = trimmed.LastIndexOf(':');
-                        if (colonIndex != -1 &&
-                            int.TryParse(trimmed.Substring(colonIndex + 1), out int wildcardPort) &&
-                            wildcardPort > 0)
-                        {
-                            return wildcardPort;
-                        }
-                    }
-
-                    // Handle standard URI format
-                    if (trimmed.StartsWith($"{scheme}://", StringComparison.OrdinalIgnoreCase) &&
-                        Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri))
+                    if (Uri.TryCreate(part.Trim(), UriKind.Absolute, out Uri? uri) && uri.Port > 0)
                     {
                         return uri.Port;
                     }
                 }
             }
 
-            // Fallback
-            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 5000;
+            // Default to HTTP or HTTPS port based on the scheme
+            string scheme = httpContext?.Request.Scheme ?? "http";
+
+            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 80;
         }
 
     }

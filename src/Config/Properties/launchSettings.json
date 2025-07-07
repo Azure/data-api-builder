@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Azure.DataApiBuilder.Config": {
+      "commandName": "Project",
+      "commandLineArgs": "start"
+    }
+  }
+}

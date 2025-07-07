@@ -453,21 +453,21 @@ namespace Azure.DataApiBuilder.Service
             }
 
             server.AddErrorFilter(error =>
+            {
+                if (error.Exception is not null)
                 {
-                    if (error.Exception is not null)
-                    {
-                        _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
-                        return error.WithMessage(error.Exception.Message);
-                    }
+                    _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
+                    return error.WithMessage(error.Exception.Message);
+                }
 
-                    if (error.Code is not null)
-                    {
-                        _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
-                        return error.WithMessage(error.Message);
-                    }
+                if (error.Code is not null)
+                {
+                    _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
+                    return error.WithMessage(error.Message);
+                }
 
-                    return error;
-                })
+                return error;
+            })
                 .AddErrorFilter(error =>
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
@@ -1028,7 +1028,7 @@ namespace Azure.DataApiBuilder.Service
                 foreach (string part in parts)
                 {
                     string trimmedPart = part.Trim();
-                    
+
                     // Handle wildcard bindings like "http://+:1234" or "http://*:1234"
                     if (trimmedPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                     {
@@ -1043,7 +1043,7 @@ namespace Azure.DataApiBuilder.Service
                             }
                         }
                     }
-                    
+
                     // Fallback to Uri.TryCreate for standard URLs
                     if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) && uri.Scheme == "http")
                     {

@@ -2,7 +2,7 @@
   "profiles": {
     "Cli": {
       "commandName": "Project",
-      "commandLineArgs": "add-telemetry --config C:\\Users\\rcernaserna\\DAB\\data-api-builder\\src\\Service\\dab-config.MsSql.json --otel-enabled false --file-sink-enabled false",
+      "commandLineArgs": "start",
       "httpPort": 5002
     }
   }

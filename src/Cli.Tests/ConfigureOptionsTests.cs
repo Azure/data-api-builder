@@ -960,10 +960,10 @@ namespace Cli.Tests
         /// validates whether the runtime config reflects those updated values
         /// </summary>
         [DataTestMethod]
-        [DataRow(RollingInterval.Hour, DisplayName = "Update rolling interval to Hour.")]
-        [DataRow(RollingInterval.Day, DisplayName = "Update rolling interval to Day.")]
-        [DataRow(RollingInterval.Week, DisplayName = "Update rolling interval to Week.")]
-        public void TestUpdateTelemetryFileRollingInterval(RollingInterval updatedRollingIntervalValue)
+        [DataRow(RollingIntervalMode.Hour, DisplayName = "Update rolling interval to Hour.")]
+        [DataRow(RollingIntervalMode.Day, DisplayName = "Update rolling interval to Day.")]
+        [DataRow(RollingIntervalMode.Week, DisplayName = "Update rolling interval to Week.")]
+        public void TestUpdateTelemetryFileRollingInterval(RollingIntervalMode updatedRollingIntervalValue)
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -1090,7 +1090,7 @@ namespace Cli.Tests
             ConfigureOptions options = new(
                 runtimeTelemetryFileEnabled: true,
                 runtimeTelemetryFilePath: "/var/log/custom-dab.log",
-                runtimeTelemetryFileRollingInterval: RollingInterval.Week,
+                runtimeTelemetryFileRollingInterval: RollingIntervalMode.Week,
                 runtimeTelemetryFileRetainedFileCountLimit: 14,
                 runtimeTelemetryFileFileSizeLimitBytes: 52428800,
                 config: TEST_RUNTIME_CONFIG_FILE
@@ -1101,13 +1101,13 @@ namespace Cli.Tests
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
-            
+
             Assert.IsNotNull(runtimeConfig.Runtime?.Telemetry?.File);
-            var fileOptions = runtimeConfig.Runtime.Telemetry.File;
-            
+            FileSinkOptions fileOptions = runtimeConfig.Runtime.Telemetry.File;
+
             Assert.AreEqual(true, fileOptions.Enabled);
             Assert.AreEqual("/var/log/custom-dab.log", fileOptions.Path);
-            Assert.AreEqual(RollingInterval.Week, fileOptions.RollingInterval);
+            Assert.AreEqual(RollingIntervalMode.Week, fileOptions.RollingInterval);
             Assert.AreEqual(14, fileOptions.RetainedFileCountLimit);
             Assert.AreEqual(52428800, fileOptions.FileSizeLimitBytes);
         }

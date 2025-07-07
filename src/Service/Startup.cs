@@ -1071,7 +1071,15 @@ namespace Azure.DataApiBuilder.Service
             // Default to HTTP or HTTPS port based on the scheme
             string scheme = httpContext?.Request.Scheme ?? "http";
 
-            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 80;
+            // Check for configurable fallback ports
+            string? fallbackPortEnv = Environment.GetEnvironmentVariable("FALLBACK_PORT");
+            if (int.TryParse(fallbackPortEnv, out int fallbackPort) && fallbackPort > 0)
+            {
+                return fallbackPort;
+            }
+
+            // Default to development-friendly ports
+            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 5001 : 5000;
         }
 
     }

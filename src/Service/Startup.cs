@@ -1029,10 +1029,10 @@ namespace Azure.DataApiBuilder.Service
                 {
                     string trimmedPart = part.Trim();
 
-                    // Handle wildcard bindings like "http://+:1234" or "http://*:1234"
-                    if (trimmedPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    // Handle wildcard bindings like "http://+:1234" or "https://*:443"
+                    if (trimmedPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                        trimmedPart.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Extract port from URL like "http://+:1234" or "http://*:1234"
                         int colonIndex = trimmedPart.LastIndexOf(':');
                         if (colonIndex > 0)
                         {
@@ -1044,12 +1044,19 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    // Fallback to Uri.TryCreate for standard URLs
-                    if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) && uri.Scheme == "http")
+                    // Fallback to Uri.TryCreate for standard URLs (http or https)
+                    if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) &&
+                        (uri.Scheme == "http" || uri.Scheme == "https"))
                     {
                         return uri.Port;
                     }
                 }
+            }
+            // Configurable fallback port
+            string? defaultPortEnv = Environment.GetEnvironmentVariable("DEFAULT_PORT");
+            if (int.TryParse(defaultPortEnv, out int defaultPort) && defaultPort > 0)
+            {
+                return defaultPort;
             }
             // Default Kestrel port if not specified.
             return 5000;

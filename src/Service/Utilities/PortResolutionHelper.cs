@@ -36,9 +36,11 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     if (trimmedPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                     {
                         int colonIndex = trimmedPart.LastIndexOf(':');
+
                         if (colonIndex > 0)
                         {
                             string portString = trimmedPart.Substring(colonIndex + 1);
+
                             if (int.TryParse(portString, out int port) && port > 0)
                             {
                                 return port;
@@ -55,14 +57,17 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     else if (trimmedPart.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                     {
                         int colonIndex = trimmedPart.LastIndexOf(':');
+
                         if (colonIndex > 0)
                         {
                             string portString = trimmedPart.Substring(colonIndex + 1);
+
                             if (int.TryParse(portString, out int port) && port > 0)
                             {
                                 httpsPort ??= port;
                             }
                         }
+
                         if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) && uri.Scheme == "https")
                         {
                             httpsPort ??= uri.Port;
@@ -79,6 +84,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
 
             // Configurable fallback port
             string? defaultPortEnv = Environment.GetEnvironmentVariable("DEFAULT_PORT");
+
             if (int.TryParse(defaultPortEnv, out int defaultPort) && defaultPort > 0)
             {
                 return defaultPort;

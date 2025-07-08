@@ -48,6 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
             Environment.SetEnvironmentVariable("ASPNETCORE_URLS", aspnetcoreUrls);
             Environment.SetEnvironmentVariable("DEFAULT_PORT", null);
+
             try
             {
                 int port = PortResolutionHelper.ResolveInternalPort();
@@ -74,6 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
             Environment.SetEnvironmentVariable("ASPNETCORE_URLS", null);
             Environment.SetEnvironmentVariable("DEFAULT_PORT", "4321");
+
             try
             {
                 int port = PortResolutionHelper.ResolveInternalPort();
@@ -106,6 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
             Environment.SetEnvironmentVariable("ASPNETCORE_URLS", aspnetcoreUrls);
             Environment.SetEnvironmentVariable("DEFAULT_PORT", null);
+
             try
             {
                 int port = PortResolutionHelper.ResolveInternalPort();

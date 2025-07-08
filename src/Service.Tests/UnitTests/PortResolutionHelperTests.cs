@@ -86,7 +86,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
-        // Negative scenarios: invalid/unsupported formats, fallback behavior
+        /// <summary>
+        /// Negative tests for the <see cref="PortResolutionHelper.ResolveInternalPort"/> method.
+        /// </summary>
+        /// <param name="aspnetcoreUrls">A string representing the ASP.NET Core URLs to be tested.</param>
+        /// <param name="expectedPort">The expected port number that should be resolved.</param>
         [DataTestMethod]
         [DataRow("http://localhost:5000 https://localhost:443", 443)] // space delimiter: fallback to first HTTPS port
         [DataRow("http://localhost:5000|https://localhost:443", 443)] // pipe delimiter: fallback to first HTTPS port

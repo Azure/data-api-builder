@@ -40,6 +40,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("invalid;http://localhost:5000", 5000)]
         [DataRow("http://localhost:5000;invalid", 5000)]
         [DataRow("http://+:", 5000)]
+        [DataRow("https://localhost:5001;http://localhost:5000", 5000)]
+        [DataRow("https://localhost:5001;https://localhost:5002", 5001)]
         public void ResolveInternalPort_ResolvesCorrectPort_Positive(string aspnetcoreUrls, int expectedPort)
         {
             string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");

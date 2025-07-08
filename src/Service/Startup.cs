@@ -28,6 +28,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Telemetry;
+using Azure.DataApiBuilder.Service.Utilities;
 using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
@@ -49,7 +50,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -283,7 +283,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
                 .ConfigureHttpClient((serviceProvider, client) =>
                 {
-                    int port = ResolveInternalPort();
+                    int port = PortResolutionHelper.ResolveInternalPort();
                     client.BaseAddress = new Uri($"http://localhost:{port}");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -544,10 +544,10 @@ namespace Azure.DataApiBuilder.Service
             }
 
             // Use HTTPS redirection for all endpoints except /health and /graphql.
-            app.UseWhen(
-                context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
-                appBuilder => appBuilder.UseHttpsRedirection()
-            );
+            //app.UseWhen(
+            //    context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
+            //    appBuilder => appBuilder.UseHttpsRedirection()
+            //);
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
@@ -1013,54 +1013,5 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
             LoggerFilters.AddFilter("default");
         }
-
-        /// <summary>
-        /// Get the internal port of the container.
-        /// </summary>
-        /// <returns>The internal container port</returns>
-        private static int ResolveInternalPort()
-        {
-            // Use explicit type names for clarity.
-            string? urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-            if (!string.IsNullOrWhiteSpace(urls))
-            {
-                string[] parts = urls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (string part in parts)
-                {
-                    string trimmedPart = part.Trim();
-
-                    // Handle wildcard bindings like "http://+:1234" or "https://*:443"
-                    if (trimmedPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                        trimmedPart.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                    {
-                        int colonIndex = trimmedPart.LastIndexOf(':');
-                        if (colonIndex > 0)
-                        {
-                            string portString = trimmedPart.Substring(colonIndex + 1);
-                            if (int.TryParse(portString, out int port) && port > 0)
-                            {
-                                return port;
-                            }
-                        }
-                    }
-
-                    // Fallback to Uri.TryCreate for standard URLs (http or https)
-                    if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) &&
-                        (uri.Scheme == "http" || uri.Scheme == "https"))
-                    {
-                        return uri.Port;
-                    }
-                }
-            }
-            // Configurable fallback port
-            string? defaultPortEnv = Environment.GetEnvironmentVariable("DEFAULT_PORT");
-            if (int.TryParse(defaultPortEnv, out int defaultPort) && defaultPort > 0)
-            {
-                return defaultPort;
-            }
-            // Default Kestrel port if not specified.
-            return 5000;
-        }
-
     }
 }

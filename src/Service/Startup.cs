@@ -543,12 +543,15 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            // Use HTTPS redirection for all endpoints except /health and /graphql.
-            // This is necessary because ContextConfiguredHealthCheckClient base URI is http://localhost:{port} for internal API calls
-            app.UseWhen(
-                context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
-                appBuilder => appBuilder.UseHttpsRedirection()
-            );
+            if (!Program.IsHttpsRedirectionDisabled)
+            {
+                // Use HTTPS redirection for all endpoints except /health and /graphql.
+                // This is necessary because ContextConfiguredHealthCheckClient base URI is http://localhost:{port} for internal API calls
+                app.UseWhen(
+                    context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
+                    appBuilder => appBuilder.UseHttpsRedirection()
+                );
+            }
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location

@@ -89,6 +89,34 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Tests that the <see cref="PortResolutionHelper.ResolveInternalPort"/> method uses the default port when the
+        /// environment variable <c>ASPNETCORE_URLS</c> is set to invalid values.
+        /// </summary>
+        /// <remarks>This test sets the <c>ASPNETCORE_URLS</c> environment variable to invalid URLs and
+        /// the <c>DEFAULT_PORT</c> environment variable to a valid port number. It verifies that <see
+        /// cref="PortResolutionHelper.ResolveInternalPort"/> correctly falls back to using the default port specified
+        /// by <c>DEFAULT_PORT</c>.</remarks>
+        [TestMethod]
+        public void ResolveInternalPort_UsesDefaultPortWhenUrlsAreInvalid()
+        {
+            string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+            string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
+            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", "invalid-url;another-invalid");
+            Environment.SetEnvironmentVariable("DEFAULT_PORT", "4321");
+
+            try
+            {
+                int port = PortResolutionHelper.ResolveInternalPort();
+                Assert.AreEqual(4321, port);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("ASPNETCORE_URLS", originalUrls);
+                Environment.SetEnvironmentVariable("DEFAULT_PORT", originalDefaultPort);
+            }
+        }
+
+        /// <summary>
         /// Negative tests for the <see cref="PortResolutionHelper.ResolveInternalPort"/> method.
         /// </summary>
         /// <param name="aspnetcoreUrls">A string representing the ASP.NET Core URLs to be tested.</param>

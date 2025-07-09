@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("http://+:", 5000)]
         [DataRow("https://localhost:5001;http://localhost:5000", 5000)]
         [DataRow("https://localhost:5001;https://localhost:5002", 5001)]
-        public void ResolveInternalPort_ResolvesCorrectPort_Positive(string aspnetcoreUrls, int expectedPort)
+        public void ResolveInternalPortResolvesCorrectPortPositiveTest(string aspnetcoreUrls, int expectedPort)
         {
             string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <see cref="PortResolutionHelper.ResolveInternalPort"/> returns this value. It ensures that  the method
         /// correctly defaults to using "DEFAULT_PORT" when "ASPNETCORE_URLS" is null.</remarks>
         [TestMethod]
-        public void ResolveInternalPort_UsesDefaultPortEnvVar()
+        public void ResolveInternalPortUsesDefaultPortEnvVarTest()
         {
             string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// cref="PortResolutionHelper.ResolveInternalPort"/> correctly falls back to using the default port specified
         /// by <c>DEFAULT_PORT</c>.</remarks>
         [TestMethod]
-        public void ResolveInternalPort_UsesDefaultPortWhenUrlsAreInvalid()
+        public void ResolveInternalPortUsesDefaultPortWhenUrlsAreInvalidTest()
         {
             string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("http://unix:/var/run/app.sock", 80)] // unix socket: defaults to 80 (no port specified)
         [DataRow("http://unix:var/run/app.sock", 5000)] // malformed unix socket: fallback to default
         [DataRow("http://unix:", 80)] // incomplete unix socket: defaults to 80
-        public void ResolveInternalPort_ResolvesCorrectPort_Negative(string aspnetcoreUrls, int expectedPort)
+        public void ResolveInternalPortResolvesCorrectPortNegativeTest(string aspnetcoreUrls, int expectedPort)
         {
             string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");

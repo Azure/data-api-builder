@@ -153,7 +153,6 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
             writer.WritePropertyName("flush-interval-seconds");
             JsonSerializer.Serialize(writer, value.FlushIntervalSeconds, options);
 
-
             writer.WriteEndObject();
         }
     }

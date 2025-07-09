@@ -48,11 +48,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                         if (reader.TokenType is JsonTokenType.String)
                         {
                             string? workspaceId = reader.DeserializeString(_replaceEnvVar);
-                            if (workspaceId is null)
-                            {
-                                throw new JsonException($"Unsuported null value entered for the property workspace-id");
-                            }
-
                             authOptions = authOptions with { WorkspaceId = workspaceId };
                         }
                         else
@@ -66,11 +61,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                         if (reader.TokenType is JsonTokenType.String)
                         {
                             string? dcrImmutableId = reader.DeserializeString(_replaceEnvVar);
-                            if (dcrImmutableId is null)
-                            {
-                                throw new JsonException($"Unsuported null value entered for the property dcr-immutable-id");
-                            }
-
                             authOptions = authOptions with { DcrImmutableId = dcrImmutableId };
                         }
                         else
@@ -84,11 +74,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                         if (reader.TokenType is JsonTokenType.String)
                         {
                             string? dceEndpoint = reader.DeserializeString(_replaceEnvVar);
-                            if (dceEndpoint is null)
-                            {
-                                throw new JsonException($"Unsuported null value entered for the property dce-endpoint");
-                            }
-
                             authOptions = authOptions with { DceEndpoint = dceEndpoint };
                         }
                         else
@@ -119,23 +104,14 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     {
         writer.WriteStartObject();
 
-        if (value?.UserProvidedWorkspaceId is true)
-        {
-            writer.WritePropertyName("workspace-id");
-            JsonSerializer.Serialize(writer, value.WorkspaceId, options);
-        }
+        writer.WritePropertyName("workspace-id");
+        JsonSerializer.Serialize(writer, value.WorkspaceId, options);
 
-        if (value?.UserProvidedDcrImmutableId is true)
-        {
-            writer.WritePropertyName("drc-immutable-id");
-            JsonSerializer.Serialize(writer, value.DcrImmutableId, options);
-        }
+        writer.WritePropertyName("dcr-immutable-id");
+        JsonSerializer.Serialize(writer, value.DcrImmutableId, options);
 
-        if (value?.UserProvidedDceEndpoint is true)
-        {
-            writer.WritePropertyName("dce-endpoint");
-            JsonSerializer.Serialize(writer, value.DceEndpoint, options);
-        }
+        writer.WritePropertyName("dce-endpoint");
+        JsonSerializer.Serialize(writer, value.DceEndpoint, options);
 
         writer.WriteEndObject();
     }

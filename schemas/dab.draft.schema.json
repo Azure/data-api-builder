@@ -436,7 +436,7 @@
                       "description": "DCE endpoint for entra-id mode"
                     }
                   },
-                  "required": ["workspace-id"]
+                  "required": [ "workspace-id", "dcr-immutable-id", "dce-endpoint" ]
                 },
                 "log-type": {
                   "type": "string",
@@ -449,7 +449,16 @@
                   "default": 5
                 }
               },
-              "required": ["auth"]
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "required": ["auth"]
+              }
             },
             "log-level": {
               "type": "object",

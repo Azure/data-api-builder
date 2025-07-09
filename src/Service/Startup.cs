@@ -860,7 +860,6 @@ namespace Azure.DataApiBuilder.Service
         /// is enabled, we can track different events and metrics.
         /// </summary>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
-        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
         private void ConfigureOpenTelemetry(RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Runtime?.Telemetry is not null
@@ -891,7 +890,6 @@ namespace Azure.DataApiBuilder.Service
         /// is enabled, we can track different events and metrics.
         /// </summary>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
-        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
         private void ConfigureAzureLogAnalytics(RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Runtime?.Telemetry is not null
@@ -899,21 +897,9 @@ namespace Azure.DataApiBuilder.Service
             {
                 AzureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
 
-                if (!(AzureLogAnalyticsOptions.Enabled))
+                if (!AzureLogAnalyticsOptions.Enabled)
                 {
                     _logger.LogInformation("Azure Log Analytics is disabled.");
-                    return;
-                }
-
-                if (AzureLogAnalyticsOptions.Auth is null)
-                {
-                    _logger.LogWarning("Logs won't be sent to Azure Log Analytics because the Authorization options are not available in the runtime config.");
-                    return;
-                }
-
-                if (string.IsNullOrWhiteSpace(AzureLogAnalyticsOptions.Auth.WorkspaceId))
-                {
-                    _logger.LogWarning("Logs won't be sent to Azure Log Analytics because a Workspace Id string is not available in the runtime config.");
                     return;
                 }
 

@@ -42,6 +42,11 @@ namespace Cli.Commands
             string? runtimeHostAuthenticationProvider = null,
             string? runtimeHostAuthenticationJwtAudience = null,
             string? runtimeHostAuthenticationJwtIssuer = null,
+            bool? runtimeTelemetryFileEnabled = null,
+            string? runtimeTelemetryFilePath = null,
+            RollingInterval? runtimeTelemetryFileRollingInterval = null,
+            int? runtimeTelemetryFileRetainedFileCountLimit = null,
+            int? runtimeTelemetryFileFileSizeLimitBytes = null,
             string? config = null)
             : base(config)
         {
@@ -72,6 +77,12 @@ namespace Cli.Commands
             RuntimeHostAuthenticationProvider = runtimeHostAuthenticationProvider;
             RuntimeHostAuthenticationJwtAudience = runtimeHostAuthenticationJwtAudience;
             RuntimeHostAuthenticationJwtIssuer = runtimeHostAuthenticationJwtIssuer;
+            // File Sink Telemetry
+            RuntimeTelemetryFileEnabled = runtimeTelemetryFileEnabled;
+            RuntimeTelemetryFilePath = runtimeTelemetryFilePath;
+            RuntimeTelemetryFileRollingInterval = runtimeTelemetryFileRollingInterval;
+            RuntimeTelemetryFileRetainedFileCountLimit = runtimeTelemetryFileRetainedFileCountLimit;
+            RuntimeTelemetryFileFileSizeLimitBytes = runtimeTelemetryFileFileSizeLimitBytes;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -139,6 +150,21 @@ namespace Cli.Commands
 
         [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtIssuer { get; }
+
+        [Option("runtime.telemetry.file.enabled", Required = false, HelpText = "Enable/disable file sink telemetry logging. Default: false (boolean).")]
+        public bool? RuntimeTelemetryFileEnabled { get; }
+
+        [Option("runtime.telemetry.file.path", Required = false, HelpText = "File path for telemetry logs. Default: '/logs/dab-log.txt' (string).")]
+        public string? RuntimeTelemetryFilePath { get; }
+
+        [Option("runtime.telemetry.file.rolling-interval", Required = false, HelpText = "Rolling interval for log files. Default: Day. Allowed values: Hour, Day, Week.")]
+        public RollingInterval? RuntimeTelemetryFileRollingInterval { get; }
+
+        [Option("runtime.telemetry.file.retained-file-count-limit", Required = false, HelpText = "Maximum number of retained log files. Default: 1 (integer, minimum: 1).")]
+        public int? RuntimeTelemetryFileRetainedFileCountLimit { get; }
+
+        [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Maximum file size in bytes before rolling. Default: 1048576 (integer, minimum: 1).")]
+        public int? RuntimeTelemetryFileFileSizeLimitBytes { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

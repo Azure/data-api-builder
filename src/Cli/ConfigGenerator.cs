@@ -1974,22 +1974,23 @@ namespace Cli
                 ServiceName: options.OpenTelemetryServiceName
             );
 
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(
+                Enabled: options.AzureLogAnalyticsEnabled is CliBool.True ? true : false,
+                Auth: new(
+                    WorkspaceId: options.AzureLogAnalyticsWorkspaceId,
+                    DcrImmutableId: options.AzureLogAnalyticsDcrImmutableId,
+                    DceEndpoint: options.AzureLogAnalyticsDceEndpoint),
+                LogType: options.AzureLogAnalyticsLogType,
+                FlushIntervalSeconds: options.AzureLogAnalyticsFlushIntervalSeconds
+            );
+
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with
                 {
                     Telemetry = runtimeConfig.Runtime.Telemetry is null
-                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions)
-                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions }
-                }
-            };
-            runtimeConfig = runtimeConfig with
-            {
-                Runtime = runtimeConfig.Runtime with
-                {
-                    Telemetry = runtimeConfig.Runtime.Telemetry is null
-                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
-                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions, AzureLogAnalytics: azureLogAnalyticsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions, AzureLogAnalytics = azureLogAnalyticsOptions }
                 }
             };
 

@@ -28,6 +28,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Telemetry;
+using Azure.DataApiBuilder.Service.Utilities;
 using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
@@ -49,7 +50,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -283,26 +283,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddHttpClient("ContextConfiguredHealthCheckClient")
                 .ConfigureHttpClient((serviceProvider, client) =>
                 {
-                    IHttpContextAccessor httpCtxAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-                    HttpContext? httpContext = httpCtxAccessor.HttpContext;
-                    string baseUri = string.Empty;
-
-                    if (httpContext is not null)
-                    {
-                        string scheme = httpContext.Request.Scheme;  // "http" or "https"
-                        string host = httpContext.Request.Host.Host ?? "localhost"; // e.g. "localhost"
-                        int port = ResolveInternalPort(httpContext);
-                        baseUri = $"{scheme}://{host}:{port}";
-                        client.BaseAddress = new Uri(baseUri);
-                    }
-                    else
-                    {
-                        // Optional fallback if ever needed in non-request scenarios
-                        baseUri = $"http://localhost:{ResolveInternalPort()}";
-                        client.BaseAddress = new Uri(baseUri);
-                    }
-
-                    _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
+                    int port = PortResolutionHelper.ResolveInternalPort();
+                    client.BaseAddress = new Uri($"http://localhost:{port}");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);
@@ -471,21 +453,21 @@ namespace Azure.DataApiBuilder.Service
             }
 
             server.AddErrorFilter(error =>
+            {
+                if (error.Exception is not null)
                 {
-                    if (error.Exception is not null)
-                    {
-                        _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
-                        return error.WithMessage(error.Exception.Message);
-                    }
+                    _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
+                    return error.WithMessage(error.Exception.Message);
+                }
 
-                    if (error.Code is not null)
-                    {
-                        _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
-                        return error.WithMessage(error.Message);
-                    }
+                if (error.Code is not null)
+                {
+                    _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
+                    return error.WithMessage(error.Message);
+                }
 
-                    return error;
-                })
+                return error;
+            })
                 .AddErrorFilter(error =>
                 {
                     if (error.Exception is DataApiBuilderException thrownException)
@@ -561,10 +543,12 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            if (!Program.IsHttpsRedirectionDisabled)
-            {
-                app.UseHttpsRedirection();
-            }
+            // Use HTTPS redirection for all endpoints except /health and /graphql.
+            // This is necessary because ContextConfiguredHealthCheckClient base URI is http://localhost:{port} for internal API calls
+            app.UseWhen(
+                context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
+                appBuilder => appBuilder.UseHttpsRedirection()
+            );
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
@@ -1030,59 +1014,5 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
             LoggerFilters.AddFilter("default");
         }
-
-        /// <summary>
-        /// Get the internal port of the container.
-        /// </summary>
-        /// <param name="httpContext">The HttpContext</param>
-        /// <returns>The internal container port</returns>
-        private static int ResolveInternalPort(HttpContext? httpContext = null)
-        {
-            // Try X-Forwarded-Port if context is present
-            if (httpContext is not null &&
-                httpContext.Request.Headers.TryGetValue("X-Forwarded-Port", out StringValues fwdPortVal) &&
-                int.TryParse(fwdPortVal.ToString(), out int fwdPort) &&
-                fwdPort > 0)
-            {
-                return fwdPort;
-            }
-
-            // Infer scheme from context if available, else default to "http"
-            string scheme = httpContext?.Request.Scheme ?? "http";
-
-            // Check ASPNETCORE_URLS env var
-            string? aspnetcoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-
-            if (!string.IsNullOrWhiteSpace(aspnetcoreUrls))
-            {
-                foreach (string part in aspnetcoreUrls.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    string trimmed = part.Trim();
-
-                    // Handle wildcard format (e.g. http://+:5002)
-                    if (trimmed.StartsWith($"{scheme}://+:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        int colonIndex = trimmed.LastIndexOf(':');
-                        if (colonIndex != -1 &&
-                            int.TryParse(trimmed.Substring(colonIndex + 1), out int wildcardPort) &&
-                            wildcardPort > 0)
-                        {
-                            return wildcardPort;
-                        }
-                    }
-
-                    // Handle standard URI format
-                    if (trimmed.StartsWith($"{scheme}://", StringComparison.OrdinalIgnoreCase) &&
-                        Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri))
-                    {
-                        return uri.Port;
-                    }
-                }
-            }
-
-            // Fallback
-            return scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 5000;
-        }
-
     }
 }

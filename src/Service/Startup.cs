@@ -886,7 +886,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 AzureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
 
-                if (!(AzureLogAnalyticsOptions.Enabled))
+                if (!AzureLogAnalyticsOptions.Enabled)
                 {
                     _logger.LogInformation("Azure Log Analytics is disabled.");
                     return;

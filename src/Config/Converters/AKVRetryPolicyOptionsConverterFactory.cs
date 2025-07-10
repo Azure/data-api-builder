@@ -158,7 +158,7 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
                 }
             }
 
-            throw new JsonException();
+            throw new JsonException("Failed to read the Azure Key Vault Retry Policy Options");
         }
 
         /// <summary>

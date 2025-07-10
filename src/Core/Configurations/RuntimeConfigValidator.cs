@@ -159,7 +159,7 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             AzureLogAnalyticsOptions azureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
             AzureLogAnalyticsAuthOptions? azureLogAnalyticsAuthOptions = azureLogAnalyticsOptions.Auth;
-            if (azureLogAnalyticsOptions.Enabled && (azureLogAnalyticsAuthOptions is null || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.WorkspaceId) ||
+            if (azureLogAnalyticsOptions.Enabled is true && (azureLogAnalyticsAuthOptions is null || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.WorkspaceId) ||
                 string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DcrImmutableId) || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DceEndpoint)))
             {
                 HandleOrRecordException(new DataApiBuilderException(

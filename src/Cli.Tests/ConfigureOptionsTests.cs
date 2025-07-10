@@ -139,7 +139,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.AzureKeyVault);
-            Assert.IsNotNull(config.AzureKeyVault.RetryPolicy);
+            Assert.IsNotNull(config.AzureKeyVault?.RetryPolicy);
             Assert.AreEqual("foo", config.AzureKeyVault?.Endpoint);
             Assert.AreEqual(AKVRetryPolicyMode.Exponential, config.AzureKeyVault?.RetryPolicy.Mode);
             Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.MaxCount);

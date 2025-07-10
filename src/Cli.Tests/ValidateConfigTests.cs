@@ -283,8 +283,7 @@ public class ValidateConfigTests
         // Arrange
         _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
         Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-        Mock<RuntimeConfigLoader> mockLoader = new(null, null);
-        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(mockLoader.Object);
+        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader);
         RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
         Mock<ILoggerFactory> mockLoggerFactory = new();
         Mock<ILogger<JsonConfigSchemaValidator>> mockLogger = new();

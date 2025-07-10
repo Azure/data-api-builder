@@ -126,10 +126,10 @@ Demo source code: [startrek](https://aka.ms/dab/startrek)
 | **REST** | • `$select` for projection<br>• `$filter` for filtering<br>• `$orderBy` for sorting |
 | **GraphQL** | • Relationship navigation<br>• Data aggregation<br>• Multiple mutations |
 | **Telemetry** | • Structured logs<br>• OpenTelemetry<br>• Application Insights<br>• Health endpoints |
-| **Advanced** | • Pagination<br>• Level 1 (in-memory) cache<br>• Level 2 (Redis) cache |
+| **Advanced** | • Pagination<br>• Level 1 (in-memory) cache |
 | **Authentication** | • OAuth2/JWT<br>• EasyAuth<br>• Entra ID |
 | **Authorization** | • Role-based support<br>• Entity permissions<br>• Database policies |
-| **Developer** | • Cross-platform CLI<br>• Swagger (REST)<br>• Banana Cake Pop (GraphQL)<br>• Open Source<br>• Hot Reload |
+| **Developer** | • Cross-platform CLI<br>• Swagger (REST)<br>• Nitro [previously Banana Cake Pop] (GraphQL)<br>• Open Source<br>• Configuration Hot Reload |
 
 ## How does it work?
 

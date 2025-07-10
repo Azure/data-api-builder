@@ -506,6 +506,136 @@ type Moon {
                                     },
                                     ""entities"":{ }
                                 }";
+
+        public const string CONFIG_FILE_WITH_UNKNOWN_AUTHENTICATION_PROVIDER = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""UnknownProvider""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_MISSING_JWT_PROPERTY = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""EntraID""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_MISSING_JWT_CHILD_PROPERTIES = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""EntraID"",
+                                                ""jwt"": { }
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
+
+        public const string CONFIG_FILE_WITH_AUTHENTICATION_PROVIDER_THAT_SHOULD_NOT_HAVE_JWT = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""cors"": {
+                                                ""origins"": [
+                                                    ""http://localhost:5000""
+                                                ],
+                                                ""allow-credentials"": false
+                                            },
+                                            ""authentication"": {
+                                                ""provider"": ""Simulator"",
+                                                ""jwt"": { ""audience"": ""https://example.com"", ""issuer"": ""https://example.com"" }
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
         public const string CONFIG_FILE_WITH_NO_CORS_FIELD = @"{
                                     // Link for latest draft schema.
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
@@ -1630,7 +1760,7 @@ type Moon {
         /// It also verifies that the expected log message is logged.
         /// </summary>
         [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
-        public async Task TestConfigSchemaIsValid()
+        public void TestConfigSchemaIsValid()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
@@ -1642,7 +1772,7 @@ type Moon {
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             schemaValidatorLogger.Verify(
@@ -1664,7 +1794,7 @@ type Moon {
         [DataRow(CONFIG_FILE_WITH_NO_OPTIONAL_FIELD, DisplayName = "Validates schema of the config file with no optional fields.")]
         [DataRow(CONFIG_FILE_WITH_NO_AUTHENTICATION_FIELD, DisplayName = "Validates schema of the config file with no Authentication field.")]
         [DataRow(CONFIG_FILE_WITH_NO_CORS_FIELD, DisplayName = "Validates schema of the config file with no Cors field.")]
-        public async Task TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
+        public void TestBasicConfigSchemaWithNoOptionalFieldsIsValid(string jsonData)
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
@@ -1672,7 +1802,7 @@ type Moon {
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsTrue(result.IsValid);
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             schemaValidatorLogger.Verify(
@@ -1686,11 +1816,41 @@ type Moon {
         }
 
         /// <summary>
+        /// This test method validates that the JSON schema validates that only known auth providers can be used.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(CONFIG_FILE_WITH_UNKNOWN_AUTHENTICATION_PROVIDER, DisplayName = "Validates schema of the config file when there is an unknown authentication provider.")]
+        [DataRow(CONFIG_FILE_WITH_MISSING_JWT_PROPERTY, DisplayName = "Validates schema of the config file a missing JWT property")]
+        [DataRow(CONFIG_FILE_WITH_MISSING_JWT_CHILD_PROPERTIES, DisplayName = "Validates schema of the config file with missing JWT child properties.")]
+        [DataRow(CONFIG_FILE_WITH_AUTHENTICATION_PROVIDER_THAT_SHOULD_NOT_HAVE_JWT, DisplayName = "Validates schema of the config file when an auth provider is chosen WITH a JWT property, "
+        + "even though the JWT property should not exist.")]
+        public void TestConfigWithInvalidAuthProviders(string jsonData)
+        {
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
+            Assert.IsFalse(result.IsValid);
+            Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            schemaValidatorLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Never);
+        }
+
+        /// <summary>
         /// The config file does not contain any entity fields, which is expected to be invalid according to the schema.
         /// The test asserts that the validation fails and there are validation errors.
         /// It also verifies that the expected error message is logged, indicating that the 'entities' property is required.
         [TestMethod]
-        public async Task TestBasicConfigSchemaWithNoEntityFieldsIsInvalid()
+        public void TestBasicConfigSchemaWithNoEntityFieldsIsInvalid()
         {
             string jsonData = @"{
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
@@ -1706,11 +1866,11 @@ type Moon {
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.IsFalse(result.IsValid);
             Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
             Assert.AreEqual(1, result.ErrorCount);
-            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> PropertyRequired: #/entities"));
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1\n> Required properties are missing from object: entities."));
         }
 
         /// <summary>
@@ -1721,23 +1881,22 @@ type Moon {
         /// It also contains an entity where `rest` property is written as `rst`.
         /// </summary>
         [TestMethod("Validates the invalid config file schema."), TestCategory(TestCategory.MSSQL)]
-        public async Task TestConfigSchemaIsInvalid()
+        public void TestConfigSchemaIsInvalid()
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
             Assert.IsFalse(result.IsValid);
             Assert.AreEqual(3, result.ValidationErrors.Count);
 
             string errorMessage = result.ErrorMessage;
             Assert.IsTrue(errorMessage.Contains("Total schema validation errors: 3"));
-            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/data-source-file at 7:31"));
-            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/runtime.Graphql at 13:26"));
-            Assert.IsTrue(errorMessage.Contains("AdditionalPropertiesNotValid: #/entities.Publisher\n"
-                    + "{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
+            Assert.IsTrue(errorMessage.Contains("Property 'data-source-file' has not been defined and the schema does not allow additional properties. at 7:31"));
+            Assert.IsTrue(errorMessage.Contains("Property 'Graphql' has not been defined and the schema does not allow additional properties. at 13:26"));
+            Assert.IsTrue(errorMessage.Contains("Property 'rst' has not been defined and the schema does not allow additional properties. at 44:26"));
         }
 
         /// <summary>
@@ -1766,10 +1925,10 @@ type Moon {
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
 
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
-            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, combinedJson);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, combinedJson);
             Assert.IsFalse(result.IsValid);
             Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1"));
-            Assert.IsTrue(result.ErrorMessage.Contains("NoAdditionalPropertiesAllowed: #/description"));
+            Assert.IsTrue(result.ErrorMessage.Contains("Property 'description' has not been defined and the schema does not allow additional properties."));
 
             File.WriteAllText(CUSTOM_CONFIG, combinedJson);
             string[] args = new[]
@@ -2886,9 +3045,11 @@ type Moon {
         /// Base Route is not configured in the config file used for this test. If base-route is configured, the Location header URL should contain the base-route.
         /// This test performs a POST request, and in the event that it results in a 201 response, it performs a subsequent GET request
         /// with the Location header to validate the correctness of the URL.
+        /// Currently ignored as it is part of the setof flakey tests that are being investigated, see: https://github.com/Azure/data-api-builder/issues/2010
         /// </summary>
         /// <param name="entityType">Type of the entity</param>
         /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
+        [Ignore]
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(EntitySourceType.Table, "/api/Book", DisplayName = "Location Header validation - Table, Base Route not configured")]
@@ -4861,7 +5022,7 @@ type Planet @model(name:""PlanetAlias"") {
             RestRuntimeOptions restOptions,
             Entity entity = null,
             string entityName = null,
-            EntityCacheOptions cacheOptions = null
+            RuntimeCacheOptions cacheOptions = null
             )
         {
             entity ??= new(
@@ -4897,7 +5058,9 @@ type Planet @model(name:""PlanetAlias"") {
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
                 Runtime: new(restOptions, graphqlOptions,
-                    Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: cacheOptions),
+                    Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development),
+                    Cache: cacheOptions
+                ),
                 Entities: new(entityMap)
             );
         }

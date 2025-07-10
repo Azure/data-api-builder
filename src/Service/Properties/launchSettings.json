@@ -1,5 +1,5 @@
 {
-  "issSettings": {
+  "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {

@@ -1961,6 +1961,33 @@ namespace Cli
                 return false;
             }
 
+            if (options.AzureLogAnalyticsEnabled is CliBool.True)
+            {
+                bool returnError = false;
+                if (string.IsNullOrWhiteSpace(options.AzureLogAnalyticsWorkspaceId))
+                {
+                    _logger.LogError("Invalid Azure Log Analytics workspace-id provided");
+                    returnError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(options.AzureLogAnalyticsDcrImmutableId))
+                {
+                    _logger.LogError("Invalid Azure Log Analytics dcr-immutable-id provided");
+                    returnError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(options.AzureLogAnalyticsDceEndpoint))
+                {
+                    _logger.LogError("Invalid Azure Log Analytics dce-endpoint provided");
+                    returnError = true;
+                }
+
+                if (returnError)
+                {
+                    return false;
+                }
+            }
+
             ApplicationInsightsOptions applicationInsightsOptions = new(
                 Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
                 ConnectionString: options.AppInsightsConnString

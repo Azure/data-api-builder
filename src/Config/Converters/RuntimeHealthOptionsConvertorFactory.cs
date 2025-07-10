@@ -55,12 +55,13 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                 bool? enabled = null;
                 int? cacheTtlSeconds = null;
                 HashSet<string>? roles = null;
+                int? maxQueryParallelism = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new RuntimeHealthCheckConfig(enabled, roles, cacheTtlSeconds);
+                        return new RuntimeHealthCheckConfig(enabled, roles, cacheTtlSeconds, maxQueryParallelism);
                     }
 
                     string? property = reader.GetString();
@@ -120,7 +121,17 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                             }
 
                             break;
+                        case "max-query-parallelism":
+                            if (reader.TokenType is not JsonTokenType.Null)
+                            {
+                                // Allow user to set values between 1 and 8 (inclusive). If not set, the value will be set to 4 during health check.
+                                int userValue = reader.GetInt32();
+                                int parseMaxQueryParallelism = Math.Clamp(userValue, RuntimeHealthCheckConfig.LOWEST_MAX_QUERY_PARALLELISM,
+                                    RuntimeHealthCheckConfig.UPPER_LIMIT_MAX_QUERY_PARALLELISM);
+                                maxQueryParallelism = parseMaxQueryParallelism;
+                            }
 
+                            break;
                         default:
                             throw new JsonException($"Unexpected property {property}");
                     }
@@ -147,6 +158,12 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                 {
                     writer.WritePropertyName("roles");
                     JsonSerializer.Serialize(writer, value.Roles, options);
+                }
+
+                if (value?.UserProvidedMaxQueryParallelism is true)
+                {
+                    writer.WritePropertyName("max-query-parallelism");
+                    JsonSerializer.Serialize(writer, value.MaxQueryParallelism, options);
                 }
 
                 writer.WriteEndObject();

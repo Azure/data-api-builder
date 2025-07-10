@@ -192,6 +192,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(DatabaseType.MySQL, "", false, DisplayName = "Database Policy left empty for Create passes for MySQL")]
         [DataRow(DatabaseType.MySQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for MySQL")]
         [DataRow(DatabaseType.MSSQL, "2 eq @item.col3", false, DisplayName = "Database Policy defined for Create passes for MSSQL")]
+        [DataRow(DatabaseType.DWSQL, "2 eq @item.col3", false, DisplayName = "Database Policy defined for Create passes for DWSQL")]
         public void AddDatabasePolicyToCreateOperation(DatabaseType dbType, string dbPolicy, bool errorExpected)
         {
             EntityActionOperation action = EntityActionOperation.Create;

@@ -165,7 +165,7 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
             writer.WritePropertyName("enabled");
             JsonSerializer.Serialize(writer, value.Enabled, options);
 
-            if (value?.Auth is not null && (value?.Auth.UserProvidedWorkspaceId is true || value?.Auth.UserProvidedDcrImmutableId is true || value?.Auth.UserProvidedDceEndpoint is true))
+            if (value.Auth is not null && (value.Auth.UserProvidedWorkspaceId is true || value.Auth.UserProvidedDcrImmutableId is true || value.Auth.UserProvidedDceEndpoint is true))
             {
                 AzureLogAnalyticsAuthOptionsConverter authOptionsConverter = options.GetConverter(typeof(AzureLogAnalyticsAuthOptions)) as AzureLogAnalyticsAuthOptionsConverter ??
                                     throw new JsonException("Failed to get azure-log-analytics.auth options converter");

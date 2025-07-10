@@ -50,7 +50,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                             string? workspaceId = reader.DeserializeString(_replaceEnvVar);
                             authOptions = authOptions with { WorkspaceId = workspaceId };
                         }
-                        else
+                        else if (reader.TokenType != JsonTokenType.Null)
                         {
                             throw new JsonException($"Unexpected type of value entered for workspace-id: {reader.TokenType}");
                         }
@@ -63,7 +63,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                             string? dcrImmutableId = reader.DeserializeString(_replaceEnvVar);
                             authOptions = authOptions with { DcrImmutableId = dcrImmutableId };
                         }
-                        else
+                        else if (reader.TokenType != JsonTokenType.Null)
                         {
                             throw new JsonException($"Unexpected type of value entered for dcr-immutable-id: {reader.TokenType}");
                         }
@@ -76,7 +76,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                             string? dceEndpoint = reader.DeserializeString(_replaceEnvVar);
                             authOptions = authOptions with { DceEndpoint = dceEndpoint };
                         }
-                        else
+                        else if (reader.TokenType != JsonTokenType.Null)
                         {
                             throw new JsonException($"Unexpected type of value entered for dce-endpoint: {reader.TokenType}");
                         }
@@ -104,14 +104,23 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     {
         writer.WriteStartObject();
 
-        writer.WritePropertyName("workspace-id");
-        JsonSerializer.Serialize(writer, value.WorkspaceId, options);
+        if (value?.UserProvidedWorkspaceId is true)
+        {
+            writer.WritePropertyName("workspace-id");
+            JsonSerializer.Serialize(writer, value.WorkspaceId, options);
+        }
 
-        writer.WritePropertyName("dcr-immutable-id");
-        JsonSerializer.Serialize(writer, value.DcrImmutableId, options);
+        if (value?.UserProvidedDcrImmutableId is true)
+        {
+            writer.WritePropertyName("dcr-immutable-id");
+            JsonSerializer.Serialize(writer, value.DcrImmutableId, options);
+        }
 
-        writer.WritePropertyName("dce-endpoint");
-        JsonSerializer.Serialize(writer, value.DceEndpoint, options);
+        if (value?.UserProvidedDceEndpoint is true)
+        {
+            writer.WritePropertyName("dce-endpoint");
+            JsonSerializer.Serialize(writer, value.DceEndpoint, options);
+        }
 
         writer.WriteEndObject();
     }

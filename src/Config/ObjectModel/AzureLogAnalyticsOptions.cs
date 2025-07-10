@@ -31,7 +31,7 @@ public record AzureLogAnalyticsOptions
     /// <summary>
     /// Whether Azure Log Analytics is enabled.
     /// </summary>
-    public bool Enabled { get; init; }
+    public bool? Enabled { get; init; }
 
     /// <summary>
     /// Authentication options for Azure Log Analytics.
@@ -49,11 +49,11 @@ public record AzureLogAnalyticsOptions
     public int? FlushIntervalSeconds { get; init; }
 
     [JsonConstructor]
-    public AzureLogAnalyticsOptions(bool enabled = false, AzureLogAnalyticsAuthOptions? auth = null, string? logType = null, int? flushIntervalSeconds = null)
+    public AzureLogAnalyticsOptions(bool? enabled = null, AzureLogAnalyticsAuthOptions? auth = null, string? logType = null, int? flushIntervalSeconds = null)
     {
         Auth = auth;
 
-        if (enabled)
+        if (enabled is not null)
         {
             Enabled = enabled;
             UserProvidedEnabled = true;

@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+
 namespace Cli.Tests;
 /// <summary>
 /// Test for config file initialization.
@@ -9,7 +12,7 @@ namespace Cli.Tests;
 public class ValidateConfigTests
     : VerifyBase
 {
-    private IFileSystem? _fileSystem;
+    private MockFileSystem? _fileSystem;
     private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
 
     [TestInitialize]
@@ -270,5 +273,42 @@ public class ValidateConfigTests
         Assert.IsTrue(
             condition: loggerOutput.Contains("The config satisfies the schema requirements."),
             message: "RuntimeConfigValidator::ValidateConfigSchema(...) didn't communicate successful config schema validation.");
+    }
+
+    /// <summary>
+    /// Tests that validation fails when AKV options are configured without an endpoint.
+    [TestMethod]
+    public async Task TestValidateAKVOptionsWithoutEndpointFails()
+    {
+        // Arrange
+        _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+        Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+        Mock<RuntimeConfigLoader> mockLoader = new(null, null);
+        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(mockLoader.Object);
+        RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+        Mock<ILoggerFactory> mockLoggerFactory = new();
+        Mock<ILogger<JsonConfigSchemaValidator>> mockLogger = new();
+        mockLoggerFactory
+            .Setup(factory => factory.CreateLogger(typeof(JsonConfigSchemaValidator).FullName!))
+            .Returns(mockLogger.Object);
+
+        // Act: Attempts to add AKV options
+        ConfigureOptions options = new(
+            azureKeyVaultRetryPolicyMaxCount: 1,
+            azureKeyVaultRetryPolicyDelaySeconds: 1,
+            azureKeyVaultRetryPolicyMaxDelaySeconds: 1,
+            azureKeyVaultRetryPolicyMode: AKVRetryPolicyMode.Exponential,
+            azureKeyVaultRetryPolicyNetworkTimeoutSeconds: 1,
+            config: TEST_RUNTIME_CONFIG_FILE
+        );
+
+        bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+        // Assert: Settings are configured, config parses, validation fails.
+        Assert.IsTrue(isSuccess);
+        string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+        JsonSchemaValidationResult result = await validator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, mockLoggerFactory.Object);
+        Assert.IsFalse(result.IsValid);
     }
 }

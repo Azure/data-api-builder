@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Core.Configurations;
-
 namespace Cli.Tests
 {
     /// <summary>
@@ -140,50 +138,6 @@ namespace Cli.Tests
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
-            Assert.IsNotNull(config.AzureKeyVault);
-            Assert.IsNotNull(config.AzureKeyVault.RetryPolicy);
-            Assert.AreEqual("foo", config.AzureKeyVault?.Endpoint);
-            Assert.AreEqual(AKVRetryPolicyMode.Exponential, config.AzureKeyVault?.RetryPolicy.Mode);
-            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.MaxCount);
-            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.DelaySeconds);
-            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.MaxDelaySeconds);
-            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.NetworkTimeoutSeconds);
-        }
-
-        /// <summary>
-        /// Tests that running the "configure --azure-key-vault" commands on a config without AKV properties results
-        /// in a valid config being generated.
-        [TestMethod]
-        public void TestValidateAKVOptionsWithoutEndpoint()
-        {
-            // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
-
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-
-            Mock<ILoggerFactory> mockLoggerFactory = new();
-            Mock<ILogger<JsonConfigSchemaValidator>> mockLogger = new();
-            mockLoggerFactory
-                .Setup(factory => factory.CreateLogger<JsonConfigSchemaValidator>())
-                .Returns(mockLogger.Object);
-
-            // Act: Attempts to add AKV options
-            ConfigureOptions options = new(
-                azureKeyVaultRetryPolicyMaxCount: 1,
-                azureKeyVaultRetryPolicyDelaySeconds: 1,
-                azureKeyVaultRetryPolicyMaxDelaySeconds: 1,
-                azureKeyVaultRetryPolicyMode: AKVRetryPolicyMode.Exponential,
-                azureKeyVaultRetryPolicyNetworkTimeoutSeconds: 1,
-                config: TEST_RUNTIME_CONFIG_FILE
-            );
-
-            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
-
-            // Assert: Validate the AKV options are added.
-            Assert.IsTrue(isSuccess);
-            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
-            //RuntimeConfigValidator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, null);
             Assert.IsNotNull(config.AzureKeyVault);
             Assert.IsNotNull(config.AzureKeyVault.RetryPolicy);
             Assert.AreEqual("foo", config.AzureKeyVault?.Endpoint);

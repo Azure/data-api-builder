@@ -94,9 +94,9 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
                             else
                             {
                                 int parseMaxCount = reader.GetInt32();
-                                if (parseMaxCount <= 0)
+                                if (parseMaxCount < 0)
                                 {
-                                    throw new JsonException($"Invalid value for max-count: {parseMaxCount}. Value must be greater than 0.");
+                                    throw new JsonException($"Invalid value for max-count: {parseMaxCount}. Value must be positive.");
                                 }
 
                                 maxCount = parseMaxCount;

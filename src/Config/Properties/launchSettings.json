@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Azure.DataApiBuilder.Config": {
+      "commandName": "Project",
+      "commandLineArgs": "configure --runtime.rest.enabled true",
+      "workingDirectory": "D:\\repos\\data-api-builder\\src\\Cli",
+      "environmentVariables": {
+        "DAB_ENVIRONMENT": "MSSQL",
+        "foo": "bar"
+      }
+    }
+  }
+}

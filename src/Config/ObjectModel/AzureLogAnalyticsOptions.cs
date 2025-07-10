@@ -14,11 +14,6 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record AzureLogAnalyticsOptions
 {
     /// <summary>
-    /// Default enabled for Azure Log Analytics.
-    /// </summary>
-    public const bool DEFAULT_ENABLED = false;
-
-    /// <summary>
     /// Default log type for Azure Log Analytics.
     /// </summary>
     public const string DEFAULT_LOG_TYPE = "DabLogs";
@@ -31,7 +26,7 @@ public record AzureLogAnalyticsOptions
     /// <summary>
     /// Whether Azure Log Analytics is enabled.
     /// </summary>
-    public bool? Enabled { get; init; }
+    public bool Enabled { get; init; }
 
     /// <summary>
     /// Authentication options for Azure Log Analytics.
@@ -49,18 +44,14 @@ public record AzureLogAnalyticsOptions
     public int? FlushIntervalSeconds { get; init; }
 
     [JsonConstructor]
-    public AzureLogAnalyticsOptions(bool? enabled = null, AzureLogAnalyticsAuthOptions? auth = null, string? logType = null, int? flushIntervalSeconds = null)
+    public AzureLogAnalyticsOptions(bool enabled = false, AzureLogAnalyticsAuthOptions? auth = null, string? logType = null, int? flushIntervalSeconds = null)
     {
         Auth = auth;
 
-        if (enabled is not null)
+        Enabled = enabled;
+        if (enabled)
         {
-            Enabled = enabled;
             UserProvidedEnabled = true;
-        }
-        else
-        {
-            Enabled = DEFAULT_ENABLED;
         }
 
         if (logType is not null)

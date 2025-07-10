@@ -23,7 +23,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     /// <summary>
     /// Defines how DAB reads Azure Log Analytics Auth options and defines which values are
     /// used to instantiate AzureLogAnalyticsAuthOptions.
-    /// Uses default deserialize.
     /// </summary>
     /// <exception cref="JsonException">Thrown when improperly formatted Azure Log Analytics Auth options are provided.</exception>
     public override AzureLogAnalyticsAuthOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

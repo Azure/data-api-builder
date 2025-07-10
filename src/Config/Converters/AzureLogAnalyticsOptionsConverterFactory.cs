@@ -51,7 +51,6 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
         /// <summary>
         /// Defines how DAB reads Azure Log Analytics options and defines which values are
         /// used to instantiate AzureLogAnalyticsOptions.
-        /// Uses default deserialize.
         /// </summary>
         /// <exception cref="JsonException">Thrown when improperly formatted Azure Log Analytics options are provided.</exception>
         public override AzureLogAnalyticsOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

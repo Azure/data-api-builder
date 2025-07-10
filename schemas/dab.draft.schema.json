@@ -490,7 +490,7 @@
             "max-count": {
               "type": "integer",
               "default": 3,
-              "minimum": 1,
+              "minimum": 0,
               "description": "Maximum number of retry attempts"
             },
             "delay-seconds": {

@@ -277,6 +277,7 @@ public class ValidateConfigTests
 
     /// <summary>
     /// Tests that validation fails when AKV options are configured without an endpoint.
+    /// </summary>
     [TestMethod]
     public async Task TestValidateAKVOptionsWithoutEndpointFails()
     {

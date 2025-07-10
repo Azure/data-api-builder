@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <param name="dbQuery">SELECT query to validate expected result.</param>
         /// <param name="errorMessage">Expected error message.</param>
         /// <param name="roleName">Custom client role in whose context this authenticated request will be executed</param>
-        public async Task InsertMutationFailingDatabasePolicy(string dbQuery, string errorMessage, string roleName)
+        public async Task InsertMutationFailingDatabasePolicy(string dbQuery, string errorMessage, string roleName, string overrideGraphQLMutationPayload = null)
         {
             string graphQLMutationName = "createPublisher";
             string graphQLMutation = @"
@@ -116,6 +116,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     }
                 }
             ";
+
+            graphQLMutation = overrideGraphQLMutationPayload ?? graphQLMutation;
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, clientRoleHeader: roleName, isAuthenticated: true);
 

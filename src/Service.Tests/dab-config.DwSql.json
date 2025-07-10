@@ -77,23 +77,6 @@
           ]
         },
         {
-          "role": "database_policy_tester",
-          "actions": [
-            {
-              "action": "update",
-              "policy": {
-                "database": "@item.id ne 1234"
-              }
-            },
-            {
-              "action": "read",
-              "policy": {
-                "database": "@item.id ne 1234 or @item.id gt 1940"
-              }
-            }
-          ]
-        },
-        {
           "role": "policy_tester_01",
           "actions": [
             {
@@ -250,6 +233,29 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            {
+              "action": "create",
+              "policy": {
+                "database": "@item.name ne 'New publisher'"
+              }
+            },
+            {
+              "action": "update",
+              "policy": {
+                "database": "@item.id ne 1234"
+              }
+            },
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.id ne 1234 or @item.id gt 1940"
+              }
             }
           ]
         }

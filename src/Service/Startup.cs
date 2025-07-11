@@ -576,7 +576,7 @@ namespace Azure.DataApiBuilder.Service
             // Consequently, SwaggerUI is not presented in a StaticWebApps (late-bound config) environment.
             if (IsUIEnabled(runtimeConfig, env))
             {
-                app.UseSwaggerUI(c =>
+                app.UseSwaggerUI(c => // CodeQL [SM04686] SwaggerUI is only enabled for Development environment.
                 {
                     c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<RuntimeConfigProvider?>());
                 });

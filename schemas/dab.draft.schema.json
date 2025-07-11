@@ -424,15 +424,15 @@
                   "additionalProperties": false,
                   "properties": {
                     "workspace-id": {
-                      "type": "string",
+                      "type": [ "string", "null" ],
                       "description": "Azure Log Analytics Workspace ID"
                     },
                     "dcr-immutable-id": {
-                      "type": "string",
+                      "type": [ "string", "null" ],
                       "description": "DCR ID for entra-id mode"
                     },
                     "dce-endpoint": {
-                      "type": "string",
+                      "type": [ "string", "null" ],
                       "description": "DCE endpoint for entra-id mode"
                     }
                   }
@@ -456,7 +456,26 @@
                 }
               },
               "then": {
-                "required": [ "auth", "workspace-id", "dcr-immutable-id", "dce-endpoint" ]
+                "properties": {
+                  "auth": {
+                    "properties": {
+                      "workspace-id": {
+                        "type": "string",
+                        "description": "Azure Log Analytics Workspace ID"
+                      },
+                      "dcr-immutable-id": {
+                        "type": "string",
+                        "description": "DCR ID for entra-id mode"
+                      },
+                      "dce-endpoint": {
+                        "type": "string",
+                        "description": "DCE endpoint for entra-id mode"
+                      }
+                    },
+                    "required": [ "workspace-id", "dcr-immutable-id", "dce-endpoint" ]
+                  }
+                },
+                "required": [ "auth" ]
               }
             },
             "log-level": {

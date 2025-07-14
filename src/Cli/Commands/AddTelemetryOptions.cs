@@ -27,6 +27,11 @@ namespace Cli.Commands
             string? openTelemetryHeaders = null,
             OtlpExportProtocol? openTelemetryExportProtocol = null,
             string? openTelemetryServiceName = null,
+            CliBool? fileSinkEnabled = null,
+            string? fileSinkPath = null,
+            RollingIntervalMode? fileSinkRollingInterval = null,
+            int? fileSinkRetainedFileCountLimit = null,
+            int? fileSinkFileSizeLimitBytes = null,
             string? config = null) : base(config)
         {
             AppInsightsConnString = appInsightsConnString;
@@ -36,6 +41,11 @@ namespace Cli.Commands
             OpenTelemetryHeaders = openTelemetryHeaders;
             OpenTelemetryExportProtocol = openTelemetryExportProtocol;
             OpenTelemetryServiceName = openTelemetryServiceName;
+            FileSinkEnabled = fileSinkEnabled;
+            FileSinkPath = fileSinkPath;
+            FileSinkRollingInterval = fileSinkRollingInterval;
+            FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
+            FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
         }
 
         // Connection string for the Application Insights resource to which telemetry data should be sent.
@@ -67,6 +77,26 @@ namespace Cli.Commands
         // Service Name for the Open Telemetry resource to which telemetry data should be sent. This flag is optional and default value is dab.
         [Option("otel-service-name", Default = "dab", Required = false, HelpText = "(Default: dab) Headers for Open Telemetry for telemetry data")]
         public string? OpenTelemetryServiceName { get; }
+
+        // To specify whether File Sink telemetry should be enabled. This flag is optional and default value is false.
+        [Option("file-sink-enabled", Default = CliBool.False, Required = false, HelpText = "Enable/disable file sink telemetry logging. Default: false (boolean).")]
+        public CliBool? FileSinkEnabled { get; }
+
+        // Path for the File Sink resource to which telemetry data should be sent. This flag is optional and default value is '/logs/dab-log.txt'.
+        [Option("file-sink-path", Default = "/logs/dab-log.txt", Required = false, HelpText = "File path for telemetry logs. Default: '/logs/dab-log.txt' (string).")]
+        public string? FileSinkPath { get; }
+
+        // Rolling Interval for the File Sink resource to which telemetry data should be sent. This flag is optional and default value is new interval per Day.
+        [Option("file-sink-rolling-interval", Default = RollingIntervalMode.Day, Required = false, HelpText = "Rolling interval for log files. Default: Day. Allowed values: Hour, Day, Week.")]
+        public RollingIntervalMode? FileSinkRollingInterval { get; }
+
+        // Retained File Count Limit for the File Sink resource to which telemetry data should be sent. This flag is optional and default value is 1.
+        [Option("file-sink-retained-file-count-limit", Default = 1, Required = false, HelpText = "Maximum number of retained log files. Default: 1 (integer, minimum: 1).")]
+        public int? FileSinkRetainedFileCountLimit { get; }
+
+        // File Size Limit Bytes for the File Sink resource to which telemetry data should be sent. This flag is optional and default value is 1048576.
+        [Option("file-sink-file-size-limit-bytes", Default = 1048576, Required = false, HelpText = "Maximum file size in bytes before rolling. Default: 1048576 (integer, minimum: 1).")]
+        public int? FileSinkFileSizeLimitBytes { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

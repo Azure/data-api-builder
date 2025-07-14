@@ -467,6 +467,54 @@
         }
       }
     },
+    "azure-key-vault": {
+      "type": "object",
+      "description": "Azure Key Vault configuration for storing secrets",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "Azure Key Vault endpoint URL"
+        },
+        "retry-policy": {
+          "type": "object",
+          "description": "Retry policy configuration for Azure Key Vault operations",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["fixed", "exponential"],
+              "default": "exponential",
+              "description": "Retry mode: fixed or exponential backoff"
+            },
+            "max-count": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 0,
+              "description": "Maximum number of retry attempts"
+            },
+            "delay-seconds": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1,
+              "description": "Initial delay between retries in seconds"
+            },
+            "max-delay-seconds": {
+              "type": "integer",
+              "default": 60,
+              "minimum": 1,
+              "description": "Maximum delay between retries in seconds (for exponential mode)"
+            },
+            "network-timeout-seconds": {
+              "type": "integer",
+              "default": 60,
+              "minimum": 1,
+              "description": "Network timeout for requests in seconds"
+            }
+          }
+        }
+      }
+    },
     "entities": {
       "type": "object",
       "description": "Entities that will be exposed via REST and/or GraphQL",
@@ -876,6 +924,16 @@
           },
           "required": ["source", "permissions"]
         }
+      }
+    }
+  },
+  "if": {
+    "required": ["azure-key-vault"]
+  },
+  "then": {
+    "properties": {
+      "azure-key-vault": {
+        "required": ["endpoint"]
       }
     }
   },

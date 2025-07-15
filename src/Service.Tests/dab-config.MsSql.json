@@ -1969,8 +1969,12 @@
         "fungus": {
           "cardinality": "one",
           "target.entity": "Fungus",
-          "source.fields": [ "species" ],
-          "target.fields": [ "habitat" ],
+          "source.fields": [
+            "species"
+          ],
+          "target.fields": [
+            "habitat"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -2048,11 +2052,15 @@
         "spores": "hazards"
       },
       "relationships": {
-        "shrub": {
+        "Shrub": {
           "cardinality": "one",
           "target.entity": "Shrub",
-          "source.fields": [ "habitat" ],
-          "target.fields": [ "species" ],
+          "source.fields": [
+            "habitat"
+          ],
+          "target.fields": [
+            "species"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }

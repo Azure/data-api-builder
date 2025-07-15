@@ -4065,7 +4065,8 @@ type Planet @model(name:""PlanetAlias"") {
             return config;
         }
 
-        #nullable enable
+#nullable enable
+
         /// <summary>
         /// Tests different Azure Log Analytics values to see if they are serialized and deserialized correctly to the Json config
         /// </summary>
@@ -4148,7 +4149,8 @@ type Planet @model(name:""PlanetAlias"") {
                 }
             }
         }
-        #nullable disable
+
+#nullable disable
 
         /// <summary>
         /// Helper method to create RuntimeConfig with specificed LogLevel value

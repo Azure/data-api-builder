@@ -88,8 +88,11 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     {
         writer.WriteStartObject();
 
-        writer.WritePropertyName("workspace-id");
-        JsonSerializer.Serialize(writer, value.WorkspaceId, options);
+        if (value?.UserProvidedWorkspaceId is true)
+        {
+            writer.WritePropertyName("workspace-id");
+            JsonSerializer.Serialize(writer, value.WorkspaceId, options);
+        }
 
         if (value?.UserProvidedDcrImmutableId is true)
         {
@@ -97,8 +100,11 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
             JsonSerializer.Serialize(writer, value.DcrImmutableId, options);
         }
 
-        writer.WritePropertyName("dce-endpoint");
-        JsonSerializer.Serialize(writer, value.DceEndpoint, options);
+        if (value?.UserProvidedDceEndpoint is true)
+        {
+            writer.WritePropertyName("dce-endpoint");
+            JsonSerializer.Serialize(writer, value.DceEndpoint, options);
+        }
 
         writer.WriteEndObject();
     }

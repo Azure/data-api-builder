@@ -135,10 +135,13 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName("enabled");
-            JsonSerializer.Serialize(writer, value.Enabled, options);
+            if (value?.UserProvidedEnabled is true)
+            {
+                writer.WritePropertyName("enabled");
+                JsonSerializer.Serialize(writer, value.Enabled, options);
+            }
 
-            if (value.Auth is not null)
+            if (value?.Auth is not null)
             {
                 AzureLogAnalyticsAuthOptionsConverter authOptionsConverter = options.GetConverter(typeof(AzureLogAnalyticsAuthOptions)) as AzureLogAnalyticsAuthOptionsConverter ??
                                     throw new JsonException("Failed to get azure-log-analytics.auth options converter");
@@ -147,11 +150,17 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                 authOptionsConverter.Write(writer, value.Auth, options);
             }
 
-            writer.WritePropertyName("log-type");
-            JsonSerializer.Serialize(writer, value.LogType, options);
+            if (value?.UserProvidedLogType is true)
+            {
+                writer.WritePropertyName("log-type");
+                JsonSerializer.Serialize(writer, value.LogType, options);
+            }
 
-            writer.WritePropertyName("flush-interval-seconds");
-            JsonSerializer.Serialize(writer, value.FlushIntervalSeconds, options);
+            if (value?.UserProvidedFlushIntervalSeconds is true)
+            {
+                writer.WritePropertyName("flush-interval-seconds");
+                JsonSerializer.Serialize(writer, value.FlushIntervalSeconds, options);
+            }
 
             writer.WriteEndObject();
         }

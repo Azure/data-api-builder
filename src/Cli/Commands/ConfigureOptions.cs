@@ -42,6 +42,12 @@ namespace Cli.Commands
             string? runtimeHostAuthenticationProvider = null,
             string? runtimeHostAuthenticationJwtAudience = null,
             string? runtimeHostAuthenticationJwtIssuer = null,
+            string? azureKeyVaultEndpoint = null,
+            AKVRetryPolicyMode? azureKeyVaultRetryPolicyMode = null,
+            int? azureKeyVaultRetryPolicyMaxCount = null,
+            int? azureKeyVaultRetryPolicyDelaySeconds = null,
+            int? azureKeyVaultRetryPolicyMaxDelaySeconds = null,
+            int? azureKeyVaultRetryPolicyNetworkTimeoutSeconds = null,
             string? config = null)
             : base(config)
         {
@@ -72,6 +78,13 @@ namespace Cli.Commands
             RuntimeHostAuthenticationProvider = runtimeHostAuthenticationProvider;
             RuntimeHostAuthenticationJwtAudience = runtimeHostAuthenticationJwtAudience;
             RuntimeHostAuthenticationJwtIssuer = runtimeHostAuthenticationJwtIssuer;
+            // Azure Key Vault
+            AzureKeyVaultEndpoint = azureKeyVaultEndpoint;
+            AzureKeyVaultRetryPolicyMode = azureKeyVaultRetryPolicyMode;
+            AzureKeyVaultRetryPolicyMaxCount = azureKeyVaultRetryPolicyMaxCount;
+            AzureKeyVaultRetryPolicyDelaySeconds = azureKeyVaultRetryPolicyDelaySeconds;
+            AzureKeyVaultRetryPolicyMaxDelaySeconds = azureKeyVaultRetryPolicyMaxDelaySeconds;
+            AzureKeyVaultRetryPolicyNetworkTimeoutSeconds = azureKeyVaultRetryPolicyNetworkTimeoutSeconds;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -139,6 +152,24 @@ namespace Cli.Commands
 
         [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtIssuer { get; }
+
+        [Option("azure-key-vault.endpoint", Required = false, HelpText = "Configure the Azure Key Vault endpoint URL.")]
+        public string? AzureKeyVaultEndpoint { get; }
+
+        [Option("azure-key-vault.retry-policy.mode", Required = false, HelpText = "Configure the retry policy mode. Allowed values: fixed, exponential. Default: exponential.")]
+        public AKVRetryPolicyMode? AzureKeyVaultRetryPolicyMode { get; }
+
+        [Option("azure-key-vault.retry-policy.max-count", Required = false, HelpText = "Configure the maximum number of retry attempts. Default: 3.")]
+        public int? AzureKeyVaultRetryPolicyMaxCount { get; }
+
+        [Option("azure-key-vault.retry-policy.delay-seconds", Required = false, HelpText = "Configure the initial delay between retries in seconds. Default: 1.")]
+        public int? AzureKeyVaultRetryPolicyDelaySeconds { get; }
+
+        [Option("azure-key-vault.retry-policy.max-delay-seconds", Required = false, HelpText = "Configure the maximum delay between retries in seconds (for exponential mode). Default: 60.")]
+        public int? AzureKeyVaultRetryPolicyMaxDelaySeconds { get; }
+
+        [Option("azure-key-vault.retry-policy.network-timeout-seconds", Required = false, HelpText = "Configure the network timeout for requests in seconds. Default: 60.")]
+        public int? AzureKeyVaultRetryPolicyNetworkTimeoutSeconds { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

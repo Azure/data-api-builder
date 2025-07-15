@@ -4065,10 +4065,10 @@ type Planet @model(name:""PlanetAlias"") {
             return config;
         }
 
+        #nullable enable
         /// <summary>
         /// Tests different Azure Log Analytics values to see if they are serialized and deserialized correctly to the Json config
         /// </summary>
-        #nullable enable
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(true, "WorkspaceId", "DcrImmutableId", "DceEndpoint", "TestDabLog", 1, true, "TestDabLog", 1)]

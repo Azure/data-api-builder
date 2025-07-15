@@ -57,14 +57,18 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
         {
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                AzureLogAnalyticsOptions azureLogAnalyticsOptions = new();
                 AzureLogAnalyticsAuthOptionsConverter authOptionsConverter = new(_replaceEnvVar);
+
+                bool? enabled = null;
+                AzureLogAnalyticsAuthOptions? auth = null;
+                string? logType = null;
+                int? flushIntervalSeconds = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
                     {
-                        break;
+                        return new AzureLogAnalyticsOptions(enabled, auth, logType, flushIntervalSeconds);
                     }
 
                     string? propertyName = reader.GetString();
@@ -73,69 +77,41 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                     switch (propertyName)
                     {
                         case "enabled":
-                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
-                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = reader.GetBoolean() };
-                            }
-                            else if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = false };
-                            }
-                            else
-                            {
-                                throw new JsonException($"Unsupported value entered for the property 'enabled': {reader.TokenType}");
+                                enabled = reader.GetBoolean();
                             }
 
                             break;
 
                         case "auth":
-                            azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Auth = authOptionsConverter.Read(ref reader, typeToConvert, options) };
+                            auth = authOptionsConverter.Read(ref reader, typeToConvert, options);
                             break;
 
                         case "log-type":
-                            if (reader.TokenType is JsonTokenType.String)
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
-                                string? logType = reader.DeserializeString(_replaceEnvVar);
-                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = logType };
-                            }
-                            else if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = AzureLogAnalyticsOptions.DEFAULT_LOG_TYPE };
-                            }
-                            else
-                            {
-                                throw new JsonException($"Unexpected type of value entered for log-type: {reader.TokenType}");
+                                logType = reader.DeserializeString(_replaceEnvVar);
                             }
 
                             break;
 
                         case "flush-interval-seconds":
-                            if (reader.TokenType is JsonTokenType.Number)
+                            if (reader.TokenType is not JsonTokenType.Null)
                             {
-                                int flushIntSec;
                                 try
                                 {
-                                    flushIntSec = reader.GetInt32();
+                                    flushIntervalSeconds = reader.GetInt32();
                                 }
                                 catch (FormatException)
                                 {
                                     throw new JsonException($"The JSON token value is of the incorrect numeric format.");
                                 }
 
-                                if (flushIntSec <= 0)
+                                if (flushIntervalSeconds <= 0)
                                 {
-                                    throw new JsonException($"Invalid flush-interval-seconds: {flushIntSec}. Specify a number > 0.");
+                                    throw new JsonException($"Invalid flush-interval-seconds: {flushIntervalSeconds}. Specify a number > 0.");
                                 }
-
-                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = flushIntSec };
-                            }
-                            else if (reader.TokenType is JsonTokenType.Null)
-                            {
-                                azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = AzureLogAnalyticsOptions.DEFAULT_FLUSH_INTERVAL_SECONDS };
-                            }
-                            else
-                            {
-                                throw new JsonException($"Unsupported value entered for flush-interval-seconds: {reader.TokenType}");
                             }
 
                             break;
@@ -144,8 +120,6 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                             throw new JsonException($"Unexpected property {propertyName}");
                     }
                 }
-
-                return azureLogAnalyticsOptions;
             }
 
             throw new JsonException("Failed to read the Azure Log Analytics Options");
@@ -161,10 +135,13 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName("enabled");
-            JsonSerializer.Serialize(writer, value.Enabled, options);
+            if (value?.UserProvidedEnabled is true)
+            {
+                writer.WritePropertyName("enabled");
+                JsonSerializer.Serialize(writer, value.Enabled, options);
+            }
 
-            if (value.Auth is not null)
+            if (value?.Auth is not null)
             {
                 AzureLogAnalyticsAuthOptionsConverter authOptionsConverter = options.GetConverter(typeof(AzureLogAnalyticsAuthOptions)) as AzureLogAnalyticsAuthOptionsConverter ??
                                     throw new JsonException("Failed to get azure-log-analytics.auth options converter");
@@ -173,11 +150,17 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                 authOptionsConverter.Write(writer, value.Auth, options);
             }
 
-            writer.WritePropertyName("log-type");
-            JsonSerializer.Serialize(writer, value.LogType, options);
+            if (value?.UserProvidedLogType is true)
+            {
+                writer.WritePropertyName("log-type");
+                JsonSerializer.Serialize(writer, value.LogType, options);
+            }
 
-            writer.WritePropertyName("flush-interval-seconds");
-            JsonSerializer.Serialize(writer, value.FlushIntervalSeconds, options);
+            if (value?.UserProvidedFlushIntervalSeconds is true)
+            {
+                writer.WritePropertyName("flush-interval-seconds");
+                JsonSerializer.Serialize(writer, value.FlushIntervalSeconds, options);
+            }
 
             writer.WriteEndObject();
         }

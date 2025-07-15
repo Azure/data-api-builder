@@ -29,13 +29,15 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     {
         if (reader.TokenType is JsonTokenType.StartObject)
         {
-            AzureLogAnalyticsAuthOptions? authOptions = new();
+            string? workspaceId = null;
+            string? dcrImmutableId = null;
+            string? dceEndpoint = null;
 
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    break;
+                    return new AzureLogAnalyticsAuthOptions(workspaceId, dcrImmutableId, dceEndpoint);
                 }
 
                 string? propertyName = reader.GetString();
@@ -44,40 +46,25 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                 switch (propertyName)
                 {
                     case "workspace-id":
-                        if (reader.TokenType is JsonTokenType.String)
+                        if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            string? workspaceId = reader.DeserializeString(_replaceEnvVar);
-                            authOptions = authOptions with { WorkspaceId = workspaceId };
-                        }
-                        else
-                        {
-                            throw new JsonException($"Unexpected type of value entered for workspace-id: {reader.TokenType}");
+                            workspaceId = reader.DeserializeString(_replaceEnvVar);
                         }
 
                         break;
 
                     case "dcr-immutable-id":
-                        if (reader.TokenType is JsonTokenType.String)
+                        if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            string? dcrImmutableId = reader.DeserializeString(_replaceEnvVar);
-                            authOptions = authOptions with { DcrImmutableId = dcrImmutableId };
-                        }
-                        else
-                        {
-                            throw new JsonException($"Unexpected type of value entered for dcr-immutable-id: {reader.TokenType}");
+                            dcrImmutableId = reader.DeserializeString(_replaceEnvVar);
                         }
 
                         break;
 
                     case "dce-endpoint":
-                        if (reader.TokenType is JsonTokenType.String)
+                        if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            string? dceEndpoint = reader.DeserializeString(_replaceEnvVar);
-                            authOptions = authOptions with { DceEndpoint = dceEndpoint };
-                        }
-                        else
-                        {
-                            throw new JsonException($"Unexpected type of value entered for dce-endpoint: {reader.TokenType}");
+                            dceEndpoint = reader.DeserializeString(_replaceEnvVar);
                         }
 
                         break;
@@ -87,7 +74,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                 }
             }
 
-            return authOptions;
         }
 
         throw new JsonException("Failed to read the Azure Log Analytics Auth Options");
@@ -103,14 +89,23 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     {
         writer.WriteStartObject();
 
-        writer.WritePropertyName("workspace-id");
-        JsonSerializer.Serialize(writer, value.WorkspaceId, options);
+        if (value?.UserProvidedWorkspaceId is true)
+        {
+            writer.WritePropertyName("workspace-id");
+            JsonSerializer.Serialize(writer, value.WorkspaceId, options);
+        }
 
-        writer.WritePropertyName("dcr-immutable-id");
-        JsonSerializer.Serialize(writer, value.DcrImmutableId, options);
+        if (value?.UserProvidedDcrImmutableId is true)
+        {
+            writer.WritePropertyName("dcr-immutable-id");
+            JsonSerializer.Serialize(writer, value.DcrImmutableId, options);
+        }
 
-        writer.WritePropertyName("dce-endpoint");
-        JsonSerializer.Serialize(writer, value.DceEndpoint, options);
+        if (value?.UserProvidedDceEndpoint is true)
+        {
+            writer.WritePropertyName("dce-endpoint");
+            JsonSerializer.Serialize(writer, value.DceEndpoint, options);
+        }
 
         writer.WriteEndObject();
     }

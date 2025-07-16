@@ -319,7 +319,8 @@ public class ValidateConfigTests
     public async Task TestValidateAzureLogAnalyticsOptionsWithoutAuthFails()
     {
         // Arrange
-        _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+        string configData = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{AddAzureLogAnalyticsTests.RUNTIME_SECTION_WITH_EMPTY_AUTH_SECTION}}}";
+        _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(configData));
         Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
         Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader);
         RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
@@ -329,20 +330,7 @@ public class ValidateConfigTests
             .Setup(factory => factory.CreateLogger(typeof(JsonConfigSchemaValidator).FullName!))
             .Returns(mockLogger.Object);
 
-        // Act: Attempts to add AKV options
-        ConfigureOptions options = new(
-            azureKeyVaultRetryPolicyMaxCount: 1,
-            azureKeyVaultRetryPolicyDelaySeconds: 1,
-            azureKeyVaultRetryPolicyMaxDelaySeconds: 1,
-            azureKeyVaultRetryPolicyMode: AKVRetryPolicyMode.Exponential,
-            azureKeyVaultRetryPolicyNetworkTimeoutSeconds: 1,
-            config: TEST_RUNTIME_CONFIG_FILE
-        );
-
-        bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
-
         // Assert: Settings are configured, config parses, validation fails.
-        Assert.IsTrue(isSuccess);
         string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
         JsonSchemaValidationResult result = await validator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, mockLoggerFactory.Object);

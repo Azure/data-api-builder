@@ -39,6 +39,7 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
+using HotChocolate.Types;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -4165,6 +4166,13 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
 #nullable disable
+
+        private static void ValidateAzureLogAnalytics()
+        {
+            AzureLogAnalyticsAuthOptions authOptions = new(workspaceId, dcrImmutableId, dceEndpoint);
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, logType, flushIntSec);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithAzureLogAnalytics(azureLogAnalyticsOptions);
+        }
 
         /// <summary>
         /// Helper method to create RuntimeConfig with specificed LogLevel value

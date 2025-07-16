@@ -4087,6 +4087,9 @@ type Planet @model(name:""PlanetAlias"") {
             int expectedFlushIntSec)
         {
             //Check if auth property and its values are expected to exist
+            bool expectedExistEnabled = enabled is not null;
+            bool expectedExistLogType = logType is not null;
+            bool expectedExistFlushIntSec = flushIntSec is not null;
             bool expectedExistWorkspaceId = workspaceId is not null;
             bool expectedExistDcrImmutableId = dcrImmutableId is not null;
             bool expectedExistDceEndpoint = dceEndpoint is not null;
@@ -4112,21 +4115,30 @@ type Planet @model(name:""PlanetAlias"") {
 
                 //Validate azure-log-analytics property exists in runtime
                 JsonElement telemetryElement = runtimeElement.GetProperty("telemetry");
-                bool logLevelPropertyExists = telemetryElement.TryGetProperty("azure-log-analytics", out JsonElement azureLogAnalyticsElement);
-                Assert.AreEqual(expected: true, actual: logLevelPropertyExists);
+                bool azureLogAnalyticsPropertyExists = telemetryElement.TryGetProperty("azure-log-analytics", out JsonElement azureLogAnalyticsElement);
+                Assert.AreEqual(expected: true, actual: azureLogAnalyticsPropertyExists);
 
                 //Validate the values inside the azure-log-analytics properties are of expected value
                 bool enabledExists = azureLogAnalyticsElement.TryGetProperty("enabled", out JsonElement enabledElement);
-                Assert.AreEqual(expected: true, actual: enabledExists);
-                Assert.AreEqual(expectedEnabled, enabledElement.GetBoolean());
+                Assert.AreEqual(expected: expectedExistEnabled, actual: enabledExists);
+                if (enabledExists)
+                {
+                    Assert.AreEqual(expectedEnabled, enabledElement.GetBoolean());
+                }
 
                 bool logTypeExists = azureLogAnalyticsElement.TryGetProperty("log-type", out JsonElement logTypeElement);
-                Assert.AreEqual(expected: true, actual: enabledExists);
-                Assert.AreEqual(expectedLogType, logTypeElement.GetString());
+                Assert.AreEqual(expected: expectedExistLogType, actual: logTypeExists);
+                if (logTypeExists)
+                {
+                    Assert.AreEqual(expectedLogType, logTypeElement.GetString());
+                }
 
                 bool flushIntSecExists = azureLogAnalyticsElement.TryGetProperty("flush-interval-seconds", out JsonElement flushIntSecElement);
-                Assert.AreEqual(expected: true, actual: flushIntSecExists);
-                Assert.AreEqual(expectedFlushIntSec, flushIntSecElement.GetInt32());
+                Assert.AreEqual(expected: expectedExistFlushIntSec, actual: flushIntSecExists);
+                if (flushIntSecExists)
+                {
+                    Assert.AreEqual(expectedFlushIntSec, flushIntSecElement.GetInt32());
+                }
 
                 //Validate auth property exists inside of azure-log-analytics
                 bool authExists = azureLogAnalyticsElement.TryGetProperty("auth", out JsonElement authElement);
@@ -4137,15 +4149,24 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     bool workspaceIdExists = authElement.TryGetProperty("workspace-id", out JsonElement workspaceIdElement);
                     Assert.AreEqual(expectedExistWorkspaceId, workspaceIdExists);
-                    Assert.AreEqual(expected: workspaceId, workspaceIdElement.GetString());
+                    if (workspaceIdExists)
+                    {
+                        Assert.AreEqual(expected: workspaceId, workspaceIdElement.GetString());
+                    }
 
                     bool dcrImmutableIdExists = authElement.TryGetProperty("dcr-immutable-id", out JsonElement dcrImmutableIdElement);
                     Assert.AreEqual(expectedExistDcrImmutableId, dcrImmutableIdExists);
-                    Assert.AreEqual(expected: dcrImmutableId, dcrImmutableIdElement.GetString());
+                    if (dcrImmutableIdExists)
+                    {
+                        Assert.AreEqual(expected: dcrImmutableId, dcrImmutableIdElement.GetString());
+                    }
 
-                    bool dceEndpointExists = authElement.TryGetProperty("workspace-id", out JsonElement dceEndpointElement);
+                    bool dceEndpointExists = authElement.TryGetProperty("dce-endpoint", out JsonElement dceEndpointElement);
                     Assert.AreEqual(expectedExistDceEndpoint, dceEndpointExists);
-                    Assert.AreEqual(expected: dceEndpoint, dceEndpointElement.GetString());
+                    if (dceEndpointExists)
+                    {
+                        Assert.AreEqual(expected: dceEndpoint, dceEndpointElement.GetString());
+                    }
                 }
             }
         }

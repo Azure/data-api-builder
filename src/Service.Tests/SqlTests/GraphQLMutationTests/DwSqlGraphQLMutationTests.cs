@@ -120,7 +120,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            string graphQLMutation = @"
+            string graphQLMutationName = "createPublisher";
+            string graphQLMutationPayload = @"
                 mutation {
                     createPublisher(item: { id: 1 name: ""New publisher"" }) {
                         result
@@ -132,7 +133,40 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 dbQuery: msSqlQuery,
                 errorMessage: errorMessage,
                 roleName: "database_policy_tester",
-                overrideGraphQLMutationPayload: graphQLMutation);
+                graphQLMutationName: graphQLMutationName,
+                graphQLMutationPayload: graphQLMutationPayload);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new Publisher with name = 'Not New publisher'
+        /// <code>Check: </code> Mutation succeeds because the database policy (@item.name ne 'New publisher') is passed
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithDatabasePolicy()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS [count]
+                   FROM [publishers]
+                WHERE [name] = 'Not New publisher'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string graphqlMutationName = "createPublisher";
+            string graphQLMutationPayload = @"
+                mutation {
+                    createPublisher(item: { id: 1 name: ""Not New publisher"" }) {
+                        result
+                    }
+                }
+            ";
+
+            await InsertMutationWithDatabasePolicy(
+                dbQuery: msSqlQuery,
+                roleName: "database_policy_tester",
+                graphQLMutationName: graphqlMutationName,
+                graphQLMutationPayload: graphQLMutationPayload);
         }
 
         /// <summary>

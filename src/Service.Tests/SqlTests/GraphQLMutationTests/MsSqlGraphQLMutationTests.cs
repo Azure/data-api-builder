@@ -96,10 +96,55 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
+            string graphqlMutationName = "createPublisher";
+            string graphQLMutationPayload = @"
+                mutation {
+                    createPublisher(item: { name: ""New publisher"" }) {
+                        id
+                        name
+                    }
+                }
+            ";
+
             await InsertMutationFailingDatabasePolicy(
                 dbQuery: msSqlQuery,
                 errorMessage: errorMessage,
-                roleName: "database_policy_tester");
+                roleName: "database_policy_tester",
+                graphQLMutationName: graphqlMutationName,
+                graphQLMutationPayload: graphQLMutationPayload);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new Publisher with name = 'Not New publisher'
+        /// <code>Check: </code> Mutation succeeds because the database policy (@item.name ne 'New publisher') is passed
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithDatabasePolicy()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS [count]
+                   FROM [publishers]
+                WHERE [name] = 'Not New publisher'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string graphqlMutationName = "createPublisher";
+            string graphQLMutationPayload = @"
+                mutation {
+                    createPublisher(item: { name: ""Not New publisher"" }) {
+                        id
+                        name
+                    }
+                }
+            ";
+
+            await InsertMutationWithDatabasePolicy(
+                dbQuery: msSqlQuery,
+                roleName: "database_policy_tester",
+                graphQLMutationName: graphqlMutationName,
+                graphQLMutationPayload: graphQLMutationPayload);
         }
 
         /// <summary>

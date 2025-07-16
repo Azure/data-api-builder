@@ -42,7 +42,8 @@ public class RuntimeConfigValidator : IConfigValidator
     // of the form @claims.*** delimited by space character,end of the line or end of the string.
     private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
-    private static readonly List<DatabaseType> _databaseTypesSupportingCreatePolicy =
+    // List of databases that support row level policy with create action
+    private static readonly HashSet<DatabaseType> _databaseTypesSupportingCreatePolicy =
     [
         DatabaseType.MSSQL,
         DatabaseType.DWSQL

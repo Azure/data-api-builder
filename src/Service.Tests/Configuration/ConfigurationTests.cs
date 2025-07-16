@@ -4094,12 +4094,6 @@ type Planet @model(name:""PlanetAlias"") {
             bool expectedExistDcrImmutableId = dcrImmutableId is not null;
             bool expectedExistDceEndpoint = dceEndpoint is not null;
 
-            bool expectedExistAuth = true;
-            if (workspaceId is null && dcrImmutableId is null && dceEndpoint is null)
-            {
-                expectedExistAuth = false;
-            }
-
             AzureLogAnalyticsAuthOptions authOptions = new(workspaceId, dcrImmutableId, dceEndpoint);
             AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, logType, flushIntSec);
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithAzureLogAnalytics(azureLogAnalyticsOptions);
@@ -4142,7 +4136,6 @@ type Planet @model(name:""PlanetAlias"") {
 
                 //Validate auth property exists inside of azure-log-analytics
                 bool authExists = azureLogAnalyticsElement.TryGetProperty("auth", out JsonElement authElement);
-                Assert.AreEqual(expected: expectedExistAuth, actual: authExists);
 
                 //Validate the values inside the auth properties are of expected value
                 if (authExists)

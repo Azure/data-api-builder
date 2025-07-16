@@ -57,6 +57,7 @@ update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_0
 update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
 update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
 update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
+update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:create" --policy-database "@item.name ne 'New publisher'"
 update Stock --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
 update Stock --config "dab-config.DwSql.json" --rest commodities --graphql true
 update Stock --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read"

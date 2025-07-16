@@ -42,6 +42,13 @@ public class RuntimeConfigValidator : IConfigValidator
     // of the form @claims.*** delimited by space character,end of the line or end of the string.
     private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
+    // List of databases that support row level policy with create action
+    private static readonly HashSet<DatabaseType> _databaseTypesSupportingCreatePolicy =
+    [
+        DatabaseType.MSSQL,
+        DatabaseType.DWSQL
+    ];
+
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
 
@@ -829,7 +836,8 @@ public class RuntimeConfigValidator : IConfigValidator
 
                         DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
 
-                        if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        // Create operation does not support defining a database policy for certain database types.
+                        if (!_databaseTypesSupportingCreatePolicy.Contains(entityDataSource.DatabaseType) && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +

@@ -410,6 +410,74 @@
               },
               "required": ["endpoint"]
             },
+            "azure-log-analytics": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling Azure Log Analytics.",
+                  "default": false
+                },
+                "auth": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "workspace-id": {
+                      "type": [ "string", "null" ],
+                      "description": "Azure Log Analytics Workspace ID"
+                    },
+                    "dcr-immutable-id": {
+                      "type": [ "string", "null" ],
+                      "description": "DCR ID for entra-id mode"
+                    },
+                    "dce-endpoint": {
+                      "type": [ "string", "null" ],
+                      "description": "DCE endpoint for entra-id mode"
+                    }
+                  }
+                },
+                "log-type": {
+                  "type": "string",
+                  "description": "Custom log table name in Log Analytics",
+                  "default": "DabLogs"
+                },
+                "flush-interval-seconds": {
+                  "type": "integer",
+                  "description": "Interval between log batch pushes (in seconds)",
+                  "default": 5
+                }
+              },
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "auth": {
+                    "properties": {
+                      "workspace-id": {
+                        "type": "string",
+                        "description": "Azure Log Analytics Workspace ID"
+                      },
+                      "dcr-immutable-id": {
+                        "type": "string",
+                        "description": "DCR ID for entra-id mode"
+                      },
+                      "dce-endpoint": {
+                        "type": "string",
+                        "description": "DCE endpoint for entra-id mode"
+                      }
+                    },
+                    "required": [ "workspace-id", "dcr-immutable-id", "dce-endpoint" ]
+                  }
+                },
+                "required": [ "auth" ]
+              }
+            },
             "log-level": {
               "type": "object",
               "description": "Global configuration of log level, defines logging severity levels for specific classes, when 'null' it will set logging level based on 'host: mode' property",

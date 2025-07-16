@@ -49,18 +49,18 @@ public record AzureLogAnalyticsOptions
     public int? FlushIntervalSeconds { get; init; }
 
     [JsonConstructor]
-    public AzureLogAnalyticsOptions(bool? enabled = null, AzureLogAnalyticsAuthOptions? auth = null, string? logType = null, int? flushIntervalSeconds = null)
+    public AzureLogAnalyticsOptions(bool? Enabled = null, AzureLogAnalyticsAuthOptions? Auth = null, string? LogType = null, int? FlushIntervalSeconds = null)
     {
         this.Auth = Auth;
 
-        if (enabled is not null)
+        if (Enabled is not null)
         {
-            Enabled = (bool)enabled;
+            this.Enabled = (bool)Enabled;
             UserProvidedEnabled = true;
         }
         else
         {
-            Enabled = DEFAULT_ENABLED;
+            this.Enabled = DEFAULT_ENABLED;
         }
 
         if (LogType is not null)

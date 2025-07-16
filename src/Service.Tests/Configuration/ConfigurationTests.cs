@@ -4065,6 +4065,132 @@ type Planet @model(name:""PlanetAlias"") {
             return config;
         }
 
+#nullable enable
+
+        /// <summary>
+        /// Tests different Azure Log Analytics values to see if they are serialized and deserialized correctly to the Json config
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(true, "WorkspaceId", "DcrImmutableId", "DceEndpoint", "TestDabLog", 1, true, "TestDabLog", 1)]
+        [DataRow(false, "", null, "", "", 10, false, "", 10)]
+        [DataRow(null, null, null, null, null, null, false, "DabLogs", 5)]
+        public void AzureLogAnalyticsSerialization(
+            bool? enabled,
+            string? workspaceId,
+            string? dcrImmutableId,
+            string? dceEndpoint,
+            string? logType,
+            int? flushIntSec,
+            bool expectedEnabled,
+            string expectedLogType,
+            int expectedFlushIntSec)
+        {
+            //Check if auth property and its values are expected to exist
+            bool expectedExistEnabled = enabled is not null;
+            bool expectedExistLogType = logType is not null;
+            bool expectedExistFlushIntSec = flushIntSec is not null;
+            bool expectedExistWorkspaceId = workspaceId is not null;
+            bool expectedExistDcrImmutableId = dcrImmutableId is not null;
+            bool expectedExistDceEndpoint = dceEndpoint is not null;
+
+            AzureLogAnalyticsAuthOptions authOptions = new(workspaceId, dcrImmutableId, dceEndpoint);
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, logType, flushIntSec);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithAzureLogAnalytics(azureLogAnalyticsOptions);
+            string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig? deserializedRuntimeConfig));
+
+            string serializedConfig = deserializedRuntimeConfig.ToJson();
+
+            using (JsonDocument parsedDocument = JsonDocument.Parse(serializedConfig))
+            {
+                JsonElement root = parsedDocument.RootElement;
+                JsonElement runtimeElement = root.GetProperty("runtime");
+
+                //Validate azure-log-analytics property exists in runtime
+                JsonElement telemetryElement = runtimeElement.GetProperty("telemetry");
+                bool azureLogAnalyticsPropertyExists = telemetryElement.TryGetProperty("azure-log-analytics", out JsonElement azureLogAnalyticsElement);
+                Assert.AreEqual(expected: true, actual: azureLogAnalyticsPropertyExists);
+
+                //Validate the values inside the azure-log-analytics properties are of expected value
+                bool enabledExists = azureLogAnalyticsElement.TryGetProperty("enabled", out JsonElement enabledElement);
+                Assert.AreEqual(expected: expectedExistEnabled, actual: enabledExists);
+                if (enabledExists)
+                {
+                    Assert.AreEqual(expectedEnabled, enabledElement.GetBoolean());
+                }
+
+                bool logTypeExists = azureLogAnalyticsElement.TryGetProperty("log-type", out JsonElement logTypeElement);
+                Assert.AreEqual(expected: expectedExistLogType, actual: logTypeExists);
+                if (logTypeExists)
+                {
+                    Assert.AreEqual(expectedLogType, logTypeElement.GetString());
+                }
+
+                bool flushIntSecExists = azureLogAnalyticsElement.TryGetProperty("flush-interval-seconds", out JsonElement flushIntSecElement);
+                Assert.AreEqual(expected: expectedExistFlushIntSec, actual: flushIntSecExists);
+                if (flushIntSecExists)
+                {
+                    Assert.AreEqual(expectedFlushIntSec, flushIntSecElement.GetInt32());
+                }
+
+                //Validate auth property exists inside of azure-log-analytics
+                bool authExists = azureLogAnalyticsElement.TryGetProperty("auth", out JsonElement authElement);
+
+                //Validate the values inside the auth properties are of expected value
+                if (authExists)
+                {
+                    bool workspaceIdExists = authElement.TryGetProperty("workspace-id", out JsonElement workspaceIdElement);
+                    Assert.AreEqual(expectedExistWorkspaceId, workspaceIdExists);
+                    if (workspaceIdExists)
+                    {
+                        Assert.AreEqual(expected: workspaceId, workspaceIdElement.GetString());
+                    }
+
+                    bool dcrImmutableIdExists = authElement.TryGetProperty("dcr-immutable-id", out JsonElement dcrImmutableIdElement);
+                    Assert.AreEqual(expectedExistDcrImmutableId, dcrImmutableIdExists);
+                    if (dcrImmutableIdExists)
+                    {
+                        Assert.AreEqual(expected: dcrImmutableId, dcrImmutableIdElement.GetString());
+                    }
+
+                    bool dceEndpointExists = authElement.TryGetProperty("dce-endpoint", out JsonElement dceEndpointElement);
+                    Assert.AreEqual(expectedExistDceEndpoint, dceEndpointExists);
+                    if (dceEndpointExists)
+                    {
+                        Assert.AreEqual(expected: dceEndpoint, dceEndpointElement.GetString());
+                    }
+                }
+            }
+        }
+
+#nullable disable
+
+        /// <summary>
+        /// Helper method to create RuntimeConfig with specificed LogLevel value
+        /// </summary>
+        private static RuntimeConfig InitializeRuntimeWithAzureLogAnalytics(AzureLogAnalyticsOptions azureLogAnalyticsOptions)
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig);
+
+            RuntimeConfig config = new(
+                Schema: baseConfig.Schema,
+                DataSource: baseConfig.DataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null),
+                    Telemetry: new(AzureLogAnalytics: azureLogAnalyticsOptions)
+                ),
+                Entities: baseConfig.Entities
+            );
+
+            return config;
+        }
+
         /// <summary>
         /// Validates the OpenAPI documentor behavior when enabling and disabling the global REST endpoint
         /// for the DAB engine.

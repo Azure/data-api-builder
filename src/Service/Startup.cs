@@ -285,7 +285,9 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureHttpClient((serviceProvider, client) =>
                 {
                     int port = PortResolutionHelper.ResolveInternalPort();
-                    client.BaseAddress = new Uri($"http://localhost:{port}");
+                    string baseUri = $"http://localhost:{port}";
+                    client.BaseAddress = new Uri(baseUri);
+                    _logger.LogInformation($"Configured HealthCheck HttpClient BaseAddress as: {baseUri}");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.Timeout = TimeSpan.FromSeconds(200);

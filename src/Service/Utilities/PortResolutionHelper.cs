@@ -32,46 +32,48 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 {
                     string trimmedPart = part.Trim();
 
-                    // Prefer HTTP
-                    if (trimmedPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    // Try to parse as a valid URI first
+                    if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) &&
+                        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
                     {
-                        int colonIndex = trimmedPart.LastIndexOf(':');
-
-                        if (colonIndex > 0)
-                        {
-                            string portString = trimmedPart.Substring(colonIndex + 1);
-
-                            if (int.TryParse(portString, out int port) && port > 0)
-                            {
-                                return port;
-                            }
-                        }
-
-                        if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) && uri.Scheme == "http")
+                        if (uri.Scheme == Uri.UriSchemeHttp)
                         {
                             return uri.Port;
                         }
-                    }
-
-                    // Save HTTPS as fallback
-                    else if (trimmedPart.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                    {
-                        int colonIndex = trimmedPart.LastIndexOf(':');
-
-                        if (colonIndex > 0)
-                        {
-                            string portString = trimmedPart.Substring(colonIndex + 1);
-
-                            if (int.TryParse(portString, out int port) && port > 0)
-                            {
-                                httpsPort ??= port;
-                            }
-                        }
-
-                        if (Uri.TryCreate(trimmedPart, UriKind.Absolute, out Uri? uri) && uri.Scheme == "https")
+                        else if (uri.Scheme == Uri.UriSchemeHttps)
                         {
                             httpsPort ??= uri.Port;
                         }
+
+                        continue;
+                    }
+
+                    // Handle known wildcard patterns (http/https with + or * as host)
+                    // Example: http://+:1234 or http://*:1234 or https://+:1234 or https://*:1234
+                    if (trimmedPart.StartsWith("http://+:", StringComparison.OrdinalIgnoreCase) ||
+                        trimmedPart.StartsWith("http://*:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string portString = trimmedPart.Substring(trimmedPart.LastIndexOf(':') + 1);
+
+                        if (int.TryParse(portString, out int port) && port > 0)
+                        {
+                            return port;
+                        }
+
+                        continue;
+                    }
+
+                    if (trimmedPart.StartsWith("https://+:", StringComparison.OrdinalIgnoreCase) ||
+                        trimmedPart.StartsWith("https://*:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string portString = trimmedPart.Substring(trimmedPart.LastIndexOf(':') + 1);
+
+                        if (int.TryParse(portString, out int port) && port > 0)
+                        {
+                            httpsPort ??= port;
+                        }
+
+                        continue;
                     }
                 }
             }
@@ -80,6 +82,24 @@ namespace Azure.DataApiBuilder.Service.Utilities
             if (httpsPort.HasValue)
             {
                 return httpsPort.Value;
+            }
+
+            // Check ASPNETCORE_HTTP_PORTS if ASPNETCORE_URLS is not set
+            string? httpPorts = Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS");
+
+            if (!string.IsNullOrWhiteSpace(httpPorts))
+            {
+                string[] portParts = httpPorts.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string portPart in portParts)
+                {
+                    string trimmedPort = portPart.Trim();
+
+                    if (int.TryParse(trimmedPort, out int port) && port > 0)
+                    {
+                        return port;
+                    }
+                }
             }
 
             // Configurable fallback port

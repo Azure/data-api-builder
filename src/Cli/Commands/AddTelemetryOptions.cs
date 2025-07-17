@@ -89,7 +89,7 @@ namespace Cli.Commands
         public string? AzureLogAnalyticsLogType { get; }
 
         // Specify the flush interval in seconds for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-flush-interval-seconds", Required = false, HelpText = "Flush Interval Seconds for Azure Log Analytics for specifying time it takes to send telemtry data")]
+        [Option("azure-log-analytics-flush-interval-seconds", Required = false, HelpText = "Flush Interval Seconds for Azure Log Analytics for specifying time it takes to send telemetry data")]
         public int? AzureLogAnalyticsFlushIntervalSeconds { get; }
 
         // Specify the Workspace ID for Azure Log Analytics resource to which telemetry data should be sent.

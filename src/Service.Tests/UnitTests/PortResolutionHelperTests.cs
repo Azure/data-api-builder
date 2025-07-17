@@ -44,21 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("https://localhost:5001;https://localhost:5002", 5001)]
         public void ResolveInternalPortResolvesCorrectPortPositiveTest(string aspnetcoreUrls, int expectedPort)
         {
-            string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-            string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
-            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", aspnetcoreUrls);
-            Environment.SetEnvironmentVariable("DEFAULT_PORT", null);
-
-            try
-            {
-                int port = PortResolutionHelper.ResolveInternalPort();
-                Assert.AreEqual(expectedPort, port);
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("ASPNETCORE_URLS", originalUrls);
-                Environment.SetEnvironmentVariable("DEFAULT_PORT", originalDefaultPort);
-            }
+            TestPortResolution(aspnetcoreUrls, null, expectedPort);
         }
 
         /// <summary>
@@ -71,21 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void ResolveInternalPortUsesDefaultPortEnvVarTest()
         {
-            string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-            string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
-            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", null);
-            Environment.SetEnvironmentVariable("DEFAULT_PORT", "4321");
-
-            try
-            {
-                int port = PortResolutionHelper.ResolveInternalPort();
-                Assert.AreEqual(4321, port);
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("ASPNETCORE_URLS", originalUrls);
-                Environment.SetEnvironmentVariable("DEFAULT_PORT", originalDefaultPort);
-            }
+            TestPortResolution(null, "4321", 4321);
         }
 
         /// <summary>
@@ -99,21 +71,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void ResolveInternalPortUsesDefaultPortWhenUrlsAreInvalidTest()
         {
-            string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
-            string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
-            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", "invalid-url;another-invalid");
-            Environment.SetEnvironmentVariable("DEFAULT_PORT", "4321");
+            TestPortResolution("invalid-url;another-invalid", "4321", 4321);
+        }
 
-            try
-            {
-                int port = PortResolutionHelper.ResolveInternalPort();
-                Assert.AreEqual(4321, port);
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("ASPNETCORE_URLS", originalUrls);
-                Environment.SetEnvironmentVariable("DEFAULT_PORT", originalDefaultPort);
-            }
+        /// <summary>
+        /// Tests that the <see cref="PortResolutionHelper.ResolveInternalPort"/> method falls back to the default port
+        /// when the <c>DEFAULT_PORT</c> environment variable is set to a non-numeric value.
+        /// </summary>
+        /// <remarks>This test sets the <c>DEFAULT_PORT</c> environment variable to an invalid value and
+        /// verifies that <see cref="PortResolutionHelper.ResolveInternalPort"/> correctly falls back to using
+        /// the default port of 5000 when the <c>DEFAULT_PORT</c> cannot be parsed as a valid integer.</remarks>
+        [TestMethod]
+        public void ResolveInternalPortFallsBackToDefaultWhenDefaultPortIsInvalidTest()
+        {
+            TestPortResolution(null, "abc", 5000);
         }
 
         /// <summary>
@@ -122,21 +93,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="aspnetcoreUrls">A string representing the ASP.NET Core URLs to be tested.</param>
         /// <param name="expectedPort">The expected port number that should be resolved.</param>
         [DataTestMethod]
-        [DataRow("http://localhost:5000 https://localhost:443", 443)] // space delimiter: fallback to first HTTPS port
-        [DataRow("http://localhost:5000|https://localhost:443", 443)] // pipe delimiter: fallback to first HTTPS port
+        [DataRow("http://localhost:5000 https://localhost:443", 443)] // space delimiter: 443 is returned due to LastIndexOf(':') parsing logic
+        [DataRow("http://localhost:5000|https://localhost:443", 443)] // pipe delimiter: 443 is returned due to LastIndexOf(':') parsing logic
         [DataRow("localhost:5000", 5000)] // missing scheme: fallback to default
-        [DataRow("http://", 5000)] // incomplete URL: fallback to default
+        [DataRow("http://:", 5000)] // incomplete URL: fallback to default
         [DataRow("ftp://localhost:21", 5000)] // unsupported scheme: fallback to default
         [DataRow("http://unix:/var/run/app.sock", 80)] // unix socket: defaults to 80 (no port specified)
         [DataRow("http://unix:var/run/app.sock", 5000)] // malformed unix socket: fallback to default
         [DataRow("http://unix:", 80)] // incomplete unix socket: defaults to 80
         public void ResolveInternalPortResolvesCorrectPortNegativeTest(string aspnetcoreUrls, int expectedPort)
         {
+            TestPortResolution(aspnetcoreUrls, null, expectedPort);
+        }
+
+        /// <summary>
+        /// Helper method to test port resolution with environment variables.
+        /// </summary>
+        /// <param name="aspnetcoreUrls">The ASPNETCORE_URLS environment variable value to set.</param>
+        /// <param name="defaultPort">The DEFAULT_PORT environment variable value to set.</param>
+        /// <param name="expectedPort">The expected port number that should be resolved.</param>
+        private static void TestPortResolution(string aspnetcoreUrls, string defaultPort, int expectedPort)
+        {
             string originalUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
             string originalDefaultPort = Environment.GetEnvironmentVariable("DEFAULT_PORT");
             Environment.SetEnvironmentVariable("ASPNETCORE_URLS", aspnetcoreUrls);
-            Environment.SetEnvironmentVariable("DEFAULT_PORT", null);
-
+            Environment.SetEnvironmentVariable("DEFAULT_PORT", defaultPort);
             try
             {
                 int port = PortResolutionHelper.ResolveInternalPort();

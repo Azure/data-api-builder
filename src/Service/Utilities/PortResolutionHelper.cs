@@ -82,6 +82,21 @@ namespace Azure.DataApiBuilder.Service.Utilities
                 return httpsPort.Value;
             }
 
+            // Check ASPNETCORE_HTTP_PORTS if ASPNETCORE_URLS is not set
+            string? httpPorts = Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS");
+            if (!string.IsNullOrWhiteSpace(httpPorts))
+            {
+                string[] portParts = httpPorts.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string portPart in portParts)
+                {
+                    string trimmedPort = portPart.Trim();
+                    if (int.TryParse(trimmedPort, out int port) && port > 0)
+                    {
+                        return port;
+                    }
+                }
+            }
+
             // Configurable fallback port
             string? defaultPortEnv = Environment.GetEnvironmentVariable("DEFAULT_PORT");
 

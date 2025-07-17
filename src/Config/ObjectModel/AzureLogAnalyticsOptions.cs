@@ -70,7 +70,7 @@ public record AzureLogAnalyticsOptions
         }
         else
         {
-            this.LogType = LogType;
+            this.LogType = DEFAULT_LOG_TYPE;
         }
 
         if (FlushIntervalSeconds is not null)
@@ -80,7 +80,7 @@ public record AzureLogAnalyticsOptions
         }
         else
         {
-            this.FlushIntervalSeconds = FlushIntervalSeconds;
+            this.FlushIntervalSeconds = DEFAULT_FLUSH_INTERVAL_SECONDS;
         }
     }
 

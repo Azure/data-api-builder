@@ -93,8 +93,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="aspnetcoreUrls">A string representing the ASP.NET Core URLs to be tested.</param>
         /// <param name="expectedPort">The expected port number that should be resolved.</param>
         [DataTestMethod]
-        [DataRow("http://localhost:5000 https://localhost:443", 443)] // space delimiter: 443 is returned due to LastIndexOf(':') parsing logic
-        [DataRow("http://localhost:5000|https://localhost:443", 443)] // pipe delimiter: 443 is returned due to LastIndexOf(':') parsing logic
+        [DataRow("http://localhost:5000 https://localhost:443", 5000)] // space invalid, falls back to default
+        [DataRow("http://localhost:5000|https://localhost:443", 5000)] // invalid delimiter, falls back to default
         [DataRow("localhost:5000", 5000)] // missing scheme: fallback to default
         [DataRow("http://:", 5000)] // incomplete URL: fallback to default
         [DataRow("ftp://localhost:21", 5000)] // unsupported scheme: fallback to default

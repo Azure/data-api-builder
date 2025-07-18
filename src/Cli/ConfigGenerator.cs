@@ -1961,6 +1961,33 @@ namespace Cli
                 return false;
             }
 
+            if (options.AzureLogAnalyticsEnabled is CliBool.True)
+            {
+                bool returnError = false;
+                if (string.IsNullOrWhiteSpace(options.AzureLogAnalyticsWorkspaceId))
+                {
+                    _logger.LogError("Invalid Azure Log Analytics workspace-id provided");
+                    returnError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(options.AzureLogAnalyticsDcrImmutableId))
+                {
+                    _logger.LogError("Invalid Azure Log Analytics dcr-immutable-id provided");
+                    returnError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(options.AzureLogAnalyticsDceEndpoint))
+                {
+                    _logger.LogError("Invalid Azure Log Analytics dce-endpoint provided");
+                    returnError = true;
+                }
+
+                if (returnError)
+                {
+                    return false;
+                }
+            }
+
             ApplicationInsightsOptions applicationInsightsOptions = new(
                 Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
                 ConnectionString: options.AppInsightsConnString
@@ -1974,22 +2001,23 @@ namespace Cli
                 ServiceName: options.OpenTelemetryServiceName
             );
 
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(
+                Enabled: options.AzureLogAnalyticsEnabled is CliBool.True ? true : false,
+                Auth: new(
+                    WorkspaceId: options.AzureLogAnalyticsWorkspaceId,
+                    DcrImmutableId: options.AzureLogAnalyticsDcrImmutableId,
+                    DceEndpoint: options.AzureLogAnalyticsDceEndpoint),
+                LogType: options.AzureLogAnalyticsLogType,
+                FlushIntervalSeconds: options.AzureLogAnalyticsFlushIntervalSeconds
+            );
+
             runtimeConfig = runtimeConfig with
             {
                 Runtime = runtimeConfig.Runtime with
                 {
                     Telemetry = runtimeConfig.Runtime.Telemetry is null
-                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions)
-                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions }
-                }
-            };
-            runtimeConfig = runtimeConfig with
-            {
-                Runtime = runtimeConfig.Runtime with
-                {
-                    Telemetry = runtimeConfig.Runtime.Telemetry is null
-                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
-                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions, OpenTelemetry: openTelemetryOptions, AzureLogAnalytics: azureLogAnalyticsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions, OpenTelemetry = openTelemetryOptions, AzureLogAnalytics = azureLogAnalyticsOptions }
                 }
             };
 

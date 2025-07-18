@@ -311,4 +311,29 @@ public class ValidateConfigTests
         JsonSchemaValidationResult result = await validator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, mockLoggerFactory.Object);
         Assert.IsFalse(result.IsValid);
     }
+
+    /// <summary>
+    /// Tests that validation fails when Azure Log Analytics options are configured without the Auth options.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateAzureLogAnalyticsOptionsWithoutAuthFails()
+    {
+        // Arrange
+        string configData = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{AddAzureLogAnalyticsTests.RUNTIME_SECTION_WITH_EMPTY_AUTH_SECTION}}}";
+        _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(configData));
+        Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader);
+        RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+        Mock<ILoggerFactory> mockLoggerFactory = new();
+        Mock<ILogger<JsonConfigSchemaValidator>> mockLogger = new();
+        mockLoggerFactory
+            .Setup(factory => factory.CreateLogger(typeof(JsonConfigSchemaValidator).FullName!))
+            .Returns(mockLogger.Object);
+
+        // Assert: Settings are configured, config parses, validation fails.
+        string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+        JsonSchemaValidationResult result = await validator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, mockLoggerFactory.Object);
+        Assert.IsFalse(result.IsValid);
+    }
 }

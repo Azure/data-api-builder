@@ -27,23 +27,23 @@ public record AzureLogAnalyticsAuthOptions
     public string? DceEndpoint { get; init; }
 
     [JsonConstructor]
-    public AzureLogAnalyticsAuthOptions(string? WorkspaceId = null, string? DcrImmutableId = null, string? DceEndpoint = null)
+    public AzureLogAnalyticsAuthOptions(string? workspaceId = null, string? dcrImmutableId = null, string? dceEndpoint = null)
     {
-        if (WorkspaceId is not null)
+        if (workspaceId is not null)
         {
-            this.WorkspaceId = WorkspaceId;
+            WorkspaceId = workspaceId;
             UserProvidedWorkspaceId = true;
         }
 
-        if (DcrImmutableId is not null)
+        if (dcrImmutableId is not null)
         {
-            this.DcrImmutableId = DcrImmutableId;
+            DcrImmutableId = dcrImmutableId;
             UserProvidedDcrImmutableId = true;
         }
 
-        if (DceEndpoint is not null)
+        if (dceEndpoint is not null)
         {
-            this.DceEndpoint = DceEndpoint;
+            DceEndpoint = dceEndpoint;
             UserProvidedDceEndpoint = true;
         }
     }

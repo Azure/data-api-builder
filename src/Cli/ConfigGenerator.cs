@@ -2002,13 +2002,13 @@ namespace Cli
             );
 
             AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(
-                Enabled: options.AzureLogAnalyticsEnabled is CliBool.True ? true : false,
-                Auth: new(
-                    WorkspaceId: options.AzureLogAnalyticsWorkspaceId,
-                    DcrImmutableId: options.AzureLogAnalyticsDcrImmutableId,
-                    DceEndpoint: options.AzureLogAnalyticsDceEndpoint),
-                LogType: options.AzureLogAnalyticsLogType,
-                FlushIntervalSeconds: options.AzureLogAnalyticsFlushIntervalSeconds
+                enabled: options.AzureLogAnalyticsEnabled is CliBool.True ? true : false,
+                auth: new(
+                    workspaceId: options.AzureLogAnalyticsWorkspaceId,
+                    dcrImmutableId: options.AzureLogAnalyticsDcrImmutableId,
+                    dceEndpoint: options.AzureLogAnalyticsDceEndpoint),
+                logType: options.AzureLogAnalyticsLogType,
+                flushIntervalSeconds: options.AzureLogAnalyticsFlushIntervalSeconds
             );
 
             runtimeConfig = runtimeConfig with

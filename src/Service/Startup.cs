@@ -70,9 +70,11 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
+        public static CustomLogCollector CustomLogCollector = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
+        public static AzureLogAnalyticsFlusherService? FlusherService;
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
@@ -892,9 +894,17 @@ namespace Azure.DataApiBuilder.Service
                     return;
                 }
 
+                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.WorkspaceId))
+                {
+
+                }
+
+                FlusherService = new AzureLogAnalyticsFlusherService(AzureLogAnalyticsOptions, CustomLogCollector);
+
                 // Updating Startup Logger to Log from Startup Class.
                 ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
                 _logger = loggerFactory.CreateLogger<Startup>();
+                _ = Task.Run(() => FlusherService.StartAsync());
             }
         }
 

@@ -648,9 +648,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(parsedConfig.IsLogLevelNull());
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null
                 || !parsedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
-            Assert.IsTrue(parsedConfig, Runtime?.Telemetry?.OpenTelemetry is null
-                || !parsedConfig.Runtime.Telemetry.AzureLogAnalytics.Enabled);
-            Assert.IsTrue(parsedConfig, Runtime?.Telemetry?.OpenTelemetry is null
+            Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.OpenTelemetry is null
+                || !parsedConfig.Runtime.Telemetry.OpenTelemetry.Enabled);
+            Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.AzureLogAnalytics is null
                 || !parsedConfig.Runtime.Telemetry.AzureLogAnalytics.Enabled);
             return true;
         }

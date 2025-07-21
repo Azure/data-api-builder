@@ -54,6 +54,7 @@
 
     <ItemGroup>
         <PackageReference Include="Azure.Identity" />
+        <PackageReference Include="Azure.Monitor.Ingestion" />
         <PackageReference Include="HotChocolate" />
         <PackageReference Include="HotChocolate.AspNetCore" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" />

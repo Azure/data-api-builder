@@ -195,6 +195,21 @@ namespace Azure.DataApiBuilder.Service
                         });
                     }
 
+                    if (Startup.AzureLogAnalyticsOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.AzureLogAnalyticsOptions.Auth?.WorkspaceId) &&
+                        !string.IsNullOrWhiteSpace(Startup.AzureLogAnalyticsOptions.Auth?.WorkspaceId) && !string.IsNullOrWhiteSpace(Startup.AzureLogAnalyticsOptions.Auth?.WorkspaceId))
+                    {
+                        builder.AddProvider(new AzureLogAnalyticsLoggerProvider(Startup.CustomLogCollector));
+
+                        if (logLevelInitializer is null)
+                        {
+                            builder.AddFilter<AzureLogAnalyticsLoggerProvider>(category: string.Empty, logLevel);
+                        }
+                        else
+                        {
+                            builder.AddFilter<AzureLogAnalyticsLoggerProvider>(category: string.Empty, level => level >= logLevelInitializer.MinLogLevel);
+                        }
+                    }
+
                     builder.AddConsole();
                 });
         }

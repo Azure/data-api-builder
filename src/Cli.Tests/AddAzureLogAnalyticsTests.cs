@@ -167,7 +167,7 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Represents a JSON string for the telemetry section of the config, with Application Insights enabled and a specified connection string.
+        /// Represents a JSON string for the telemetry section of the config, with Azure Log Analytics enabled and specified auth properties.
         /// </summary>
         private const string TELEMETRY_SECTION_WITH_AZURE_LOG_ANALYTICS = @"
             ""telemetry"": {
@@ -188,7 +188,7 @@ namespace Cli.Tests
             ""telemetry"": {}";
 
         /// <summary>
-        /// Represents a JSON string for the empty telemetry section of the config.
+        /// Represents a JSON string for the telemetry section of the config, with Azure Log Analytics enabled and an empty auth section.
         /// </summary>
         private const string EMPTY_AUTH_TELEMETRY_SECTION = @"
             ""telemetry"": {

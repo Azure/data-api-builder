@@ -89,15 +89,15 @@ namespace Cli.Commands
         public string? AzureLogAnalyticsLogType { get; }
 
         // Specify the flush interval in seconds for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-flush-interval-seconds", Required = false, HelpText = "Flush Interval Seconds for Azure Log Analytics for specifying time it takes to send telemetry data")]
+        [Option("azure-log-analytics-flush-interval-seconds", Required = false, HelpText = "Flush Interval in seconds for Azure Log Analytics for specifying time it takes to send telemetry data")]
         public int? AzureLogAnalyticsFlushIntervalSeconds { get; }
 
         // Specify the Workspace ID for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-auth-workspace-id", Required = false, HelpText = "Workspace ID for Azure Log Analytics to find table to send telemetry data")]
+        [Option("azure-log-analytics-auth-workspace-id", Required = false, HelpText = "Workspace ID for Azure Log Analytics used to find workspace to connect")]
         public string? AzureLogAnalyticsWorkspaceId { get; }
 
         // Specify the DCR Immutable ID for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-auth-dcr-immutable-id", Required = false, HelpText = "DCR Immutable ID for Azure Log Analytics to find table to send telemetry data")]
+        [Option("azure-log-analytics-auth-dcr-immutable-id", Required = false, HelpText = "DCR Immutable ID for Azure Log Analytics to find the data collection rule that defines how data is collected")]
         public string? AzureLogAnalyticsDcrImmutableId { get; }
 
         // Specify the DCE Endpoint for Azure Log Analytics resource to which telemetry data should be sent.

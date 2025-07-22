@@ -790,11 +790,7 @@ namespace Cli
                 bool status = TryUpdateConfiguredAzureLogAnalyticsOptions(options, ref updatedAzureLogAnalyticsOptions);
                 if (status)
                 {
-                    runtimeConfig = runtimeConfig!
-                        with { Runtime = runtimeConfig.Runtime!
-                            with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ?
-                                runtimeConfig.Runtime!.Telemetry with { AzureLogAnalytics = updatedAzureLogAnalyticsOptions } :
-                                new TelemetryOptions(AzureLogAnalytics: updatedAzureLogAnalyticsOptions) } };
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ? runtimeConfig.Runtime!.Telemetry with { AzureLogAnalytics = updatedAzureLogAnalyticsOptions } : new TelemetryOptions(AzureLogAnalytics: updatedAzureLogAnalyticsOptions) } };
                 }
                 else
                 {

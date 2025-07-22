@@ -786,11 +786,14 @@ namespace Cli
                 options.AzureLogAnalyticsDcrImmutableId is not null ||
                 options.AzureLogAnalyticsDceEndpoint is not null)
             {
-                AzureLogAnalyticsOptions? updatedAzureLogAnalyticsOptions = runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics;
+                AzureLogAnalyticsOptions? updatedAzureLogAnalyticsOptions = runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics ?? new();
                 bool status = TryUpdateConfiguredAzureLogAnalyticsOptions(options, ref updatedAzureLogAnalyticsOptions);
                 if (status)
                 {
-                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry! with { AzureLogAnalytics = updatedAzureLogAnalyticsOptions } } };
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with {
+                        Telemetry = runtimeConfig.Runtime!.Telemetry is not null ?
+                        runtimeConfig.Runtime!.Telemetry with { AzureLogAnalytics = updatedAzureLogAnalyticsOptions } :
+                        new TelemetryOptions(AzureLogAnalytics: updatedAzureLogAnalyticsOptions) } };
                 }
                 else
                 {

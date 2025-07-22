@@ -48,6 +48,12 @@ namespace Cli.Commands
             int? azureKeyVaultRetryPolicyDelaySeconds = null,
             int? azureKeyVaultRetryPolicyMaxDelaySeconds = null,
             int? azureKeyVaultRetryPolicyNetworkTimeoutSeconds = null,
+            CliBool? azureLogAnalyticsEnabled = null,
+            string? azureLogAnalyticsLogType = null,
+            int? azureLogAnalyticsFlushIntervalSeconds = null,
+            string? azureLogAnalyticsWorkspaceId = null,
+            string? azureLogAnalyticsDcrImmutableId = null,
+            string? azureLogAnalyticsDceEndpoint = null,
             string? config = null)
             : base(config)
         {
@@ -85,6 +91,13 @@ namespace Cli.Commands
             AzureKeyVaultRetryPolicyDelaySeconds = azureKeyVaultRetryPolicyDelaySeconds;
             AzureKeyVaultRetryPolicyMaxDelaySeconds = azureKeyVaultRetryPolicyMaxDelaySeconds;
             AzureKeyVaultRetryPolicyNetworkTimeoutSeconds = azureKeyVaultRetryPolicyNetworkTimeoutSeconds;
+            // Azure Log Analytics
+            AzureLogAnalyticsEnabled = azureLogAnalyticsEnabled;
+            AzureLogAnalyticsLogType = azureLogAnalyticsLogType;
+            AzureLogAnalyticsFlushIntervalSeconds = azureLogAnalyticsFlushIntervalSeconds;
+            AzureLogAnalyticsWorkspaceId = azureLogAnalyticsWorkspaceId;
+            AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
+            AzureLogAnalyticsDceEndpoint = azureLogAnalyticsDceEndpoint;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -170,6 +183,24 @@ namespace Cli.Commands
 
         [Option("azure-key-vault.retry-policy.network-timeout-seconds", Required = false, HelpText = "Configure the network timeout for requests in seconds. Default: 60.")]
         public int? AzureKeyVaultRetryPolicyNetworkTimeoutSeconds { get; }
+
+        [Option("runtime.telemetry.azure-log-analytics.enabled", Default = CliBool.False, Required = false, HelpText = "Enable/Disable Azure Log Analytics.")]
+        public CliBool? AzureLogAnalyticsEnabled { get; }
+
+        [Option("runtime.telemetry.azure-log-analytics.log-type", Required = false, HelpText = "Configure Log Type for Azure Log Analytics to find table to send telemetry data")]
+        public string? AzureLogAnalyticsLogType { get; }
+
+        [Option("runtime.telemetry.azure-log-analytics.flush-interval-seconds", Required = false, HelpText = "Configure Flush Interval in seconds for Azure Log Analytics for specifying time it takes to send telemetry data")]
+        public int? AzureLogAnalyticsFlushIntervalSeconds { get; }
+
+        [Option("runtime.telemetry.azure-log-analytics.auth.workspace-id", Required = false, HelpText = "Configure Workspace ID for Azure Log Analytics used to find workspace to connect")]
+        public string? AzureLogAnalyticsWorkspaceId { get; }
+
+        [Option("runtime.telemetry.azure-log-analytics.auth.dcr-immutable-id", Required = false, HelpText = "Configure DCR Immutable ID for Azure Log Analytics to find the data collection rule that defines how data is collected")]
+        public string? AzureLogAnalyticsDcrImmutableId { get; }
+
+        [Option("runtime.telemetry.azure-log-analytics.auth.dce-endpoint", Required = false, HelpText = "Configure DCE Endpoint for Azure Log Analytics to find table to send telemetry data")]
+        public string? AzureLogAnalyticsDceEndpoint { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

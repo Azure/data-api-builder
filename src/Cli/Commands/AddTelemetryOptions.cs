@@ -27,12 +27,6 @@ namespace Cli.Commands
             string? openTelemetryHeaders = null,
             OtlpExportProtocol? openTelemetryExportProtocol = null,
             string? openTelemetryServiceName = null,
-            CliBool? azureLogAnalyticsEnabled = null,
-            string? azureLogAnalyticsLogType = null,
-            int? azureLogAnalyticsFlushIntervalSeconds = null,
-            string? azureLogAnalyticsWorkspaceId = null,
-            string? azureLogAnalyticsDcrImmutableId = null,
-            string? azureLogAnalyticsDceEndpoint = null,
             string? config = null) : base(config)
         {
             AppInsightsConnString = appInsightsConnString;
@@ -42,12 +36,6 @@ namespace Cli.Commands
             OpenTelemetryHeaders = openTelemetryHeaders;
             OpenTelemetryExportProtocol = openTelemetryExportProtocol;
             OpenTelemetryServiceName = openTelemetryServiceName;
-            AzureLogAnalyticsEnabled = azureLogAnalyticsEnabled;
-            AzureLogAnalyticsLogType = azureLogAnalyticsLogType;
-            AzureLogAnalyticsFlushIntervalSeconds = azureLogAnalyticsFlushIntervalSeconds;
-            AzureLogAnalyticsWorkspaceId = azureLogAnalyticsWorkspaceId;
-            AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
-            AzureLogAnalyticsDceEndpoint = azureLogAnalyticsDceEndpoint;
         }
 
         // Connection string for the Application Insights resource to which telemetry data should be sent.
@@ -79,30 +67,6 @@ namespace Cli.Commands
         // Service Name for the Open Telemetry resource to which telemetry data should be sent. This flag is optional and default value is dab.
         [Option("otel-service-name", Default = "dab", Required = false, HelpText = "(Default: dab) Headers for Open Telemetry for telemetry data")]
         public string? OpenTelemetryServiceName { get; }
-
-        // To specify whether Azure Log Analytics telemetry should be enabled. This flag is optional and default value is false.
-        [Option("azure-log-analytics-enabled", Default = CliBool.False, Required = false, HelpText = "(Default: false) Enable/Disable Azure Log Analytics")]
-        public CliBool? AzureLogAnalyticsEnabled { get; }
-
-        // Specify the table name for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-log-type", Required = false, HelpText = "Log Type for Azure Log Analytics to find table to send telemetry data")]
-        public string? AzureLogAnalyticsLogType { get; }
-
-        // Specify the flush interval in seconds for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-flush-interval-seconds", Required = false, HelpText = "Flush Interval in seconds for Azure Log Analytics for specifying time it takes to send telemetry data")]
-        public int? AzureLogAnalyticsFlushIntervalSeconds { get; }
-
-        // Specify the Workspace ID for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-auth-workspace-id", Required = false, HelpText = "Workspace ID for Azure Log Analytics used to find workspace to connect")]
-        public string? AzureLogAnalyticsWorkspaceId { get; }
-
-        // Specify the DCR Immutable ID for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-auth-dcr-immutable-id", Required = false, HelpText = "DCR Immutable ID for Azure Log Analytics to find the data collection rule that defines how data is collected")]
-        public string? AzureLogAnalyticsDcrImmutableId { get; }
-
-        // Specify the DCE Endpoint for Azure Log Analytics resource to which telemetry data should be sent.
-        [Option("azure-log-analytics-auth-dce-endpoint", Required = false, HelpText = "DCE Endpoint for Azure Log Analytics to find table to send telemetry data")]
-        public string? AzureLogAnalyticsDceEndpoint { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

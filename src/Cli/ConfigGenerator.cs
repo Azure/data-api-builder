@@ -786,7 +786,7 @@ namespace Cli
                 options.AzureLogAnalyticsDcrImmutableId is not null ||
                 options.AzureLogAnalyticsDceEndpoint is not null)
             {
-                AzureLogAnalyticsOptions? updatedAzureLogAnalyticsOptions = runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics ?? new();
+                AzureLogAnalyticsOptions updatedAzureLogAnalyticsOptions = runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics ?? new();
                 bool status = TryUpdateConfiguredAzureLogAnalyticsOptions(options, ref updatedAzureLogAnalyticsOptions);
                 if (status)
                 {
@@ -1124,37 +1124,37 @@ namespace Cli
         /// <returns>True if the Azure Key Vault options were successfully configured; otherwise, false.</returns>
         private static bool TryUpdateConfiguredAzureLogAnalyticsOptions(
             ConfigureOptions options,
-            [NotNullWhen(true)] ref AzureLogAnalyticsOptions? azureLogAnalyticsOptions)
+            [NotNullWhen(true)] ref AzureLogAnalyticsOptions azureLogAnalyticsOptions)
         {
             try
             {
-                AzureLogAnalyticsAuthOptions? updatedAuthOptions = azureLogAnalyticsOptions?.Auth;
+                AzureLogAnalyticsAuthOptions? updatedAuthOptions = azureLogAnalyticsOptions.Auth;
 
                 // Runtime.Telemetry.AzureLogAnalytics.Enabled
                 if (options.AzureLogAnalyticsEnabled is not null)
                 {
-                    azureLogAnalyticsOptions = azureLogAnalyticsOptions! with { Enabled = options.AzureLogAnalyticsEnabled is CliBool.True ? true : false, UserProvidedEnabled = true };
-                    _logger.LogInformation($"Updated RuntimeConfig with runtime.telemetry.azure-log-analytics.enabled as '{options.AzureLogAnalyticsEnabled}'");
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = options.AzureLogAnalyticsEnabled is CliBool.True ? true : false, UserProvidedEnabled = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.enabled as '{options.AzureLogAnalyticsEnabled}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.LogType
                 if (options.AzureLogAnalyticsLogType is not null)
                 {
-                    azureLogAnalyticsOptions = azureLogAnalyticsOptions! with { LogType = options.AzureLogAnalyticsLogType, UserProvidedLogType = true };
-                    _logger.LogInformation($"Updated RuntimeConfig with runtime.telemetry.azure-log-analytics.log-type as '{options.AzureLogAnalyticsLogType}'");
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = options.AzureLogAnalyticsLogType, UserProvidedLogType = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.log-type as '{options.AzureLogAnalyticsLogType}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds
                 if (options.AzureLogAnalyticsFlushIntervalSeconds is not null)
                 {
-                    if (options.AzureLogAnalyticsFlushIntervalSeconds.Value <= 0)
+                    if (options.AzureLogAnalyticsFlushIntervalSeconds <= 0)
                     {
-                        _logger.LogError("Failed to update runtime.telemetry.azure-log-analytics.log-type. Value must be a positive integer greater than 0.");
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.log-type. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
-                    azureLogAnalyticsOptions = azureLogAnalyticsOptions! with { FlushIntervalSeconds = options.AzureLogAnalyticsFlushIntervalSeconds, UserProvidedFlushIntervalSeconds = true };
-                    _logger.LogInformation($"Updated RuntimeConfig with runtime.telemetry.azure-log-analytics.flush-interval-seconds as '{options.AzureLogAnalyticsFlushIntervalSeconds}'");
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = options.AzureLogAnalyticsFlushIntervalSeconds, UserProvidedFlushIntervalSeconds = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds as '{options.AzureLogAnalyticsFlushIntervalSeconds}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.Auth.WorkspaceId
@@ -1163,7 +1163,7 @@ namespace Cli
                     updatedAuthOptions = updatedAuthOptions is not null
                         ? updatedAuthOptions with { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true }
                         : new AzureLogAnalyticsAuthOptions { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true };
-                    _logger.LogInformation($"Updated RuntimeConfig with runtime.telemetry.azure-log-analytics.auth.workspace-id as '{options.AzureLogAnalyticsWorkspaceId}'");
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.workspace-id as '{options.AzureLogAnalyticsWorkspaceId}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId
@@ -1172,7 +1172,7 @@ namespace Cli
                     updatedAuthOptions = updatedAuthOptions is not null
                         ? updatedAuthOptions with { DcrImmutableId = options.AzureLogAnalyticsDcrImmutableId, UserProvidedDcrImmutableId = true }
                         : new AzureLogAnalyticsAuthOptions { DcrImmutableId = options.AzureLogAnalyticsDcrImmutableId, UserProvidedDcrImmutableId = true };
-                    _logger.LogInformation($"Updated RuntimeConfig with runtime.telemetry.azure-log-analytics.auth.dcr-immutable-id as '{options.AzureLogAnalyticsDcrImmutableId}'");
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.dcr-immutable-id as '{options.AzureLogAnalyticsDcrImmutableId}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint
@@ -1181,25 +1181,20 @@ namespace Cli
                     updatedAuthOptions = updatedAuthOptions is not null
                         ? updatedAuthOptions with { DceEndpoint = options.AzureLogAnalyticsDceEndpoint, UserProvidedDceEndpoint = true }
                         : new AzureLogAnalyticsAuthOptions { DceEndpoint = options.AzureLogAnalyticsDceEndpoint, UserProvidedDceEndpoint = true };
-                    _logger.LogInformation($"Updated RuntimeConfig with runtime.telemetry.azure-log-analytics.auth.dce-endpoint as '{options.AzureLogAnalyticsDceEndpoint}'");
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.dce-endpoint as '{options.AzureLogAnalyticsDceEndpoint}'");
                 }
 
                 // Update Azure Log Analytics options with Auth options if it was modified
                 if (updatedAuthOptions is not null)
                 {
-                    azureLogAnalyticsOptions = azureLogAnalyticsOptions! with { Auth = updatedAuthOptions };
-                }
-                // Check if Azure Log Analytics exists
-                else if (azureLogAnalyticsOptions is null)
-                {
-                    azureLogAnalyticsOptions = new AzureLogAnalyticsOptions();
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Auth = updatedAuthOptions };
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Failed to update runtime.telemetry.azure-log-analytics with exception message: {ex.Message}.");
+                _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
                 return false;
             }
         }

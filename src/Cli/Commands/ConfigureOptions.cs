@@ -190,7 +190,7 @@ namespace Cli.Commands
         [Option("runtime.telemetry.azure-log-analytics.log-type", Required = false, HelpText = "Configure Log Type for Azure Log Analytics to find table to send telemetry data")]
         public string? AzureLogAnalyticsLogType { get; }
 
-        [Option("runtime.telemetry.azure-log-analytics.flush-interval-seconds", Required = false, HelpText = "Configure Flush Interval in seconds for Azure Log Analytics for specifying time it takes to send telemetry data")]
+        [Option("runtime.telemetry.azure-log-analytics.flush-interval-seconds", Required = false, HelpText = "Configure Flush Interval in seconds for Azure Log Analytics to specify the time interval to send the telemetry data")]
         public int? AzureLogAnalyticsFlushIntervalSeconds { get; }
 
         [Option("runtime.telemetry.azure-log-analytics.auth.workspace-id", Required = false, HelpText = "Configure Workspace ID for Azure Log Analytics used to find workspace to connect")]

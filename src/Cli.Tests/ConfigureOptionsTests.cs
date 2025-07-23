@@ -149,6 +149,45 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running the "configure --azure-log-analytics" commands on a config without Azure Log Analytics properties results
+        /// in a valid config being generated.
+        [TestMethod]
+        public void TestAddAzureLogAnalyticsOptions()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add Azure Log Analytics options
+            ConfigureOptions options = new(
+                azureLogAnalyticsEnabled: CliBool.True,
+                azureLogAnalyticsLogType: "log-type-test",
+                azureLogAnalyticsFlushIntervalSeconds: 1,
+                azureLogAnalyticsWorkspaceId: "workspace-id-test",
+                azureLogAnalyticsDcrImmutableId: "dcr-immutable-id-test",
+                azureLogAnalyticsDceEndpoint: "dce-endpoint-test",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Azure Log Analytics options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics);
+            Assert.AreEqual(true, config.Runtime.Telemetry.AzureLogAnalytics.Enabled);
+            Assert.AreEqual("log-type-test", config.Runtime.Telemetry.AzureLogAnalytics.LogType);
+            Assert.AreEqual(1, config.Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds);
+            Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics.Auth);
+            Assert.AreEqual("workspace-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.WorkspaceId);
+            Assert.AreEqual("dcr-immutable-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId);
+            Assert.AreEqual("dce-endpoint-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint);
+        }
+
+        /// <summary>
         /// Tests that running "dab configure --runtime.graphql.enabled" on a config with various values results
         /// in runtime. Takes in updated value for graphql.enabled and 
         /// validates whether the runtime config reflects those updated values

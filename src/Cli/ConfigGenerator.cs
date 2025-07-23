@@ -1124,7 +1124,7 @@ namespace Cli
         /// <returns>True if the Azure Key Vault options were successfully configured; otherwise, false.</returns>
         private static bool TryUpdateConfiguredAzureLogAnalyticsOptions(
             ConfigureOptions options,
-            [NotNullWhen(true)] ref AzureLogAnalyticsOptions azureLogAnalyticsOptions)
+            ref AzureLogAnalyticsOptions azureLogAnalyticsOptions)
         {
             try
             {

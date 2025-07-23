@@ -410,6 +410,74 @@
               },
               "required": ["endpoint"]
             },
+            "azure-log-analytics": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling Azure Log Analytics.",
+                  "default": false
+                },
+                "auth": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "workspace-id": {
+                      "type": [ "string", "null" ],
+                      "description": "Azure Log Analytics Workspace ID"
+                    },
+                    "dcr-immutable-id": {
+                      "type": [ "string", "null" ],
+                      "description": "DCR ID for entra-id mode"
+                    },
+                    "dce-endpoint": {
+                      "type": [ "string", "null" ],
+                      "description": "DCE endpoint for entra-id mode"
+                    }
+                  }
+                },
+                "log-type": {
+                  "type": "string",
+                  "description": "Custom log table name in Log Analytics",
+                  "default": "DabLogs"
+                },
+                "flush-interval-seconds": {
+                  "type": "integer",
+                  "description": "Interval between log batch pushes (in seconds)",
+                  "default": 5
+                }
+              },
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "auth": {
+                    "properties": {
+                      "workspace-id": {
+                        "type": "string",
+                        "description": "Azure Log Analytics Workspace ID"
+                      },
+                      "dcr-immutable-id": {
+                        "type": "string",
+                        "description": "DCR ID for entra-id mode"
+                      },
+                      "dce-endpoint": {
+                        "type": "string",
+                        "description": "DCE endpoint for entra-id mode"
+                      }
+                    },
+                    "required": [ "workspace-id", "dcr-immutable-id", "dce-endpoint" ]
+                  }
+                },
+                "required": [ "auth" ]
+              }
+            },
             "log-level": {
               "type": "object",
               "description": "Global configuration of log level, defines logging severity levels for specific classes, when 'null' it will set logging level based on 'host: mode' property",
@@ -462,6 +530,54 @@
               "type": "integer",
               "description": "The max degree of parallelism for running parallel health check queries.",
               "default": 4
+            }
+          }
+        }
+      }
+    },
+    "azure-key-vault": {
+      "type": "object",
+      "description": "Azure Key Vault configuration for storing secrets",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "Azure Key Vault endpoint URL"
+        },
+        "retry-policy": {
+          "type": "object",
+          "description": "Retry policy configuration for Azure Key Vault operations",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["fixed", "exponential"],
+              "default": "exponential",
+              "description": "Retry mode: fixed or exponential backoff"
+            },
+            "max-count": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 0,
+              "description": "Maximum number of retry attempts"
+            },
+            "delay-seconds": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1,
+              "description": "Initial delay between retries in seconds"
+            },
+            "max-delay-seconds": {
+              "type": "integer",
+              "default": 60,
+              "minimum": 1,
+              "description": "Maximum delay between retries in seconds (for exponential mode)"
+            },
+            "network-timeout-seconds": {
+              "type": "integer",
+              "default": 60,
+              "minimum": 1,
+              "description": "Network timeout for requests in seconds"
             }
           }
         }
@@ -876,6 +992,16 @@
           },
           "required": ["source", "permissions"]
         }
+      }
+    }
+  },
+  "if": {
+    "required": ["azure-key-vault"]
+  },
+  "then": {
+    "properties": {
+      "azure-key-vault": {
+        "required": ["endpoint"]
       }
     }
   },

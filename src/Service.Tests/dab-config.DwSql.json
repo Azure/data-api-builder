@@ -2,7 +2,7 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "dwsql",
-    "connection-string": "Server=tcp:{your_server}.database.windows.net,1433;Database={your_database};User ID={your_user_name};Password={your_password_here};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;",
     "options": {
       "set-session-context": true
     }
@@ -73,23 +73,6 @@
             },
             {
               "action": "delete"
-            }
-          ]
-        },
-        {
-          "role": "database_policy_tester",
-          "actions": [
-            {
-              "action": "update",
-              "policy": {
-                "database": "@item.id ne 1234"
-              }
-            },
-            {
-              "action": "read",
-              "policy": {
-                "database": "@item.id ne 1234 or @item.id gt 1940"
-              }
             }
           ]
         },
@@ -252,14 +235,41 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            {
+              "action": "create",
+              "policy": {
+                "database": "@item.name ne 'New publisher'"
+              }
+            },
+            {
+              "action": "update",
+              "policy": {
+                "database": "@item.id ne 1234"
+              }
+            },
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.id ne 1234 or @item.id gt 1940"
+              }
+            }
+          ]
         }
       ],
       "relationships": {
         "books": {
           "cardinality": "many",
           "target.entity": "Book",
-          "source.fields": [ "id" ],
-          "target.fields": [ "publisher_id" ],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "publisher_id"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -333,6 +343,20 @@
           "actions": [
             {
               "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "database_policy_tester",
+          "actions": [
+            {
+              "action": "read"
+            },
+            {
+              "action": "update",
+              "policy": {
+                "database": "@item.pieceid ne 1"
+              }
             }
           ]
         },
@@ -421,14 +445,6 @@
       },
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "read"
-            }
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             {
@@ -442,6 +458,14 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
             }
           ]
         },
@@ -857,27 +881,22 @@
           ]
         }
       ],
+      "mappings": {
+        "id": "id",
+        "title": "title"
+      },
       "relationships": {
         "websiteplacement": {
           "cardinality": "one",
           "target.entity": "BookWebsitePlacement",
-          "source.fields": [ "id" ],
-          "target.fields": [ "book_id" ],
-          "linking.source.fields": [],
-          "linking.target.fields": []
-        },
-        "authors": {
-          "cardinality": "many",
-          "target.entity": "Author",
-          "source.fields": [ "id" ],
-          "target.fields": [ "id" ],
-          "linking.object": "book_author_link",
-          "linking.source.fields": [
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
             "book_id"
           ],
-          "linking.target.fields": [
-            "author_id"
-          ]
+          "linking.source.fields": [],
+          "linking.target.fields": []
         },
         "publishers": {
           "cardinality": "one",
@@ -887,20 +906,39 @@
           ],
           "target.fields": [
             "id"
-          ]
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
         },
         "reviews": {
           "cardinality": "many",
           "target.entity": "Review",
-          "source.fields": [ "id" ],
-          "target.fields": [ "book_id" ],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "book_id"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
+        },
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "Author",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.object": "book_author_link",
+          "linking.source.fields": [
+            "book_id"
+          ],
+          "linking.target.fields": [
+            "author_id"
+          ]
         }
-      },
-      "mappings": {
-        "id": "id",
-        "title": "title"
       }
     },
     "BookWebsitePlacement": {
@@ -958,8 +996,12 @@
         "books": {
           "cardinality": "one",
           "target.entity": "Book",
-          "source.fields": [ "book_id" ],
-          "target.fields": [ "id" ],
+          "source.fields": [
+            "book_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1014,11 +1056,19 @@
         "books": {
           "cardinality": "many",
           "target.entity": "Book",
-          "source.fields": [ "id" ],
-          "target.fields": [ "id" ],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.object": "book_author_link",
-          "linking.source.fields": [ "author_id" ],
-          "linking.target.fields": [ "book_id" ]
+          "linking.source.fields": [
+            "author_id"
+          ],
+          "linking.target.fields": [
+            "book_id"
+          ]
         }
       }
     },
@@ -1078,8 +1128,12 @@
         "books": {
           "cardinality": "one",
           "target.entity": "Book",
-          "source.fields": [ "book_id" ],
-          "target.fields": [ "id" ],
+          "source.fields": [
+            "book_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1183,8 +1237,12 @@
         "myseries": {
           "cardinality": "one",
           "target.entity": "series",
-          "source.fields": [ "series_id" ],
-          "target.fields": [ "id" ],
+          "source.fields": [
+            "series_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1470,8 +1528,12 @@
         "fungus": {
           "cardinality": "one",
           "target.entity": "Fungus",
-          "source.fields": [ "species" ],
-          "target.fields": [ "habitat" ],
+          "source.fields": [
+            "species"
+          ],
+          "target.fields": [
+            "habitat"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1552,11 +1614,15 @@
         "spores": "hazards"
       },
       "relationships": {
-        "shrub": {
+        "Shrub": {
           "cardinality": "one",
           "target.entity": "Shrub",
-          "source.fields": [ "habitat" ],
-          "target.fields": [ "species" ],
+          "source.fields": [
+            "habitat"
+          ],
+          "target.fields": [
+            "species"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1668,19 +1734,6 @@
           ]
         },
         {
-          "role": "TestNestedFilterManyOne_ColumnForbidden",
-          "actions": [
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [
-                  "name"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "role": "TestNestedFilterManyOne_EntityReadForbidden",
           "actions": [
             {
@@ -1691,6 +1744,19 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterManyOne_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ]
+              }
             }
           ]
         },
@@ -1715,8 +1781,12 @@
         "comics": {
           "cardinality": "many",
           "target.entity": "Comic",
-          "source.fields": [ "id" ],
-          "target.fields": [ "series_id" ],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "series_id"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -2209,16 +2279,16 @@
         }
       ]
     },
-    "GetBooks": {
+    "GetBook": {
       "source": {
-        "object": "get_books",
+        "object": "get_book_by_id",
         "type": "stored-procedure"
       },
       "graphql": {
-        "enabled": true,
-        "operation": "query",
+        "enabled": false,
+        "operation": "mutation",
         "type": {
-          "singular": "GetBooks",
+          "singular": "GetBook",
           "plural": "GetBooks"
         }
       },
@@ -2247,16 +2317,16 @@
         }
       ]
     },
-    "GetBook": {
+    "GetBooks": {
       "source": {
-        "object": "get_book_by_id",
+        "object": "get_books",
         "type": "stored-procedure"
       },
       "graphql": {
-        "enabled": false,
-        "operation": "mutation",
+        "enabled": true,
+        "operation": "query",
         "type": {
-          "singular": "GetBook",
+          "singular": "GetBooks",
           "plural": "GetBooks"
         }
       },
@@ -2301,7 +2371,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "get"
+          "post"
         ]
       },
       "permissions": [
@@ -2342,7 +2412,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "get"
+          "post"
         ]
       },
       "permissions": [
@@ -2380,7 +2450,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "get"
+          "post"
         ]
       },
       "permissions": [
@@ -2444,21 +2514,17 @@
         }
       ]
     },
-    "InsertAndDisplayAllBooksUnderGivenPublisher": {
+    "DeleteLastInsertedBook": {
       "source": {
-        "object": "insert_and_display_all_books_for_given_publisher",
-        "type": "stored-procedure",
-        "parameters": {
-          "title": "MyTitle",
-          "publisher_name": "MyPublisher"
-        }
+        "object": "delete_last_inserted_book",
+        "type": "stored-procedure"
       },
       "graphql": {
         "enabled": true,
         "operation": "mutation",
         "type": {
-          "singular": "InsertAndDisplayAllBooksUnderGivenPublisher",
-          "plural": "InsertAndDisplayAllBooksUnderGivenPublishers"
+          "singular": "DeleteLastInsertedBook",
+          "plural": "DeleteLastInsertedBooks"
         }
       },
       "rest": {
@@ -2528,17 +2594,21 @@
         }
       ]
     },
-    "DeleteLastInsertedBook": {
+    "InsertAndDisplayAllBooksUnderGivenPublisher": {
       "source": {
-        "object": "delete_last_inserted_book",
-        "type": "stored-procedure"
+        "object": "insert_and_display_all_books_for_given_publisher",
+        "type": "stored-procedure",
+        "parameters": {
+          "title": "MyTitle",
+          "publisher_name": "MyPublisher"
+        }
       },
       "graphql": {
         "enabled": true,
         "operation": "mutation",
         "type": {
-          "singular": "DeleteLastInsertedBook",
-          "plural": "DeleteLastInsertedBooks"
+          "singular": "InsertAndDisplayAllBooksUnderGivenPublisher",
+          "plural": "InsertAndDisplayAllBooksUnderGivenPublishers"
         }
       },
       "rest": {
@@ -2566,43 +2636,6 @@
         }
       ]
     },
-    "dbo_DimAccount": {
-      "source": "dbo.DimAccount",
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            "read",
-            "create",
-            "update",
-            "delete"
-          ]
-    }
-      ],
-      "relationships": {
-
-        "parent_account": {
-          "cardinality": "one",
-          "target.entity": "dbo_DimAccount",
-          "source.fields": [
-            "ParentAccountKey"
-          ],
-          "target.fields": [
-            "AccountKey"
-          ]
-        },
-        "child_accounts": {
-          "cardinality": "many",
-          "target.entity": "dbo_DimAccount",
-          "source.fields": [
-            "AccountKey"
-          ],
-          "target.fields": [
-            "ParentAccountKey"
-          ]
-        }
-      }
-    },
     "DateOnlyTable": {
       "source": {
         "object": "date_only_table",
@@ -2627,10 +2660,62 @@
           "actions": [
             {
               "action": "*"
-        }
+            }
           ]
-      }
+        }
       ]
+    },
+    "dbo_DimAccount": {
+      "source": {
+        "object": "DimAccount",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "dbo_DimAccount",
+          "plural": "dbo_DimAccounts"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "parent_account": {
+          "cardinality": "one",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "ParentAccountKey"
+          ],
+          "target.fields": [
+            "AccountKey"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "child_accounts": {
+          "cardinality": "many",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "AccountKey"
+          ],
+          "target.fields": [
+            "ParentAccountKey"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     }
   }
 }

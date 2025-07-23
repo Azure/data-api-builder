@@ -258,6 +258,9 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
         options.Converters.Add(new HostOptionsConvertorFactory());
+        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replaceEnvVar));
+        options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replaceEnvVar));
+        options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replaceEnvVar));
 
         if (replaceEnvVar)
         {

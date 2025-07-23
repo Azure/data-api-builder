@@ -22,7 +22,6 @@ namespace Azure.DataApiBuilder.Service.Telemetry
         {
             _options = options;
             _customLogCollector = customLogCollector;
-
             _logsIngestionClient = new LogsIngestionClient(new Uri(_options.Auth!.DceEndpoint!), _credential);
         }
 

@@ -171,6 +171,13 @@ public record RuntimeConfig
         Runtime.GraphQL.FeatureFlags is not null &&
         Runtime.GraphQL.FeatureFlags.EnableDwNto1JoinQueryOptimization;
 
+    /// <summary>
+    /// Returns true if runtime.pagination.next-link-relative is set to true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsNextLinkRelative =>
+        Runtime?.Pagination?.NextLinkRelative == true;
+
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();

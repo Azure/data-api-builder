@@ -579,8 +579,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="path">The request path excluding query parameters (e.g. https://localhost/api/myEntity)</param>
         /// <param name="queryStringParameters">Collection of query string parameters that are URI escaped.</param>
         /// <param name="newAfterPayload">The contents to add to the $after query parameter. Should be base64 encoded pagination token.</param>
+        /// <param name="relative">If true, return a relative nextLink (path + queryString), otherwise absolute.</param>
         /// <returns>JSON element - array with nextLink.</returns>
-        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string newAfterPayload)
+        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string newAfterPayload, bool relative = false)
         {
             if (queryStringParameters is null)
             {
@@ -605,14 +606,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
-            // ValueKind will be array so we can differentiate from other objects in the response
-            // to be returned.
-            // [{"nextLink":"[base]/api/[entity]?[queryParams_URIescaped]$after=[base64encodedPaginationToken]"}]
+            // If the path is relative, we need to append the query string to the path.
+            string nextLinkValue = relative
+                ? $"{new Uri(path).PathAndQuery}{queryString}"
+                : $"{path}{queryString}";
+
             string jsonString = JsonSerializer.Serialize(new[]
             {
                 new
                 {
-                    nextLink = @$"{path}{queryString}"
+                    nextLink = nextLinkValue
                 }
             });
             return JsonSerializer.Deserialize<JsonElement>(jsonString);

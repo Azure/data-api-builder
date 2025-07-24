@@ -168,6 +168,11 @@
               "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
               "default": 100,
               "minimum": 1
+            },
+            "next-link-relative": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, nextLink in paginated results will use a relative URL."
             }
           }
         },

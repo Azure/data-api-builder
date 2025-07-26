@@ -29,6 +29,8 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
+using Azure.Identity;
+using Azure.Monitor.Ingestion;
 using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
@@ -70,7 +72,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
-        public static CustomLogCollector CustomLogCollector = new();
+        public static AzureLogAnalyticsCustomLogCollector CustomLogCollector = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
@@ -173,6 +175,14 @@ namespace Azure.DataApiBuilder.Service
                         })
                         .AddSource(TelemetryTracesHelper.DABActivitySource.Name);
                 });
+            }
+
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics is not null
+                && runtimeConfig.Runtime.Telemetry.AzureLogAnalytics.Enabled)
+            {
+                services.AddSingleton<AzureLogAnalyticsFlusherService>();
+                services.AddSingleton<ILoggerProvider, AzureLogAnalyticsLoggerProvider>();
             }
 
             services.AddSingleton(implementationFactory: serviceProvider =>
@@ -894,12 +904,27 @@ namespace Azure.DataApiBuilder.Service
                     return;
                 }
 
-                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.WorkspaceId))
+                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.CustomTableName))
                 {
-
+                    _logger.LogInformation("Logs won't be sent to Azure Log Analytics because the Custom Table Name is not available in the config file.");
+                    return;
                 }
 
-                FlusherService = new AzureLogAnalyticsFlusherService(AzureLogAnalyticsOptions, CustomLogCollector);
+                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.DcrImmutableId))
+                {
+                    _logger.LogInformation("Logs won't be sent to Azure Log Analytics because the DCR Immutable Id is not available in the config file.");
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.DceEndpoint))
+                {
+                    _logger.LogInformation("Logs won't be sent to Azure Log Analytics because the DCE Endpoint is not available in the config file.");
+                    return;
+                }
+
+                DefaultAzureCredential credential = new();
+                LogsIngestionClient logsIngestionClient = new(new Uri(AzureLogAnalyticsOptions.Auth.DceEndpoint), credential);
+                FlusherService = new AzureLogAnalyticsFlusherService(AzureLogAnalyticsOptions, CustomLogCollector, logsIngestionClient);
 
                 // Updating Startup Logger to Log from Startup Class.
                 ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);

@@ -4,44 +4,43 @@
 using System;
 using Microsoft.Extensions.Logging;
 
-namespace Azure.DataApiBuilder.Service.Telemetry
+namespace Azure.DataApiBuilder.Service.Telemetry;
+
+public class AzureLogAnalyticsLoggerProvider : ILoggerProvider
 {
-    public class AzureLogAnalyticsLoggerProvider : ILoggerProvider
+    private readonly ICustomLogCollector _customLogCollector;
+
+    public AzureLogAnalyticsLoggerProvider (ICustomLogCollector customLogCollector)
     {
-        private readonly ICustomLogCollector _customLogCollector;
-
-        public AzureLogAnalyticsLoggerProvider (ICustomLogCollector customLogCollector)
-        {
-            _customLogCollector = customLogCollector;
-        }
-
-        public ILogger CreateLogger(string categoryName)
-        {
-            return new AzureLogAnalyticsLogger(categoryName, _customLogCollector);
-        }
-
-        public void Dispose() { }
+        _customLogCollector = customLogCollector;
     }
 
-    public class AzureLogAnalyticsLogger : ILogger
+    public ILogger CreateLogger(string categoryName)
     {
-        private readonly string _categoryName;
-        private readonly ICustomLogCollector _customLogCollector;
+        return new AzureLogAnalyticsLogger(categoryName, _customLogCollector);
+    }
 
-        public AzureLogAnalyticsLogger (string categoryName, ICustomLogCollector customLogCollector)
-        {
-            _categoryName = categoryName;
-            _customLogCollector = customLogCollector;
-        }
+    public void Dispose() { }
+}
 
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default!;
+public class AzureLogAnalyticsLogger : ILogger
+{
+    private readonly string _categoryName;
+    private readonly ICustomLogCollector _customLogCollector;
 
-        public bool IsEnabled(LogLevel logLevel) => true;
+    public AzureLogAnalyticsLogger (string categoryName, ICustomLogCollector customLogCollector)
+    {
+        _categoryName = categoryName;
+        _customLogCollector = customLogCollector;
+    }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            string message = formatter(state, exception);
-            _customLogCollector.Log(message, logLevel, _categoryName);
-        }
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default!;
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        string message = formatter(state, exception);
+        _customLogCollector.Log(message, logLevel, _categoryName);
     }
 }

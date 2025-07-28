@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -452,8 +451,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             int verifyNumRecords = -1,
             bool expectJson = true,
             bool isExpectedErrorMsgSubstr = false,
-            string clientRoleHeader = null,
-            bool nextLinkShouldBeRelative = false)
+            string clientRoleHeader = null)
         {
             // Create the rest endpoint using the path and entity name.
             string restEndPoint = restPath + "/" + entityNameOrPath;
@@ -557,7 +555,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType is EntityActionOperation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"{SqlTestHelper.jsonResultTopLevelKey}\":" +
-                        $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}", nextLinkShouldBeRelative)}}}";
+                        $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
                 }
             }
 
@@ -578,7 +576,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// </summary>
         /// <param name="expected">The expected response.</param>
         /// <returns>Formatted expected response.</returns>
-        protected static string FormatExpectedValue(string expected)
+        private static string FormatExpectedValue(string expected)
         {
             return string.IsNullOrWhiteSpace(expected) ? string.Empty : (!Equals(expected[0], '[')) ? $"[{expected}]" : expected;
         }
@@ -591,21 +589,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="baseUrl">The base Url.</param>
         /// <param name="queryString">The query string to add to the url.</param>
         /// <returns></returns>
-        protected static string ExpectedNextLinkIfAny(bool paginated, string baseUrl, string queryString, bool nextLinkShouldBeRelative = false)
+        private static string ExpectedNextLinkIfAny(bool paginated, string baseUrl, string queryString)
         {
-            if (!paginated)
-            {
-                return string.Empty;
-            }
-
-            if (nextLinkShouldBeRelative)
-            {
-                // Only return the path and query string
-                Uri uri = new(baseUrl);
-                return $",\"nextLink\":\"{uri.PathAndQuery}{queryString}\"";
-            }
-
-            return $",\"nextLink\":\"{baseUrl}{queryString}\"";
+            return paginated ? $",\"nextLink\":\"{baseUrl}{queryString}\"" : string.Empty;
         }
 
         /// <summary>

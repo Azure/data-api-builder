@@ -10,7 +10,7 @@ public class AzureLogAnalyticsLoggerProvider : ILoggerProvider
 {
     private readonly ICustomLogCollector _customLogCollector;
 
-    public AzureLogAnalyticsLoggerProvider (ICustomLogCollector customLogCollector)
+    public AzureLogAnalyticsLoggerProvider(ICustomLogCollector customLogCollector)
     {
         _customLogCollector = customLogCollector;
     }
@@ -28,7 +28,7 @@ public class AzureLogAnalyticsLogger : ILogger
     private readonly string _categoryName;
     private readonly ICustomLogCollector _customLogCollector;
 
-    public AzureLogAnalyticsLogger (string categoryName, ICustomLogCollector customLogCollector)
+    public AzureLogAnalyticsLogger(string categoryName, ICustomLogCollector customLogCollector)
     {
         _categoryName = categoryName;
         _customLogCollector = customLogCollector;

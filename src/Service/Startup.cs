@@ -181,8 +181,9 @@ namespace Azure.DataApiBuilder.Service
                 && runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics is not null
                 && runtimeConfig.Runtime.Telemetry.AzureLogAnalytics.Enabled)
             {
-                services.AddSingleton<AzureLogAnalyticsFlusherService>();
+                services.AddSingleton<ICustomLogCollector, AzureLogAnalyticsCustomLogCollector>();
                 services.AddSingleton<ILoggerProvider, AzureLogAnalyticsLoggerProvider>();
+                services.AddSingleton<AzureLogAnalyticsFlusherService>();
             }
 
             services.AddSingleton(implementationFactory: serviceProvider =>

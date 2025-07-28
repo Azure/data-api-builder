@@ -1293,7 +1293,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 new("sub", "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY"),
                 new("oid", "55296aad-ea7f-4c44-9a4c-bb1e8d43a005"),
                 new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE),
-                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "ROLE2")
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "ROLE2"),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "ROLE3")
             };
 
             //Add identity object to the Mock context object.
@@ -1315,6 +1316,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.AreEqual(expected: "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY", actual: claimsInRequestContext["sub"], message: "Expected the sub claim to be present.");
             Assert.AreEqual(expected: "55296aad-ea7f-4c44-9a4c-bb1e8d43a005", actual: claimsInRequestContext["oid"], message: "Expected the oid claim to be present.");
             Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE], actual: TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+            Assert.AreEqual(expected: "[\"" + TEST_ROLE + "\",\"ROLE2\",\"ROLE3\"]", actual: claimsInRequestContext[AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE], message: "Original roles should be preserved in a new context");
         }
 
         /// <summary>
@@ -1365,7 +1367,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Dictionary<string, string> resolvedClaims = AuthorizationResolver.GetProcessedUserClaims(context.Object);
 
             // Assert
-            Assert.AreEqual(expected: authenticatedUserclaims.Count, actual: resolvedClaims.Count, message: "Only two claims should be present.");
+            Assert.AreEqual(expected: authenticatedUserclaims.Count + 1, actual: resolvedClaims.Count, message: "Only " + (authenticatedUserclaims.Count + 1) + " claims should be present.");
             Assert.AreEqual(expected: "openid", actual: resolvedClaims["scp"], message: "Unexpected scp claim returned.");
 
             bool didResolveUnauthenticatedRoleClaim = resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE] == "Don't_Parse_This_Role";

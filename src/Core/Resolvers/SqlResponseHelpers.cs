@@ -92,29 +92,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
 
-            HttpRequest req = httpContext.Request;
-            string scheme = req.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? req.Scheme;
-
-            // Validate the scheme
-            if (!IsValidScheme(scheme))
-            {
-                throw new DataApiBuilderException(
-                    message: $"Invalid scheme '{scheme}' in X-Forwarded-Proto. Supported schemes are 'http' and 'https'.",
-                    statusCode: System.Net.HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-
-            string host = req.Headers["X-Forwarded-Host"].FirstOrDefault() ?? req.Host.ToString();
-
-            // Validate the host
-            if (!IsValidHost(host))
-            {
-                throw new DataApiBuilderException(
-                    message: $"Invalid host '{host}' in X-Forwarded-Host. The host must be a valid hostname or IP address.",
-                    statusCode: System.Net.HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-
             string path = GetPathForNextLink(httpContext, runtimeConfig.Runtime?.BaseRoute);
 
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(

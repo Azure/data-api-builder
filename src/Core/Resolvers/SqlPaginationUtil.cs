@@ -598,7 +598,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Append new $after token
             if (!string.IsNullOrWhiteSpace(newAfterPayload))
             {
-                string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "" : "&";
+                string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "?" : "&";
                 queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
@@ -610,7 +610,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // Construct final link
             string nextLinkValue = relative
-                ? uriBuilder.Uri.PathAndQuery // returns just "/api/Book?...", no host
+                ? uriBuilder.Uri.PathAndQuery // returns just "/api/<Entity>?$after...", no host
                 : uriBuilder.Uri.AbsoluteUri; // returns full URL
 
             // Return serialized JSON object

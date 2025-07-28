@@ -442,8 +442,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 scheme: scheme,
                 host: new HostString(host),
                 pathBase: string.IsNullOrWhiteSpace(baseRoute) ? PathString.Empty : new PathString(baseRoute),
-                path: req.Path,
-                query: req.QueryString);
+                path: req.Path);
         }
 
         /// <summary>

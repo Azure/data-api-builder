@@ -114,7 +114,7 @@ public class AzureLogAnalyticsTests
         AzureLogAnalyticsFlusherService flusherService = serviceProvider.GetService<AzureLogAnalyticsFlusherService>();
         AzureLogAnalyticsLoggerProvider loggerProvider = serviceProvider.GetService<AzureLogAnalyticsLoggerProvider>();
 
-        // If flusherService and loggerProvider are null, OTEL is disabled
+        // If flusherService and loggerProvider are null, Azure Log Analytics is disabled
         Assert.IsNull(flusherService, "AzureLogAnalyticsFlusherService should not be registered.");
         Assert.IsNull(loggerProvider, "AzureLogAnalyticsLoggerProvider should not be registered.");
     }

@@ -170,7 +170,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DcrImmutableId) || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DceEndpoint)))
             {
                 HandleOrRecordException(new DataApiBuilderException(
-                    message: "Azure Log Analytics Auth options 'custom-name-id', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
+                    message: "Azure Log Analytics Auth options 'custom-table-name', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

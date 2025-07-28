@@ -1,11 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.Monitor.Ingestion;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.Monitor.Ingestion;
 
 namespace Azure.DataApiBuilder.Service.Telemetry;
 
@@ -32,7 +32,7 @@ public class AzureLogAnalyticsFlusherService
         {
             try
             {
-                List<AzureLogAnalyticsLogs> logs = _customLogCollector.DequeueAll();
+                List<AzureLogAnalyticsLogs> logs = _customLogCollector.DequeueAll(_options.LogType!);
 
                 if (logs.Count > 0)
                 {

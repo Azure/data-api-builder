@@ -1455,11 +1455,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Validates that a relative nextLink is created when next-link-relative is enabled in config.
         /// </summary>
         [TestMethod]
-        public async Task FindTest_NextLinkRelative_Config()
+        public async Task FindTestNextLinkRelativeConfig()
         {
-            // Arrange: set up a config with next-link-relative true
             string after = SqlPaginationUtil.Base64Encode("[{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}]");
-            // This helper should be extended to allow custom config injection if not already supported.
+
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -1473,7 +1472,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         #endregion
 
-            #region Negative Tests
+        #region Negative Tests
 
         /// <summary>
         /// Tests the REST Api for Find operation on a stored procedure with a

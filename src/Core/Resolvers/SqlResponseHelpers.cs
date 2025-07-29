@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                   path,
                                   queryStringParameters: context!.ParsedQueryString,
                                   after,
-                                  runtimeConfig.IsNextLinkRelative);
+                                  runtimeConfig.NextLinkRelative());
 
             // When there are extra fields present, they are removed before returning the response.
             if (extraFieldsInResponse.Count > 0)

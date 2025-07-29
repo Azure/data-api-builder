@@ -171,13 +171,6 @@ public record RuntimeConfig
         Runtime.GraphQL.FeatureFlags is not null &&
         Runtime.GraphQL.FeatureFlags.EnableDwNto1JoinQueryOptimization;
 
-    /// <summary>
-    /// Returns true if runtime.pagination.next-link-relative is set to true.
-    /// </summary>
-    [JsonIgnore]
-    public bool IsNextLinkRelative =>
-        Runtime?.Pagination?.NextLinkRelative == true;
-
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
     private Dictionary<string, string> _entityNameToDataSourceName = new();
@@ -597,6 +590,11 @@ public record RuntimeConfig
     public uint MaxPageSize()
     {
         return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
+    }
+
+    public bool NextLinkRelative()
+    {
+        return Runtime?.Pagination?.NextLinkRelative ?? false;
     }
 
     public int MaxResponseSizeMB()

@@ -75,7 +75,7 @@ public class AzureLogAnalyticsTests
     [DataRow("Information Test Message", LogLevel.Information)]
     [DataRow("Trace Test Message", LogLevel.Trace)]
     [DataRow("Warning Test Message", LogLevel.Warning)]
-    public void TestAzureLogAnalyticsFlushServiceSucceed(string message, LogLevel logLevel)
+    public async void TestAzureLogAnalyticsFlushServiceSucceed(string message, LogLevel logLevel)
     {
         // Arrange
         AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(true, new AzureLogAnalyticsAuthOptions("custom-table-name-test", "dcr-immutable-id-test", "https://fake.dce.endpoint"));
@@ -85,7 +85,7 @@ public class AzureLogAnalyticsTests
         AzureLogAnalyticsFlusherService flusherService = new(azureLogAnalyticsOptions, customLogCollector, customClient);
 
         // Act
-        customLogCollector.Log(message, logLevel);
+        await customLogCollector.LogAsync(message, logLevel);
         _ = Task.Run(() => flusherService.StartAsync());
 
         // Assert

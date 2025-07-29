@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Channels;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.Extensions.Logging;
 
@@ -11,18 +13,18 @@ namespace Azure.DataApiBuilder.Service.Telemetry;
 
 public interface ICustomLogCollector
 {
-    void Log(string message, LogLevel loggingLevel, string? source = null);
-    List<AzureLogAnalyticsLogs> DequeueAll(string logType);
+    Task LogAsync(string message, LogLevel loggingLevel, string? source = null);
+    Task<List<AzureLogAnalyticsLogs>> DequeueAllAsync(string logType, int flushIntervalSeconds);
 }
 
 public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
 {
-    private readonly ConcurrentQueue<AzureLogAnalyticsLogs> _logs = new();
+    private readonly Channel<AzureLogAnalyticsLogs> _logs = Channel.CreateUnbounded<AzureLogAnalyticsLogs>();
 
-    public void Log(string message, LogLevel loggingLevel, string? source = null)
+    public async Task LogAsync(string message, LogLevel loggingLevel, string? source = null)
     {
         DateTime dateTime = DateTime.UtcNow;
-        _logs.Enqueue(
+        await _logs.Writer.WriteAsync(
             new AzureLogAnalyticsLogs(
                 dateTime.ToString("o"),
                 loggingLevel,
@@ -30,13 +32,20 @@ public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
                 source));
     }
 
-    public List<AzureLogAnalyticsLogs> DequeueAll(string logType)
+    public async Task<List<AzureLogAnalyticsLogs>> DequeueAllAsync(string logType, int flushIntervalSeconds)
     {
         List<AzureLogAnalyticsLogs> list = new();
-        while (_logs.TryDequeue(out AzureLogAnalyticsLogs? item))
+        Stopwatch time = Stopwatch.StartNew();
+
+        await foreach (AzureLogAnalyticsLogs item in _logs.Reader.ReadAllAsync())
         {
             item.LogType = logType;
             list.Add(item);
+
+            if (time.Elapsed >= TimeSpan.FromSeconds(flushIntervalSeconds))
+            {
+                break;
+            }
         }
 
         return list;

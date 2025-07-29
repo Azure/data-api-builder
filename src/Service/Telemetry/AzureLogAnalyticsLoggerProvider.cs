@@ -38,9 +38,9 @@ public class AzureLogAnalyticsLogger : ILogger
 
     public bool IsEnabled(LogLevel logLevel) => true;
 
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    public async void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         string message = formatter(state, exception);
-        _customLogCollector.Log(message, logLevel, _categoryName);
+        await _customLogCollector.LogAsync(message, logLevel, _categoryName);
     }
 }

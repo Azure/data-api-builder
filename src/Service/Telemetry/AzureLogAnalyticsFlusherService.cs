@@ -32,7 +32,7 @@ public class AzureLogAnalyticsFlusherService
         {
             try
             {
-                List<AzureLogAnalyticsLogs> logs = _customLogCollector.DequeueAll(_options.LogType!);
+                List<AzureLogAnalyticsLogs> logs = await _customLogCollector.DequeueAllAsync(_options.LogType!, (int)_options.FlushIntervalSeconds!);
 
                 if (logs.Count > 0)
                 {
@@ -43,8 +43,6 @@ public class AzureLogAnalyticsFlusherService
             {
                 Console.WriteLine($"Error uploading logs to Azure Log Analytics: {ex}");
             }
-
-            await Task.Delay(((int)_options.FlushIntervalSeconds!) * 1000);
         }
     }
 }

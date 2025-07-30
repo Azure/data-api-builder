@@ -896,7 +896,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     IEnumerable<string> roles = authorizationResolver.GetRolesForField(EntityName, field: columnName, operation: EntityActionOperation.Read);
                     if (roles != null && !roles.Contains(roleOfGraphQLRequest, StringComparer.OrdinalIgnoreCase))
                     {
-                        // raising execption for the first unauthorized groupBy field found
+                        // raising exception for the first unauthorized groupBy field found
                         throw new DataApiBuilderException(
                             message: string.Format(DataApiBuilderException.GRAPHQL_GROUPBY_FIELD_AUTHZ_FAILURE, fieldName),
                             statusCode: HttpStatusCode.Forbidden,
@@ -1030,7 +1030,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     IEnumerable<string> roles = authorizationResolver.GetRolesForField(EntityName, field: columnName, operation: EntityActionOperation.Read);
                     if (roles != null && !roles.Contains(roleOfGraphQLRequest, StringComparer.OrdinalIgnoreCase))
                     {
-                        // raising execption for the first unauthorized field found
+                        // raising exception for the first unauthorized field found
                         throw new DataApiBuilderException(
                             message: string.Format(DataApiBuilderException.GRAPHQL_AGGREGATION_FIELD_AUTHZ_FAILURE, fieldName, operation),
                             statusCode: HttpStatusCode.Forbidden,

@@ -73,7 +73,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                         throw new JsonException($"Unexpected property {propertyName}");
                 }
             }
-
         }
 
         throw new JsonException("Failed to read the Azure Log Analytics Auth Options");

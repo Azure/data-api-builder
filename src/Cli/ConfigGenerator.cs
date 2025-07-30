@@ -1149,7 +1149,7 @@ namespace Cli
                 {
                     if (options.AzureLogAnalyticsFlushIntervalSeconds <= 0)
                     {
-                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.log-type. Value must be a positive integer greater than 0.");
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 

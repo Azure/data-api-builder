@@ -169,6 +169,7 @@ namespace Cli.Tests
                 azureLogAnalyticsDceEndpoint: "dce-endpoint-test",
                 config: TEST_RUNTIME_CONFIG_FILE
             );
+
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Azure Log Analytics options are added.

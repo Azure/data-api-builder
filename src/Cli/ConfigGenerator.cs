@@ -778,6 +778,26 @@ namespace Cli
                 }
             }
 
+            // Telemetry: Azure Log Analytics
+            if (options.AzureLogAnalyticsEnabled is not null ||
+                options.AzureLogAnalyticsLogType is not null ||
+                options.AzureLogAnalyticsFlushIntervalSeconds is not null ||
+                options.AzureLogAnalyticsWorkspaceId is not null ||
+                options.AzureLogAnalyticsDcrImmutableId is not null ||
+                options.AzureLogAnalyticsDceEndpoint is not null)
+            {
+                AzureLogAnalyticsOptions updatedAzureLogAnalyticsOptions = runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics ?? new();
+                bool status = TryUpdateConfiguredAzureLogAnalyticsOptions(options, ref updatedAzureLogAnalyticsOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ? runtimeConfig.Runtime!.Telemetry with { AzureLogAnalytics = updatedAzureLogAnalyticsOptions } : new TelemetryOptions(AzureLogAnalytics: updatedAzureLogAnalyticsOptions) } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             return runtimeConfig != null;
         }
 
@@ -844,7 +864,7 @@ namespace Cli
         /// </summary>
         /// <param name="options">options.</param>
         /// <param name="updatedGraphQLOptions">updatedGraphQLOptions.</param>
-        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
         private static bool TryUpdateConfiguredGraphQLValues(
             ConfigureOptions options,
             ref GraphQLRuntimeOptions? updatedGraphQLOptions)
@@ -910,7 +930,7 @@ namespace Cli
         /// </summary>
         /// <param name="options">options.</param>
         /// <param name="updatedCacheOptions">updatedCacheOptions.</param>
-        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
         private static bool TryUpdateConfiguredCacheValues(
             ConfigureOptions options,
             ref RuntimeCacheOptions? updatedCacheOptions)
@@ -959,7 +979,7 @@ namespace Cli
         /// </summary>
         /// <param name="options">options.</param>
         /// <param name="updatedHostOptions">updatedHostOptions.</param>
-        /// <returns>True if the value needs to be udpated in the runtime config, else false</returns>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
         private static bool TryUpdateConfiguredHostValues(
             ConfigureOptions options,
             ref HostOptions? updatedHostOptions)
@@ -1091,6 +1111,90 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.Host with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Azure Log Analytics configuration options based on the provided values.
+        /// Validates that any user-provided parameter value is valid and updates the runtime configuration accordingly.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="azureLogAnalyticsOptions">The Azure Log Analytics options to be updated.</param>
+        /// <returns>True if the Azure Log Analytics options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredAzureLogAnalyticsOptions(
+            ConfigureOptions options,
+            ref AzureLogAnalyticsOptions azureLogAnalyticsOptions)
+        {
+            try
+            {
+                AzureLogAnalyticsAuthOptions? updatedAuthOptions = azureLogAnalyticsOptions.Auth;
+
+                // Runtime.Telemetry.AzureLogAnalytics.Enabled
+                if (options.AzureLogAnalyticsEnabled is not null)
+                {
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = options.AzureLogAnalyticsEnabled is CliBool.True, UserProvidedEnabled = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.enabled as '{options.AzureLogAnalyticsEnabled}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.LogType
+                if (options.AzureLogAnalyticsLogType is not null)
+                {
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = options.AzureLogAnalyticsLogType, UserProvidedLogType = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.log-type as '{options.AzureLogAnalyticsLogType}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds
+                if (options.AzureLogAnalyticsFlushIntervalSeconds is not null)
+                {
+                    if (options.AzureLogAnalyticsFlushIntervalSeconds <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { FlushIntervalSeconds = options.AzureLogAnalyticsFlushIntervalSeconds, UserProvidedFlushIntervalSeconds = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds as '{options.AzureLogAnalyticsFlushIntervalSeconds}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.WorkspaceId
+                if (options.AzureLogAnalyticsWorkspaceId is not null)
+                {
+                    updatedAuthOptions = updatedAuthOptions is not null
+                        ? updatedAuthOptions with { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true }
+                        : new AzureLogAnalyticsAuthOptions { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.workspace-id as '{options.AzureLogAnalyticsWorkspaceId}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId
+                if (options.AzureLogAnalyticsDcrImmutableId is not null)
+                {
+                    updatedAuthOptions = updatedAuthOptions is not null
+                        ? updatedAuthOptions with { DcrImmutableId = options.AzureLogAnalyticsDcrImmutableId, UserProvidedDcrImmutableId = true }
+                        : new AzureLogAnalyticsAuthOptions { DcrImmutableId = options.AzureLogAnalyticsDcrImmutableId, UserProvidedDcrImmutableId = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.dcr-immutable-id as '{options.AzureLogAnalyticsDcrImmutableId}'");
+                }
+
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint
+                if (options.AzureLogAnalyticsDceEndpoint is not null)
+                {
+                    updatedAuthOptions = updatedAuthOptions is not null
+                        ? updatedAuthOptions with { DceEndpoint = options.AzureLogAnalyticsDceEndpoint, UserProvidedDceEndpoint = true }
+                        : new AzureLogAnalyticsAuthOptions { DceEndpoint = options.AzureLogAnalyticsDceEndpoint, UserProvidedDceEndpoint = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.dce-endpoint as '{options.AzureLogAnalyticsDceEndpoint}'");
+                }
+
+                // Update Azure Log Analytics options with Auth options if it was modified
+                if (updatedAuthOptions is not null)
+                {
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Auth = updatedAuthOptions };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
                 return false;
             }
         }

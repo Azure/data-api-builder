@@ -1121,7 +1121,7 @@ namespace Cli
         /// </summary>
         /// <param name="options">The configuration options provided by the user.</param>
         /// <param name="azureLogAnalyticsOptions">The Azure Log Analytics options to be updated.</param>
-        /// <returns>True if the Azure Key Vault options were successfully configured; otherwise, false.</returns>
+        /// <returns>True if the Azure Log Analytics options were successfully configured; otherwise, false.</returns>
         private static bool TryUpdateConfiguredAzureLogAnalyticsOptions(
             ConfigureOptions options,
             ref AzureLogAnalyticsOptions azureLogAnalyticsOptions)
@@ -1133,7 +1133,7 @@ namespace Cli
                 // Runtime.Telemetry.AzureLogAnalytics.Enabled
                 if (options.AzureLogAnalyticsEnabled is not null)
                 {
-                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = options.AzureLogAnalyticsEnabled is CliBool.True ? true : false, UserProvidedEnabled = true };
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { Enabled = options.AzureLogAnalyticsEnabled is CliBool.True, UserProvidedEnabled = true };
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.enabled as '{options.AzureLogAnalyticsEnabled}'");
                 }
 

@@ -894,7 +894,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     // Validate that the current role has access to groupBy argument fields
                     IEnumerable<string> roles = authorizationResolver.GetRolesForField(EntityName, field: columnName, operation: EntityActionOperation.Read);
-                    if (roles != null && !roles.Contains(roleOfGraphQLRequest))
+                    if (roles != null && !roles.Contains(roleOfGraphQLRequest, StringComparer.OrdinalIgnoreCase))
                     {
                         // raising execption for the first unauthorized groupBy field found
                         throw new DataApiBuilderException(
@@ -1028,7 +1028,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     // Validate that the current role has access to field in the aggregation function argument
                     IEnumerable<string> roles = authorizationResolver.GetRolesForField(EntityName, field: columnName, operation: EntityActionOperation.Read);
-                    if (roles != null && !roles.Contains(roleOfGraphQLRequest))
+                    if (roles != null && !roles.Contains(roleOfGraphQLRequest, StringComparer.OrdinalIgnoreCase))
                     {
                         // raising execption for the first unauthorized field found
                         throw new DataApiBuilderException(

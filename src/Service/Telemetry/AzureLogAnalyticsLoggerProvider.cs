@@ -1,11 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Telemetry;
 
+/// <summary>
+/// Adds an Azure Log Analytics logger named 'AzureLogAnalyticsLogger' to the <see cref="ILoggerFactory"/>.
+/// </summary>
 public class AzureLogAnalyticsLoggerProvider : ILoggerProvider
 {
     private readonly ICustomLogCollector _customLogCollector;
@@ -21,26 +23,4 @@ public class AzureLogAnalyticsLoggerProvider : ILoggerProvider
     }
 
     public void Dispose() { }
-}
-
-public class AzureLogAnalyticsLogger : ILogger
-{
-    private readonly string _categoryName;
-    private readonly ICustomLogCollector _customLogCollector;
-
-    public AzureLogAnalyticsLogger(string categoryName, ICustomLogCollector customLogCollector)
-    {
-        _categoryName = categoryName;
-        _customLogCollector = customLogCollector;
-    }
-
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => default!;
-
-    public bool IsEnabled(LogLevel logLevel) => true;
-
-    public async void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        string message = formatter(state, exception);
-        await _customLogCollector.LogAsync(message, logLevel, _categoryName);
-    }
 }

@@ -537,7 +537,7 @@ namespace Azure.DataApiBuilder.Service
                 // Configure Application Insights Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
                 ConfigureOpenTelemetry(runtimeConfig);
-                ConfigureAzureLogAnalytics(app, runtimeConfig);
+                ConfigureAzureLogAnalytics(runtimeConfig);
 
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -898,7 +898,7 @@ namespace Azure.DataApiBuilder.Service
         /// is enabled, we can track different events and metrics.
         /// </summary>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
-        private void ConfigureAzureLogAnalytics(IApplicationBuilder app, RuntimeConfig runtimeConfig)
+        private void ConfigureAzureLogAnalytics(RuntimeConfig runtimeConfig)
         {
             if (runtimeConfig?.Runtime?.Telemetry is not null
                 && runtimeConfig.Runtime.Telemetry.AzureLogAnalytics is not null)

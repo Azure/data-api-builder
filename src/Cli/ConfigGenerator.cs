@@ -782,7 +782,7 @@ namespace Cli
             if (options.AzureLogAnalyticsEnabled is not null ||
                 options.AzureLogAnalyticsLogType is not null ||
                 options.AzureLogAnalyticsFlushIntervalSeconds is not null ||
-                options.AzureLogAnalyticsWorkspaceId is not null ||
+                options.AzureLogAnalyticsCustomTableName is not null ||
                 options.AzureLogAnalyticsDcrImmutableId is not null ||
                 options.AzureLogAnalyticsDceEndpoint is not null)
             {
@@ -1157,13 +1157,13 @@ namespace Cli
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds as '{options.AzureLogAnalyticsFlushIntervalSeconds}'");
                 }
 
-                // Runtime.Telemetry.AzureLogAnalytics.Auth.WorkspaceId
-                if (options.AzureLogAnalyticsWorkspaceId is not null)
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName
+                if (options.AzureLogAnalyticsCustomTableName is not null)
                 {
                     updatedAuthOptions = updatedAuthOptions is not null
-                        ? updatedAuthOptions with { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true }
-                        : new AzureLogAnalyticsAuthOptions { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true };
-                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.workspace-id as '{options.AzureLogAnalyticsWorkspaceId}'");
+                        ? updatedAuthOptions with { CustomTableName = options.AzureLogAnalyticsCustomTableName, UserProvidedCustomTableName = true }
+                        : new AzureLogAnalyticsAuthOptions { CustomTableName = options.AzureLogAnalyticsCustomTableName, UserProvidedCustomTableName = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.custom-table-name as '{options.AzureLogAnalyticsCustomTableName}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId

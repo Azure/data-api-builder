@@ -16,6 +16,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.Telemetry;
@@ -69,24 +72,53 @@ public class AzureLogAnalyticsTests
     }
 
     /// <summary>
+    /// Tests if the services are correctly enabled for Azure Log Analytics.
+    /// </summary>
+    [TestMethod]
+    public void TestOpenTelemetryServicesEnabled()
+    {
+        // Arrange
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "Custom-Table-Name-Test", "DCR-Immutable-ID-Test", "DCE-Endpoint-Test");
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
+        };
+        using TestServer server = new(Program.CreateWebHostBuilder(args));
+
+        // Additional assertions to check if AzureLogAnalytics is enabled correctly in services
+        IServiceProvider serviceProvider = server.Services;
+        AzureLogAnalyticsCustomLogCollector customLogCollector = serviceProvider.GetService<AzureLogAnalyticsCustomLogCollector>();
+        AzureLogAnalyticsLoggerProvider loggerProvider = serviceProvider.GetService<AzureLogAnalyticsLoggerProvider>();
+        AzureLogAnalyticsFlusherService flusherService = serviceProvider.GetService<AzureLogAnalyticsFlusherService>();
+
+        // If tracerProvider and meterProvider are not null, AzureLogAnalytics is enabled
+        Assert.IsNotNull(customLogCollector, "AzureLogAnalyticsCustomLogCollector should be registered.");
+        Assert.IsNotNull(loggerProvider, "AzureLogAnalyticsLoggerProvider should be registered.");
+        Assert.IsNotNull(flusherService, "AzureLogAnalyticsFlusherService should be registered.");
+    }
+
+    /// <summary>
     /// Tests if the logs are flushed correctly when Azure Log Analytics is enabled.
     /// </summary>
     [DataTestMethod]
     [DataRow("Information Test Message", LogLevel.Information)]
     [DataRow("Trace Test Message", LogLevel.Trace)]
     [DataRow("Warning Test Message", LogLevel.Warning)]
-    public async void TestAzureLogAnalyticsFlushServiceSucceed(string message, LogLevel logLevel)
+    public async Task TestAzureLogAnalyticsFlushServiceSucceed(string message, LogLevel logLevel)
     {
         // Arrange
+        CancellationTokenSource tokenSource = new();
         AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(true, new AzureLogAnalyticsAuthOptions("custom-table-name-test", "dcr-immutable-id-test", "https://fake.dce.endpoint"));
         CustomLogsIngestionClient customClient = new(azureLogAnalyticsOptions.Auth.DceEndpoint);
         AzureLogAnalyticsCustomLogCollector customLogCollector = new();
 
-        AzureLogAnalyticsFlusherService flusherService = new(azureLogAnalyticsOptions, customLogCollector, customClient);
+        Logger<Startup> logger = new(null);
+        AzureLogAnalyticsFlusherService flusherService = new(azureLogAnalyticsOptions, customLogCollector, customClient, logger);
 
         // Act
         await customLogCollector.LogAsync(message, logLevel);
-        _ = Task.Run(() => flusherService.StartAsync());
+        _ = Task.Run(() => flusherService.StartAsync(tokenSource.Token));
 
         // Assert
         AzureLogAnalyticsLogs actualLog = customClient.LogAnalyticsLogs[0];
@@ -128,12 +160,12 @@ public class AzureLogAnalyticsTests
 
         public CustomLogsIngestionClient(string dceEndpoint) : base(new Uri(dceEndpoint), new DefaultAzureCredential()) { }
 
-        public override Task<Response> UploadAsync<T>(string ruleId, string streamName, IEnumerable<T> logs, LogsUploadOptions options = null, CancellationToken cancellationToken = default)
+        public async override Task<Response> UploadAsync<T>(string ruleId, string streamName, IEnumerable<T> logs, LogsUploadOptions options = null, CancellationToken cancellationToken = default)
         {
             LogAnalyticsLogs.AddRange(logs.Cast<AzureLogAnalyticsLogs>());
 
             Response mockResponse = Response.FromValue(Mock.Of<Response>(), Mock.Of<Response>());
-            return Task.FromResult(mockResponse);
+            return await Task.FromResult(mockResponse);
         }
     }
 }

@@ -17,9 +17,9 @@ public class AzureLogAnalyticsLoggerProvider : ILoggerProvider
         _customLogCollector = customLogCollector;
     }
 
-    public ILogger CreateLogger(string categoryName)
+    public ILogger CreateLogger(string className)
     {
-        return new AzureLogAnalyticsLogger(categoryName, _customLogCollector);
+        return new AzureLogAnalyticsLogger(className, _customLogCollector);
     }
 
     public void Dispose() { }

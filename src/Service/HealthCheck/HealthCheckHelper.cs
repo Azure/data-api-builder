@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -44,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         /// <summary>
         /// GetHealthCheckResponse is the main function which fetches the HttpContext and then creates the comprehensive health check report.
-        /// Serializes the report to JSON and returns the response.  
+        /// Serializes the report to JSON and returns the response.
         /// </summary>
         /// <param name="runtimeConfig">RuntimeConfig</param>
         /// <returns>This function returns the comprehensive health report after calculating the response time of each datasource, rest and graphql health queries.</returns>
@@ -160,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             if (ComprehensiveHealthCheckReport.Checks != null && runtimeConfig.DataSource.IsDatasourceHealthEnabled)
             {
                 string query = Utilities.GetDatSourceQuery(runtimeConfig.DataSource.DatabaseType);
-                (int, string?) response = await ExecuteDatasourceQueryCheckAsync(query, runtimeConfig.DataSource.ConnectionString);
+                (int, string?) response = await ExecuteDatasourceQueryCheckAsync(query, runtimeConfig.DataSource.ConnectionString, Utilities.GetDbProviderFactory(runtimeConfig.DataSource.DatabaseType));
                 bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < runtimeConfig.DataSource.DatasourceThresholdMs;
 
                 // Add DataSource Health Check Results
@@ -180,14 +181,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the DB Query and keeps track of the response time and error message.
-        private async Task<(int, string?)> ExecuteDatasourceQueryCheckAsync(string query, string connectionString)
+        private async Task<(int, string?)> ExecuteDatasourceQueryCheckAsync(string query, string connectionString, DbProviderFactory dbProviderFactory)
         {
             string? errorMessage = null;
             if (!string.IsNullOrEmpty(query) && !string.IsNullOrEmpty(connectionString))
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = await _httpUtility.ExecuteDbQueryAsync(query, connectionString);
+                errorMessage = await _httpUtility.ExecuteDbQueryAsync(query, connectionString, dbProviderFactory);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
@@ -195,7 +196,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
         }
 
-        // Updates the Entity Health Check Results in the response. 
+        // Updates the Entity Health Check Results in the response.
         // Goes through the entities one by one and executes the rest and graphql checks (if enabled).
         private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport report, RuntimeConfig runtimeConfig)
         {

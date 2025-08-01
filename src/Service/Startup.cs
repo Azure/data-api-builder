@@ -29,6 +29,8 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
+using Azure.Identity;
+using Azure.Monitor.Ingestion;
 using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
@@ -70,6 +72,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
+        public static AzureLogAnalyticsCustomLogCollector CustomLogCollector = new();
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
@@ -171,6 +174,22 @@ namespace Azure.DataApiBuilder.Service
                         })
                         .AddSource(TelemetryTracesHelper.DABActivitySource.Name);
                 });
+            }
+
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.Telemetry?.AzureLogAnalytics is not null
+                && IsAzureLogAnalyticsAvailable(runtimeConfig.Runtime.Telemetry.AzureLogAnalytics))
+            {
+                services.AddSingleton<ICustomLogCollector, AzureLogAnalyticsCustomLogCollector>();
+                services.AddSingleton<ILoggerProvider, AzureLogAnalyticsLoggerProvider>();
+                services.AddSingleton(sp =>
+                {
+                    AzureLogAnalyticsOptions options = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
+                    DefaultAzureCredential credential = new();
+                    LogsIngestionClient logsIngestionClient = new(new Uri(options.Auth!.DceEndpoint!), credential);
+                    return new AzureLogAnalyticsFlusherService(options, CustomLogCollector, logsIngestionClient, _logger);
+                });
+                services.AddHostedService(sp => sp.GetRequiredService<AzureLogAnalyticsFlusherService>());
             }
 
             services.AddSingleton(implementationFactory: serviceProvider =>
@@ -892,6 +911,30 @@ namespace Azure.DataApiBuilder.Service
                     return;
                 }
 
+                bool isAuthIncomplete = false;
+                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.CustomTableName))
+                {
+                    _logger.LogError("Logs won't be sent to Azure Log Analytics because the Custom Table Name is not available in the config file.");
+                    isAuthIncomplete = true;
+                }
+
+                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.DcrImmutableId))
+                {
+                    _logger.LogError("Logs won't be sent to Azure Log Analytics because the DCR Immutable Id is not available in the config file.");
+                    isAuthIncomplete = true;
+                }
+
+                if (string.IsNullOrEmpty(AzureLogAnalyticsOptions.Auth?.DceEndpoint))
+                {
+                    _logger.LogError("Logs won't be sent to Azure Log Analytics because the DCE Endpoint is not available in the config file.");
+                    isAuthIncomplete = true;
+                }
+
+                if (isAuthIncomplete)
+                {
+                    return;
+                }
+
                 // Updating Startup Logger to Log from Startup Class.
                 ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
                 _logger = loggerFactory.CreateLogger<Startup>();
@@ -1043,6 +1086,18 @@ namespace Azure.DataApiBuilder.Service
             LoggerFilters.AddFilter(typeof(IAuthorizationHandler).FullName);
             LoggerFilters.AddFilter(typeof(IAuthorizationResolver).FullName);
             LoggerFilters.AddFilter("default");
+        }
+
+        /// <summary>
+        /// Helper function that returns if AzureLogAnalytics feature is enabled and properly configured.
+        /// </summary>
+        public static bool IsAzureLogAnalyticsAvailable(AzureLogAnalyticsOptions azureLogAnalyticsOptions)
+        {
+            return azureLogAnalyticsOptions.Auth is not null
+                && azureLogAnalyticsOptions.Enabled
+                && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.CustomTableName)
+                && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DcrImmutableId)
+                && !string.IsNullOrWhiteSpace(azureLogAnalyticsOptions.Auth.DceEndpoint);
         }
     }
 }

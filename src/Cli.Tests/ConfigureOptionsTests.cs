@@ -164,7 +164,7 @@ namespace Cli.Tests
                 azureLogAnalyticsEnabled: CliBool.True,
                 azureLogAnalyticsLogType: "log-type-test",
                 azureLogAnalyticsFlushIntervalSeconds: 1,
-                azureLogAnalyticsWorkspaceId: "workspace-id-test",
+                azureLogAnalyticsCustomTableName: "custom-table-name-test",
                 azureLogAnalyticsDcrImmutableId: "dcr-immutable-id-test",
                 azureLogAnalyticsDceEndpoint: "dce-endpoint-test",
                 config: TEST_RUNTIME_CONFIG_FILE
@@ -183,7 +183,7 @@ namespace Cli.Tests
             Assert.AreEqual("log-type-test", config.Runtime.Telemetry.AzureLogAnalytics.LogType);
             Assert.AreEqual(1, config.Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics.Auth);
-            Assert.AreEqual("workspace-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.WorkspaceId);
+            Assert.AreEqual("custom-table-name-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName);
             Assert.AreEqual("dcr-immutable-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId);
             Assert.AreEqual("dce-endpoint-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint);
         }

@@ -51,7 +51,7 @@ namespace Cli.Commands
             CliBool? azureLogAnalyticsEnabled = null,
             string? azureLogAnalyticsLogType = null,
             int? azureLogAnalyticsFlushIntervalSeconds = null,
-            string? azureLogAnalyticsWorkspaceId = null,
+            string? azureLogAnalyticsCustomTableName = null,
             string? azureLogAnalyticsDcrImmutableId = null,
             string? azureLogAnalyticsDceEndpoint = null,
             string? config = null)
@@ -95,7 +95,7 @@ namespace Cli.Commands
             AzureLogAnalyticsEnabled = azureLogAnalyticsEnabled;
             AzureLogAnalyticsLogType = azureLogAnalyticsLogType;
             AzureLogAnalyticsFlushIntervalSeconds = azureLogAnalyticsFlushIntervalSeconds;
-            AzureLogAnalyticsWorkspaceId = azureLogAnalyticsWorkspaceId;
+            AzureLogAnalyticsCustomTableName = azureLogAnalyticsCustomTableName;
             AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
             AzureLogAnalyticsDceEndpoint = azureLogAnalyticsDceEndpoint;
         }
@@ -184,17 +184,17 @@ namespace Cli.Commands
         [Option("azure-key-vault.retry-policy.network-timeout-seconds", Required = false, HelpText = "Configure the network timeout for requests in seconds. Default: 60.")]
         public int? AzureKeyVaultRetryPolicyNetworkTimeoutSeconds { get; }
 
-        [Option("runtime.telemetry.azure-log-analytics.enabled", Default = CliBool.False, Required = false, HelpText = "Enable/Disable Azure Log Analytics.")]
+        [Option("runtime.telemetry.azure-log-analytics.enabled", Required = false, HelpText = "Enable/Disable Azure Log Analytics. Default: False (boolean)")]
         public CliBool? AzureLogAnalyticsEnabled { get; }
 
-        [Option("runtime.telemetry.azure-log-analytics.log-type", Required = false, HelpText = "Configure Log Type for Azure Log Analytics to find table to send telemetry data")]
+        [Option("runtime.telemetry.azure-log-analytics.log-type", Required = false, HelpText = "Configure Log Type for Azure Log Analytics to find table to send telemetry data. Default: DABLogs")]
         public string? AzureLogAnalyticsLogType { get; }
 
-        [Option("runtime.telemetry.azure-log-analytics.flush-interval-seconds", Required = false, HelpText = "Configure Flush Interval in seconds for Azure Log Analytics to specify the time interval to send the telemetry data")]
+        [Option("runtime.telemetry.azure-log-analytics.flush-interval-seconds", Required = false, HelpText = "Configure Flush Interval in seconds for Azure Log Analytics to specify the time interval to send the telemetry data. Default: 5")]
         public int? AzureLogAnalyticsFlushIntervalSeconds { get; }
 
-        [Option("runtime.telemetry.azure-log-analytics.auth.workspace-id", Required = false, HelpText = "Configure Workspace ID for Azure Log Analytics used to find workspace to connect")]
-        public string? AzureLogAnalyticsWorkspaceId { get; }
+        [Option("runtime.telemetry.azure-log-analytics.auth.custom-table-name", Required = false, HelpText = "Configure Custom Table Name for Azure Log Analytics used to find table to connect")]
+        public string? AzureLogAnalyticsCustomTableName { get; }
 
         [Option("runtime.telemetry.azure-log-analytics.auth.dcr-immutable-id", Required = false, HelpText = "Configure DCR Immutable ID for Azure Log Analytics to find the data collection rule that defines how data is collected")]
         public string? AzureLogAnalyticsDcrImmutableId { get; }

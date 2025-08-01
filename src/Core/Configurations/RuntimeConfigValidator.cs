@@ -166,11 +166,11 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             AzureLogAnalyticsOptions azureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
             AzureLogAnalyticsAuthOptions? azureLogAnalyticsAuthOptions = azureLogAnalyticsOptions.Auth;
-            if (azureLogAnalyticsOptions.Enabled && (azureLogAnalyticsAuthOptions is null || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.WorkspaceId) ||
+            if (azureLogAnalyticsOptions.Enabled && (azureLogAnalyticsAuthOptions is null || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.CustomTableName) ||
                 string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DcrImmutableId) || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DceEndpoint)))
             {
                 HandleOrRecordException(new DataApiBuilderException(
-                    message: "Azure Log Analytics Auth options 'workspace-id', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
+                    message: "Azure Log Analytics Auth options 'custom-table-name', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

@@ -4072,12 +4072,12 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, "WorkspaceId", "DcrImmutableId", "DceEndpoint", "TestDabLog", 1, true, "TestDabLog", 1)]
+        [DataRow(true, "CustomTableName", "DcrImmutableId", "DceEndpoint", "TestDabLog", 1, true, "TestDabLog", 1)]
         [DataRow(false, "", null, "", "", 10, false, "", 10)]
         [DataRow(null, null, null, null, null, null, false, "DabLogs", 5)]
         public void AzureLogAnalyticsSerialization(
             bool? enabled,
-            string? workspaceId,
+            string? customTableName,
             string? dcrImmutableId,
             string? dceEndpoint,
             string? logType,
@@ -4090,11 +4090,11 @@ type Planet @model(name:""PlanetAlias"") {
             bool expectedExistEnabled = enabled is not null;
             bool expectedExistLogType = logType is not null;
             bool expectedExistFlushIntSec = flushIntSec is not null;
-            bool expectedExistWorkspaceId = workspaceId is not null;
+            bool expectedExistCustomTableName = customTableName is not null;
             bool expectedExistDcrImmutableId = dcrImmutableId is not null;
             bool expectedExistDceEndpoint = dceEndpoint is not null;
 
-            AzureLogAnalyticsAuthOptions authOptions = new(workspaceId, dcrImmutableId, dceEndpoint);
+            AzureLogAnalyticsAuthOptions authOptions = new(customTableName, dcrImmutableId, dceEndpoint);
             AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, logType, flushIntSec);
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithAzureLogAnalytics(azureLogAnalyticsOptions);
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
@@ -4140,11 +4140,11 @@ type Planet @model(name:""PlanetAlias"") {
                 //Validate the values inside the auth properties are of expected value
                 if (authExists)
                 {
-                    bool workspaceIdExists = authElement.TryGetProperty("workspace-id", out JsonElement workspaceIdElement);
-                    Assert.AreEqual(expectedExistWorkspaceId, workspaceIdExists);
-                    if (workspaceIdExists)
+                    bool customTableNameExists = authElement.TryGetProperty("custom-table-name", out JsonElement customTableNameElement);
+                    Assert.AreEqual(expectedExistCustomTableName, customTableNameExists);
+                    if (customTableNameExists)
                     {
-                        Assert.AreEqual(expected: workspaceId, workspaceIdElement.GetString());
+                        Assert.AreEqual(expected: customTableName, customTableNameElement.GetString());
                     }
 
                     bool dcrImmutableIdExists = authElement.TryGetProperty("dcr-immutable-id", out JsonElement dcrImmutableIdElement);

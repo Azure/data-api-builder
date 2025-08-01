@@ -3442,6 +3442,19 @@
                 Action: Read
               }
             ]
+          },
+          {
+            Role: TestFieldExcludedForAggregation,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
+              }
+            ]
           }
         ],
         Mappings: {

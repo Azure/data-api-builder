@@ -459,7 +459,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (isGroupByQuery)
                 {
-                    ProcessGroupByField(queryField, ctx);
+                    ProcessGroupByField(queryField, ctx, authorizationResolver);
                 }
                 else
                 {
@@ -877,11 +877,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///   }
         /// }
         /// </summary>
-        private void ProcessGroupByField(FieldNode groupByField, IMiddlewareContext ctx)
+        private void ProcessGroupByField(FieldNode groupByField, IMiddlewareContext ctx, IAuthorizationResolver authorizationResolver)
         {
             // Extract 'fields' argument
             ArgumentNode? fieldsArg = groupByField.Arguments.FirstOrDefault(a => a.Name.Value == QueryBuilder.GROUP_BY_FIELDS_FIELD_NAME);
             HashSet<string> fieldsInArgument = new();
+
+            string roleOfGraphQLRequest = Authorization.AuthorizationResolver.GetRoleOfGraphQLRequest(ctx);
 
             if (fieldsArg is { Value: ListValueNode fieldsList })
             {
@@ -889,6 +891,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     string fieldName = value.Value;
                     string columnName = MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumn) ? backingColumn : fieldName;
+
+                    // Validate that the current role has access to groupBy argument fields
+                    IEnumerable<string> roles = authorizationResolver.GetRolesForField(EntityName, field: columnName, operation: EntityActionOperation.Read);
+                    if (roles != null && !roles.Contains(roleOfGraphQLRequest, StringComparer.OrdinalIgnoreCase))
+                    {
+                        // raising exception for the first unauthorized groupBy field found
+                        throw new DataApiBuilderException(
+                            message: string.Format(DataApiBuilderException.GRAPHQL_GROUPBY_FIELD_AUTHZ_FAILURE, fieldName),
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        );
+                    }
 
                     GroupByMetadata.Fields[columnName] = new Column(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, SourceAlias);
                     AddColumn(fieldName, backingColumn ?? fieldName);
@@ -913,7 +927,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     case QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME:
                         GroupByMetadata.RequestedAggregations = true;
-                        ProcessAggregations(field, ctx);
+                        ProcessAggregations(field, ctx, authorizationResolver, roleOfGraphQLRequest);
                         break;
                 }
             }
@@ -963,7 +977,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="aggregationsField">The FieldNode representing the aggregations field in the GraphQL query.</param>
         /// <param name="ctx"> middleware context.</param>
-        private void ProcessAggregations(FieldNode aggregationsField, IMiddlewareContext ctx)
+        private void ProcessAggregations(FieldNode aggregationsField, IMiddlewareContext ctx, IAuthorizationResolver authorizationResolver, string roleOfGraphQLRequest)
         {
             // If there are no selections in the aggregation field, exit early
             if (aggregationsField.SelectionSet == null)
@@ -1010,7 +1024,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? backingColumn))
                     {
                         columnName = backingColumn;
-                        fieldName = backingColumn;
+                    }
+
+                    // Validate that the current role has access to field in the aggregation function argument
+                    IEnumerable<string> roles = authorizationResolver.GetRolesForField(EntityName, field: columnName, operation: EntityActionOperation.Read);
+                    if (roles != null && !roles.Contains(roleOfGraphQLRequest, StringComparer.OrdinalIgnoreCase))
+                    {
+                        // raising exception for the first unauthorized field found
+                        throw new DataApiBuilderException(
+                            message: string.Format(DataApiBuilderException.GRAPHQL_AGGREGATION_FIELD_AUTHZ_FAILURE, fieldName, operation),
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        );
                     }
 
                     // Use the field alias if provided, otherwise default to the operation name

@@ -71,5 +71,73 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 SqlTestHelper.PerformTestEqualJsonStrings(expectedResult, actual.ToString());
             }
         }
+
+        /// <summary>
+        /// Tests that a GraphQL query with a groupBy operation on fields not allowed for aggregation results in an
+        /// appropriate error message.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task Query_GroupBy_FieldNotAllowed()
+        {
+            string graphQLQueryName = "booksNF";
+            string graphQLQuery = @"{
+                  booksNF {
+                    groupBy (fields: [id, publisher_id]) {
+                      fields {
+                        id
+                        publisher_id
+                      }
+                    }
+                  }
+                }
+                ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "TestFieldExcludedForAggregation");
+
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                actual.ToString(),
+                message: "Access forbidden to field 'publisher_id' referenced in the groupBy argument.",
+                path: @"[""booksNF""]"
+            );
+        }
+
+        /// <summary>
+        /// Tests that a GraphQL query with a group by aggregation on a field not allowed for aggregation results in an
+        /// appropriate error message.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task Query_GroupBy_Aggregation_FieldNotAllowed()
+        {
+            string graphQLQueryName = "booksNF";
+            string graphQLQuery = @"{
+                  booksNF {
+                    groupBy {
+                      aggregations {
+                        max (field: id)
+                        min (field: publisher_id)
+                      }
+                    }
+                  }
+                }
+                ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "TestFieldExcludedForAggregation");
+
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                actual.ToString(),
+                message: "Access forbidden to field 'publisher_id' referenced in the aggregation function 'min'.",
+                path: @"[""booksNF""]"
+            );
+        }
     }
 }

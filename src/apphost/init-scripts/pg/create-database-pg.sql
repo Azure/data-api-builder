@@ -3,75 +3,70 @@
 
 -- Create database (run this as a superuser, outside the target database)
 -- Uncomment and edit the database name as needed
--- CREATE DATABASE "Trek"
---     WITH 
---     OWNER = trek_user
---     ENCODING = 'UTF8'
---     LC_COLLATE = 'en_US.utf8'
---     LC_CTYPE = 'en_US.utf8'
---     TEMPLATE = template0;
+--CREATE DATABASE "Trek";
 
 -- Connect to the target database before running the rest of the script
+--\connect Trek;
 
 -- Drop tables in reverse order of creation due to foreign key dependencies
-DROP TABLE IF EXISTS Character_Species;
-DROP TABLE IF EXISTS Series_Character;
+DROP TABLE IF EXISTS "Character_Species";
+DROP TABLE IF EXISTS "Series_Character";
 DROP TABLE IF EXISTS "Character";
-DROP TABLE IF EXISTS Species;
-DROP TABLE IF EXISTS Actor;
-DROP TABLE IF EXISTS Series;
+DROP TABLE IF EXISTS "Species";
+DROP TABLE IF EXISTS "Actor";
+DROP TABLE IF EXISTS "Series";
 
 -- create tables
-CREATE TABLE Series (
-    Id INTEGER PRIMARY KEY,
-    Name VARCHAR(255) NOT NULL
+CREATE TABLE "Series" (
+    "Id" INTEGER PRIMARY KEY,
+    "Name" VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE Actor (
-    Id INTEGER PRIMARY KEY,
-    Name VARCHAR(255) NOT NULL,
+CREATE TABLE "Actor" (
+    "Id" INTEGER PRIMARY KEY,
+    "Name" VARCHAR(255) NOT NULL,
     "BirthYear" INTEGER NOT NULL
 );
 
-CREATE TABLE Species (
-    Id INTEGER PRIMARY KEY,
-    Name VARCHAR(255) NOT NULL
+CREATE TABLE "Species" (
+    "Id" INTEGER PRIMARY KEY,
+    "Name" VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE "Character" (
-    Id INTEGER PRIMARY KEY,
-    Name VARCHAR(255) NOT NULL,
-    ActorId INTEGER NOT NULL,
-    Stardate DECIMAL(10, 2),
-    FOREIGN KEY (ActorId) REFERENCES Actor(Id)
+    "Id" INTEGER PRIMARY KEY,
+    "Name" VARCHAR(255) NOT NULL,
+    "ActorId" INTEGER NOT NULL,
+    "Stardate" DECIMAL(10, 2),
+    FOREIGN KEY ("ActorId") REFERENCES "Actor"("Id")
 );
 
-CREATE TABLE Series_Character (
-    SeriesId INTEGER,
-    CharacterId INTEGER,
-    Role VARCHAR(500),
-    FOREIGN KEY (SeriesId) REFERENCES Series(Id),
-    FOREIGN KEY (CharacterId) REFERENCES "Character"(Id),
-    PRIMARY KEY (SeriesId, CharacterId)
+CREATE TABLE "Series_Character" (
+    "SeriesId" INTEGER,
+    "CharacterId" INTEGER,
+    "Role" VARCHAR(500),
+    FOREIGN KEY ("SeriesId") REFERENCES "Series"("Id"),
+    FOREIGN KEY ("CharacterId") REFERENCES "Character"("Id"),
+    PRIMARY KEY ("SeriesId", "CharacterId")
 );
 
-CREATE TABLE Character_Species (
-    CharacterId INTEGER,
-    SpeciesId INTEGER,
-    FOREIGN KEY (CharacterId) REFERENCES "Character"(Id),
-    FOREIGN KEY (SpeciesId) REFERENCES Species(Id),
-    PRIMARY KEY (CharacterId, SpeciesId)
+CREATE TABLE "Character_Species" (
+    "CharacterId" INTEGER,
+    "SpeciesId" INTEGER,
+    FOREIGN KEY ("CharacterId") REFERENCES "Character"("Id"),
+    FOREIGN KEY ("SpeciesId") REFERENCES "Species"("Id"),
+    PRIMARY KEY ("CharacterId", "SpeciesId")
 );
 
 -- create data
-INSERT INTO Series (Id, Name) VALUES 
+INSERT INTO "Series" ("Id", "Name") VALUES
     (1, 'Star Trek'),
     (2, 'Star Trek: The Next Generation'),
     (3, 'Star Trek: Voyager'),
     (4, 'Star Trek: Deep Space Nine'),
     (5, 'Star Trek: Enterprise');
 
-INSERT INTO Species (Id, Name) VALUES 
+INSERT INTO "Species" ("Id", "Name") VALUES
     (1, 'Human'),
     (2, 'Vulcan'),
     (3, 'Android'),
@@ -85,7 +80,7 @@ INSERT INTO Species (Id, Name) VALUES
     (11, 'Denobulan'),
     (12, 'Borg');
 
-INSERT INTO Actor (Id, Name, "BirthYear") VALUES 
+INSERT INTO "Actor" ("Id", "Name", "BirthYear") VALUES
     (1, 'William Shatner', 1931),
     (2, 'Leonard Nimoy', 1931),
     (3, 'DeForest Kelley', 1920),
@@ -123,7 +118,7 @@ INSERT INTO Actor (Id, Name, "BirthYear") VALUES
     (35, 'Linda Park', 1978),
     (36, 'Anthony Montgomery', 1971);
 
-INSERT INTO "Character" (Id, Name, ActorId, Stardate) VALUES 
+INSERT INTO "Character" ("Id", "Name", "ActorId", "Stardate") VALUES
     (1, 'James T. Kirk', 1, 2233.04),
     (2, 'Spock', 2, 2230.06),
     (3, 'Leonard McCoy', 3, 2227.00),
@@ -161,7 +156,7 @@ INSERT INTO "Character" (Id, Name, ActorId, Stardate) VALUES
     (36, 'Hoshi Sato', 35, 2129.00),
     (37, 'Travis Mayweather', 36, 2126.00);
 
-INSERT INTO Series_Character (SeriesId, CharacterId, Role) VALUES 
+INSERT INTO "Series_Character" ("SeriesId", "CharacterId", "Role") VALUES
     (1, 1, 'Captain'), -- James T. Kirk in Star Trek
     (1, 2, 'Science Officer'), -- Spock in Star Trek
     (1, 3, 'Doctor'), -- Leonard McCoy in Star Trek
@@ -200,7 +195,7 @@ INSERT INTO Series_Character (SeriesId, CharacterId, Role) VALUES
     (5, 36, 'Communications Officer'),-- Hoshi Sato in Star Trek: Enterprise
     (5, 37, 'Helmsman');-- Travis Mayweather in Star Trek: Enterprise
 
-INSERT INTO Character_Species (CharacterId, SpeciesId) VALUES 
+INSERT INTO "Character_Species" ("CharacterId", "SpeciesId") VALUES
     (1, 1),  -- James T. Kirk is Human
     (2, 2),  -- Spock is Vulcan
     (2, 1),  -- Spock is also Human

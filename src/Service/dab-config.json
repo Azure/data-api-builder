@@ -1,0 +1,231 @@
+{
+    "data-source": {
+      "database-type": "@env('db-type')",
+      "connection-string": "@env('ConnectionStrings__Trek')",
+      "options": {
+        "set-session-context": false
+      }
+    },
+    "runtime": {
+      "rest": {
+        "enabled": true,
+        "path": "/api",
+        "request-body-strict": true
+      },
+      "graphql": {
+        "enabled": true,
+        "path": "/graphql",
+        "allow-introspection": true
+      },
+      "host": {
+        "authentication": {
+          "provider": "StaticWebApps"
+        },
+        "cors": {
+          "origins": [],
+          "allow-credentials": false
+        },
+        "mode": "development"
+      },
+      "telemetry": {
+        "open-telemetry": {
+          "enabled": true,
+          "endpoint": "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
+          "headers": "@env('OTEL_EXPORTER_OTLP_HEADERS')",
+          "exporter-protocol": "@env('OTEL_EXPORTER_OTLP_PROTOCOL')",
+          "service-name": "@env('OTEL_SERVICE_NAME')"
+        }
+      },
+      "cache": {
+        "enabled": true,
+        "ttl-seconds": 60
+      }
+    },
+    "entities": {
+      "Actor": {
+        "source": {
+          "object": "Actor",
+          "type": "table"
+        },
+        "graphql": {
+          "enabled": true,
+          "type": {
+            "singular": "Actor",
+            "plural": "Actors"
+          }
+        },
+        "rest": {
+          "enabled": true
+        },
+        "permissions": [
+          {
+            "role": "anonymous",
+            "actions": [
+              "*"
+            ]
+          }
+        ],
+        "relationships": {
+          "character": {
+            "cardinality": "many",
+            "target.entity": "Character",
+            "source.fields": [
+              "Id"
+            ],
+            "target.fields": [
+              "ActorId"
+            ],
+            "linking.source.fields": [],
+            "linking.target.fields": []
+          }
+        }
+      },
+      "Character": {
+        "source": {
+          "object": "Character",
+          "type": "table"
+        },
+        "graphql": {
+          "enabled": true,
+          "type": {
+            "singular": "Character",
+            "plural": "Characters"
+          }
+        },
+        "rest": {
+          "enabled": true
+        },
+        "permissions": [
+          {
+            "role": "anonymous",
+            "actions": [
+              {
+                "action": "*"
+              }
+            ]
+          }
+        ],
+        "relationships": {
+          "actor": {
+            "cardinality": "one",
+            "target.entity": "Actor",
+            "source.fields": [
+              "ActorId"
+            ],
+            "target.fields": [
+              "Id"
+            ],
+            "linking.source.fields": [],
+            "linking.target.fields": []
+          },
+          "series": {
+            "cardinality": "many",
+            "target.entity": "Series",
+            "source.fields": [
+              "Id"
+            ],
+            "target.fields": [
+              "Id"
+            ],
+            "linking.object": "series_character",
+            "linking.source.fields": [
+              "CharacterId"
+            ],
+            "linking.target.fields": [
+              "SeriesId"
+            ]
+          }
+        }
+      },
+      "Series": {
+        "source": {
+          "object": "Series",
+          "type": "table"
+        },
+        "graphql": {
+          "enabled": true,
+          "type": {
+            "singular": "Series",
+            "plural": "Series"
+          }
+        },
+        "rest": {
+          "enabled": true
+        },
+        "permissions": [
+          {
+            "role": "anonymous",
+            "actions": [
+              {
+                "action": "*"
+              }
+            ]
+          }
+        ],
+        "relationships": {
+          "character": {
+            "cardinality": "many",
+            "target.entity": "Character",
+            "source.fields": [
+              "Id"
+            ],
+            "target.fields": [
+              "Id"
+            ],
+            "linking.object": "series_character",
+            "linking.source.fields": [
+              "SeriesId"
+            ],
+            "linking.target.fields": [
+              "CharacterId"
+            ]
+          }
+        }
+      },
+      "Species": {
+        "source": {
+          "object": "Species",
+          "type": "table"
+        },
+        "graphql": {
+          "enabled": true,
+          "type": {
+            "singular": "Species",
+            "plural": "Species"
+          }
+        },
+        "rest": {
+          "enabled": true
+        },
+        "permissions": [
+          {
+            "role": "anonymous",
+            "actions": [
+              {
+                "action": "*"
+              }
+            ]
+          }
+        ],
+        "relationships": {
+          "character": {
+            "cardinality": "many",
+            "target.entity": "Character",
+            "source.fields": [
+              "Id"
+            ],
+            "target.fields": [
+              "Id"
+            ],
+            "linking.object": "character_species",
+            "linking.source.fields": [
+              "SpeciesId"
+            ],
+            "linking.target.fields": [
+              "CharacterId"
+            ]
+          }
+        }
+      }
+    }
+  }

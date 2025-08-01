@@ -592,6 +592,11 @@ public record RuntimeConfig
         return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
 
+    public bool NextLinkRelative()
+    {
+        return Runtime?.Pagination?.NextLinkRelative ?? false;
+    }
+
     public int MaxResponseSizeMB()
     {
         return Runtime?.Host?.MaxResponseSizeMB ?? HostOptions.MAX_RESPONSE_LENGTH_DAB_ENGINE_MB;

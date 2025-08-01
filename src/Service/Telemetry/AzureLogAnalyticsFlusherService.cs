@@ -36,7 +36,7 @@ public class AzureLogAnalyticsFlusherService : BackgroundService
     /// <param name="stoppingToken">Token used to stop running service when program is shut down.</param>
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (_options?.Enabled is true && _logsIngestionClient is not null && _customLogCollector is not null && _logger is not null)
+        while (true)
         {
             try
             {

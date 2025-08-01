@@ -12,12 +12,12 @@ namespace Azure.DataApiBuilder.Service.Telemetry;
 /// </summary>
 public class AzureLogAnalyticsLogger : ILogger
 {
-    private readonly string _categoryName;
+    private readonly string _className;
     private readonly ICustomLogCollector _customLogCollector;
 
-    public AzureLogAnalyticsLogger(string categoryName, ICustomLogCollector customLogCollector)
+    public AzureLogAnalyticsLogger(string className, ICustomLogCollector customLogCollector)
     {
-        _categoryName = categoryName;
+        _className = className;
         _customLogCollector = customLogCollector;
     }
 
@@ -28,6 +28,6 @@ public class AzureLogAnalyticsLogger : ILogger
     public async void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         string message = formatter(state, exception);
-        await _customLogCollector.LogAsync(message, logLevel, _categoryName);
+        await _customLogCollector.LogAsync(message, logLevel, _className);
     }
 }

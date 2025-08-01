@@ -16,9 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.Telemetry;
@@ -75,10 +72,10 @@ public class AzureLogAnalyticsTests
     /// Tests if the services are correctly enabled for Azure Log Analytics.
     /// </summary>
     [TestMethod]
-    public void TestOpenTelemetryServicesEnabled()
+    public void TestAzureLogAnalyticsServicesEnabled()
     {
         // Arrange
-        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "Custom-Table-Name-Test", "DCR-Immutable-ID-Test", "DCE-Endpoint-Test");
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, "Custom-Table-Name-Test", "DCR-Immutable-ID-Test", "https://fake.dce.endpoint");
 
         string[] args = new[]
         {
@@ -113,7 +110,8 @@ public class AzureLogAnalyticsTests
         CustomLogsIngestionClient customClient = new(azureLogAnalyticsOptions.Auth.DceEndpoint);
         AzureLogAnalyticsCustomLogCollector customLogCollector = new();
 
-        Logger<Startup> logger = new(null);
+        ILoggerFactory loggerFactory = new LoggerFactory();
+        ILogger<Startup> logger = loggerFactory.CreateLogger<Startup>();
         AzureLogAnalyticsFlusherService flusherService = new(azureLogAnalyticsOptions, customLogCollector, customClient, logger);
 
         // Act

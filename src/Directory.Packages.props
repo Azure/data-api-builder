@@ -3,6 +3,9 @@
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     </PropertyGroup>
     <ItemGroup>
+        <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.4.0" />
+        <PackageVersion Include="Aspire.Hosting.SqlServer" Version="9.4.0" />
+        <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="9.4.0" />
         <PackageVersion Include="Azure.Identity" Version="1.11.4" />
         <PackageVersion Include="CommandLineParser" Version="2.9.1" />
         <PackageVersion Include="coverlet.msbuild" Version="6.0.2" />

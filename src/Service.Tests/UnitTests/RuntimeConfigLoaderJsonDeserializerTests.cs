@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TryParseAndAssertOnDefaults("{" + emptyHostSubProps, out _);
 
             // Test with empty telemetry sub-properties
-            minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { }, ""log-level"": { }, ""open-telemetry"": { }, ""azure-log-analytics"": { } } }");
+            minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { }, ""log-level"": { }, ""open-telemetry"": { }, ""azure-log-analytics"": { }, ""file"": { } } }");
 
             string emptyTelemetrySubProps = minJsonWithTelemetrySubProps + "}";
             TryParseAndAssertOnDefaults("{" + emptyTelemetrySubProps, out _);
@@ -652,6 +652,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 || !parsedConfig.Runtime.Telemetry.OpenTelemetry.Enabled);
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.AzureLogAnalytics is null
                 || !parsedConfig.Runtime.Telemetry.AzureLogAnalytics.Enabled);
+            Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.File is null
+                || !parsedConfig.Runtime.Telemetry.File.Enabled);
             return true;
         }
 

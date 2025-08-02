@@ -261,6 +261,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replaceEnvVar));
+        options.Converters.Add(new FileSinkConverter(replaceEnvVar));
 
         if (replaceEnvVar)
         {

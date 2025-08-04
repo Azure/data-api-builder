@@ -85,14 +85,15 @@ public class AzureLogAnalyticsTests
 
         // Additional assertions to check if AzureLogAnalytics is enabled correctly in services
         IServiceProvider serviceProvider = server.Services;
-        AzureLogAnalyticsCustomLogCollector customLogCollector = serviceProvider.GetService<AzureLogAnalyticsCustomLogCollector>();
-        AzureLogAnalyticsLoggerProvider loggerProvider = serviceProvider.GetService<AzureLogAnalyticsLoggerProvider>();
+        AzureLogAnalyticsCustomLogCollector customLogCollector = (AzureLogAnalyticsCustomLogCollector)serviceProvider.GetService<ICustomLogCollector>();
         AzureLogAnalyticsFlusherService flusherService = serviceProvider.GetService<AzureLogAnalyticsFlusherService>();
+        IEnumerable<ILoggerProvider> loggerProvidersServices = serviceProvider.GetServices<ILoggerProvider>();
+        AzureLogAnalyticsLoggerProvider loggerProvider = loggerProvidersServices.OfType<AzureLogAnalyticsLoggerProvider>().FirstOrDefault();
 
-        // If customLogCollector, loggerProvider and flusherService are not null when AzureLogAnalytics is enabled
+        // If customLogCollector, flusherService, and loggerProvider are not null when AzureLogAnalytics is enabled
         Assert.IsNotNull(customLogCollector, "AzureLogAnalyticsCustomLogCollector should be registered.");
-        Assert.IsNotNull(loggerProvider, "AzureLogAnalyticsLoggerProvider should be registered.");
         Assert.IsNotNull(flusherService, "AzureLogAnalyticsFlusherService should be registered.");
+        Assert.IsNotNull(loggerProvider, "AzureLogAnalyticsLoggerProvider should be registered.");
     }
 
     /// <summary>
@@ -106,7 +107,7 @@ public class AzureLogAnalyticsTests
     {
         // Arrange
         CancellationTokenSource tokenSource = new();
-        AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(true, new AzureLogAnalyticsAuthOptions("custom-table-name-test", "dcr-immutable-id-test", "https://fake.dce.endpoint"));
+        AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(true, new AzureLogAnalyticsAuthOptions("custom-table-name-test", "dcr-immutable-id-test", "https://fake.dce.endpoint"), "DABLogs", 1);
         CustomLogsIngestionClient customClient = new(azureLogAnalyticsOptions.Auth.DceEndpoint);
         AzureLogAnalyticsCustomLogCollector customLogCollector = new();
 
@@ -116,7 +117,10 @@ public class AzureLogAnalyticsTests
 
         // Act
         await customLogCollector.LogAsync(message, logLevel);
+
         _ = Task.Run(() => flusherService.StartAsync(tokenSource.Token));
+
+        await Task.Delay(1000);
 
         // Assert
         AzureLogAnalyticsLogs actualLog = customClient.LogAnalyticsLogs[0];

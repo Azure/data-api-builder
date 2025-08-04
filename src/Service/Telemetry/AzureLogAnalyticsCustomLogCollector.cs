@@ -55,19 +55,16 @@ public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
         List<AzureLogAnalyticsLogs> list = new();
         Stopwatch time = Stopwatch.StartNew();
 
-        while (time.Elapsed < TimeSpan.FromSeconds(flushIntervalSeconds))
+        if (await _logs.Reader.WaitToReadAsync())
         {
-            if (await _logs.Reader.WaitToReadAsync())
+            while (_logs.Reader.TryRead(out AzureLogAnalyticsLogs? item))
             {
-                while (_logs.Reader.TryRead(out AzureLogAnalyticsLogs? item))
-                {
-                    item.LogType = logType;
-                    list.Add(item);
+                item.LogType = logType;
+                list.Add(item);
 
-                    if (time.Elapsed >= TimeSpan.FromSeconds(flushIntervalSeconds))
-                    {
-                        break;
-                    }
+                if (time.Elapsed >= TimeSpan.FromSeconds(flushIntervalSeconds))
+                {
+                    break;
                 }
             }
         }

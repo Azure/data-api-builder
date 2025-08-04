@@ -124,7 +124,7 @@ public class AzureLogAnalyticsTests
 
         // Assert
         AzureLogAnalyticsLogs actualLog = customClient.LogAnalyticsLogs[0];
-        Assert.AreEqual(logLevel, actualLog.LoggingLevel);
+        Assert.AreEqual(logLevel.ToString(), actualLog.LogLevel);
         Assert.AreEqual(message, actualLog.Message);
     }
 

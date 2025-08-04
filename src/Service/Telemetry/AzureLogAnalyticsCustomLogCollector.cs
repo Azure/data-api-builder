@@ -31,15 +31,15 @@ public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
     /// Adds one log to the channel asynchronously, and saves the time at which it was created.
     /// </summary>
     /// <param name="message">Structured log message.</param>
-    /// <param name="loggingLevel">Severity of log event.</param>
+    /// <param name="logLevel">Severity of log event.</param>
     /// <param name="source">Class from which log event originated.</param>
-    public async Task LogAsync(string message, LogLevel loggingLevel, string? source = null)
+    public async Task LogAsync(string message, LogLevel logLevel, string? source = null)
     {
         DateTime dateTime = DateTime.UtcNow;
         await _logs.Writer.WriteAsync(
             new AzureLogAnalyticsLogs(
                 dateTime.ToString("o"),
-                loggingLevel,
+                logLevel.ToString(),
                 message,
                 source));
     }

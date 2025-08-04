@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Microsoft.Extensions.Logging;
-
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
@@ -11,15 +9,15 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public class AzureLogAnalyticsLogs
 {
     public string Time { get; set; }
-    public LogLevel LoggingLevel { get; set; }
+    public string LogLevel { get; set; }
     public string? Message { get; set; }
     public string? Component { get; set; }
     public string? LogType { get; set; }
 
-    public AzureLogAnalyticsLogs(string time, LogLevel loggingLevel, string? message, string? component, string? logType = null)
+    public AzureLogAnalyticsLogs(string time, string logLevel, string? message, string? component, string? logType = null)
     {
         Time = time;
-        LoggingLevel = loggingLevel;
+        LogLevel = logLevel;
         Message = message;
         Component = component;
         LogType = logType;

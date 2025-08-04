@@ -89,7 +89,7 @@ public class AzureLogAnalyticsTests
         AzureLogAnalyticsLoggerProvider loggerProvider = serviceProvider.GetService<AzureLogAnalyticsLoggerProvider>();
         AzureLogAnalyticsFlusherService flusherService = serviceProvider.GetService<AzureLogAnalyticsFlusherService>();
 
-        // If tracerProvider and meterProvider are not null, AzureLogAnalytics is enabled
+        // If customLogCollector, loggerProvider and flusherService are not null when AzureLogAnalytics is enabled
         Assert.IsNotNull(customLogCollector, "AzureLogAnalyticsCustomLogCollector should be registered.");
         Assert.IsNotNull(loggerProvider, "AzureLogAnalyticsLoggerProvider should be registered.");
         Assert.IsNotNull(flusherService, "AzureLogAnalyticsFlusherService should be registered.");
@@ -156,7 +156,7 @@ public class AzureLogAnalyticsTests
     {
         public List<AzureLogAnalyticsLogs> LogAnalyticsLogs { get; } = new();
 
-        public CustomLogsIngestionClient(string dceEndpoint) : base(new Uri(dceEndpoint), new DefaultAzureCredential()) { }
+        public CustomLogsIngestionClient(string dceEndpoint) : base(new Uri(dceEndpoint), new DefaultAzureCredential()) { } // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
 
         public async override Task<Response> UploadAsync<T>(string ruleId, string streamName, IEnumerable<T> logs, LogsUploadOptions options = null, CancellationToken cancellationToken = default)
         {

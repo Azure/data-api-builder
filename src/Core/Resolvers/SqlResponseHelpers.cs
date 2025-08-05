@@ -451,7 +451,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="req">The HTTP request.</param>
         /// <returns>Validated scheme string ("http" or "https").</returns>
         /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid scheme.</exception>
-        private static string GetValidatedScheme(HttpRequest req)
+        internal static string GetValidatedScheme(HttpRequest req)
         {
             string? rawScheme = req.Headers["X-Forwarded-Proto"].FirstOrDefault();
             string? normalized = rawScheme?.Trim().ToLowerInvariant();
@@ -461,10 +461,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (isExplicit && !isValid)
             {
-                throw new DataApiBuilderException(
-                    message: $"Invalid scheme '{rawScheme}' in X-Forwarded-Proto. Supported schemes are 'http' and 'https'.",
-                    statusCode: System.Net.HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                // Log a warning and ignore the invalid value, fallback to request's scheme
+                Console.WriteLine($"Warning: Invalid scheme '{rawScheme}' in X-Forwarded-Proto header. Falling back to request scheme: '{req.Scheme}'.");
+                return req.Scheme;
             }
 
             return isValid ? normalized! : req.Scheme;
@@ -476,7 +475,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="req">The HTTP request.</param>
         /// <returns>Validated host string.</returns>
         /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid host.</exception>
-        private static string GetValidatedHost(HttpRequest req)
+        internal static string GetValidatedHost(HttpRequest req)
         {
             string? rawHost = req.Headers["X-Forwarded-Host"].FirstOrDefault();
             string? trimmed = rawHost?.Trim();
@@ -486,10 +485,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (isExplicit && !isValid)
             {
-                throw new DataApiBuilderException(
-                    message: $"Invalid host '{rawHost}' in X-Forwarded-Host. The host must be a valid hostname or IP address.",
-                    statusCode: System.Net.HttpStatusCode.BadRequest,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                // Log a warning and ignore the invalid value, fallback to request's host
+                Console.WriteLine($"Warning: Invalid host '{rawHost}' in X-Forwarded-Host header. Falling back to request host: '{req.Host}'.");
+                return req.Host.ToString();
             }
 
             return isValid ? trimmed! : req.Host.ToString();

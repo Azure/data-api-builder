@@ -88,7 +88,7 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                             auth = authOptionsConverter.Read(ref reader, typeToConvert, options);
                             break;
 
-                        case "log-type":
+                        case "dab-identifier":
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
                                 logType = reader.DeserializeString(_replaceEnvVar);
@@ -150,10 +150,10 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
                 authOptionsConverter.Write(writer, value.Auth, options);
             }
 
-            if (value?.UserProvidedLogType is true)
+            if (value?.UserProvidedDabIdentifier is true)
             {
-                writer.WritePropertyName("log-type");
-                JsonSerializer.Serialize(writer, value.LogType, options);
+                writer.WritePropertyName("dab-identifier");
+                JsonSerializer.Serialize(writer, value.DabIdentifier, options);
             }
 
             if (value?.UserProvidedFlushIntervalSeconds is true)

@@ -437,9 +437,9 @@
                     }
                   }
                 },
-                "log-type": {
+                "dab-identifier": {
                   "type": "string",
-                  "description": "Custom log table name in Log Analytics",
+                  "description": "Identifier passed on to Log Analytics",
                   "default": "DabLogs"
                 },
                 "flush-interval-seconds": {

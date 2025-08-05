@@ -4080,22 +4080,22 @@ type Planet @model(name:""PlanetAlias"") {
             string? customTableName,
             string? dcrImmutableId,
             string? dceEndpoint,
-            string? logType,
+            string? dabIdentifier,
             int? flushIntSec,
             bool expectedEnabled,
-            string expectedLogType,
+            string expectedDabIdentifier,
             int expectedFlushIntSec)
         {
             //Check if auth property and its values are expected to exist
             bool expectedExistEnabled = enabled is not null;
-            bool expectedExistLogType = logType is not null;
+            bool expectedExistDabIdentifier = dabIdentifier is not null;
             bool expectedExistFlushIntSec = flushIntSec is not null;
             bool expectedExistCustomTableName = customTableName is not null;
             bool expectedExistDcrImmutableId = dcrImmutableId is not null;
             bool expectedExistDceEndpoint = dceEndpoint is not null;
 
             AzureLogAnalyticsAuthOptions authOptions = new(customTableName, dcrImmutableId, dceEndpoint);
-            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, logType, flushIntSec);
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, dabIdentifier, flushIntSec);
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithAzureLogAnalytics(azureLogAnalyticsOptions);
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig? deserializedRuntimeConfig));
@@ -4120,11 +4120,11 @@ type Planet @model(name:""PlanetAlias"") {
                     Assert.AreEqual(expectedEnabled, enabledElement.GetBoolean());
                 }
 
-                bool logTypeExists = azureLogAnalyticsElement.TryGetProperty("log-type", out JsonElement logTypeElement);
-                Assert.AreEqual(expected: expectedExistLogType, actual: logTypeExists);
-                if (logTypeExists)
+                bool dabIdentifierExists = azureLogAnalyticsElement.TryGetProperty("dab-identifier", out JsonElement dabIdentifierElement);
+                Assert.AreEqual(expected: expectedExistDabIdentifier, actual: dabIdentifierExists);
+                if (dabIdentifierExists)
                 {
-                    Assert.AreEqual(expectedLogType, logTypeElement.GetString());
+                    Assert.AreEqual(expectedDabIdentifier, dabIdentifierElement.GetString());
                 }
 
                 bool flushIntSecExists = azureLogAnalyticsElement.TryGetProperty("flush-interval-seconds", out JsonElement flushIntSecElement);

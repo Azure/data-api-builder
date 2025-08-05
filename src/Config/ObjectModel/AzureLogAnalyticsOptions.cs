@@ -21,7 +21,7 @@ public record AzureLogAnalyticsOptions
     /// <summary>
     /// Default log type for Azure Log Analytics.
     /// </summary>
-    public const string DEFAULT_LOG_TYPE = "DabLogs";
+    public const string DEFAULT_DAB_IDENTIFIER = "DabLogs";
 
     /// <summary>
     /// Default flush interval in seconds.
@@ -39,9 +39,9 @@ public record AzureLogAnalyticsOptions
     public AzureLogAnalyticsAuthOptions? Auth { get; init; }
 
     /// <summary>
-    /// Custom log table name in Log Analytics.
+    /// Custom identifier name to send to Log Analytics.
     /// </summary>
-    public string? LogType { get; init; }
+    public string? DabIdentifier { get; init; }
 
     /// <summary>
     /// Interval between log batch pushes (in seconds).
@@ -49,7 +49,7 @@ public record AzureLogAnalyticsOptions
     public int? FlushIntervalSeconds { get; init; }
 
     [JsonConstructor]
-    public AzureLogAnalyticsOptions(bool? enabled = null, AzureLogAnalyticsAuthOptions? auth = null, string? logType = null, int? flushIntervalSeconds = null)
+    public AzureLogAnalyticsOptions(bool? enabled = null, AzureLogAnalyticsAuthOptions? auth = null, string? dabIdentifier = null, int? flushIntervalSeconds = null)
     {
         Auth = auth;
 
@@ -63,14 +63,14 @@ public record AzureLogAnalyticsOptions
             Enabled = DEFAULT_ENABLED;
         }
 
-        if (logType is not null)
+        if (dabIdentifier is not null)
         {
-            LogType = logType;
-            UserProvidedLogType = true;
+            DabIdentifier = dabIdentifier;
+            UserProvidedDabIdentifier = true;
         }
         else
         {
-            LogType = DEFAULT_LOG_TYPE;
+            DabIdentifier = DEFAULT_DAB_IDENTIFIER;
         }
 
         if (flushIntervalSeconds is not null)
@@ -97,12 +97,12 @@ public record AzureLogAnalyticsOptions
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write log-type
     /// property and value to the runtime config file.
-    /// When user doesn't provide the log-type property/value, which signals DAB to use the default,
+    /// When user doesn't provide the dab-identifier property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(LogType))]
-    public bool UserProvidedLogType { get; init; } = false;
+    [MemberNotNullWhen(true, nameof(DabIdentifier))]
+    public bool UserProvidedDabIdentifier { get; init; } = false;
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write flush-interval-seconds

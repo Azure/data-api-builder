@@ -207,6 +207,7 @@ update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilter_E
 update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilter_ColumnForbidden:read"
 update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:read"
 update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read"
+update BookNF --config "dab-config.MsSql.json" --permissions "TestFieldExcludedForAggregation:read" --fields.exclude "publisher_id"
 update BookNF --config "dab-config.MsSql.json" --relationship publishers --target.entity PublisherNF --cardinality one
 update BookNF --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update BookNF --config "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many

@@ -423,9 +423,9 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
-                    "workspace-id": {
+                    "custom-table-name": {
                       "type": [ "string", "null" ],
-                      "description": "Azure Log Analytics Workspace ID"
+                      "description": "Azure Log Analytics Custom Table Name for entra-id mode"
                     },
                     "dcr-immutable-id": {
                       "type": [ "string", "null" ],
@@ -459,9 +459,9 @@
                 "properties": {
                   "auth": {
                     "properties": {
-                      "workspace-id": {
+                      "custom-table-name": {
                         "type": "string",
-                        "description": "Azure Log Analytics Workspace ID"
+                        "description": "Azure Log Analytics Custom Table Name for entra-id mode"
                       },
                       "dcr-immutable-id": {
                         "type": "string",
@@ -472,7 +472,7 @@
                         "description": "DCE endpoint for entra-id mode"
                       }
                     },
-                    "required": [ "workspace-id", "dcr-immutable-id", "dce-endpoint" ]
+                    "required": [ "custom-table-name", "dcr-immutable-id", "dce-endpoint" ]
                   }
                 },
                 "required": [ "auth" ]

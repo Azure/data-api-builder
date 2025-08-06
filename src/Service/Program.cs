@@ -195,6 +195,20 @@ namespace Azure.DataApiBuilder.Service
                         });
                     }
 
+                    if (Startup.IsAzureLogAnalyticsAvailable(Startup.AzureLogAnalyticsOptions))
+                    {
+                        builder.AddProvider(new AzureLogAnalyticsLoggerProvider(Startup.CustomLogCollector));
+
+                        if (logLevelInitializer is null)
+                        {
+                            builder.AddFilter<AzureLogAnalyticsLoggerProvider>(category: string.Empty, logLevel);
+                        }
+                        else
+                        {
+                            builder.AddFilter<AzureLogAnalyticsLoggerProvider>(category: string.Empty, level => level >= logLevelInitializer.MinLogLevel);
+                        }
+                    }
+
                     builder.AddConsole();
                 });
         }

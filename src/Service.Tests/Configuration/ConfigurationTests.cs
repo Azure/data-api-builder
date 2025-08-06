@@ -4095,7 +4095,7 @@ type Planet @model(name:""PlanetAlias"") {
             bool expectedExistDceEndpoint = dceEndpoint is not null;
 
             AzureLogAnalyticsAuthOptions authOptions = new(customTableName, dcrImmutableId, dceEndpoint);
-            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, logType, flushIntSec);
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, dabIdentifier, flushIntSec);
             TelemetryOptions telemetryOptions = new(AzureLogAnalytics: azureLogAnalyticsOptions);
             RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithTelemetry(telemetryOptions);
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();

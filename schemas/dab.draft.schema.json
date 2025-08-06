@@ -496,7 +496,7 @@
                   "type": "string",
                   "description": "File path for telemetry logs.",
                   "default": "/logs/dab-log.txt",
-                  "pattern": "^([a-zA-Z]:\\\\\\\\)?([^:\\\\]+\\\\){1,}([^\\\\]+)\\.txt"
+                  "pattern": "^([a-zA-Z]:\\/\\/([^:\\/]+))?(\\/[^:\\/]+){1,}([^\\/]+)\\.txt$"
                 },
                 "rolling-interval": {
                   "type": "string",

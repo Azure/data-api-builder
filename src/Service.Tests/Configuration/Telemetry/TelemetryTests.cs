@@ -17,7 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
-namespace Azure.DataApiBuilder.Service.Tests.Configuration;
+namespace Azure.DataApiBuilder.Service.Tests.Configuration.Telemetry;
 
 /// <summary>
 /// Contains tests for telemetry functionality.
@@ -168,7 +168,7 @@ public class TelemetryTests
         List<ITelemetry> telemetryItems = ((CustomTelemetryChannel)telemetryChannel).GetTelemetryItems();
 
         // Assert that we are not sending any Traces/Requests/Exceptions to Telemetry
-        Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(telemetryItems));
+        Assert.IsTrue(telemetryItems.IsNullOrEmpty());
     }
 
     /// <summary>

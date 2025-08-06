@@ -4417,9 +4417,9 @@ type Planet @model(name:""PlanetAlias"") {
                 Mappings: null);
 
             Dictionary<string, Entity> entityMap = new()
-    {
-        { ENTITY_NAME, requiredEntity }
-    };
+            {
+                { ENTITY_NAME, requiredEntity }
+            };
 
             PaginationOptions paginationOptions = null;
 
@@ -4439,8 +4439,8 @@ type Planet @model(name:""PlanetAlias"") {
 
             string[] args = new[]
             {
-        $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
-    };
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();

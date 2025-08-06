@@ -95,7 +95,7 @@ public record AzureLogAnalyticsOptions
     public bool UserProvidedEnabled { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write log-type
+    /// Flag which informs CLI and JSON serializer whether to write dab-identifier
     /// property and value to the runtime config file.
     /// When user doesn't provide the dab-identifier property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.

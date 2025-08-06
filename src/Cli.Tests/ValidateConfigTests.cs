@@ -332,7 +332,7 @@ public class ValidateConfigTests
         // Act: Attempts to add Azure Log Analytics options without Auth options
         ConfigureOptions options = new(
             azureLogAnalyticsEnabled: CliBool.True,
-            azureLogAnalyticsLogType: "log-type-test",
+            azureLogAnalyticsDabIdentifier: "dab-identifier-test",
             azureLogAnalyticsFlushIntervalSeconds: 1,
             config: TEST_RUNTIME_CONFIG_FILE
         );

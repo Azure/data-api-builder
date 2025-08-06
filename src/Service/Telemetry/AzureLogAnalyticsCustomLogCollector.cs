@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Telemetry;
 public interface ICustomLogCollector
 {
     Task LogAsync(string message, LogLevel loggingLevel, string? source = null);
-    Task<List<AzureLogAnalyticsLogs>> DequeueAllAsync(string logType, int flushIntervalSeconds);
+    Task<List<AzureLogAnalyticsLogs>> DequeueAllAsync(string dabIdentifier, int flushIntervalSeconds);
 }
 
 /// <summary>
@@ -47,10 +47,10 @@ public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
     /// <summary>
     /// Creates a list periodically from the logs that are currently saved.
     /// </summary>
-    /// <param name="logType">Custom name to distinguish the logs sent from DAB to Azure Log Analytics.</param>
+    /// <param name="dabIdentifier">Custom name to distinguish the logs sent from DAB to Azure Log Analytics.</param>
     /// <param name="flushIntervalSeconds">Period of time between each list of logs is sent.</param>
     /// <returns>List of logs structured to be sent to Azure Log Analytics.</returns>
-    public async Task<List<AzureLogAnalyticsLogs>> DequeueAllAsync(string logType, int flushIntervalSeconds)
+    public async Task<List<AzureLogAnalyticsLogs>> DequeueAllAsync(string dabIdentifier, int flushIntervalSeconds)
     {
         List<AzureLogAnalyticsLogs> list = new();
         Stopwatch time = Stopwatch.StartNew();
@@ -59,7 +59,7 @@ public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
         {
             while (_logs.Reader.TryRead(out AzureLogAnalyticsLogs? item))
             {
-                item.LogType = logType;
+                item.Identifier = dabIdentifier;
                 list.Add(item);
 
                 if (time.Elapsed >= TimeSpan.FromSeconds(flushIntervalSeconds))

@@ -162,7 +162,7 @@ namespace Cli.Tests
             // Act: Attempts to add Azure Log Analytics options
             ConfigureOptions options = new(
                 azureLogAnalyticsEnabled: CliBool.True,
-                azureLogAnalyticsLogType: "log-type-test",
+                azureLogAnalyticsDabIdentifier: "dab-identifier-test",
                 azureLogAnalyticsFlushIntervalSeconds: 1,
                 azureLogAnalyticsCustomTableName: "custom-table-name-test",
                 azureLogAnalyticsDcrImmutableId: "dcr-immutable-id-test",
@@ -180,7 +180,7 @@ namespace Cli.Tests
             Assert.IsNotNull(config.Runtime.Telemetry);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics);
             Assert.AreEqual(true, config.Runtime.Telemetry.AzureLogAnalytics.Enabled);
-            Assert.AreEqual("log-type-test", config.Runtime.Telemetry.AzureLogAnalytics.LogType);
+            Assert.AreEqual("dab-identifier-test", config.Runtime.Telemetry.AzureLogAnalytics.DabIdentifier);
             Assert.AreEqual(1, config.Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics.Auth);
             Assert.AreEqual("custom-table-name-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName);

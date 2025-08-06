@@ -12,14 +12,14 @@ public class AzureLogAnalyticsLogs
     public string LogLevel { get; set; }
     public string? Message { get; set; }
     public string? Component { get; set; }
-    public string? LogType { get; set; }
+    public string? Identifier { get; set; }
 
-    public AzureLogAnalyticsLogs(string time, string logLevel, string? message, string? component, string? logType = null)
+    public AzureLogAnalyticsLogs(string time, string logLevel, string? message, string? component, string? identifier = null)
     {
         Time = time;
         LogLevel = logLevel;
         Message = message;
         Component = component;
-        LogType = logType;
+        Identifier = identifier;
     }
 }

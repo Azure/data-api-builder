@@ -40,7 +40,7 @@ public class AzureLogAnalyticsFlusherService : BackgroundService
         {
             try
             {
-                List<AzureLogAnalyticsLogs> logs = await _customLogCollector.DequeueAllAsync(_options.LogType!, (int)_options.FlushIntervalSeconds!);
+                List<AzureLogAnalyticsLogs> logs = await _customLogCollector.DequeueAllAsync(_options.DabIdentifier!, (int)_options.FlushIntervalSeconds!);
 
                 if (logs.Count > 0)
                 {

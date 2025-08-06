@@ -49,7 +49,7 @@ namespace Cli.Commands
             int? azureKeyVaultRetryPolicyMaxDelaySeconds = null,
             int? azureKeyVaultRetryPolicyNetworkTimeoutSeconds = null,
             CliBool? azureLogAnalyticsEnabled = null,
-            string? azureLogAnalyticsLogType = null,
+            string? azureLogAnalyticsDabIdentifier = null,
             int? azureLogAnalyticsFlushIntervalSeconds = null,
             string? azureLogAnalyticsCustomTableName = null,
             string? azureLogAnalyticsDcrImmutableId = null,
@@ -93,7 +93,7 @@ namespace Cli.Commands
             AzureKeyVaultRetryPolicyNetworkTimeoutSeconds = azureKeyVaultRetryPolicyNetworkTimeoutSeconds;
             // Azure Log Analytics
             AzureLogAnalyticsEnabled = azureLogAnalyticsEnabled;
-            AzureLogAnalyticsLogType = azureLogAnalyticsLogType;
+            AzureLogAnalyticsDabIdentifier = azureLogAnalyticsDabIdentifier;
             AzureLogAnalyticsFlushIntervalSeconds = azureLogAnalyticsFlushIntervalSeconds;
             AzureLogAnalyticsCustomTableName = azureLogAnalyticsCustomTableName;
             AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
@@ -187,8 +187,8 @@ namespace Cli.Commands
         [Option("runtime.telemetry.azure-log-analytics.enabled", Required = false, HelpText = "Enable/Disable Azure Log Analytics. Default: False (boolean)")]
         public CliBool? AzureLogAnalyticsEnabled { get; }
 
-        [Option("runtime.telemetry.azure-log-analytics.log-type", Required = false, HelpText = "Configure Log Type for Azure Log Analytics to find table to send telemetry data. Default: DABLogs")]
-        public string? AzureLogAnalyticsLogType { get; }
+        [Option("runtime.telemetry.azure-log-analytics.dab-identifier", Required = false, HelpText = "Configure DAB Identifier to allow user to differentiate which logs come from DAB in Azure Log Analytics . Default: DABLogs")]
+        public string? AzureLogAnalyticsDabIdentifier { get; }
 
         [Option("runtime.telemetry.azure-log-analytics.flush-interval-seconds", Required = false, HelpText = "Configure Flush Interval in seconds for Azure Log Analytics to specify the time interval to send the telemetry data. Default: 5")]
         public int? AzureLogAnalyticsFlushIntervalSeconds { get; }

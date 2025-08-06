@@ -89,16 +89,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                tableName: context.DatabaseObject.Name,
                                sqlMetadataProvider: sqlMetadataProvider);
 
-            // nextLink is the URL needed to get the next page of records using the same query options
-            // with $after base64 encoded for opaqueness
+            string basePaginationUri = SqlPaginationUtil.ConstructBaseUriForPagination(httpContext, runtimeConfig.Runtime?.BaseRoute);
 
-            string path = GetPathForNextLink(httpContext, runtimeConfig.Runtime?.BaseRoute);
+            // Build the query string with the $after token.
+            string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
+                      queryStringParameters: context!.ParsedQueryString,
+                      newAfterPayload: after);
 
-            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
-                                  path,
-                                  queryStringParameters: context!.ParsedQueryString,
-                                  after,
-                                  runtimeConfig.NextLinkRelative());
+            // Get the final consolidated nextLink for the pagination.
+            JsonElement nextLink = SqlPaginationUtil.GetConsolidatedNextLinkForPagination(
+                baseUri: basePaginationUri,
+                queryString: queryString,
+                isNextLinkRelative: runtimeConfig.NextLinkRelative());
 
             // When there are extra fields present, they are removed before returning the response.
             if (extraFieldsInResponse.Count > 0)
@@ -410,128 +412,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 value = resultEnumerated
             });
-        }
-
-        /// <summary>
-        /// Constructs a validated request URL for next link using the specified <see cref="HttpContext"/> and an optional base route.
-        /// </summary>
-        /// <remarks>
-        /// This method uses the "X-Forwarded-Proto" and "X-Forwarded-Host" headers to determine
-        /// the scheme and host of the request, falling back to the request's original scheme and host if the headers
-        /// are not present or invalid. The method ensures that the scheme is either "http" or "https" and that the host
-        /// is a valid hostname or IP address.
-        /// </remarks>
-        /// <param name="httpContext">The HTTP context containing the request information.</param>
-        /// <param name="baseRoute">An optional base route to prepend to the request path. If not specified, no base route is used.</param>
-        /// <returns>A string representing the fully constructed and validated request URL.</returns>
-        /// <exception cref="DataApiBuilderException">
-        /// Thrown if the scheme specified in the "X-Forwarded-Proto" header is invalid,
-        /// or if the host specified in the "X-Forwarded-Host" header is invalid.
-        /// </exception>
-        private static string GetPathForNextLink(HttpContext httpContext, string? baseRoute = null)
-        {
-            HttpRequest req = httpContext.Request;
-
-            string scheme = GetValidatedScheme(req);
-            string host = GetValidatedHost(req);
-
-            // If the base route is not empty, we need to insert it into the URI before the rest path.
-            // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath.
-            // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
-            return UriHelper.BuildAbsolute(
-                scheme: scheme,
-                host: new HostString(host),
-                pathBase: string.IsNullOrWhiteSpace(baseRoute) ? PathString.Empty : new PathString(baseRoute),
-                path: req.Path);
-        }
-
-        /// <summary>
-        /// Extracts and validates the request scheme from "X-Forwarded-Proto" or falls back to the request scheme.
-        /// </summary>
-        /// <param name="req">The HTTP request.</param>
-        /// <returns>Validated scheme string ("http" or "https").</returns>
-        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid scheme.</exception>
-        internal static string GetValidatedScheme(HttpRequest req)
-        {
-            string? rawScheme = req.Headers["X-Forwarded-Proto"].FirstOrDefault();
-            string? normalized = rawScheme?.Trim().ToLowerInvariant();
-
-            bool isExplicit = !string.IsNullOrEmpty(rawScheme);
-            bool isValid = IsValidScheme(normalized);
-
-            if (isExplicit && !isValid)
-            {
-                // Log a warning and ignore the invalid value, fallback to request's scheme
-                Console.WriteLine($"Warning: Invalid scheme '{rawScheme}' in X-Forwarded-Proto header. Falling back to request scheme: '{req.Scheme}'.");
-                return req.Scheme;
-            }
-
-            return isValid ? normalized! : req.Scheme;
-        }
-
-        /// <summary>
-        /// Extracts and validates the request host from "X-Forwarded-Host" or falls back to the request host.
-        /// </summary>
-        /// <param name="req">The HTTP request.</param>
-        /// <returns>Validated host string.</returns>
-        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid host.</exception>
-        internal static string GetValidatedHost(HttpRequest req)
-        {
-            string? rawHost = req.Headers["X-Forwarded-Host"].FirstOrDefault();
-            string? trimmed = rawHost?.Trim();
-
-            bool isExplicit = !string.IsNullOrEmpty(rawHost);
-            bool isValid = IsValidHost(trimmed);
-
-            if (isExplicit && !isValid)
-            {
-                // Log a warning and ignore the invalid value, fallback to request's host
-                Console.WriteLine($"Warning: Invalid host '{rawHost}' in X-Forwarded-Host header. Falling back to request host: '{req.Host}'.");
-                return req.Host.ToString();
-            }
-
-            return isValid ? trimmed! : req.Host.ToString();
-        }
-
-        /// <summary>
-        /// Checks if the provided scheme is valid.
-        /// </summary>
-        /// <param name="scheme">Scheme, e.g., "http" or "https".</param>
-        /// <returns>True if valid, otherwise false.</returns>
-        private static bool IsValidScheme(string? scheme)
-        {
-            return scheme is "http" or "https";
-        }
-
-        /// <summary>
-        /// Checks if the provided host is a valid hostname or IP address.
-        /// </summary>
-        /// <param name="host">The host name (with optional port).</param>
-        /// <returns>True if valid, otherwise false.</returns>
-        private static bool IsValidHost(string? host)
-        {
-            if (string.IsNullOrWhiteSpace(host))
-            {
-                return false;
-            }
-
-            // Reject dangerous characters
-            if (host.Contains('\r') || host.Contains('\n') || host.Contains(' ') ||
-                host.Contains('<') || host.Contains('>') || host.Contains('@'))
-            {
-                return false;
-            }
-
-            // Validate host part (exclude port if present)
-            string hostnamePart = host.Split(':')[0];
-
-            if (Uri.CheckHostName(hostnamePart) == UriHostNameType.Unknown)
-            {
-                return false;
-            }
-
-            // Final sanity check: ensure it parses into a full URI
-            return Uri.TryCreate($"http://{host}", UriKind.Absolute, out _);
         }
     }
 }

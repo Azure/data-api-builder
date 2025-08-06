@@ -780,7 +780,7 @@ namespace Cli
 
             // Telemetry: Azure Log Analytics
             if (options.AzureLogAnalyticsEnabled is not null ||
-                options.AzureLogAnalyticsLogType is not null ||
+                options.AzureLogAnalyticsDabIdentifier is not null ||
                 options.AzureLogAnalyticsFlushIntervalSeconds is not null ||
                 options.AzureLogAnalyticsCustomTableName is not null ||
                 options.AzureLogAnalyticsDcrImmutableId is not null ||
@@ -1137,11 +1137,11 @@ namespace Cli
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.enabled as '{options.AzureLogAnalyticsEnabled}'");
                 }
 
-                // Runtime.Telemetry.AzureLogAnalytics.LogType
-                if (options.AzureLogAnalyticsLogType is not null)
+                // Runtime.Telemetry.AzureLogAnalytics.DabIdentifier
+                if (options.AzureLogAnalyticsDabIdentifier is not null)
                 {
-                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = options.AzureLogAnalyticsLogType, UserProvidedLogType = true };
-                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.log-type as '{options.AzureLogAnalyticsLogType}'");
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { DabIdentifier = options.AzureLogAnalyticsDabIdentifier, UserProvidedDabIdentifier = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.dab-identifier as '{options.AzureLogAnalyticsDabIdentifier}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds

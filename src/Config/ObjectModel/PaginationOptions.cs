@@ -37,8 +37,14 @@ public record PaginationOptions
     [JsonPropertyName("max-page-size")]
     public int? MaxPageSize { get; init; } = null;
 
+    /// <summary>
+    /// When true, nextLink in paginated responses will be relative (default: false).
+    /// </summary>
+    [JsonPropertyName("next-link-relative")]
+    public bool? NextLinkRelative { get; init; } = false;
+
     [JsonConstructor]
-    public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null)
+    public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null, bool? NextLinkRelative = null)
     {
         if (MaxPageSize is not null)
         {
@@ -69,6 +75,8 @@ public record PaginationOptions
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
+
+        this.NextLinkRelative = NextLinkRelative ?? false;
     }
 
     /// <summary>

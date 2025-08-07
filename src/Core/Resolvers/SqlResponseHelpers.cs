@@ -89,29 +89,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                tableName: context.DatabaseObject.Name,
                                sqlMetadataProvider: sqlMetadataProvider);
 
-            // nextLink is the URL needed to get the next page of records using the same query options
-            // with $after base64 encoded for opaqueness
-            string path = UriHelper.GetEncodedUrl(httpContext!.Request).Split('?')[0];
+            string basePaginationUri = SqlPaginationUtil.ConstructBaseUriForPagination(httpContext, runtimeConfig.Runtime?.BaseRoute);
 
-            // If the base route is not empty, we need to insert it into the URI before the rest path.
-            string? baseRoute = runtimeConfig.Runtime?.BaseRoute;
-            if (!string.IsNullOrWhiteSpace(baseRoute))
-            {
-                HttpRequest request = httpContext!.Request;
+            // Build the query string with the $after token.
+            string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
+                      queryStringParameters: context!.ParsedQueryString,
+                      newAfterPayload: after);
 
-                // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath.
-                // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
-                path = UriHelper.BuildAbsolute(
-                    scheme: request.Scheme,
-                    host: request.Host,
-                    pathBase: baseRoute,
-                    path: request.Path);
-            }
-
-            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
-                                  path,
-                                  queryStringParameters: context!.ParsedQueryString,
-                                  after);
+            // Get the final consolidated nextLink for the pagination.
+            JsonElement nextLink = SqlPaginationUtil.GetConsolidatedNextLinkForPagination(
+                baseUri: basePaginationUri,
+                queryString: queryString,
+                isNextLinkRelative: runtimeConfig.NextLinkRelative());
 
             // When there are extra fields present, they are removed before returning the response.
             if (extraFieldsInResponse.Count > 0)
@@ -424,6 +413,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 value = resultEnumerated
             });
         }
-
     }
 }

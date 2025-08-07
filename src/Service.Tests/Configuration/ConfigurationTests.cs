@@ -4393,9 +4393,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// did not come across two $after query parameters. This addresses a customer raised issue where two $after
         /// query parameters were returned by DAB.
         /// </summary>
-        [TestMethod]
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "NextLinkRelative is false")]
+        [DataRow(true, DisplayName = "NextLinkRelative is true")]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task ValidateNextLinkUsage()
+        public async Task ValidateNextLinkUsage(bool isNextLinkRelative)
         {
             // Arrange - Setup test server with entity that has >1 record so that results can be paged.
             // A short cut to using an entity with >100 records is to just include the $first=1 filter
@@ -4419,7 +4421,21 @@ type Planet @model(name:""PlanetAlias"") {
                 { ENTITY_NAME, requiredEntity }
             };
 
-            CreateCustomConfigFile(entityMap, enableGlobalRest: true);
+            PaginationOptions paginationOptions = null;
+
+            if (isNextLinkRelative)
+            {
+                paginationOptions = new PaginationOptions
+                {
+                    DefaultPageSize = 1,
+                    MaxPageSize = 1,
+                    UserProvidedDefaultPageSize = true,
+                    UserProvidedMaxPageSize = true,
+                    NextLinkRelative = true
+                };
+            }
+
+            CreateCustomConfigFile(entityMap, enableGlobalRest: true, paginationOptions: paginationOptions);
 
             string[] args = new[]
             {
@@ -4453,7 +4469,23 @@ type Planet @model(name:""PlanetAlias"") {
             Dictionary<string, JsonElement> followNextLinkResponseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(followNextLinkResponseBody);
 
             string followUpResponseNextLink = followNextLinkResponseProperties["nextLink"].ToString();
-            Uri nextLink = new(uriString: followUpResponseNextLink);
+
+            // Build the Uri from nextLink string for query parsing.
+            // If relative, combine with base; if absolute, use as is.
+            Uri nextLink = null;
+            if (Uri.IsWellFormedUriString(followUpResponseNextLink, UriKind.Absolute))
+            {
+                nextLink = new(followUpResponseNextLink, UriKind.Absolute);
+            }
+            else if (Uri.IsWellFormedUriString(followUpResponseNextLink, UriKind.Relative))
+            {
+                nextLink = new(new("http://localhost:5000"), followUpResponseNextLink);
+            }
+            else
+            {
+                Assert.Fail($"Invalid nextLink URI format: {followUpResponseNextLink}");
+            }
+
             NameValueCollection parsedQueryParameters = HttpUtility.ParseQueryString(query: nextLink.Query);
             Assert.AreEqual(expected: false, actual: parsedQueryParameters["$after"].Contains(','), message: "nextLink erroneously contained two $after query parameters that were joined by HttpUtility.ParseQueryString(queryString).");
             Assert.AreNotEqual(notExpected: nextLinkUri, actual: followUpResponseNextLink, message: "The follow up request erroneously returned the same nextLink value.");
@@ -4466,6 +4498,114 @@ type Planet @model(name:""PlanetAlias"") {
             catch (FormatException)
             {
                 Assert.Fail(message: "$after query parameter was not a valid base64 encoded value.");
+            }
+
+            // Validate nextLink is relative if nextLinkRelative is true or false otherwise.
+            // The assertion is now done directly on the original string, not on the parsed Uri object.
+            if (isNextLinkRelative)
+            {
+                // The server returned a relative URL, so it should NOT start with http/https
+                Assert.IsFalse(Uri.IsWellFormedUriString(followUpResponseNextLink, UriKind.Absolute),
+                    $"nextLink was expected to be relative but was absolute: {followUpResponseNextLink}");
+                Assert.IsTrue(followUpResponseNextLink.StartsWith("/"),
+                    $"nextLink was expected to start with '/' (relative), got: {followUpResponseNextLink}");
+            }
+            else
+            {
+                Assert.IsTrue(Uri.IsWellFormedUriString(followUpResponseNextLink, UriKind.Absolute),
+                    $"nextLink was expected to be absolute but was relative: {followUpResponseNextLink}");
+                Assert.IsTrue(followUpResponseNextLink.StartsWith("http"),
+                    $"nextLink was expected to start with http/https, got: {followUpResponseNextLink}");
+            }
+        }
+
+        /// <summary>
+        /// Validates X-Forwarded headers for nextLink in Pagination
+        /// </summary>
+        /// <param name="forwardedHost">The X-Forwarded-Host value</param>
+        /// <param name="forwardedProto">The X-Forwarded-Proto value</param>
+        [DataTestMethod]
+        [DataRow("localhost:5000", "http", DisplayName = "Forwarded Host and HTTP Protocol")]
+        [DataRow("myhost.com", "https", DisplayName = "Forwarded Host and HTTPS Protocol")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateNextLinkRespectsXForwardedHostAndProto(string forwardedHost, string forwardedProto)
+        {
+            // Arrange - Setup test server with entity that has >1 record so that results can be paged.
+            const string ENTITY_NAME = "Bookmark";
+
+            Entity requiredEntity = new(
+                Source: new("bookmarks", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new(Singular: "", Plural: "", Enabled: false),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { ENTITY_NAME, requiredEntity }
+            };
+
+            PaginationOptions paginationOptions = new()
+            {
+                DefaultPageSize = 1,
+                MaxPageSize = 1,
+                UserProvidedDefaultPageSize = true,
+                UserProvidedMaxPageSize = true,
+                NextLinkRelative = false // Absolute nextLink required for this test
+            };
+
+            CreateCustomConfigFile(entityMap, enableGlobalRest: true, paginationOptions: paginationOptions);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            // Setup and send GET request with X-Forwarded-* headers
+            HttpRequestMessage initialPaginationRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{ENTITY_NAME}?$first=1");
+            initialPaginationRequest.Headers.Add("X-Forwarded-Host", forwardedHost);
+            initialPaginationRequest.Headers.Add("X-Forwarded-Proto", forwardedProto);
+
+            HttpResponseMessage initialPaginationResponse = await client.SendAsync(initialPaginationRequest);
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, initialPaginationResponse.StatusCode, message: "Expected request to succeed.");
+
+            // Process response body and get nextLink
+            string responseBody = await initialPaginationResponse.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            string nextLinkUri = responseProperties.ContainsKey("nextLink") ? responseProperties["nextLink"].ToString() : null;
+
+            Assert.IsNotNull(nextLinkUri, "nextLink missing in initial response.");
+
+            // Assert that nextLink uses the forwarded host and proto
+            Uri nextLink = new(nextLinkUri, UriKind.Absolute);
+
+            // Split host/port if present
+            string expectedHost;
+            int expectedPort = -1;
+            string[] hostParts = forwardedHost.Split(':');
+
+            if (hostParts.Length == 2 && int.TryParse(hostParts[1], out int port))
+            {
+                expectedHost = hostParts[0];
+                expectedPort = port;
+            }
+            else
+            {
+                expectedHost = forwardedHost;
+            }
+
+            Assert.AreEqual(forwardedProto, nextLink.Scheme, $"nextLink scheme should be '{forwardedProto}' but was '{nextLink.Scheme}'");
+            Assert.AreEqual(expectedHost, nextLink.Host, $"nextLink host should be '{expectedHost}' but was '{nextLink.Host}'");
+
+            if (expectedPort != -1)
+            {
+                Assert.AreEqual(expectedPort, nextLink.Port, $"nextLink port should be '{expectedPort}' but was '{nextLink.Port}'");
             }
         }
 
@@ -4742,22 +4882,31 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
-        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true)
+        /// <param name="paginationOptions">Optional pagination options to use in the runtime config.</param>
+        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, PaginationOptions paginationOptions = null)
         {
             DataSource dataSource = new(
                 DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null);
+
             HostOptions hostOptions = new(Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
+
+            RuntimeOptions runtime = paginationOptions != null
+                ? new(
+                    Rest: new(Enabled: enableGlobalRest),
+                    GraphQL: new(Enabled: true),
+                    Host: hostOptions,
+                    Pagination: paginationOptions)
+                : new(
+                    Rest: new(Enabled: enableGlobalRest),
+                    GraphQL: new(Enabled: true),
+                    Host: hostOptions);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,
                 DataSource: dataSource,
-                Runtime: new(
-                    Rest: new(Enabled: enableGlobalRest),
-                    GraphQL: new(Enabled: true),
-                    Host: hostOptions
-                ),
+                Runtime: runtime,
                 Entities: new(entityMap));
 
             File.WriteAllText(

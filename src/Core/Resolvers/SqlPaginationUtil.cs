@@ -12,8 +12,10 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
+using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -572,15 +574,50 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Create the URL that will provide for the next page of results
-        /// using the same query options.
-        /// Return value formatted as a JSON array: [{"nextLink":"[base]/api/[entity]?[queryParams_URIescaped]$after=[base64encodedPaginationToken]"}]
+        /// Constructs the base Uri for Pagination
         /// </summary>
-        /// <param name="path">The request path excluding query parameters (e.g. https://localhost/api/myEntity)</param>
-        /// <param name="queryStringParameters">Collection of query string parameters that are URI escaped.</param>
-        /// <param name="newAfterPayload">The contents to add to the $after query parameter. Should be base64 encoded pagination token.</param>
-        /// <returns>JSON element - array with nextLink.</returns>
-        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string newAfterPayload)
+        /// <remarks>
+        /// This method uses the "X-Forwarded-Proto" and "X-Forwarded-Host" headers to determine
+        /// the scheme and host of the request, falling back to the request's original scheme and host if the headers
+        /// are not present or invalid. The method ensures that the scheme is either "http" or "https" and that the host
+        /// is a valid hostname or IP address.
+        /// </remarks>
+        /// <param name="httpContext">The HTTP context containing the request information.</param>
+        /// <param name="baseRoute">An optional base route to prepend to the request path. If not specified, no base route is used.</param>
+        /// <returns>A string representing the fully constructed Base request URL for Pagination.</returns>
+        public static string ConstructBaseUriForPagination(HttpContext httpContext, string? baseRoute = null)
+        {
+            HttpRequest req = httpContext.Request;
+
+            // use scheme from X-Forwarded-Proto or fallback to request scheme
+            string scheme = ResolveRequestScheme(req);
+
+            // Use host from X-Forwarded-Host or fallback to request host
+            string host = ResolveRequestHost(req);
+
+            // If the base route is not empty, we need to insert it into the URI before the rest path.
+            // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath.
+            // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
+            return UriHelper.BuildAbsolute(
+                scheme: scheme,
+                host: new HostString(host),
+                pathBase: string.IsNullOrWhiteSpace(baseRoute) ? PathString.Empty : new PathString(baseRoute),
+                path: req.Path);
+        }
+
+        /// <summary>
+        /// Builds a query string by appending or replacing the <c>$after</c> token with the specified value.
+        /// </summary>
+        /// <remarks>This method does not include the <paramref name="path"/> in the returned query
+        /// string. It only processes and formats the query string parameters.</remarks>
+        /// <param name="queryStringParameters">A collection of existing query string parameters. If <see langword="null"/>, an empty collection is used.
+        /// The <c>$after</c> parameter, if present, will be removed before appending the new token.</param>
+        /// <param name="newAfterPayload">The new value for the <c>$after</c> token. If this value is <see langword="null"/>, empty, or whitespace, no
+        /// <c>$after</c> token will be appended.</param>
+        /// <returns>A URL-encoded query string containing the updated parameters, including the new <c>$after</c> token if
+        /// specified. If no parameters are provided and <paramref name="newAfterPayload"/> is empty, an empty string is
+        /// returned.</returns>
+        public static string BuildQueryStringWithAfterToken(NameValueCollection? queryStringParameters, string newAfterPayload)
         {
             if (queryStringParameters is null)
             {
@@ -588,33 +625,50 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                // Purge old $after value so this function can replace it.
                 queryStringParameters.Remove("$after");
             }
 
-            // To prevent regression of current behavior, retain the call to FormatQueryString
-            // which URI escapes other query parameters. Since $after has been removed,
-            // this will not affect the base64 encoded paging token.
-            string queryString = FormatQueryString(queryStringParameters: queryStringParameters);
+            // Format existing query string (URL encoded)
+            string queryString = FormatQueryString(queryStringParameters);
 
-            // When a new $after payload is provided, append it to the query string with the
-            // appropriate prefix: ? if $after is the only query parameter. & if $after is one of many query parameters.
+            // Append new $after token
             if (!string.IsNullOrWhiteSpace(newAfterPayload))
             {
                 string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "?" : "&";
                 queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
-            // ValueKind will be array so we can differentiate from other objects in the response
-            // to be returned.
-            // [{"nextLink":"[base]/api/[entity]?[queryParams_URIescaped]$after=[base64encodedPaginationToken]"}]
+            // Construct final link
+            // return $"{path}{queryString}";
+            return queryString;
+        }
+
+        /// <summary>
+        /// Gets a consolidated next link for pagination in JSON format.
+        /// </summary>
+        /// <param name="baseUri">The base Pagination Uri</param>
+        /// <param name="queryString">The query string with after value</param>
+        /// <param name="isNextLinkRelative">True, if the next link should be relative</param>
+        /// <returns></returns>
+        public static JsonElement GetConsolidatedNextLinkForPagination(string baseUri, string queryString, bool isNextLinkRelative = false)
+        {
+            UriBuilder uriBuilder = new(baseUri)
+            {
+                // Form final link by appending the query string
+                Query = queryString
+            };
+
+            // Construct final link- absolute or relative
+            string nextLinkValue = isNextLinkRelative
+                ? uriBuilder.Uri.PathAndQuery // returns just "/api/<Entity>?$after...", no host
+                : uriBuilder.Uri.AbsoluteUri; // returns full URL
+
+            // Return serialized JSON object
             string jsonString = JsonSerializer.Serialize(new[]
             {
-                new
-                {
-                    nextLink = @$"{path}{queryString}"
-                }
+                new { nextLink = nextLinkValue }
             });
+
             return JsonSerializer.Deserialize<JsonElement>(jsonString);
         }
 
@@ -694,6 +748,95 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return queryString;
+        }
+
+        /// <summary>
+        /// Extracts and request scheme from "X-Forwarded-Proto" or falls back to the request scheme.
+        /// </summary>
+        /// <param name="req">The HTTP request.</param>
+        /// <returns>The scheme string ("http" or "https").</returns>
+        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid scheme.</exception>
+        private static string ResolveRequestScheme(HttpRequest req)
+        {
+            string? rawScheme = req.Headers["X-Forwarded-Proto"].FirstOrDefault();
+            string? normalized = rawScheme?.Trim().ToLowerInvariant();
+
+            bool isExplicit = !string.IsNullOrEmpty(rawScheme);
+            bool isValid = IsValidScheme(normalized);
+
+            if (isExplicit && !isValid)
+            {
+                // Log a warning and ignore the invalid value, fallback to request's scheme
+                Console.WriteLine($"Warning: Invalid scheme '{rawScheme}' in X-Forwarded-Proto header. Falling back to request scheme: '{req.Scheme}'.");
+                return req.Scheme;
+            }
+
+            return isValid ? normalized! : req.Scheme;
+        }
+
+        /// <summary>
+        /// Extracts the request host from "X-Forwarded-Host" or falls back to the request host.
+        /// </summary>
+        /// <param name="req">The HTTP request.</param>
+        /// <returns>The host string.</returns>
+        /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid host.</exception>
+        private static string ResolveRequestHost(HttpRequest req)
+        {
+            string? rawHost = req.Headers["X-Forwarded-Host"].FirstOrDefault();
+            string? trimmed = rawHost?.Trim();
+
+            bool isExplicit = !string.IsNullOrEmpty(rawHost);
+            bool isValid = IsValidHost(trimmed);
+
+            if (isExplicit && !isValid)
+            {
+                // Log a warning and ignore the invalid value, fallback to request's host
+                Console.WriteLine($"Warning: Invalid host '{rawHost}' in X-Forwarded-Host header. Falling back to request host: '{req.Host}'.");
+                return req.Host.ToString();
+            }
+
+            return isValid ? trimmed! : req.Host.ToString();
+        }
+
+        /// <summary>
+        /// Checks if the provided scheme is valid.
+        /// </summary>
+        /// <param name="scheme">Scheme, e.g., "http" or "https".</param>
+        /// <returns>True if valid, otherwise false.</returns>
+        private static bool IsValidScheme(string? scheme)
+        {
+            return scheme is "http" or "https";
+        }
+
+        /// <summary>
+        /// Checks if the provided host is a valid hostname or IP address.
+        /// </summary>
+        /// <param name="host">The host name (with optional port).</param>
+        /// <returns>True if valid, otherwise false.</returns>
+        private static bool IsValidHost(string? host)
+        {
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                return false;
+            }
+
+            // Reject dangerous characters
+            if (host.Contains('\r') || host.Contains('\n') || host.Contains(' ') ||
+                host.Contains('<') || host.Contains('>') || host.Contains('@'))
+            {
+                return false;
+            }
+
+            // Validate host part (exclude port if present)
+            string hostnamePart = host.Split(':')[0];
+
+            if (Uri.CheckHostName(hostnamePart) == UriHostNameType.Unknown)
+            {
+                return false;
+            }
+
+            // Final sanity check: ensure it parses into a full URI
+            return Uri.TryCreate($"http://{host}", UriKind.Absolute, out _);
         }
     }
 }

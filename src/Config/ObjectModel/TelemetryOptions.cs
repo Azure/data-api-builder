@@ -9,6 +9,11 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <summary>
 /// Represents the options for telemetry.
 /// </summary>
+/// <param name="ApplicationInsights"></param>
+/// <param name="OpenTelemetry"></param>
+/// <param name="AzureLogAnalytics"></param>
+/// <param name="File"></param>
+/// <param name="LoggerLevel"></param>
 public record TelemetryOptions(
     ApplicationInsightsOptions? ApplicationInsights = null,
     OpenTelemetryOptions? OpenTelemetry = null,

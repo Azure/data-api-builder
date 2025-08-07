@@ -4170,7 +4170,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, "/file/path/exists.txt", RollingIntervalMode.Hour, 10, 256, true, "/file/path/exists.txt", 1, RollingIntervalMode.Hour, 10, 256)]
+        [DataRow(true, "/file/path/exists.txt", RollingIntervalMode.Hour, 10, 256, true, "/file/path/exists.txt", RollingIntervalMode.Hour, 10, 256)]
         [DataRow(false, "", RollingIntervalMode.Week, 5, 512, false, "", RollingIntervalMode.Week, 5, 512)]
         [DataRow(null, null, null, null, null, false, "/logs/dab-log.txt", RollingIntervalMode.Day, 1, 1048576)]
         public void FileSinkSerialization(

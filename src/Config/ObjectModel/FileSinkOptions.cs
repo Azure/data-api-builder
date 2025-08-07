@@ -24,7 +24,7 @@ public record FileSinkOptions
     /// <summary>
     /// Default rolling interval for File Sink.
     /// </summary>
-    public const RollingIntervalMode DEFAULT_ROLLING_INTERVAL = RollingIntervalMode.Day;
+    public const string DEFAULT_ROLLING_INTERVAL = nameof(RollingIntervalMode.Day);
 
     /// <summary>
     /// Default retained file count limit for File Sink.
@@ -49,7 +49,7 @@ public record FileSinkOptions
     /// <summary>
     /// Time it takes for files with logs to be discarded.
     /// </summary>
-    public RollingIntervalMode? RollingInterval { get; init; }
+    public string? RollingInterval { get; init; }
 
     /// <summary>
     /// Amount of files that can exist simultaneously in which logs are saved.
@@ -86,7 +86,7 @@ public record FileSinkOptions
 
         if (rollingInterval is not null)
         {
-            RollingInterval = rollingInterval;
+            RollingInterval = rollingInterval.ToString();
             UserProvidedRollingInterval = true;
         }
         else

@@ -574,7 +574,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Constructs 
+        /// Constructs the base Uri for Pagination
         /// </summary>
         /// <remarks>
         /// This method uses the "X-Forwarded-Proto" and "X-Forwarded-Host" headers to determine

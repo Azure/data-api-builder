@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service
                 services.AddSingleton(sp =>
                 {
                     AzureLogAnalyticsOptions options = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
-                    DefaultAzureCredential credential = new();
+                    ManagedIdentityCredential credential = new();
                     LogsIngestionClient logsIngestionClient = new(new Uri(options.Auth!.DceEndpoint!), credential);
                     return new AzureLogAnalyticsFlusherService(options, CustomLogCollector, logsIngestionClient, _logger);
                 });

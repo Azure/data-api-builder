@@ -42,6 +42,13 @@ public class RuntimeConfigValidator : IConfigValidator
     // of the form @claims.*** delimited by space character,end of the line or end of the string.
     private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
+    // List of databases that support row level policy with create action
+    private static readonly HashSet<DatabaseType> _databaseTypesSupportingCreatePolicy =
+    [
+        DatabaseType.MSSQL,
+        DatabaseType.DWSQL
+    ];
+
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
 
@@ -74,6 +81,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
         ValidateLoggerFilters(runtimeConfig);
+        ValidateAzureLogAnalyticsAuth(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -145,6 +153,26 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     throw new NotSupportedException($"Log level filter {logger.Key} needs to be of a valid log class.");
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The auth options in Azure Log Analytics are required if it is enabled.
+    /// </summary>
+    public void ValidateAzureLogAnalyticsAuth(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.AzureLogAnalytics is not null)
+        {
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
+            AzureLogAnalyticsAuthOptions? azureLogAnalyticsAuthOptions = azureLogAnalyticsOptions.Auth;
+            if (azureLogAnalyticsOptions.Enabled && (azureLogAnalyticsAuthOptions is null || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.CustomTableName) ||
+                string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DcrImmutableId) || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DceEndpoint)))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Azure Log Analytics Auth options 'custom-table-name', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
     }
@@ -808,7 +836,8 @@ public class RuntimeConfigValidator : IConfigValidator
 
                         DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
 
-                        if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        // Create operation does not support defining a database policy for certain database types.
+                        if (!_databaseTypesSupportingCreatePolicy.Contains(entityDataSource.DatabaseType) && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +

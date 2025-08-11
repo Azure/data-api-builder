@@ -192,6 +192,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(DatabaseType.MySQL, "", false, DisplayName = "Database Policy left empty for Create passes for MySQL")]
         [DataRow(DatabaseType.MySQL, " ", false, DisplayName = "Database Policy only whitespace for Create passes for MySQL")]
         [DataRow(DatabaseType.MSSQL, "2 eq @item.col3", false, DisplayName = "Database Policy defined for Create passes for MSSQL")]
+        [DataRow(DatabaseType.DWSQL, "2 eq @item.col3", false, DisplayName = "Database Policy defined for Create passes for DWSQL")]
         public void AddDatabasePolicyToCreateOperation(DatabaseType dbType, string dbPolicy, bool errorExpected)
         {
             EntityActionOperation action = EntityActionOperation.Create;
@@ -2379,13 +2380,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "DefaultPageSize cannot be 0")]
         [DataRow(true, 101, 100, "Pagination options invalid. The default page size cannot be greater than max page size",
             DisplayName = "DefaultPageSize cannot be greater than MaxPageSize")]
+        [DataRow(false, null, null, "", (int)PaginationOptions.DEFAULT_PAGE_SIZE, (int)PaginationOptions.MAX_PAGE_SIZE, null,
+            DisplayName = "NextLinkRelative should be false when no value provided in config")]
+        [DataRow(false, null, null, "", (int)PaginationOptions.DEFAULT_PAGE_SIZE, (int)PaginationOptions.MAX_PAGE_SIZE, true,
+            DisplayName = "NextLinkRelative should be true when explicitly set to true in config")]
+        [DataRow(false, null, null, "", (int)PaginationOptions.DEFAULT_PAGE_SIZE, (int)PaginationOptions.MAX_PAGE_SIZE, false,
+            DisplayName = "NextLinkRelative should be false when explicitly set to false in config")]
+        [DataRow(false, 1000, 10000, "", 1000, 10000, true,
+            DisplayName = "NextLinkRelative with custom page sizes")]
         public void ValidatePaginationOptionsInConfig(
             bool exceptionExpected,
             int? defaultPageSize,
             int? maxPageSize,
             string expectedExceptionMessage,
             int? expectedDefaultPageSize = null,
-            int? expectedMaxPageSize = null)
+            int? expectedMaxPageSize = null,
+            bool? nextLinkRelative = null)
         {
             try
             {
@@ -2396,12 +2406,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         Rest: new(),
                         GraphQL: new(),
                         Host: new(Cors: null, Authentication: null),
-                        Pagination: new PaginationOptions(defaultPageSize, maxPageSize)
+                        Pagination: new PaginationOptions(defaultPageSize, maxPageSize, nextLinkRelative)
                     ),
                     Entities: new(new Dictionary<string, Entity>()));
 
                 Assert.AreEqual((uint)expectedDefaultPageSize, runtimeConfig.DefaultPageSize());
                 Assert.AreEqual((uint)expectedMaxPageSize, runtimeConfig.MaxPageSize());
+                Assert.AreEqual(expected: nextLinkRelative ?? false, actual: runtimeConfig.NextLinkRelative());
             }
             catch (DataApiBuilderException dabException)
             {

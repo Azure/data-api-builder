@@ -112,6 +112,83 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running the "configure --azure-key-vault" commands on a config without AKV properties results
+        /// in a valid config being generated.
+        [TestMethod]
+        public void TestAddAKVOptions()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add AKV options
+            ConfigureOptions options = new(
+                azureKeyVaultEndpoint: "foo",
+                azureKeyVaultRetryPolicyMaxCount: 1,
+                azureKeyVaultRetryPolicyDelaySeconds: 1,
+                azureKeyVaultRetryPolicyMaxDelaySeconds: 1,
+                azureKeyVaultRetryPolicyMode: AKVRetryPolicyMode.Exponential,
+                azureKeyVaultRetryPolicyNetworkTimeoutSeconds: 1,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the AKV options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.AzureKeyVault);
+            Assert.IsNotNull(config.AzureKeyVault?.RetryPolicy);
+            Assert.AreEqual("foo", config.AzureKeyVault?.Endpoint);
+            Assert.AreEqual(AKVRetryPolicyMode.Exponential, config.AzureKeyVault?.RetryPolicy.Mode);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.MaxCount);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.DelaySeconds);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.MaxDelaySeconds);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.NetworkTimeoutSeconds);
+        }
+
+        /// <summary>
+        /// Tests that running the "configure --azure-log-analytics" commands on a config without Azure Log Analytics properties results
+        /// in a valid config being generated.
+        [TestMethod]
+        public void TestAddAzureLogAnalyticsOptions()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add Azure Log Analytics options
+            ConfigureOptions options = new(
+                azureLogAnalyticsEnabled: CliBool.True,
+                azureLogAnalyticsDabIdentifier: "dab-identifier-test",
+                azureLogAnalyticsFlushIntervalSeconds: 1,
+                azureLogAnalyticsCustomTableName: "custom-table-name-test",
+                azureLogAnalyticsDcrImmutableId: "dcr-immutable-id-test",
+                azureLogAnalyticsDceEndpoint: "dce-endpoint-test",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Azure Log Analytics options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics);
+            Assert.AreEqual(true, config.Runtime.Telemetry.AzureLogAnalytics.Enabled);
+            Assert.AreEqual("dab-identifier-test", config.Runtime.Telemetry.AzureLogAnalytics.DabIdentifier);
+            Assert.AreEqual(1, config.Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds);
+            Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics.Auth);
+            Assert.AreEqual("custom-table-name-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName);
+            Assert.AreEqual("dcr-immutable-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId);
+            Assert.AreEqual("dce-endpoint-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint);
+        }
+
+        /// <summary>
         /// Tests that running "dab configure --runtime.graphql.enabled" on a config with various values results
         /// in runtime. Takes in updated value for graphql.enabled and 
         /// validates whether the runtime config reflects those updated values

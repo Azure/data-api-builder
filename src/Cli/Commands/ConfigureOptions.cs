@@ -54,6 +54,11 @@ namespace Cli.Commands
             string? azureLogAnalyticsCustomTableName = null,
             string? azureLogAnalyticsDcrImmutableId = null,
             string? azureLogAnalyticsDceEndpoint = null,
+            CliBool? fileEnabled = null,
+            string? filePath = null,
+            string? fileRollingInterval = null,
+            int? fileRetainedFileCountLimit = null,
+            int? fileFileSizeLimitBytes = null,
             string? config = null)
             : base(config)
         {
@@ -98,6 +103,12 @@ namespace Cli.Commands
             AzureLogAnalyticsCustomTableName = azureLogAnalyticsCustomTableName;
             AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
             AzureLogAnalyticsDceEndpoint = azureLogAnalyticsDceEndpoint;
+            // File
+            FileEnabled = fileEnabled;
+            FilePath = filePath;
+            FileRollingInterval = fileRollingInterval;
+            FileRetainedFileCountLimit = fileRetainedFileCountLimit;
+            FileFileSizeLimitBytes = fileFileSizeLimitBytes;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -201,6 +212,21 @@ namespace Cli.Commands
 
         [Option("runtime.telemetry.azure-log-analytics.auth.dce-endpoint", Required = false, HelpText = "Configure DCE Endpoint for Azure Log Analytics to find table to send telemetry data")]
         public string? AzureLogAnalyticsDceEndpoint { get; }
+
+        [Option("runtime.telemetry.file.enabled", Required = false, HelpText = "Enable/Disable file logging. Default: False (boolean)")]
+        public CliBool? FileEnabled { get; }
+
+        [Option("runtime.telemetry.file.path", Required = false, HelpText = "Configure path for file logging. Default: /logs/dab-log.txt")]
+        public string? FilePath { get; }
+
+        [Option("runtime.telemetry.file.rolling-interval", Required = false, HelpText = "Configure rolling interval for file logging. Default: Day")]
+        public string? FileRollingInterval { get; }
+
+        [Option("runtime.telemetry.file.retained-file-count-limit", Required = false, HelpText = "Configure maximum number of retained files. Default: 1")]
+        public int? FileRetainedFileCountLimit { get; }
+
+        [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
+        public int? FileFileSizeLimitBytes { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

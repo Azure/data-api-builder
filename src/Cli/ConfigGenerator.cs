@@ -798,6 +798,25 @@ namespace Cli
                 }
             }
 
+            // Telemetry: File
+            if (options.FileEnabled is not null ||
+                options.FilePath is not null ||
+                options.FileRollingInterval is not null ||
+                options.FileRetainedFileCountLimit is not null ||
+                options.FileFileSizeLimitBytes is not null)
+            {
+                Azure.DataApiBuilder.Config.ObjectModel.FileOptions updatedFileOptions = runtimeConfig?.Runtime?.Telemetry?.File ?? new();
+                bool status = TryUpdateConfiguredFileOptions(options, ref updatedFileOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ? runtimeConfig.Runtime!.Telemetry with { File = updatedFileOptions } : new TelemetryOptions(File: updatedFileOptions) } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             return runtimeConfig != null;
         }
 
@@ -1195,6 +1214,74 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the file options in the configuration.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="fileOptions">The file options to be updated.</param>
+        /// <returns>True if the options were successfully updated; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredFileOptions(
+            ConfigureOptions options,
+            ref Azure.DataApiBuilder.Config.ObjectModel.FileOptions fileOptions)
+        {
+            try
+            {
+                // Runtime.Telemetry.File.Enabled
+                if (options.FileEnabled is not null)
+                {
+                    fileOptions = fileOptions with { Enabled = options.FileEnabled is CliBool.True, UserProvidedEnabled = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.enabled as '{options.FileEnabled}'");
+                }
+
+                // Runtime.Telemetry.File.Path
+                if (options.FilePath is not null)
+                {
+                    fileOptions = fileOptions with { Path = options.FilePath, UserProvidedPath = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.path as '{options.FilePath}'");
+                }
+
+                // Runtime.Telemetry.File.RollingInterval
+                if (options.FileRollingInterval is not null)
+                {
+                    fileOptions = fileOptions with { RollingInterval = options.FileRollingInterval, UserProvidedRollingInterval = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.rolling-interval as '{options.FileRollingInterval}'");
+                }
+
+                // Runtime.Telemetry.File.RetainedFileCountLimit
+                if (options.FileRetainedFileCountLimit is not null)
+                {
+                    if (options.FileRetainedFileCountLimit <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.file.retained-file-count-limit. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    fileOptions = fileOptions with { RetainedFileCountLimit = options.FileRetainedFileCountLimit, UserProvidedRetainedFileCountLimit = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.retained-file-count-limit as '{options.FileRetainedFileCountLimit}'");
+                }
+
+                // Runtime.Telemetry.File.FileSizeLimitBytes
+                if (options.FileFileSizeLimitBytes is not null)
+                {
+                    if (options.FileFileSizeLimitBytes <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.file.file-size-limit-bytes. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    fileOptions = fileOptions with { FileSizeLimitBytes = options.FileFileSizeLimitBytes, UserProvidedFileSizeLimitBytes = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.file-size-limit-bytes as '{options.FileFileSizeLimitBytes}'");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to update configuration with runtime.telemetry.file. Exception message: {ex.Message}.");
                 return false;
             }
         }

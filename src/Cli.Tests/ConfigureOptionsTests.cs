@@ -189,6 +189,44 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running the "configure --file" commands on a config without file sink properties results
+        /// in a valid config being generated.
+        /// </summary>
+        [TestMethod]
+        public void TestAddFileSinkOptions()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add file options
+            ConfigureOptions options = new(
+                fileSinkEnabled: CliBool.True,
+                fileSinkPath: "/custom/log/path.txt",
+                fileSinkRollingInterval: "Hour",
+                fileSinkRetainedFileCountLimit: 5,
+                fileSinkFileSizeLimitBytes: 2097152,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the file options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.File);
+            Assert.AreEqual(true, config.Runtime.Telemetry.File.Enabled);
+            Assert.AreEqual("/custom/log/path.txt", config.Runtime.Telemetry.File.Path);
+            Assert.AreEqual("Hour", config.Runtime.Telemetry.File.RollingInterval);
+            Assert.AreEqual(5, config.Runtime.Telemetry.File.RetainedFileCountLimit);
+            Assert.AreEqual(2097152, config.Runtime.Telemetry.File.FileSizeLimitBytes);
+        }
+
+        /// <summary>
         /// Tests that running "dab configure --runtime.graphql.enabled" on a config with various values results
         /// in runtime. Takes in updated value for graphql.enabled and 
         /// validates whether the runtime config reflects those updated values

@@ -12,8 +12,9 @@ class FileSinkConverter : JsonConverter<FileSinkOptions>
     // value or not while deserializing.
     private bool _replaceEnvVar;
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
+    /// <param name="replaceEnvVar">
+    /// Whether to replace environment variable with its value or not while deserializing.
+    /// </param>
     public FileSinkConverter(bool replaceEnvVar)
     {
         _replaceEnvVar = replaceEnvVar;

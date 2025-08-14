@@ -127,7 +127,7 @@ public record FileSinkOptions
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write path
-    /// property and value to the runtime config file.
+    /// property/value to the runtime config file.
     /// When user doesn't provide the path property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
@@ -137,7 +137,7 @@ public record FileSinkOptions
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write rolling-interval
-    /// property and value to the runtime config file.
+    /// property/value to the runtime config file.
     /// When user doesn't provide the rolling-interval property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
@@ -147,7 +147,7 @@ public record FileSinkOptions
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write retained-file-count-limit
-    /// property and value to the runtime config file.
+    /// property/value to the runtime config file.
     /// When user doesn't provide the retained-file-count-limit property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
@@ -157,7 +157,7 @@ public record FileSinkOptions
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write file-size-limit-bytes
-    /// property and value to the runtime config file.
+    /// property/value to the runtime config file.
     /// When user doesn't provide the file-size-limit-bytes property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>

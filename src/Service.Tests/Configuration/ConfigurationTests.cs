@@ -4086,7 +4086,7 @@ type Planet @model(name:""PlanetAlias"") {
             string expectedDabIdentifier,
             int expectedFlushIntSec)
         {
-            //Check if auth property and its values are expected to exist
+            // Check if auth property and its values are expected to exist
             bool expectedExistEnabled = enabled is not null;
             bool expectedExistDabIdentifier = dabIdentifier is not null;
             bool expectedExistFlushIntSec = flushIntSec is not null;
@@ -4135,10 +4135,10 @@ type Planet @model(name:""PlanetAlias"") {
                     Assert.AreEqual(expectedFlushIntSec, flushIntSecElement.GetInt32());
                 }
 
-                //Validate auth property exists inside of azure-log-analytics
+                // Validate auth property exists inside of azure-log-analytics
                 bool authExists = azureLogAnalyticsElement.TryGetProperty("auth", out JsonElement authElement);
 
-                //Validate the values inside the auth properties are of expected value
+                // Validate the values inside the auth properties are of expected value
                 if (authExists)
                 {
                     bool customTableNameExists = authElement.TryGetProperty("custom-table-name", out JsonElement customTableNameElement);
@@ -4170,8 +4170,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, "/file/path/exists.txt", RollingIntervalMode.Hour, 10, 256, true, "/file/path/exists.txt", RollingIntervalMode.Hour, 10, 256)]
-        [DataRow(false, "", RollingIntervalMode.Week, 5, 512, false, "", RollingIntervalMode.Week, 5, 512)]
+        [DataRow(true, "/file/path/exists.txt", RollingIntervalMode.Minute, 27, 256, true, "/file/path/exists.txt", RollingIntervalMode.Minute, 27, 256)]
+        [DataRow(true, "/test/path.csv", RollingIntervalMode.Hour, 10, 3000, true, "/test/path.csv", RollingIntervalMode.Hour, 10, 3000)]
+        [DataRow(false, "C://absolute/file/path.log", RollingIntervalMode.Month, 2147483647, 2048, false, "C://absolute/file/path.log", RollingIntervalMode.Month, 2147483647, 2048)]
+        [DataRow(false, "D://absolute/test/path.txt", RollingIntervalMode.Year, 10, 2147483647, false, "D://absolute/test/path.txt", RollingIntervalMode.Year, 10, 2147483647)]
+        [DataRow(false, "", RollingIntervalMode.Infinite, 5, 512, false, "", RollingIntervalMode.Infinite, 5, 512)]
         [DataRow(null, null, null, null, null, false, "/logs/dab-log.txt", RollingIntervalMode.Day, 1, 1048576)]
         public void FileSinkSerialization(
             bool? enabled,
@@ -4185,7 +4188,7 @@ type Planet @model(name:""PlanetAlias"") {
             int expectedRetainedFileCountLimit,
             int expectedFileSizeLimitBytes)
         {
-            //Check if file values are expected to exist
+            // Check if file values are expected to exist
             bool isEnabledNull = enabled is null;
             bool isPathNull = path is null;
             bool isRollingIntervalNull = rollingInterval is null;
@@ -4205,12 +4208,12 @@ type Planet @model(name:""PlanetAlias"") {
                 JsonElement root = parsedDocument.RootElement;
                 JsonElement runtimeElement = root.GetProperty("runtime");
 
-                //Validate file property exists in runtime
+                // Validate file property exists in runtime
                 JsonElement telemetryElement = runtimeElement.GetProperty("telemetry");
                 bool filePropertyExists = telemetryElement.TryGetProperty("file", out JsonElement fileElement);
                 Assert.AreEqual(expected: true, actual: filePropertyExists);
 
-                //Validate the values inside the file properties are of expected value
+                // Validate the values inside the file properties are of expected value
                 bool enabledExists = fileElement.TryGetProperty("enabled", out JsonElement enabledElement);
                 Assert.AreEqual(expected: !isEnabledNull, actual: enabledExists);
                 if (enabledExists)

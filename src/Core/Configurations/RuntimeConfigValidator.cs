@@ -82,6 +82,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
         ValidateLoggerFilters(runtimeConfig);
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
+        ValidateFileSinkPath(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -171,6 +172,24 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 HandleOrRecordException(new DataApiBuilderException(
                     message: "Azure Log Analytics Auth options 'custom-table-name', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The path in File Sink is required if it is enabled.
+    /// </summary>
+    public void ValidateFileSinkPath(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.File is not null)
+        {
+            FileSinkOptions fileSinkOptions = runtimeConfig.Runtime.Telemetry.File;
+            if (fileSinkOptions.Enabled && string.IsNullOrEmpty(fileSinkOptions.Path))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "File option 'path' cannot be null or empty if enabled.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

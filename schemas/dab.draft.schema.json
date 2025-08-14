@@ -500,8 +500,8 @@
                 "rolling-interval": {
                   "type": "string",
                   "description": "Rolling interval for log files.",
-                  "default": "day",
-                  "enum": ["hour", "day", "week"]
+                  "default": "Day",
+                  "enum": ["Minute", "Hour", "Day", "Month", "Year", "Infinite"]
                 },
                 "retained-file-count-limit": {
                   "type": "integer",

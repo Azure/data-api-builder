@@ -117,7 +117,7 @@ public record FileSinkOptions
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write enabled
-    /// property and value to the runtime config file.
+    /// property/value to the runtime config file.
     /// When user doesn't provide the enabled property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>

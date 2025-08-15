@@ -4086,7 +4086,7 @@ type Planet @model(name:""PlanetAlias"") {
             string expectedDabIdentifier,
             int expectedFlushIntSec)
         {
-            //Check if auth property and its values are expected to exist
+            // Check if auth property and its values are expected to exist
             bool expectedExistEnabled = enabled is not null;
             bool expectedExistDabIdentifier = dabIdentifier is not null;
             bool expectedExistFlushIntSec = flushIntSec is not null;
@@ -4096,7 +4096,8 @@ type Planet @model(name:""PlanetAlias"") {
 
             AzureLogAnalyticsAuthOptions authOptions = new(customTableName, dcrImmutableId, dceEndpoint);
             AzureLogAnalyticsOptions azureLogAnalyticsOptions = new(enabled, authOptions, dabIdentifier, flushIntSec);
-            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithAzureLogAnalytics(azureLogAnalyticsOptions);
+            TelemetryOptions telemetryOptions = new(AzureLogAnalytics: azureLogAnalyticsOptions);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithTelemetry(telemetryOptions);
             string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig? deserializedRuntimeConfig));
 
@@ -4134,10 +4135,10 @@ type Planet @model(name:""PlanetAlias"") {
                     Assert.AreEqual(expectedFlushIntSec, flushIntSecElement.GetInt32());
                 }
 
-                //Validate auth property exists inside of azure-log-analytics
+                // Validate auth property exists inside of azure-log-analytics
                 bool authExists = azureLogAnalyticsElement.TryGetProperty("auth", out JsonElement authElement);
 
-                //Validate the values inside the auth properties are of expected value
+                // Validate the values inside the auth properties are of expected value
                 if (authExists)
                 {
                     bool customTableNameExists = authElement.TryGetProperty("custom-table-name", out JsonElement customTableNameElement);
@@ -4164,12 +4165,98 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
+        /// <summary>
+        /// Tests different File Sink values to see if they are serialized and deserialized correctly to the Json config
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(true, "/file/path/exists.txt", RollingIntervalMode.Minute, 27, 256, true, "/file/path/exists.txt", RollingIntervalMode.Minute, 27, 256)]
+        [DataRow(true, "/test/path.csv", RollingIntervalMode.Hour, 10, 3000, true, "/test/path.csv", RollingIntervalMode.Hour, 10, 3000)]
+        [DataRow(false, "C://absolute/file/path.log", RollingIntervalMode.Month, 2147483647, 2048, false, "C://absolute/file/path.log", RollingIntervalMode.Month, 2147483647, 2048)]
+        [DataRow(false, "D://absolute/test/path.txt", RollingIntervalMode.Year, 10, 2147483647, false, "D://absolute/test/path.txt", RollingIntervalMode.Year, 10, 2147483647)]
+        [DataRow(false, "", RollingIntervalMode.Infinite, 5, 512, false, "", RollingIntervalMode.Infinite, 5, 512)]
+        [DataRow(null, null, null, null, null, false, "/logs/dab-log.txt", RollingIntervalMode.Day, 1, 1048576)]
+        public void FileSinkSerialization(
+            bool? enabled,
+            string? path,
+            RollingIntervalMode? rollingInterval,
+            int? retainedFileCountLimit,
+            int? fileSizeLimitBytes,
+            bool expectedEnabled,
+            string expectedPath,
+            RollingIntervalMode expectedRollingInterval,
+            int expectedRetainedFileCountLimit,
+            int expectedFileSizeLimitBytes)
+        {
+            // Check if file values are expected to exist
+            bool isEnabledNull = enabled is null;
+            bool isPathNull = path is null;
+            bool isRollingIntervalNull = rollingInterval is null;
+            bool isRetainedFileCountLimitNull = retainedFileCountLimit is null;
+            bool isFileSizeLimitBytesNull = fileSizeLimitBytes is null;
+
+            FileSinkOptions fileOptions = new(enabled, path, rollingInterval, retainedFileCountLimit, fileSizeLimitBytes);
+            TelemetryOptions telemetryOptions = new(File: fileOptions);
+            RuntimeConfig configWithCustomLogLevel = InitializeRuntimeWithTelemetry(telemetryOptions);
+            string configWithCustomLogLevelJson = configWithCustomLogLevel.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomLogLevelJson, out RuntimeConfig? deserializedRuntimeConfig));
+
+            string serializedConfig = deserializedRuntimeConfig.ToJson();
+
+            using (JsonDocument parsedDocument = JsonDocument.Parse(serializedConfig))
+            {
+                JsonElement root = parsedDocument.RootElement;
+                JsonElement runtimeElement = root.GetProperty("runtime");
+
+                // Validate file property exists in runtime
+                JsonElement telemetryElement = runtimeElement.GetProperty("telemetry");
+                bool filePropertyExists = telemetryElement.TryGetProperty("file", out JsonElement fileElement);
+                Assert.AreEqual(expected: true, actual: filePropertyExists);
+
+                // Validate the values inside the file properties are of expected value
+                bool enabledExists = fileElement.TryGetProperty("enabled", out JsonElement enabledElement);
+                Assert.AreEqual(expected: !isEnabledNull, actual: enabledExists);
+                if (enabledExists)
+                {
+                    Assert.AreEqual(expectedEnabled, enabledElement.GetBoolean());
+                }
+
+                bool pathExists = fileElement.TryGetProperty("path", out JsonElement pathElement);
+                Assert.AreEqual(expected: !isPathNull, actual: pathExists);
+                if (pathExists)
+                {
+                    Assert.AreEqual(expectedPath, pathElement.GetString());
+                }
+
+                bool rollingIntervalExists = fileElement.TryGetProperty("rolling-interval", out JsonElement rollingIntervalElement);
+                Assert.AreEqual(expected: !isRollingIntervalNull, actual: rollingIntervalExists);
+                if (rollingIntervalExists)
+                {
+                    Assert.AreEqual(expectedRollingInterval.ToString(), rollingIntervalElement.GetString());
+                }
+
+                bool retainedFileCountLimitExists = fileElement.TryGetProperty("retained-file-count-limit", out JsonElement retainedFileCountLimitElement);
+                Assert.AreEqual(expected: !isRetainedFileCountLimitNull, actual: retainedFileCountLimitExists);
+                if (retainedFileCountLimitExists)
+                {
+                    Assert.AreEqual(expectedRetainedFileCountLimit, retainedFileCountLimitElement.GetInt32());
+                }
+
+                bool fileSizeLimitBytesExists = fileElement.TryGetProperty("file-size-limit-bytes", out JsonElement fileSizeLimitBytesElement);
+                Assert.AreEqual(expected: !isFileSizeLimitBytesNull, actual: fileSizeLimitBytesExists);
+                if (fileSizeLimitBytesExists)
+                {
+                    Assert.AreEqual(expectedFileSizeLimitBytes, fileSizeLimitBytesElement.GetInt32());
+                }
+            }
+        }
+
 #nullable disable
 
         /// <summary>
-        /// Helper method to create RuntimeConfig with specificed LogLevel value
+        /// Helper method to create RuntimeConfig with specified Telemetry options
         /// </summary>
-        private static RuntimeConfig InitializeRuntimeWithAzureLogAnalytics(AzureLogAnalyticsOptions azureLogAnalyticsOptions)
+        private static RuntimeConfig InitializeRuntimeWithTelemetry(TelemetryOptions telemetryOptions)
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
 
@@ -4183,7 +4270,7 @@ type Planet @model(name:""PlanetAlias"") {
                     Rest: new(),
                     GraphQL: new(),
                     Host: new(null, null),
-                    Telemetry: new(AzureLogAnalytics: azureLogAnalyticsOptions)
+                    Telemetry: telemetryOptions
                 ),
                 Entities: baseConfig.Entities
             );

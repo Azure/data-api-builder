@@ -685,7 +685,7 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Evicts the GraphQL schema from the request executor resolver.
         /// </summary>
-        private static void EvictGraphQLSchema(IRequestExecutorResolver requestExecutorResolver)
+        private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorResolver)
         {
             Console.WriteLine("Evicting old GraphQL schema.");
             requestExecutorResolver.EvictRequestExecutor();

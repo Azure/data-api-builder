@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Serilog;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 class FileSinkConverter : JsonConverter<FileSinkOptions>
@@ -31,7 +32,7 @@ class FileSinkConverter : JsonConverter<FileSinkOptions>
         {
             bool? enabled = null;
             string? path = null;
-            RollingIntervalMode? rollingInterval = null;
+            RollingInterval? rollingInterval = null;
             int? retainedFileCountLimit = null;
             int? fileSizeLimitBytes = null;
 
@@ -66,7 +67,7 @@ class FileSinkConverter : JsonConverter<FileSinkOptions>
                     case "rolling-interval":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            rollingInterval = EnumExtensions.Deserialize<RollingIntervalMode>(reader.DeserializeString(_replaceEnvVar)!);
+                            rollingInterval = EnumExtensions.Deserialize<RollingInterval>(reader.DeserializeString(_replaceEnvVar)!);
                         }
 
                         break;

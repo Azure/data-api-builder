@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -20,6 +21,9 @@ using Microsoft.Extensions.Logging.ApplicationInsights;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
+using Serilog;
+using Serilog.Core;
+using Serilog.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -132,9 +136,11 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Creates a LoggerFactory and add filter with the given LogLevel.
         /// </summary>
-        /// <param name="logLevel">minimum log level.</param>
+        /// <param name="logLevel">Minimum log level.</param>
         /// <param name="appTelemetryClient">Telemetry client</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null, LogLevelInitializer? logLevelInitializer = null)
+        /// <param name="logLevelInitializer">Hot-reloadable log level</param>
+        /// <param name="serilogLogger">Core Serilog logging pipeline</param>
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null, LogLevelInitializer? logLevelInitializer = null, Logger? serilogLogger = null)
         {
             return LoggerFactory
                 .Create(builder =>
@@ -206,6 +212,20 @@ namespace Azure.DataApiBuilder.Service
                         else
                         {
                             builder.AddFilter<AzureLogAnalyticsLoggerProvider>(category: string.Empty, level => level >= logLevelInitializer.MinLogLevel);
+                        }
+                    }
+
+                    if (Startup.FileSinkOptions.Enabled && serilogLogger is not null)
+                    {
+                        builder.AddSerilog(serilogLogger);
+
+                        if (logLevelInitializer is null)
+                        {
+                            builder.AddFilter<SerilogLoggerProvider>(category: string.Empty, logLevel);
+                        }
+                        else
+                        {
+                            builder.AddFilter<SerilogLoggerProvider>(category: string.Empty, level => level >= logLevelInitializer.MinLogLevel);
                         }
                     }
 

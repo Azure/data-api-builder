@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Serilog;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Serilog;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 

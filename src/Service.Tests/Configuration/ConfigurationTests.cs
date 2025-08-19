@@ -4964,6 +4964,32 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Validates that the pagination next link is relative when configured.
+        /// </summary>
+        [TestMethod]
+        public void ValidatePaginationNextLinkRelativeFromConfig()
+        {
+            string configJson = @"
+            {
+                ""$schema"": ""dab.draft.schema.json"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=localhost;Database=test;""
+                },
+                ""runtime"": {
+                    ""pagination"": {
+                        ""next-link-relative"": true
+                    }
+                },
+                ""entities"": {}
+            }";
+
+            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig config);
+            Assert.IsNotNull(config);
+            Assert.AreEqual(true, config.NextLinkRelative());
+        }
+
+        /// <summary>
         /// Helper function to write custom configuration file. with minimal REST/GraphQL global settings
         /// using the supplied entities.
         /// </summary>

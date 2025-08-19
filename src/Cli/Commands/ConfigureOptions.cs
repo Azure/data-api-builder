@@ -54,6 +54,7 @@ namespace Cli.Commands
             string? azureLogAnalyticsCustomTableName = null,
             string? azureLogAnalyticsDcrImmutableId = null,
             string? azureLogAnalyticsDceEndpoint = null,
+            bool? runtimeNextLinkRelative = null,
             string? config = null)
             : base(config)
         {
@@ -98,6 +99,8 @@ namespace Cli.Commands
             AzureLogAnalyticsCustomTableName = azureLogAnalyticsCustomTableName;
             AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
             AzureLogAnalyticsDceEndpoint = azureLogAnalyticsDceEndpoint;
+            // Pagination
+            RuntimeNextLinkRelative = runtimeNextLinkRelative;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -162,6 +165,9 @@ namespace Cli.Commands
 
         [Option("runtime.host.authentication.jwt.audience", Required = false, HelpText = "Configure the intended recipient(s) of the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtAudience { get; }
+
+        [Option("runtime.rest.next-link-relative", Required = false, HelpText = "Enable nextLink in paginated results for relative URL. Default: false (boolean).")]
+        public bool? RuntimeNextLinkRelative { get; }
 
         [Option("runtime.host.authentication.jwt.issuer", Required = false, HelpText = "Configure the entity that issued the Jwt Token.")]
         public string? RuntimeHostAuthenticationJwtIssuer { get; }

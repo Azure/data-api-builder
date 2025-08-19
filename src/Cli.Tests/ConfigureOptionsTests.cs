@@ -882,6 +882,35 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests the configuration of the next link relative setting in the runtime configuration file.
+        /// </summary>
+        /// <remarks>This method sets up an initial configuration, attempts to update the next link
+        /// relative value, and asserts that the update was successful. It verifies that the configuration file reflects
+        /// the expected changes.</remarks>
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update runtime.pagination.next-link-relative to false.")]
+        [DataRow(true, DisplayName = "Update runtime.pagination.next-link-relative to true.")]
+        public void TestConfigureNextLinkRelative(bool value)
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update next link relative value
+            ConfigureOptions options = new(
+                runtimeNextLinkRelative: value,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the NextLinkRelative Value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.AreEqual(runtimeConfig.Runtime?.Pagination?.NextLinkRelative, value);
+        }
+
+        /// <summary>
         /// Sets up the mock file system with an initial configuration file.
         /// This method adds a config file to the mock file system and verifies its existence.
         /// It also attempts to parse the config file to ensure it is valid.

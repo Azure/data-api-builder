@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -427,6 +428,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="expectedSubStatusCode">enum represents the returned sub status code</param>
         /// <param name="expectedLocationHeader">The expected location header in the response (if any)</param>
         /// <param name="isExpectedErrorMsgSubstr">When set to true, will look for a substring 'expectedErrorMessage'
+        /// <param name="nextLinkShouldBeRelative">When set to true, will return a relative URL for the nextLink</param>
         /// in the actual error message to verify the test result. This is helpful when the actual error message is dynamic and changes
         /// on every single run of the test.</param>
         /// <param name="clientRoleHeader">The custom role in whose context the request will be executed.</param>
@@ -451,7 +453,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             int verifyNumRecords = -1,
             bool expectJson = true,
             bool isExpectedErrorMsgSubstr = false,
-            string clientRoleHeader = null)
+            string clientRoleHeader = null,
+            bool nextLinkShouldBeRelative = false)
         {
             // Create the rest endpoint using the path and entity name.
             string restEndPoint = restPath + "/" + entityNameOrPath;
@@ -555,7 +558,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     // For FIND requests, null result signifies an empty result set
                     dbResult = (operationType is EntityActionOperation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"{SqlTestHelper.jsonResultTopLevelKey}\":" +
-                        $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
+                        $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}", nextLinkShouldBeRelative)}}}";
                 }
             }
 
@@ -588,10 +591,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="paginated">Bool representing if the nextLink is needed.</param>
         /// <param name="baseUrl">The base Url.</param>
         /// <param name="queryString">The query string to add to the url.</param>
+        /// <param name="nextLinkShouldBeRelative">Bool representing if the nextLink should be relative.</param>
         /// <returns></returns>
-        private static string ExpectedNextLinkIfAny(bool paginated, string baseUrl, string queryString)
+        protected static string ExpectedNextLinkIfAny(bool paginated, string baseUrl, string queryString, bool nextLinkShouldBeRelative = false)
         {
-            return paginated ? $",\"nextLink\":\"{baseUrl}{queryString}\"" : string.Empty;
+            if (!paginated)
+            {
+                return string.Empty;
+            }
+
+            if (nextLinkShouldBeRelative)
+            {
+                // Only return the path and query string
+                Uri uri = new(baseUrl);
+                return $",\"nextLink\":\"{uri.PathAndQuery}{queryString}\"";
+            }
+
+            return $",\"nextLink\":\"{baseUrl}{queryString}\"";
         }
 
         /// <summary>

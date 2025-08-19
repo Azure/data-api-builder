@@ -801,6 +801,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Validates that a relative nextLink is created when next-link-relative is enabled in config.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestNextLinkRelativeConfig()
+        {
+            string after = SqlPaginationUtil.Base64Encode("[{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}]");
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _integrationPaginationEntityName,
+                sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink)),
+                expectedAfterQueryString: $"?$after={after}",
+                paginated: true,
+                nextLinkShouldBeRelative: true
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation using $first to
         /// limit the number of records returned with multiple column
         /// primary key in the table.

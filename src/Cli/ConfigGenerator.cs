@@ -724,6 +724,22 @@ namespace Cli
                 }
             }
 
+            // Pagination: NextLinkRelative
+            if (options.RuntimeNextLinkRelative != null)
+            {
+                PaginationOptions? updatedPaginationOptions = runtimeConfig?.Runtime?.Pagination ?? new();
+                bool status = TryUpdateConfiguredPaginationValues(options, ref updatedPaginationOptions);
+
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Pagination = updatedPaginationOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             // GraphQL: Enabled, Path, Allow-Introspection and Multiple-Mutations.Create.Enabled
             if (options.RuntimeGraphQLEnabled != null ||
                 options.RuntimeGraphQLPath != null ||
@@ -1195,6 +1211,38 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Pagination runtime settings based on the provided value.
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedPaginationOptions">updatedPaginationOptions.</param>
+        /// <returns>True, if the value need to be updated in the runtime config</returns>
+        private static bool TryUpdateConfiguredPaginationValues(
+            ConfigureOptions options,
+            ref PaginationOptions? updatedPaginationOptions)
+        {
+            object? updatedValue;
+
+            try
+            {
+                // Runtime.Pagination.NextLinkRelative
+                updatedValue = options?.RuntimeNextLinkRelative;
+
+                if (updatedValue != null)
+                {
+                    updatedPaginationOptions = updatedPaginationOptions! with { NextLinkRelative = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Pagination.NextLinkRelative as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Pagination with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

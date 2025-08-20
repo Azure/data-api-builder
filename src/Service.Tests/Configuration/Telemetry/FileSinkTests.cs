@@ -81,7 +81,7 @@ public class FileSinkTests
         LoggerConfiguration serilogLoggerConfiguration = serviceProvider.GetService<LoggerConfiguration>();
         Logger serilogLogger = serviceProvider.GetService<Logger>();
 
-        // If customLogCollector, flusherService, and loggerProvider are not null when File Sink is enabled
+        // If serilogLoggerConfiguration and serilogLogger are not null, File Sink is enabled
         Assert.IsNotNull(serilogLoggerConfiguration, "LoggerConfiguration for Serilog should be registered.");
         Assert.IsNotNull(serilogLogger, "Logger for Serilog should be registered.");
     }
@@ -128,8 +128,8 @@ public class FileSinkTests
         LoggerConfiguration serilogLoggerConfiguration = serviceProvider.GetService<LoggerConfiguration>();
         Logger serilogLogger = serviceProvider.GetService<Logger>();
 
-        // If customLogCollector, flusherService, and loggerProvider are not null when File Sink is enabled
-        Assert.IsNotNull(serilogLoggerConfiguration, "LoggerConfiguration for Serilog should be registered.");
-        Assert.IsNotNull(serilogLogger, "Logger for Serilog should be registered.");
+        // If serilogLoggerConfiguration and serilogLogger are null, File Sink is disabled
+        Assert.IsNull(serilogLoggerConfiguration, "LoggerConfiguration for Serilog should not be registered.");
+        Assert.IsNull(serilogLogger, "Logger for Serilog should not be registered.");
     }
 }

@@ -202,7 +202,12 @@ namespace Azure.DataApiBuilder.Service
                 services.AddSingleton(sp =>
                 {
                     FileSinkOptions options = runtimeConfig.Runtime.Telemetry.File;
-                    return new LoggerConfiguration().WriteTo.File(path: options.Path, rollingInterval: (RollingInterval)Enum.Parse(typeof(RollingInterval), options.RollingInterval), retainedFileCountLimit: options.RetainedFileCountLimit, fileSizeLimitBytes: options.FileSizeLimitBytes, rollOnFileSizeLimit: true);
+                    return new LoggerConfiguration().WriteTo.File(
+                        path: options.Path,
+                        rollingInterval: (RollingInterval)Enum.Parse(typeof(RollingInterval), options.RollingInterval),
+                        retainedFileCountLimit: options.RetainedFileCountLimit,
+                        fileSizeLimitBytes: options.FileSizeLimitBytes,
+                        rollOnFileSizeLimit: true);
                 });
                 services.AddSingleton(sp => sp.GetRequiredService<LoggerConfiguration>().MinimumLevel.Verbose().CreateLogger());
             }

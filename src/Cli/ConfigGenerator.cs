@@ -1247,7 +1247,7 @@ namespace Cli
                 // Runtime.Telemetry.File.RollingInterval
                 if (options.FileSinkRollingInterval is not null)
                 {
-                    fileOptions = fileOptions with { RollingInterval = options.FileSinkRollingInterval, UserProvidedRollingInterval = true };
+                    fileOptions = fileOptions with { RollingInterval = ((RollingIntervalMode)options.FileSinkRollingInterval).ToString(), UserProvidedRollingInterval = true };
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.file.rolling-interval as '{options.FileSinkRollingInterval}'");
                 }
 
@@ -1260,7 +1260,7 @@ namespace Cli
                         return false;
                     }
 
-                    fileOptions = fileOptions with { RetainedFileCountLimit = options.FileSinkRetainedFileCountLimit, UserProvidedRetainedFileCountLimit = true };
+                    fileOptions = fileOptions with { RetainedFileCountLimit = (int)options.FileSinkRetainedFileCountLimit, UserProvidedRetainedFileCountLimit = true };
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.file.retained-file-count-limit as '{options.FileSinkRetainedFileCountLimit}'");
                 }
 
@@ -1273,7 +1273,7 @@ namespace Cli
                         return false;
                     }
 
-                    fileOptions = fileOptions with { FileSizeLimitBytes = options.FileSinkFileSizeLimitBytes, UserProvidedFileSizeLimitBytes = true };
+                    fileOptions = fileOptions with { FileSizeLimitBytes = (long)options.FileSinkFileSizeLimitBytes, UserProvidedFileSizeLimitBytes = true };
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.file.file-size-limit-bytes as '{options.FileSinkFileSizeLimitBytes}'");
                 }
 

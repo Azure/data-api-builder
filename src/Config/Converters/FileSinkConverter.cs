@@ -34,7 +34,7 @@ class FileSinkConverter : JsonConverter<FileSinkOptions>
             string? path = null;
             RollingInterval? rollingInterval = null;
             int? retainedFileCountLimit = null;
-            int? fileSizeLimitBytes = null;
+            long? fileSizeLimitBytes = null;
 
             while (reader.Read())
             {
@@ -97,7 +97,7 @@ class FileSinkConverter : JsonConverter<FileSinkOptions>
                         {
                             try
                             {
-                                fileSizeLimitBytes = reader.GetInt32();
+                                fileSizeLimitBytes = reader.GetInt64();
                             }
                             catch (FormatException)
                             {

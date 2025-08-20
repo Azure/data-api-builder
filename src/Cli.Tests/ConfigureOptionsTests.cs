@@ -196,6 +196,11 @@ namespace Cli.Tests
         public void TestAddFileSinkOptions()
         {
             // Arrange
+            string fileSinkPath = "/custom/log/path.txt";
+            string fileSinkRollingInterval = "Hour";
+            int fileSinkRetainedFileCountLimit = 5;
+            int fileSinkFileSizeLimitBytes = 2097152;
+
             _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
 
             Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
@@ -203,10 +208,10 @@ namespace Cli.Tests
             // Act: Attempts to add file options
             ConfigureOptions options = new(
                 fileSinkEnabled: CliBool.True,
-                fileSinkPath: "/custom/log/path.txt",
-                fileSinkRollingInterval: "Hour",
-                fileSinkRetainedFileCountLimit: 5,
-                fileSinkFileSizeLimitBytes: 2097152,
+                fileSinkPath: fileSinkPath,
+                fileSinkRollingInterval: fileSinkRollingInterval,
+                fileSinkRetainedFileCountLimit: fileSinkRetainedFileCountLimit,
+                fileSinkFileSizeLimitBytes: fileSinkFileSizeLimitBytes,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
 
@@ -220,10 +225,10 @@ namespace Cli.Tests
             Assert.IsNotNull(config.Runtime.Telemetry);
             Assert.IsNotNull(config.Runtime.Telemetry.File);
             Assert.AreEqual(true, config.Runtime.Telemetry.File.Enabled);
-            Assert.AreEqual("/custom/log/path.txt", config.Runtime.Telemetry.File.Path);
-            Assert.AreEqual("Hour", config.Runtime.Telemetry.File.RollingInterval);
-            Assert.AreEqual(5, config.Runtime.Telemetry.File.RetainedFileCountLimit);
-            Assert.AreEqual(2097152, config.Runtime.Telemetry.File.FileSizeLimitBytes);
+            Assert.AreEqual(fileSinkPath, config.Runtime.Telemetry.File.Path);
+            Assert.AreEqual(fileSinkRollingInterval, config.Runtime.Telemetry.File.RollingInterval);
+            Assert.AreEqual(fileSinkRetainedFileCountLimit, config.Runtime.Telemetry.File.RetainedFileCountLimit);
+            Assert.AreEqual(fileSinkFileSizeLimitBytes, config.Runtime.Telemetry.File.FileSizeLimitBytes);
         }
 
         /// <summary>

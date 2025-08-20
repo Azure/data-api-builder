@@ -56,9 +56,9 @@ namespace Cli.Commands
             string? azureLogAnalyticsDceEndpoint = null,
             CliBool? fileSinkEnabled = null,
             string? fileSinkPath = null,
-            string? fileSinkRollingInterval = null,
+            RollingIntervalMode? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
-            int? fileSinkFileSizeLimitBytes = null,
+            long? fileSinkFileSizeLimitBytes = null,
             string? config = null)
             : base(config)
         {
@@ -220,13 +220,13 @@ namespace Cli.Commands
         public string? FileSinkPath { get; }
 
         [Option("runtime.telemetry.file.rolling-interval", Required = false, HelpText = "Configure rolling interval for File Sink logging. Default: Day")]
-        public string? FileSinkRollingInterval { get; }
+        public RollingIntervalMode? FileSinkRollingInterval { get; }
 
         [Option("runtime.telemetry.file.retained-file-count-limit", Required = false, HelpText = "Configure maximum number of retained files. Default: 1")]
         public int? FileSinkRetainedFileCountLimit { get; }
 
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
-        public int? FileSinkFileSizeLimitBytes { get; }
+        public long? FileSinkFileSizeLimitBytes { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

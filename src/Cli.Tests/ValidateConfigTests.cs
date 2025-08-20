@@ -292,7 +292,7 @@ public class ValidateConfigTests
         );
 
         // Act
-        await TestValidatePropertyOptionsFails(options);
+        await ValidatePropertyOptionsFails(options);
     }
 
     /// <summary>
@@ -310,18 +310,23 @@ public class ValidateConfigTests
         );
 
         // Act
-        await TestValidatePropertyOptionsFails(options);
+        await ValidatePropertyOptionsFails(options);
     }
 
     /// <summary>
-    /// Tests that validation fails when File Sink options are configured with an empty 'path' property.
+    /// Tests that validation fails when File Sink options are configured with an invalid 'path' property.
     /// </summary>
-    [TestMethod]
-    public async Task TestValidateFileSinkOptionsWithoutPathFails()
+    [DataTestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow("     ")]
+    [DataRow("invalid-path?.txt")]
+    public async Task TestValidateFileSinkOptionsWithInvalidPathFails(string? path)
     {
         // Arrange
         ConfigureOptions options = new(
             fileSinkEnabled: CliBool.True,
+            fileSinkPath: path,
             fileSinkRollingInterval: nameof(RollingIntervalMode.Day),
             fileSinkRetainedFileCountLimit: 1,
             fileSinkFileSizeLimitBytes: 1024,
@@ -329,13 +334,13 @@ public class ValidateConfigTests
         );
 
         // Act
-        await TestValidatePropertyOptionsFails(options);
+        await ValidatePropertyOptionsFails(options);
     }
 
     /// <summary>
-    /// Base test that ensures properties with missing options fail validation.
+    /// Helper function that ensures properties with missing options fail validation.
     /// </summary>
-    private async Task TestValidatePropertyOptionsFails(ConfigureOptions options)
+    private async Task ValidatePropertyOptionsFails(ConfigureOptions options)
     {
         _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
         Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));

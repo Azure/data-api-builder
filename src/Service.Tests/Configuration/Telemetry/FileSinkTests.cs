@@ -3,6 +3,8 @@
 
 using System;
 using System.IO;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,16 +31,17 @@ public class FileSinkTests
     /// This is a helper function that creates runtime config file with specified telemetry options.
     /// </summary>
     /// <param name="configFileName">Name of the config file to be created.</param>
-    /// <param name="isTelemetryEnabled">Whether telemetry is enabled or not.</param>
-    /// <param name="telemetryConnectionString">Telemetry connection string.</param>
-    public static void SetUpTelemetryInConfig(string configFileName, bool isFileSinkEnabled, string fileSinkPath)
+    /// <param name="isFileSinkEnabled">Whether telemetry is enabled or not.</param>
+    /// <param name="fileSinkPath">Path where logs will be sent to.</param>
+    /// <param name="rollingInterval">Time it takes for logs to roll over to next file.</param>
+    public static void SetUpTelemetryInConfig(string configFileName, bool isFileSinkEnabled, string fileSinkPath, RollingInterval? rollingInterval = null)
     {
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
         _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new());
 
-        TelemetryOptions _testTelemetryOptions = new(File: new FileSinkOptions(isFileSinkEnabled, fileSinkPath));
+        TelemetryOptions _testTelemetryOptions = new(File: new FileSinkOptions(isFileSinkEnabled, fileSinkPath, rollingInterval));
         _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };
 
         File.WriteAllText(configFileName, _configuration.ToJson());
@@ -89,20 +92,30 @@ public class FileSinkTests
     /// <summary>
     /// Tests if the logs are flushed to the proper path when File Sink is enabled.
     /// </summary>
+    /// <summary>
+    /// Tests if the logs are flushed to the proper path when File Sink is enabled.
+    /// </summary>
     [DataTestMethod]
-    [DataRow("/file-sink-test-file.txt")]
-    [DataRow("/file-sink-test-file.log")]
-    [DataRow("/file-sink-test-file.csv")]
-    public void TestFileSinkSucceed(string fileName)
+    [DataRow("file-sink-test-file.txt")]
+    [DataRow("file-sink-test-file.log")]
+    [DataRow("file-sink-test-file.csv")]
+    public async Task TestFileSinkSucceed(string fileName)
     {
         // Arrange
-        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, fileName);
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, true, fileName, RollingInterval.Infinite);
 
         string[] args = new[]
         {
             $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
         };
         using TestServer server = new(Program.CreateWebHostBuilder(args));
+
+        // Act
+        using (HttpClient client = server.CreateClient())
+        {
+            HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
+            await client.SendAsync(restRequest);
+        }
 
         // Assert
         Assert.IsTrue(File.Exists(fileName));

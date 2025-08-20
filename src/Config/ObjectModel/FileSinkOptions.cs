@@ -20,7 +20,7 @@ public record FileSinkOptions
     /// <summary>
     /// Default path for File Sink.
     /// </summary>
-    public const string DEFAULT_PATH = "/logs/dab-log.txt";
+    public const string DEFAULT_PATH = @"logs\dab-log.txt";
 
     /// <summary>
     /// Default rolling interval for File Sink.

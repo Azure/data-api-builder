@@ -327,7 +327,7 @@ public class ValidateConfigTests
         ConfigureOptions options = new(
             fileSinkEnabled: CliBool.True,
             fileSinkPath: path,
-            fileSinkRollingInterval: nameof(RollingIntervalMode.Day),
+            fileSinkRollingInterval: RollingIntervalMode.Day,
             fileSinkRetainedFileCountLimit: 1,
             fileSinkFileSizeLimitBytes: 1024,
             config: TEST_RUNTIME_CONFIG_FILE

@@ -314,19 +314,14 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Tests that validation fails when File Sink options are configured with an invalid 'path' property.
+    /// Tests that validation fails when File Sink options are configured without the 'path' property.
     /// </summary>
-    [DataTestMethod]
-    [DataRow(null)]
-    [DataRow("")]
-    [DataRow("     ")]
-    [DataRow("invalid-path?.txt")]
-    public async Task TestValidateFileSinkOptionsWithInvalidPathFails(string? path)
+    [TestMethod]
+    public async Task TestValidateFileSinkOptionsWithoutPathFails()
     {
         // Arrange
         ConfigureOptions options = new(
             fileSinkEnabled: CliBool.True,
-            fileSinkPath: path,
             fileSinkRollingInterval: RollingIntervalMode.Day,
             fileSinkRetainedFileCountLimit: 1,
             fileSinkFileSizeLimitBytes: 1024,

@@ -118,9 +118,23 @@ public class FileSinkTests
             await client.SendAsync(restRequest);
         }
 
+        server.Dispose();
+
         // Assert
         Assert.IsTrue(File.Exists(fileName));
-        Assert.IsTrue(File.ReadAllLines(fileName).Contains("INF"));
+
+        bool containsInfo = false;
+        string[] allLines = File.ReadAllLines(fileName);
+        foreach (string line in allLines)
+        {
+            containsInfo = line.Contains("INF");
+            if (containsInfo)
+            {
+                break;
+            }
+        }
+
+        Assert.IsTrue(containsInfo);
     }
 
     /// <summary>

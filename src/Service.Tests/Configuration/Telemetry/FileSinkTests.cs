@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -31,10 +32,10 @@ public class FileSinkTests
     /// This is a helper function that creates runtime config file with specified telemetry options.
     /// </summary>
     /// <param name="configFileName">Name of the config file to be created.</param>
-    /// <param name="isFileSinkEnabled">Whether telemetry is enabled or not.</param>
+    /// <param name="isFileSinkEnabled">Whether File Sink is enabled or not.</param>
     /// <param name="fileSinkPath">Path where logs will be sent to.</param>
     /// <param name="rollingInterval">Time it takes for logs to roll over to next file.</param>
-    public static void SetUpTelemetryInConfig(string configFileName, bool isFileSinkEnabled, string fileSinkPath, RollingInterval? rollingInterval = null)
+    private static void SetUpTelemetryInConfig(string configFileName, bool isFileSinkEnabled, string fileSinkPath, RollingInterval? rollingInterval = null)
     {
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -119,6 +120,7 @@ public class FileSinkTests
 
         // Assert
         Assert.IsTrue(File.Exists(fileName));
+        Assert.IsTrue(File.ReadAllLines(fileName).Contains("INF"));
     }
 
     /// <summary>

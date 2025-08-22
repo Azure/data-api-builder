@@ -53,15 +53,16 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             string? errorMessage = null;
             // Execute the query on DB and return the response time.
-            using (DbConnection? connection = providerFactory.CreateConnection())
+            DbConnection? connection = providerFactory.CreateConnection();
+            if (connection == null)
             {
-                if (connection == null)
-                {
-                    errorMessage = "Failed to create database connection.";
-                    _logger.LogError(errorMessage);
-                    return errorMessage;
-                }
+                errorMessage = "Failed to create database connection.";
+                _logger.LogError(errorMessage);
+                return errorMessage;
+            }
 
+            using (connection)
+            {
                 try
                 {
                     connection.ConnectionString = connectionString;

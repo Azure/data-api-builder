@@ -51,7 +51,7 @@ var pgService = builder.AddProject<Projects.Azure_DataApiBuilder_Service>("pg-se
 // BUG: Blocked due to https://github.com/dotnet/aspire/issues/10680
 // msSql.WithParentRelationship(mssqlService);
 
-// YOU NEED TO HAVE A SPACE HERE OR ELSE THIS DOESN'T WORK, WHAT EVEN IF THIS, PYTHON!?!?!
+// Note: A space is required here due to a parsing issue in the framework. Without the space, the parent relationship may not be established correctly. See related issue: https://github.com/dotnet/aspire/issues/10680
 // postgresDB.WithParentRelationship(pgService);
 
 builder.Build().Run();

@@ -12,7 +12,6 @@ var msSql = sqlDbContainer.AddDatabase("msSqlDb", "Trek")
 var pgScript = File.ReadAllText("./init-scripts/pg/create-database-pg.sql");
 
 var postgresDB = builder.AddPostgres("postgres")
-    //.WithDataVolume()
     .WithPgAdmin()
     .AddDatabase("pgDb", "postgres")
     .WithCreationScript(pgScript);

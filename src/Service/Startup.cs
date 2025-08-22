@@ -58,6 +58,8 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Serilog;
+using Serilog.Core;
 using StackExchange.Redis;
 using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
@@ -76,6 +78,7 @@ namespace Azure.DataApiBuilder.Service
         public static ApplicationInsightsOptions AppInsightsOptions = new();
         public static OpenTelemetryOptions OpenTelemetryOptions = new();
         public static AzureLogAnalyticsOptions AzureLogAnalyticsOptions = new();
+        public static FileSinkOptions FileSinkOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
         private readonly HotReloadEventHandler<HotReloadEventArgs> _hotReloadEventHandler = new();
         private RuntimeConfigProvider? _configProvider;
@@ -190,6 +193,23 @@ namespace Azure.DataApiBuilder.Service
                     return new AzureLogAnalyticsFlusherService(options, CustomLogCollector, logsIngestionClient, _logger);
                 });
                 services.AddHostedService(sp => sp.GetRequiredService<AzureLogAnalyticsFlusherService>());
+            }
+
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.Telemetry?.File is not null
+                && runtimeConfig.Runtime.Telemetry.File.Enabled)
+            {
+                services.AddSingleton(sp =>
+                {
+                    FileSinkOptions options = runtimeConfig.Runtime.Telemetry.File;
+                    return new LoggerConfiguration().WriteTo.File(
+                        path: options.Path,
+                        rollingInterval: (RollingInterval)Enum.Parse(typeof(RollingInterval), options.RollingInterval),
+                        retainedFileCountLimit: options.RetainedFileCountLimit,
+                        fileSizeLimitBytes: options.FileSizeLimitBytes,
+                        rollOnFileSizeLimit: true);
+                });
+                services.AddSingleton(sp => sp.GetRequiredService<LoggerConfiguration>().MinimumLevel.Verbose().CreateLogger());
             }
 
             services.AddSingleton(implementationFactory: serviceProvider =>
@@ -538,6 +558,7 @@ namespace Azure.DataApiBuilder.Service
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
                 ConfigureOpenTelemetry(runtimeConfig);
                 ConfigureAzureLogAnalytics(runtimeConfig);
+                ConfigureFileSink(app, runtimeConfig);
 
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
@@ -709,8 +730,9 @@ namespace Azure.DataApiBuilder.Service
             }
 
             TelemetryClient? appTelemetryClient = serviceProvider.GetService<TelemetryClient>();
+            Logger? serilogLogger = serviceProvider.GetService<Logger>();
 
-            return Program.GetLoggerFactoryForLogLevel(logLevelInitializer.MinLogLevel, appTelemetryClient, logLevelInitializer);
+            return Program.GetLoggerFactoryForLogLevel(logLevelInitializer.MinLogLevel, appTelemetryClient, logLevelInitializer, serilogLogger);
         }
 
         /// <summary>
@@ -937,6 +959,44 @@ namespace Azure.DataApiBuilder.Service
 
                 // Updating Startup Logger to Log from Startup Class.
                 ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+                _logger = loggerFactory.CreateLogger<Startup>();
+            }
+        }
+
+        /// <summary>
+        /// Configure File Sink based on the loaded runtime configuration. If File Sink
+        /// is enabled, we can track different events and metrics.
+        /// </summary>
+        /// <param name="app">The application builder.</param>
+        /// <param name="runtimeConfig">The provider used to load runtime configuration.</param>
+        private void ConfigureFileSink(IApplicationBuilder app, RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig?.Runtime?.Telemetry is not null
+               && runtimeConfig.Runtime.Telemetry.File is not null)
+            {
+                FileSinkOptions = runtimeConfig.Runtime.Telemetry.File;
+
+                if (!FileSinkOptions.Enabled)
+                {
+                    _logger.LogInformation("File is disabled.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(FileSinkOptions.Path))
+                {
+                    _logger.LogError("Logs won't be sent to File because the Path is not available in the config file.");
+                    return;
+                }
+
+                Logger? serilogLogger = app.ApplicationServices.GetService<Logger>();
+                if (serilogLogger is null)
+                {
+                    _logger.LogError("Serilog Logger Configuration is not set.");
+                    return;
+                }
+
+                // Updating Startup Logger to Log from Startup Class.
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(logLevel: MinimumLogLevel, serilogLogger: serilogLogger);
                 _logger = loggerFactory.CreateLogger<Startup>();
             }
         }

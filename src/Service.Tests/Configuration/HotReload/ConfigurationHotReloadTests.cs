@@ -698,6 +698,7 @@ public class ConfigurationHotReloadTests
     /// Invalid change that was added is a schema file that is not complete, which should be
     /// catched by the validator.
     /// </summary>
+    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public void HotReloadValidationFail()

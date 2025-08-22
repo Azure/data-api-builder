@@ -236,3 +236,4 @@ INSERT INTO Character_Species (CharacterId, SpeciesId) VALUES
     (35, 1), -- Malcolm Reed is Human
     (36, 1), -- Hoshi Sato is Human
     (37, 1); -- Travis Mayweather is Human
+    

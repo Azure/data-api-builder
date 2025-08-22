@@ -92,9 +92,6 @@ public class FileSinkTests
     /// <summary>
     /// Tests if the logs are flushed to the proper path when File Sink is enabled.
     /// </summary>
-    /// <summary>
-    /// Tests if the logs are flushed to the proper path when File Sink is enabled.
-    /// </summary>
     [DataTestMethod]
     [DataRow("file-sink-test-file.txt")]
     [DataRow("file-sink-test-file.log")]

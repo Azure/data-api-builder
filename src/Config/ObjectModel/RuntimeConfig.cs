@@ -141,6 +141,44 @@ public record RuntimeConfig
         }
     }
 
+    /// <summary>
+    /// Retrieves the value of runtime.ai.mcp.enabled property if present, default is false.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsMcpEnabled =>
+        Runtime?.Ai?.Mcp?.Enabled ?? false;
+
+    /// <summary>
+    /// The path at which MCP API is available
+    /// </summary>
+    [JsonIgnore]
+    public string McpPath
+    {
+        get
+        {
+            if (Runtime?.Ai?.Mcp?.Path is null)
+            {
+                return McpOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.Ai.Mcp.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The protocol for MCP communication
+    /// </summary>
+    [JsonIgnore]
+    public McpProtocol McpProtocol
+    {
+        get
+        {
+            return Runtime?.Ai?.Mcp?.Protocol ?? McpProtocol.Http;
+        }
+    }
+
     [JsonIgnore]
     public string DefaultDataSourceName { get; set; }
 

@@ -54,6 +54,9 @@ namespace Cli.Commands
             string? azureLogAnalyticsCustomTableName = null,
             string? azureLogAnalyticsDcrImmutableId = null,
             string? azureLogAnalyticsDceEndpoint = null,
+            bool? aiMcpEnabled = null,
+            string? aiMcpPath = null,
+            string? aiMcpProtocol = null,
             string? config = null)
             : base(config)
         {
@@ -98,6 +101,10 @@ namespace Cli.Commands
             AzureLogAnalyticsCustomTableName = azureLogAnalyticsCustomTableName;
             AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
             AzureLogAnalyticsDceEndpoint = azureLogAnalyticsDceEndpoint;
+            // AI MCP
+            AiMcpEnabled = aiMcpEnabled;
+            AiMcpPath = aiMcpPath;
+            AiMcpProtocol = aiMcpProtocol;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -201,6 +208,15 @@ namespace Cli.Commands
 
         [Option("runtime.telemetry.azure-log-analytics.auth.dce-endpoint", Required = false, HelpText = "Configure DCE Endpoint for Azure Log Analytics to find table to send telemetry data")]
         public string? AzureLogAnalyticsDceEndpoint { get; }
+
+        [Option("ai.mcp.enabled", Required = false, HelpText = "Enable DAB's MCP endpoint for AI agentic applications. Default: false (boolean).")]
+        public bool? AiMcpEnabled { get; }
+
+        [Option("ai.mcp.path", Required = false, HelpText = "Customize DAB's MCP endpoint path. Default: '/mcp' Conditions: Prefix path with '/'.")]
+        public string? AiMcpPath { get; }
+
+        [Option("ai.mcp.protocol", Required = false, HelpText = "Configure MCP transport protocol. Allowed values: http, stdio. Default: http.")]
+        public string? AiMcpProtocol { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

@@ -798,6 +798,23 @@ namespace Cli
                 }
             }
 
+            // AI: MCP Enabled, Path, and Protocol
+            if (options.AiMcpEnabled != null ||
+                options.AiMcpPath != null ||
+                options.AiMcpProtocol != null)
+            {
+                AiOptions? updatedAiOptions = runtimeConfig?.Runtime?.Ai ?? new();
+                bool status = TryUpdateConfiguredAiValues(options, ref updatedAiOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Ai = updatedAiOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             return runtimeConfig != null;
         }
 
@@ -1195,6 +1212,76 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the AI options based on the provided configuration values.
+        /// This method updates MCP (Model Context Protocol) related settings.
+        /// When validation fails, this function logs the validation errors and returns false.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="aiOptions">The AI options to be updated.</param>
+        /// <returns>True if the AI options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredAiValues(
+            ConfigureOptions options,
+            ref AiOptions aiOptions)
+        {
+            try
+            {
+                McpOptions? updatedMcpOptions = aiOptions.Mcp;
+
+                // AI.MCP.Enabled
+                if (options.AiMcpEnabled is not null)
+                {
+                    updatedMcpOptions = updatedMcpOptions is not null
+                        ? updatedMcpOptions with { Enabled = options.AiMcpEnabled.Value }
+                        : new McpOptions { Enabled = options.AiMcpEnabled.Value };
+                    _logger.LogInformation($"Updated configuration with ai.mcp.enabled as '{options.AiMcpEnabled}'");
+                }
+
+                // AI.MCP.Path
+                if (options.AiMcpPath is not null)
+                {
+                    if (!options.AiMcpPath.StartsWith('/'))
+                    {
+                        _logger.LogError("Failed to update configuration with ai.mcp.path. Value must start with '/'.");
+                        return false;
+                    }
+
+                    updatedMcpOptions = updatedMcpOptions is not null
+                        ? updatedMcpOptions with { Path = options.AiMcpPath }
+                        : new McpOptions { Path = options.AiMcpPath };
+                    _logger.LogInformation($"Updated configuration with ai.mcp.path as '{options.AiMcpPath}'");
+                }
+
+                // AI.MCP.Protocol
+                if (options.AiMcpProtocol is not null)
+                {
+                    if (!Enum.TryParse<McpProtocol>(options.AiMcpProtocol, ignoreCase: true, out McpProtocol protocol))
+                    {
+                        _logger.LogError($"Failed to update configuration with ai.mcp.protocol. Invalid value: '{options.AiMcpProtocol}'. Valid values are: {string.Join(", ", Enum.GetNames<McpProtocol>())}");
+                        return false;
+                    }
+
+                    updatedMcpOptions = updatedMcpOptions is not null
+                        ? updatedMcpOptions with { Protocol = protocol }
+                        : new McpOptions { Protocol = protocol };
+                    _logger.LogInformation($"Updated configuration with ai.mcp.protocol as '{options.AiMcpProtocol}'");
+                }
+
+                // Update AI options with MCP options if it was modified
+                if (updatedMcpOptions is not null)
+                {
+                    aiOptions = aiOptions with { Mcp = updatedMcpOptions };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to update configuration with ai.mcp. Exception message: {ex.Message}.");
                 return false;
             }
         }

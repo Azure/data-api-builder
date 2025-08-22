@@ -60,10 +60,10 @@ public record FileSinkOptions
     /// <summary>
     /// File size limit in bytes before a new file needs to be created.
     /// </summary>
-    public int FileSizeLimitBytes { get; init; }
+    public long FileSizeLimitBytes { get; init; }
 
     [JsonConstructor]
-    public FileSinkOptions(bool? enabled = null, string? path = null, RollingInterval? rollingInterval = null, int? retainedFileCountLimit = null, int? fileSizeLimitBytes = null)
+    public FileSinkOptions(bool? enabled = null, string? path = null, RollingInterval? rollingInterval = null, int? retainedFileCountLimit = null, long? fileSizeLimitBytes = null)
     {
         if (enabled is not null)
         {
@@ -107,7 +107,7 @@ public record FileSinkOptions
 
         if (fileSizeLimitBytes is not null)
         {
-            FileSizeLimitBytes = (int)fileSizeLimitBytes;
+            FileSizeLimitBytes = (long)fileSizeLimitBytes;
             UserProvidedFileSizeLimitBytes = true;
         }
         else

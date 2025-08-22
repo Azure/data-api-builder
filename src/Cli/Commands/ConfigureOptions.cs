@@ -8,7 +8,9 @@ using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using static Cli.Utils;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Cli.Commands
 {
@@ -54,6 +56,11 @@ namespace Cli.Commands
             string? azureLogAnalyticsCustomTableName = null,
             string? azureLogAnalyticsDcrImmutableId = null,
             string? azureLogAnalyticsDceEndpoint = null,
+            CliBool? fileSinkEnabled = null,
+            string? fileSinkPath = null,
+            RollingInterval? fileSinkRollingInterval = null,
+            int? fileSinkRetainedFileCountLimit = null,
+            long? fileSinkFileSizeLimitBytes = null,
             string? config = null)
             : base(config)
         {
@@ -98,6 +105,12 @@ namespace Cli.Commands
             AzureLogAnalyticsCustomTableName = azureLogAnalyticsCustomTableName;
             AzureLogAnalyticsDcrImmutableId = azureLogAnalyticsDcrImmutableId;
             AzureLogAnalyticsDceEndpoint = azureLogAnalyticsDceEndpoint;
+            // File
+            FileSinkEnabled = fileSinkEnabled;
+            FileSinkPath = fileSinkPath;
+            FileSinkRollingInterval = fileSinkRollingInterval;
+            FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
+            FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -201,6 +214,21 @@ namespace Cli.Commands
 
         [Option("runtime.telemetry.azure-log-analytics.auth.dce-endpoint", Required = false, HelpText = "Configure DCE Endpoint for Azure Log Analytics to find table to send telemetry data")]
         public string? AzureLogAnalyticsDceEndpoint { get; }
+
+        [Option("runtime.telemetry.file.enabled", Required = false, HelpText = "Enable/Disable File Sink logging. Default: False (boolean)")]
+        public CliBool? FileSinkEnabled { get; }
+
+        [Option("runtime.telemetry.file.path", Required = false, HelpText = "Configure path for File Sink logging. Default: /logs/dab-log.txt")]
+        public string? FileSinkPath { get; }
+
+        [Option("runtime.telemetry.file.rolling-interval", Required = false, HelpText = "Configure rolling interval for File Sink logging. Default: Day")]
+        public RollingInterval? FileSinkRollingInterval { get; }
+
+        [Option("runtime.telemetry.file.retained-file-count-limit", Required = false, HelpText = "Configure maximum number of retained files. Default: 1")]
+        public int? FileSinkRetainedFileCountLimit { get; }
+
+        [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
+        public long? FileSinkFileSizeLimitBytes { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

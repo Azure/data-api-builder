@@ -8,7 +8,9 @@ using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using static Cli.Utils;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Cli.Commands
 {
@@ -56,7 +58,7 @@ namespace Cli.Commands
             string? azureLogAnalyticsDceEndpoint = null,
             CliBool? fileSinkEnabled = null,
             string? fileSinkPath = null,
-            RollingIntervalMode? fileSinkRollingInterval = null,
+            RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
             string? config = null)
@@ -220,7 +222,7 @@ namespace Cli.Commands
         public string? FileSinkPath { get; }
 
         [Option("runtime.telemetry.file.rolling-interval", Required = false, HelpText = "Configure rolling interval for File Sink logging. Default: Day")]
-        public RollingIntervalMode? FileSinkRollingInterval { get; }
+        public RollingInterval? FileSinkRollingInterval { get; }
 
         [Option("runtime.telemetry.file.retained-file-count-limit", Required = false, HelpText = "Configure maximum number of retained files. Default: 1")]
         public int? FileSinkRetainedFileCountLimit { get; }

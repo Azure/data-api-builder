@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Serilog;
 
 namespace Cli.Tests;
 /// <summary>
@@ -322,7 +323,7 @@ public class ValidateConfigTests
         // Arrange
         ConfigureOptions options = new(
             fileSinkEnabled: CliBool.True,
-            fileSinkRollingInterval: RollingIntervalMode.Day,
+            fileSinkRollingInterval: RollingInterval.Day,
             fileSinkRetainedFileCountLimit: 1,
             fileSinkFileSizeLimitBytes: 1024,
             config: TEST_RUNTIME_CONFIG_FILE

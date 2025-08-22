@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using static Cli.Utils;
 
 namespace Cli
@@ -1247,7 +1248,7 @@ namespace Cli
                 // Runtime.Telemetry.File.RollingInterval
                 if (options.FileSinkRollingInterval is not null)
                 {
-                    fileOptions = fileOptions with { RollingInterval = ((RollingIntervalMode)options.FileSinkRollingInterval).ToString(), UserProvidedRollingInterval = true };
+                    fileOptions = fileOptions with { RollingInterval = ((RollingInterval)options.FileSinkRollingInterval).ToString(), UserProvidedRollingInterval = true };
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.file.rolling-interval as '{options.FileSinkRollingInterval}'");
                 }
 

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Serilog;
+
 namespace Cli.Tests
 {
     /// <summary>
@@ -197,7 +199,7 @@ namespace Cli.Tests
         {
             // Arrange
             string fileSinkPath = "/custom/log/path.txt";
-            RollingIntervalMode fileSinkRollingInterval = RollingIntervalMode.Hour;
+            RollingInterval fileSinkRollingInterval = RollingInterval.Hour;
             int fileSinkRetainedFileCountLimit = 5;
             int fileSinkFileSizeLimitBytes = 2097152;
 

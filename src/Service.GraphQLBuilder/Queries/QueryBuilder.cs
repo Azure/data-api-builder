@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             return node;
         }
 
-        public static ObjectType PaginationTypeToModelType(ObjectType underlyingFieldType, IReadOnlyCollection<INamedType> types)
+        public static ObjectType PaginationTypeToModelType(ObjectType underlyingFieldType, IReadOnlyCollection<ITypeDefinition> types)
         {
             IEnumerable<ObjectType> modelTypes = types.Where(t => t is ObjectType)
                 .Cast<ObjectType>()

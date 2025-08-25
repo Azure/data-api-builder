@@ -617,9 +617,14 @@ public class AuthorizationResolver : IAuthorizationResolver
             // into a list and storing that in resolvedClaims using the claimType as the key.
             foreach (Claim claim in identity.Claims)
             {
-                // 'roles' claim has already been processed.
+                // 'roles' claim has already been processed. But we preserve the original 'roles' claim.
                 if (claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE))
                 {
+                    if (!resolvedClaims.TryAdd(AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE, new List<Claim>() { claim }))
+                    {
+                        resolvedClaims[AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE].Add(claim);
+                    }
+
                     continue;
                 }
 

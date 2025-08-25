@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Serilog;
+
 namespace Cli.Tests
 {
     /// <summary>
@@ -186,6 +188,49 @@ namespace Cli.Tests
             Assert.AreEqual("custom-table-name-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName);
             Assert.AreEqual("dcr-immutable-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId);
             Assert.AreEqual("dce-endpoint-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Tests that running the "configure --file" commands on a config without file sink properties results
+        /// in a valid config being generated.
+        /// </summary>
+        [TestMethod]
+        public void TestAddFileSinkOptions()
+        {
+            // Arrange
+            string fileSinkPath = "/custom/log/path.txt";
+            RollingInterval fileSinkRollingInterval = RollingInterval.Hour;
+            int fileSinkRetainedFileCountLimit = 5;
+            int fileSinkFileSizeLimitBytes = 2097152;
+
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add file options
+            ConfigureOptions options = new(
+                fileSinkEnabled: CliBool.True,
+                fileSinkPath: fileSinkPath,
+                fileSinkRollingInterval: fileSinkRollingInterval,
+                fileSinkRetainedFileCountLimit: fileSinkRetainedFileCountLimit,
+                fileSinkFileSizeLimitBytes: fileSinkFileSizeLimitBytes,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the file options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.File);
+            Assert.AreEqual(true, config.Runtime.Telemetry.File.Enabled);
+            Assert.AreEqual(fileSinkPath, config.Runtime.Telemetry.File.Path);
+            Assert.AreEqual(fileSinkRollingInterval.ToString(), config.Runtime.Telemetry.File.RollingInterval);
+            Assert.AreEqual(fileSinkRetainedFileCountLimit, config.Runtime.Telemetry.File.RetainedFileCountLimit);
+            Assert.AreEqual(fileSinkFileSizeLimitBytes, config.Runtime.Telemetry.File.FileSizeLimitBytes);
         }
 
         /// <summary>

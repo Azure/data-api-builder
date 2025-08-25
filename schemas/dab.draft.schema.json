@@ -483,6 +483,50 @@
                 "required": [ "auth" ]
               }
             },
+            "file": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable/disable file sink telemetry logging.",
+                  "default": false
+                },
+                "path": {
+                  "type": "string",
+                  "description": "File path for telemetry logs.",
+                  "default": "/logs/dab-log.txt"
+                },
+                "rolling-interval": {
+                  "type": "string",
+                  "description": "Rolling interval for log files.",
+                  "default": "Day",
+                  "enum": [ "Minute", "Hour", "Day", "Month", "Year", "Infinite" ]
+                },
+                "retained-file-count-limit": {
+                  "type": "integer",
+                  "description": "Maximum number of retained log files.",
+                  "default": 1,
+                  "minimum": 1
+                },
+                "file-size-limit-bytes": {
+                  "type": "integer",
+                  "description": "Maximum file size in bytes before rolling.",
+                  "default": 1048576,
+                  "minimum": 1
+                }
+              },
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "required": [ "path" ]
+              }
+            },
             "log-level": {
               "type": "object",
               "description": "Global configuration of log level, defines logging severity levels for specific classes, when 'null' it will set logging level based on 'host: mode' property",

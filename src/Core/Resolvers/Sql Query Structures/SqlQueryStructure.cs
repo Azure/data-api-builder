@@ -388,7 +388,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IDictionary<string, object?> queryParams,
                 ISqlMetadataProvider sqlMetadataProvider,
                 IAuthorizationResolver authorizationResolver,
-                ObjectField    schemaField,
+                ObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter,
                 RuntimeConfigProvider runtimeConfigProvider,

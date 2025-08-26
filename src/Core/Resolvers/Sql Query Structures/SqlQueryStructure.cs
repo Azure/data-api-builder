@@ -989,7 +989,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ObjectField schemaField = ctx.Selection.Field;
 
             // Get the 'group by' field from the schema's entity type
-            ObjectField    groupByField = schemaField.Type.NamedType<ObjectType>()
+            ObjectField groupByField = schemaField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_FIELD_NAME];
 
             // Get the 'aggregations' field from the 'group by' entity type

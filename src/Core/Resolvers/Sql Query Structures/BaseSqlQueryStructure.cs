@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (mutationParameters.TryGetValue(fieldName, out object? item))
             {
-                ObjectField    fieldSchema = context.Selection.Field;
+                ObjectField fieldSchema = context.Selection.Field;
                 IInputValueDefinition itemsArgumentSchema = fieldSchema.Arguments[fieldName];
                 InputObjectType itemsArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
 

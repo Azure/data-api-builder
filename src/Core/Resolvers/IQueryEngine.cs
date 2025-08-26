@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Resolves a jsonElement representing an inner object based on the field's schema and metadata
         /// </summary>
-        public JsonElement ResolveObject(JsonElement element, ObjectField    fieldSchema, ref IMetadata metadata);
+        public JsonElement ResolveObject(JsonElement element, ObjectField fieldSchema, ref IMetadata metadata);
 
         /// <summary>
         /// Resolves a jsonElement representing a list type based on the field's schema and metadata

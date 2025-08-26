@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonElement ResolveObject(JsonElement element, ObjectField    fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, ObjectField fieldSchema, ref IMetadata metadata)
         {
 
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;

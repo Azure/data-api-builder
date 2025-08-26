@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Serilog;
+
 namespace Cli.Tests
 {
     /// <summary>
@@ -162,9 +164,9 @@ namespace Cli.Tests
             // Act: Attempts to add Azure Log Analytics options
             ConfigureOptions options = new(
                 azureLogAnalyticsEnabled: CliBool.True,
-                azureLogAnalyticsLogType: "log-type-test",
+                azureLogAnalyticsDabIdentifier: "dab-identifier-test",
                 azureLogAnalyticsFlushIntervalSeconds: 1,
-                azureLogAnalyticsWorkspaceId: "workspace-id-test",
+                azureLogAnalyticsCustomTableName: "custom-table-name-test",
                 azureLogAnalyticsDcrImmutableId: "dcr-immutable-id-test",
                 azureLogAnalyticsDceEndpoint: "dce-endpoint-test",
                 config: TEST_RUNTIME_CONFIG_FILE
@@ -180,12 +182,55 @@ namespace Cli.Tests
             Assert.IsNotNull(config.Runtime.Telemetry);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics);
             Assert.AreEqual(true, config.Runtime.Telemetry.AzureLogAnalytics.Enabled);
-            Assert.AreEqual("log-type-test", config.Runtime.Telemetry.AzureLogAnalytics.LogType);
+            Assert.AreEqual("dab-identifier-test", config.Runtime.Telemetry.AzureLogAnalytics.DabIdentifier);
             Assert.AreEqual(1, config.Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics.Auth);
-            Assert.AreEqual("workspace-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.WorkspaceId);
+            Assert.AreEqual("custom-table-name-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName);
             Assert.AreEqual("dcr-immutable-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId);
             Assert.AreEqual("dce-endpoint-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Tests that running the "configure --file" commands on a config without file sink properties results
+        /// in a valid config being generated.
+        /// </summary>
+        [TestMethod]
+        public void TestAddFileSinkOptions()
+        {
+            // Arrange
+            string fileSinkPath = "/custom/log/path.txt";
+            RollingInterval fileSinkRollingInterval = RollingInterval.Hour;
+            int fileSinkRetainedFileCountLimit = 5;
+            int fileSinkFileSizeLimitBytes = 2097152;
+
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add file options
+            ConfigureOptions options = new(
+                fileSinkEnabled: CliBool.True,
+                fileSinkPath: fileSinkPath,
+                fileSinkRollingInterval: fileSinkRollingInterval,
+                fileSinkRetainedFileCountLimit: fileSinkRetainedFileCountLimit,
+                fileSinkFileSizeLimitBytes: fileSinkFileSizeLimitBytes,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the file options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.File);
+            Assert.AreEqual(true, config.Runtime.Telemetry.File.Enabled);
+            Assert.AreEqual(fileSinkPath, config.Runtime.Telemetry.File.Path);
+            Assert.AreEqual(fileSinkRollingInterval.ToString(), config.Runtime.Telemetry.File.RollingInterval);
+            Assert.AreEqual(fileSinkRetainedFileCountLimit, config.Runtime.Telemetry.File.RetainedFileCountLimit);
+            Assert.AreEqual(fileSinkFileSizeLimitBytes, config.Runtime.Telemetry.File.FileSizeLimitBytes);
         }
 
         /// <summary>

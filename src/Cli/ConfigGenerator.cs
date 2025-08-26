@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
+using Serilog;
 using static Cli.Utils;
 
 namespace Cli
@@ -780,9 +781,9 @@ namespace Cli
 
             // Telemetry: Azure Log Analytics
             if (options.AzureLogAnalyticsEnabled is not null ||
-                options.AzureLogAnalyticsLogType is not null ||
+                options.AzureLogAnalyticsDabIdentifier is not null ||
                 options.AzureLogAnalyticsFlushIntervalSeconds is not null ||
-                options.AzureLogAnalyticsWorkspaceId is not null ||
+                options.AzureLogAnalyticsCustomTableName is not null ||
                 options.AzureLogAnalyticsDcrImmutableId is not null ||
                 options.AzureLogAnalyticsDceEndpoint is not null)
             {
@@ -791,6 +792,25 @@ namespace Cli
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ? runtimeConfig.Runtime!.Telemetry with { AzureLogAnalytics = updatedAzureLogAnalyticsOptions } : new TelemetryOptions(AzureLogAnalytics: updatedAzureLogAnalyticsOptions) } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Telemetry: File Sink
+            if (options.FileSinkEnabled is not null ||
+                options.FileSinkPath is not null ||
+                options.FileSinkRollingInterval is not null ||
+                options.FileSinkRetainedFileCountLimit is not null ||
+                options.FileSinkFileSizeLimitBytes is not null)
+            {
+                FileSinkOptions updatedFileSinkOptions = runtimeConfig?.Runtime?.Telemetry?.File ?? new();
+                bool status = TryUpdateConfiguredFileOptions(options, ref updatedFileSinkOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Telemetry = runtimeConfig.Runtime!.Telemetry is not null ? runtimeConfig.Runtime!.Telemetry with { File = updatedFileSinkOptions } : new TelemetryOptions(File: updatedFileSinkOptions) } };
                 }
                 else
                 {
@@ -1137,11 +1157,11 @@ namespace Cli
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.enabled as '{options.AzureLogAnalyticsEnabled}'");
                 }
 
-                // Runtime.Telemetry.AzureLogAnalytics.LogType
-                if (options.AzureLogAnalyticsLogType is not null)
+                // Runtime.Telemetry.AzureLogAnalytics.DabIdentifier
+                if (options.AzureLogAnalyticsDabIdentifier is not null)
                 {
-                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { LogType = options.AzureLogAnalyticsLogType, UserProvidedLogType = true };
-                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.log-type as '{options.AzureLogAnalyticsLogType}'");
+                    azureLogAnalyticsOptions = azureLogAnalyticsOptions with { DabIdentifier = options.AzureLogAnalyticsDabIdentifier, UserProvidedDabIdentifier = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.dab-identifier as '{options.AzureLogAnalyticsDabIdentifier}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds
@@ -1157,13 +1177,13 @@ namespace Cli
                     _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds as '{options.AzureLogAnalyticsFlushIntervalSeconds}'");
                 }
 
-                // Runtime.Telemetry.AzureLogAnalytics.Auth.WorkspaceId
-                if (options.AzureLogAnalyticsWorkspaceId is not null)
+                // Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName
+                if (options.AzureLogAnalyticsCustomTableName is not null)
                 {
                     updatedAuthOptions = updatedAuthOptions is not null
-                        ? updatedAuthOptions with { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true }
-                        : new AzureLogAnalyticsAuthOptions { WorkspaceId = options.AzureLogAnalyticsWorkspaceId, UserProvidedWorkspaceId = true };
-                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.workspace-id as '{options.AzureLogAnalyticsWorkspaceId}'");
+                        ? updatedAuthOptions with { CustomTableName = options.AzureLogAnalyticsCustomTableName, UserProvidedCustomTableName = true }
+                        : new AzureLogAnalyticsAuthOptions { CustomTableName = options.AzureLogAnalyticsCustomTableName, UserProvidedCustomTableName = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.azure-log-analytics.auth.custom-table-name as '{options.AzureLogAnalyticsCustomTableName}'");
                 }
 
                 // Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId
@@ -1195,6 +1215,74 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.azure-log-analytics. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Updates the file sink options in the configuration.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="fileOptions">The file sink options to be updated.</param>
+        /// <returns>True if the options were successfully updated; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredFileOptions(
+            ConfigureOptions options,
+            ref FileSinkOptions fileOptions)
+        {
+            try
+            {
+                // Runtime.Telemetry.File.Enabled
+                if (options.FileSinkEnabled is not null)
+                {
+                    fileOptions = fileOptions with { Enabled = options.FileSinkEnabled is CliBool.True, UserProvidedEnabled = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.enabled as '{options.FileSinkEnabled}'");
+                }
+
+                // Runtime.Telemetry.File.Path
+                if (options.FileSinkPath is not null)
+                {
+                    fileOptions = fileOptions with { Path = options.FileSinkPath, UserProvidedPath = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.path as '{options.FileSinkPath}'");
+                }
+
+                // Runtime.Telemetry.File.RollingInterval
+                if (options.FileSinkRollingInterval is not null)
+                {
+                    fileOptions = fileOptions with { RollingInterval = ((RollingInterval)options.FileSinkRollingInterval).ToString(), UserProvidedRollingInterval = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.rolling-interval as '{options.FileSinkRollingInterval}'");
+                }
+
+                // Runtime.Telemetry.File.RetainedFileCountLimit
+                if (options.FileSinkRetainedFileCountLimit is not null)
+                {
+                    if (options.FileSinkRetainedFileCountLimit <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.file.retained-file-count-limit. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    fileOptions = fileOptions with { RetainedFileCountLimit = (int)options.FileSinkRetainedFileCountLimit, UserProvidedRetainedFileCountLimit = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.retained-file-count-limit as '{options.FileSinkRetainedFileCountLimit}'");
+                }
+
+                // Runtime.Telemetry.File.FileSizeLimitBytes
+                if (options.FileSinkFileSizeLimitBytes is not null)
+                {
+                    if (options.FileSinkFileSizeLimitBytes <= 0)
+                    {
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.file.file-size-limit-bytes. Value must be a positive integer greater than 0.");
+                        return false;
+                    }
+
+                    fileOptions = fileOptions with { FileSizeLimitBytes = (long)options.FileSinkFileSizeLimitBytes, UserProvidedFileSizeLimitBytes = true };
+                    _logger.LogInformation($"Updated configuration with runtime.telemetry.file.file-size-limit-bytes as '{options.FileSinkFileSizeLimitBytes}'");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to update configuration with runtime.telemetry.file. Exception message: {ex.Message}.");
                 return false;
             }
         }

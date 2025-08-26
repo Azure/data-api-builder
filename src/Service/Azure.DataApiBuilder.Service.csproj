@@ -54,6 +54,7 @@
 
     <ItemGroup>
         <PackageReference Include="Azure.Identity" />
+        <PackageReference Include="Azure.Monitor.Ingestion" />
         <PackageReference Include="HotChocolate" />
         <PackageReference Include="HotChocolate.AspNetCore" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
@@ -74,6 +75,8 @@
         <PackageReference Include="Npgsql" />
         <PackageReference Include="Polly" />
         <PackageReference Include="DotNetEnv" />
+        <PackageReference Include="Serilog.Extensions.Logging" />
+        <PackageReference Include="Serilog.Sinks.File" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
         <PackageReference Include="System.CommandLine" />
         <PackageReference Include="System.IO.Abstractions" />

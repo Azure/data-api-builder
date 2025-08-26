@@ -12,7 +12,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
-namespace Azure.DataApiBuilder.Service.Tests.Configuration;
+namespace Azure.DataApiBuilder.Service.Tests.Configuration.Telemetry;
 
 /// <summary>
 /// Contains tests for OpenTelemetry functionality.

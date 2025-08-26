@@ -645,10 +645,10 @@ namespace Azure.DataApiBuilder.Service
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
 
-            IRequestExecutorResolver requestExecutorResolver = app.ApplicationServices.GetRequiredService<IRequestExecutorResolver>();
+            IRequestExecutorManager requestExecutorManager = app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
             _hotReloadEventHandler.Subscribe(
                 "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED",
-                (_, _) => EvictGraphQLSchema(requestExecutorResolver));
+                (_, _) => EvictGraphQLSchema(requestExecutorManager));
 
             app.UseEndpoints(endpoints =>
             {
@@ -688,7 +688,7 @@ namespace Azure.DataApiBuilder.Service
         private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorResolver)
         {
             Console.WriteLine("Evicting old GraphQL schema.");
-            requestExecutorResolver.EvictRequestExecutor();
+            requestExecutorResolver.EvictExecutor();
         }
 
         /// <summary>

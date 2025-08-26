@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
                 .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(queryEngineFactory.Object, mutationEngineFactory.Object, provider)));
-            ISchema schema = schemaBuilder.Create();
+            Schema schema = schemaBuilder.Create();
             IExecutionResult result = await schema.MakeExecutable().ExecuteAsync(_query);
 
             // client is mapped as belonging to the sql data source.

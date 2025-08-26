@@ -411,7 +411,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Value: (object) argument value
         /// </returns>
         public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(
-            ObjectField    schema,
+            ObjectField schema,
             FieldNode query,
             IVariableValueCollection variables)
         {

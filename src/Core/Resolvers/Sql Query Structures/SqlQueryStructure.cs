@@ -986,7 +986,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // Retrieve the schema field from the GraphQL context
-            ObjectField    schemaField = ctx.Selection.Field;
+            ObjectField schemaField = ctx.Selection.Field;
 
             // Get the 'group by' field from the schema's entity type
             ObjectField    groupByField = schemaField.Type.NamedType<ObjectType>()

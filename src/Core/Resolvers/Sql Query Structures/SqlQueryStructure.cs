@@ -172,7 +172,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _ctx = ctx;
             IsMultipleCreateOperation = isMultipleCreateOperation;
 
-            ObjectField   schemaField = _ctx.Selection.Field;
+            ObjectField schemaField = _ctx.Selection.Field;
             FieldNode? queryField = _ctx.Selection.SyntaxNode;
 
             IOutputType outputType = schemaField.Type;

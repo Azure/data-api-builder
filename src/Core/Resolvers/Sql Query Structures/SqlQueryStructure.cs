@@ -993,7 +993,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 .Fields[QueryBuilder.GROUP_BY_FIELD_NAME];
 
             // Get the 'aggregations' field from the 'group by' entity type
-            ObjectField    aggregationsObjectField = groupByField.Type.NamedType<ObjectType>()
+            ObjectField aggregationsObjectField = groupByField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME];
 
             // Iterate through each selection in the aggregation field

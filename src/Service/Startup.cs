@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Mcp;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
@@ -237,6 +238,10 @@ namespace Azure.DataApiBuilder.Service
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
                 return loggerFactory.CreateLogger<IQueryExecutor>();
             });
+
+            ILoggerFactory? x = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
+            services.AddDabMcpServer(configProvider, x);
+
 
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
             {

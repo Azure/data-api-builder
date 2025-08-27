@@ -168,6 +168,11 @@
               "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
               "default": 100,
               "minimum": 1
+            },
+            "next-link-relative": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, nextLink in paginated results will use a relative URL."
             }
           }
         },
@@ -423,9 +428,9 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
-                    "workspace-id": {
+                    "custom-table-name": {
                       "type": [ "string", "null" ],
-                      "description": "Azure Log Analytics Workspace ID"
+                      "description": "Azure Log Analytics Custom Table Name for entra-id mode"
                     },
                     "dcr-immutable-id": {
                       "type": [ "string", "null" ],
@@ -437,9 +442,9 @@
                     }
                   }
                 },
-                "log-type": {
+                "dab-identifier": {
                   "type": "string",
-                  "description": "Custom log table name in Log Analytics",
+                  "description": "Identifier passed on to Log Analytics",
                   "default": "DabLogs"
                 },
                 "flush-interval-seconds": {
@@ -459,9 +464,9 @@
                 "properties": {
                   "auth": {
                     "properties": {
-                      "workspace-id": {
+                      "custom-table-name": {
                         "type": "string",
-                        "description": "Azure Log Analytics Workspace ID"
+                        "description": "Azure Log Analytics Custom Table Name for entra-id mode"
                       },
                       "dcr-immutable-id": {
                         "type": "string",
@@ -472,10 +477,54 @@
                         "description": "DCE endpoint for entra-id mode"
                       }
                     },
-                    "required": [ "workspace-id", "dcr-immutable-id", "dce-endpoint" ]
+                    "required": [ "custom-table-name", "dcr-immutable-id", "dce-endpoint" ]
                   }
                 },
                 "required": [ "auth" ]
+              }
+            },
+            "file": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable/disable file sink telemetry logging.",
+                  "default": false
+                },
+                "path": {
+                  "type": "string",
+                  "description": "File path for telemetry logs.",
+                  "default": "/logs/dab-log.txt"
+                },
+                "rolling-interval": {
+                  "type": "string",
+                  "description": "Rolling interval for log files.",
+                  "default": "Day",
+                  "enum": [ "Minute", "Hour", "Day", "Month", "Year", "Infinite" ]
+                },
+                "retained-file-count-limit": {
+                  "type": "integer",
+                  "description": "Maximum number of retained log files.",
+                  "default": 1,
+                  "minimum": 1
+                },
+                "file-size-limit-bytes": {
+                  "type": "integer",
+                  "description": "Maximum file size in bytes before rolling.",
+                  "default": 1048576,
+                  "minimum": 1
+                }
+              },
+              "if": {
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "required": [ "path" ]
               }
             },
             "log-level": {

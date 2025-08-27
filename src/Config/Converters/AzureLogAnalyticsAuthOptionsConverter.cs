@@ -29,7 +29,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     {
         if (reader.TokenType is JsonTokenType.StartObject)
         {
-            string? workspaceId = null;
+            string? customTableName = null;
             string? dcrImmutableId = null;
             string? dceEndpoint = null;
 
@@ -37,7 +37,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    return new AzureLogAnalyticsAuthOptions(workspaceId, dcrImmutableId, dceEndpoint);
+                    return new AzureLogAnalyticsAuthOptions(customTableName, dcrImmutableId, dceEndpoint);
                 }
 
                 string? propertyName = reader.GetString();
@@ -45,10 +45,10 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                 reader.Read();
                 switch (propertyName)
                 {
-                    case "workspace-id":
+                    case "custom-table-name":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            workspaceId = reader.DeserializeString(_replaceEnvVar);
+                            customTableName = reader.DeserializeString(_replaceEnvVar);
                         }
 
                         break;
@@ -73,7 +73,6 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                         throw new JsonException($"Unexpected property {propertyName}");
                 }
             }
-
         }
 
         throw new JsonException("Failed to read the Azure Log Analytics Auth Options");
@@ -89,10 +88,10 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
     {
         writer.WriteStartObject();
 
-        if (value?.UserProvidedWorkspaceId is true)
+        if (value?.UserProvidedCustomTableName is true)
         {
-            writer.WritePropertyName("workspace-id");
-            JsonSerializer.Serialize(writer, value.WorkspaceId, options);
+            writer.WritePropertyName("custom-table-name");
+            JsonSerializer.Serialize(writer, value.CustomTableName, options);
         }
 
         if (value?.UserProvidedDcrImmutableId is true)

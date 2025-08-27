@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Serilog;
 
 namespace Cli.Tests;
 /// <summary>
@@ -282,17 +283,6 @@ public class ValidateConfigTests
     public async Task TestValidateAKVOptionsWithoutEndpointFails()
     {
         // Arrange
-        _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
-        Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader);
-        RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
-        Mock<ILoggerFactory> mockLoggerFactory = new();
-        Mock<ILogger<JsonConfigSchemaValidator>> mockLogger = new();
-        mockLoggerFactory
-            .Setup(factory => factory.CreateLogger(typeof(JsonConfigSchemaValidator).FullName!))
-            .Returns(mockLogger.Object);
-
-        // Act: Attempts to add AKV options
         ConfigureOptions options = new(
             azureKeyVaultRetryPolicyMaxCount: 1,
             azureKeyVaultRetryPolicyDelaySeconds: 1,
@@ -302,6 +292,64 @@ public class ValidateConfigTests
             config: TEST_RUNTIME_CONFIG_FILE
         );
 
+        // Act
+        await ValidatePropertyOptionsFails(options);
+    }
+
+    /// <summary>
+    /// Tests that validation fails when Azure Log Analytics options are configured without the Auth options.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateAzureLogAnalyticsOptionsWithoutAuthFails()
+    {
+        // Arrange
+        ConfigureOptions options = new(
+            azureLogAnalyticsEnabled: CliBool.True,
+            azureLogAnalyticsDabIdentifier: "dab-identifier-test",
+            azureLogAnalyticsFlushIntervalSeconds: 1,
+            config: TEST_RUNTIME_CONFIG_FILE
+        );
+
+        // Act
+        await ValidatePropertyOptionsFails(options);
+    }
+
+    /// <summary>
+    /// Tests that validation fails when File Sink options are configured without the 'path' property.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateFileSinkOptionsWithoutPathFails()
+    {
+        // Arrange
+        ConfigureOptions options = new(
+            fileSinkEnabled: CliBool.True,
+            fileSinkRollingInterval: RollingInterval.Day,
+            fileSinkRetainedFileCountLimit: 1,
+            fileSinkFileSizeLimitBytes: 1024,
+            config: TEST_RUNTIME_CONFIG_FILE
+        );
+
+        // Act
+        await ValidatePropertyOptionsFails(options);
+    }
+
+    /// <summary>
+    /// Helper function that ensures properties with missing options fail validation.
+    /// </summary>
+    private async Task ValidatePropertyOptionsFails(ConfigureOptions options)
+    {
+        _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+        Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader);
+        RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+        Mock<ILoggerFactory> mockLoggerFactory = new();
+        Mock<ILogger<JsonConfigSchemaValidator>> mockLogger = new();
+        mockLoggerFactory
+            .Setup(factory => factory.CreateLogger(typeof(JsonConfigSchemaValidator).FullName!))
+            .Returns(mockLogger.Object);
+
+        // Act: Attempts to add File Sink options without empty path
         bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
         // Assert: Settings are configured, config parses, validation fails.

@@ -25,7 +25,8 @@ public record McpOptions
 
 public enum McpDmlTool
 {
-    Echo
+    Echo,
+    GetGraphQLSchema
 }
 
 public record RuntimeConfig

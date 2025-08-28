@@ -239,10 +239,6 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<IQueryExecutor>();
             });
 
-            ILoggerFactory? x = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
-            services.AddDabMcpServer(configProvider, x);
-
-
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(ISqlMetadataProvider).FullName, _configProvider, _hotReloadEventHandler);

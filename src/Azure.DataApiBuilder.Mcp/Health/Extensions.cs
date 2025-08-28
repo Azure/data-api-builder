@@ -18,15 +18,13 @@ public static class Extensions
         {
             ResponseWriter = async (context, report) =>
             {
-                CheckResult mcpCheck = await McpCheck.CheckAsync(context.RequestServices);
+                CheckResult[] mcpChecks = await McpCheck.CheckAllAsync(context.RequestServices);
 
                 var response = new
                 {
-                    Status = mcpCheck.IsHealthy ? "Healthy" : "Unhealthy",
+                    Status = mcpChecks.All(c => c.IsHealthy) ? "Healthy" : "Unhealthy",
                     Timestamp = DateTime.UtcNow,
-                    Checks = new object[] {
-                        mcpCheck.ToReport()
-                    }
+                    Checks = mcpChecks.Select(c => c.ToReport()).ToArray()
                 };
 
                 context.Response.ContentType = "application/json";

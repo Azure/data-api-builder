@@ -20,7 +20,7 @@ public record McpOptions
 {
     public bool Enabled { get; init; } = true;
     public string Path { get; init; } = "/mcp";
-    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.Echo];
+    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.Echo, McpDmlTool.GetGraphQLSchema];
 }
 
 public enum McpDmlTool

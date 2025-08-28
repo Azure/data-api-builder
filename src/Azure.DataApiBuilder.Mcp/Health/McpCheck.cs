@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using ModelContextProtocol.Client;
+using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Mcp.Health;
 
@@ -21,7 +22,11 @@ public class McpCheck
     {
         CheckResult serviceRegistrationCheck = CheckServiceRegistration(serviceProvider);
         CheckResult clientConnectionCheck = await CheckClientConnectionAsync(serviceProvider);
-        
+
+        // testing
+        string x = await Tools.DmlTools.InternalGetGraphQLSchemaAsync(serviceProvider);
+        Console.WriteLine(x);   
+
         return new[] { serviceRegistrationCheck, clientConnectionCheck };
     }
 

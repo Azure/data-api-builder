@@ -13,7 +13,6 @@ public static class Extensions
 {
     public static IEndpointRouteBuilder MapDabHealthChecks(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string pattern = "")
     {
-        endpoints.MapMcp();
         endpoints.MapHealthChecks(pattern, new()
         {
             ResponseWriter = async (context, report) =>

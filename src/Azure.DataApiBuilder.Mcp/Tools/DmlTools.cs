@@ -34,43 +34,48 @@ public static class DmlTools
     }
 
     [McpServerTool]
-    public static async Task<string> GetGraphQLSchema(IServiceProvider services)
+    public static async Task<string> GetGraphQLSchemaAsync(IServiceProvider services)
     {
         _logger.LogInformation("GetGraphQLSchema tool called");
 
         using (Activity activity = new("MCP"))
         {
-            activity.SetTag("tool", nameof(GetGraphQLSchema));
+            activity.SetTag("tool", nameof(GetGraphQLSchemaAsync));
 
-            try
+            return await InternalGetGraphQLSchemaAsync(services);
+        }
+    }
+
+    internal static async Task<string> InternalGetGraphQLSchemaAsync(IServiceProvider services)
+    {
+        try
+        {
+            // Get the GraphQL request executor resolver from services
+            IRequestExecutorResolver? requestExecutorResolver = services.GetService(typeof(IRequestExecutorResolver)) as IRequestExecutorResolver;
+
+            if (requestExecutorResolver == null)
             {
-                // Get the GraphQL request executor resolver from services
-                IRequestExecutorResolver? requestExecutorResolver = services.GetService(typeof(IRequestExecutorResolver)) as IRequestExecutorResolver;
-
-                if (requestExecutorResolver == null)
-                {
-                    _logger.LogWarning("IRequestExecutorResolver not found in service container");
-                    throw new Exception("IRequestExecutorResolver not available");
-                }
-
-                // Get the GraphQL request executor
-                IRequestExecutor requestExecutor = await requestExecutorResolver.GetRequestExecutorAsync();
-
-                // Get the schema from the request executor
-                ISchema schema = requestExecutor.Schema;
-
-                // Return the schema as SDL (Schema Definition Language)
-                string schemaString = schema.ToString();
-
-                _logger.LogInformation("Successfully retrieved GraphQL schema with {length} characters", schemaString.Length);
-
-                return schemaString;
+                _logger.LogWarning("IRequestExecutorResolver not found in service container");
+                throw new Exception("IRequestExecutorResolver not available");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to retrieve GraphQL schema");
-                return $"Error retrieving GraphQL schema: {ex.Message}";
-            }
+
+            // Get the GraphQL request executor
+            IRequestExecutor requestExecutor = await requestExecutorResolver.GetRequestExecutorAsync();
+
+            // Get the schema from the request executor
+            ISchema schema = requestExecutor.Schema;
+
+            // Return the schema as SDL (Schema Definition Language)
+            string schemaString = schema.ToString();
+
+            _logger.LogInformation("Successfully retrieved GraphQL schema with {length} characters", schemaString.Length);
+
+            return schemaString;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve GraphQL schema");
+            return $"Error retrieving GraphQL schema: {ex.Message}";
         }
     }
 }

@@ -239,10 +239,6 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<IQueryExecutor>();
             });
 
-            ILoggerFactory? x = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider, logLevelInit);
-            services.AddDabMcpServer(configProvider, x);
-
-
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
             {
                 LogLevelInitializer logLevelInit = new(MinimumLogLevel, typeof(ISqlMetadataProvider).FullName, _configProvider, _hotReloadEventHandler);
@@ -457,6 +453,10 @@ namespace Azure.DataApiBuilder.Service
             }
 
             services.AddSingleton<DabCacheService>();
+
+            // special for MCP
+            services.AddDabMcpServer(configProvider);
+
             services.AddControllers();
         }
 
@@ -679,6 +679,9 @@ namespace Azure.DataApiBuilder.Service
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+
+                // Special for MCP
+                endpoints.MapDabMcp();
 
                 endpoints
                     .MapGraphQL()

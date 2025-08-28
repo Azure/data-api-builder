@@ -7,6 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Health\**" />
+    <Compile Remove="Tools\**" />
+    <EmbeddedResource Remove="Health\**" />
+    <EmbeddedResource Remove="Tools\**" />
+    <None Remove="Health\**" />
+    <None Remove="Tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>

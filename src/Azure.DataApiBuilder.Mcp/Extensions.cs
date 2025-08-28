@@ -26,8 +26,10 @@ namespace Azure.DataApiBuilder.Mcp
 
             services.AddDmlTools(_mcpOptions);
 
-            IMcpServerBuilder mcp = services.AddMcpServer();
-            mcp.WithHttpTransport();
+            services
+                .AddMcpServer()
+                .WithHttpTransport();
+
             return services;
         }
        

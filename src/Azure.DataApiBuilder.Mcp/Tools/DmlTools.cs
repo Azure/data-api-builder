@@ -6,7 +6,6 @@ using ModelContextProtocol.Server;
 using System.Diagnostics;
 using HotChocolate.Execution;
 using HotChocolate;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp.Tools;
 
@@ -38,33 +37,33 @@ public static class DmlTools
     public static async Task<string> GetGraphQLSchema(IServiceProvider services)
     {
         _logger.LogInformation("GetGraphQLSchema tool called");
-        
+
         using (Activity activity = new("MCP"))
         {
             activity.SetTag("tool", nameof(GetGraphQLSchema));
-            
+
             try
             {
                 // Get the GraphQL request executor resolver from services
                 IRequestExecutorResolver? requestExecutorResolver = services.GetService(typeof(IRequestExecutorResolver)) as IRequestExecutorResolver;
-                
+
                 if (requestExecutorResolver == null)
                 {
                     _logger.LogWarning("IRequestExecutorResolver not found in service container");
-                    return "IRequestExecutorResolver not available";
+                    throw new Exception("IRequestExecutorResolver not available");
                 }
 
                 // Get the GraphQL request executor
                 IRequestExecutor requestExecutor = await requestExecutorResolver.GetRequestExecutorAsync();
-                
+
                 // Get the schema from the request executor
                 ISchema schema = requestExecutor.Schema;
-                
+
                 // Return the schema as SDL (Schema Definition Language)
                 string schemaString = schema.ToString();
-                
+
                 _logger.LogInformation("Successfully retrieved GraphQL schema with {length} characters", schemaString.Length);
-                
+
                 return schemaString;
             }
             catch (Exception ex)

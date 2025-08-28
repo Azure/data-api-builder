@@ -15,19 +15,18 @@ public static class Extensions
         HashSet<string> DmlToolNames = mcpOptions.DmlTools
             .Select(x => x.ToString()).ToHashSet();
 
-        foreach (MethodInfo method in typeof(DmlTools).GetMethods())
-        {
-            if (DmlToolNames.Contains(method.Name))
-            {
-                services.AddMcpTool(method);
-            }
-        }
-    }
+        IEnumerable<MethodInfo> methods = typeof(DmlTools).GetMethods()
+            .Where(method => DmlToolNames.Contains(method.Name));
 
-    public static void AddMcpTool(this IServiceCollection services, MethodInfo method)
-    {
-        Func<IServiceProvider, McpServerTool> factory = (services) => McpServerTool
-            .Create(method, options: new() { Services = services, SerializerOptions = default });
-        _ = services.AddSingleton(factory);
+        foreach (MethodInfo method in methods)
+        {
+            Func<IServiceProvider, McpServerTool> factory = (services) => McpServerTool
+                .Create(method, options: new()
+                {
+                    Services = services,
+                    SerializerOptions = default
+                });
+            _ = services.AddSingleton(factory);
+        }
     }
 }

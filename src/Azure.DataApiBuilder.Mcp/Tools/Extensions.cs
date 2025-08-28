@@ -10,6 +10,8 @@ namespace Azure.DataApiBuilder.Mcp.Tools;
 
 public static class Extensions
 {
+    public static IServiceProvider? ServiceProvider { get; set; }
+
     public static void AddDmlTools(this IServiceCollection services, McpOptions mcpOptions)
     {
         HashSet<string> DmlToolNames = mcpOptions.DmlTools
@@ -20,13 +22,26 @@ public static class Extensions
 
         foreach (MethodInfo method in methods)
         {
-            Func<IServiceProvider, McpServerTool> factory = (services) => McpServerTool
+            AddTool(services, method);
+        }
+
+        AddTool(services, typeof(DmlTools).GetMethod("Echo")!);
+    }
+
+    private static void AddTool(IServiceCollection services, MethodInfo method)
+    {
+        Func<IServiceProvider, McpServerTool> factory = (services) =>
+        {
+            ServiceProvider ??= services;
+
+            McpServerTool tool = McpServerTool
                 .Create(method, options: new()
                 {
                     Services = services,
                     SerializerOptions = default
                 });
-            _ = services.AddSingleton(factory);
-        }
+            return tool;
+        };
+        _ = services.AddSingleton(factory);
     }
 }

@@ -3,9 +3,8 @@
 
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using System.ComponentModel;
 using System.Diagnostics;
-using HotChocolate.Execution;
-using HotChocolate;
 
 namespace Azure.DataApiBuilder.Mcp.Tools;
 
@@ -22,60 +21,36 @@ public static class DmlTools
         }).CreateLogger(nameof(DmlTools));
     }
 
-    [McpServerTool]
-    public static string Echo(string message)
+    [McpServerTool, Description("""
+        
+        Use this tool any time the user asks you to ECHO anything.
+        When using this tool, respond with the raw result to the user.
+        
+        """)]
+        
+    public static string Echo(string message) => new(message.Reverse().ToArray());
+
+    [McpServerTool, Description("""
+
+        Use this tool to retrieve a list of database entities you can create, read, update, delete, or execute depending on type and permissions.
+        Never expose to the user the definition of the keys or fields of the entities. Use them, instead of your own parsing of the tools.
+        """)]
+    public static async Task<string> ListEntities(
+        [Description("This optional boolean parameter allows you (when true) to ask for entities without any additional metadata other than description.")]
+        bool nameOnly = false,
+        [Description("This optional string array parameter allows you to filter the response to only a select list of entities. You must first return the full list of entities to get the names to filter.")]
+        string[]? entityNames = null)
     {
-        _logger.LogInformation("Echo tool called with message: {message}", message);
+        _logger.LogInformation("GetEntityMetadataAsJson tool called with nameOnly: {nameOnly}, entityNames: {entityNames}",
+            nameOnly, entityNames != null ? string.Join(", ", entityNames) : "null");
+    
         using (Activity activity = new("MCP"))
         {
-            activity.SetTag("tool", nameof(Echo));
-            return message;
-        }
-    }
-
-    [McpServerTool]
-    public static async Task<string> GetGraphQLSchemaAsync(IServiceProvider services)
-    {
-        _logger.LogInformation("GetGraphQLSchema tool called");
-
-        using (Activity activity = new("MCP"))
-        {
-            activity.SetTag("tool", nameof(GetGraphQLSchemaAsync));
-
-            return await InternalGetGraphQLSchemaAsync(services);
-        }
-    }
-
-    internal static async Task<string> InternalGetGraphQLSchemaAsync(IServiceProvider services)
-    {
-        try
-        {
-            // Get the GraphQL request executor resolver from services
-            IRequestExecutorResolver? requestExecutorResolver = services.GetService(typeof(IRequestExecutorResolver)) as IRequestExecutorResolver;
-
-            if (requestExecutorResolver == null)
-            {
-                _logger.LogWarning("IRequestExecutorResolver not found in service container");
-                throw new Exception("IRequestExecutorResolver not available");
-            }
-
-            // Get the GraphQL request executor
-            IRequestExecutor requestExecutor = await requestExecutorResolver.GetRequestExecutorAsync();
-
-            // Get the schema from the request executor
-            ISchema schema = requestExecutor.Schema;
-
-            // Return the schema as SDL (Schema Definition Language)
-            string schemaString = schema.ToString();
-
-            _logger.LogInformation("Successfully retrieved GraphQL schema with {length} characters", schemaString.Length);
-
-            return schemaString;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve GraphQL schema");
-            return $"Error retrieving GraphQL schema: {ex.Message}";
+            activity.SetTag("tool", nameof(ListEntities));
+    
+            SchemaLogic schemaLogic = new(Extensions.ServiceProvider!);
+            string jsonMetadata = await schemaLogic.GetEntityMetadataAsJsonAsync(nameOnly, entityNames);
+            return jsonMetadata;
         }
     }
 }

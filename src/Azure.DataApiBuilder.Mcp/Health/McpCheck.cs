@@ -6,7 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using ModelContextProtocol.Client;
-using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Mcp.Tools;
+using System.Text.Json;
 
 namespace Azure.DataApiBuilder.Mcp.Health;
 
@@ -22,12 +23,9 @@ public class McpCheck
     {
         CheckResult serviceRegistrationCheck = CheckServiceRegistration(serviceProvider);
         CheckResult clientConnectionCheck = await CheckClientConnectionAsync(serviceProvider);
+        CheckResult checkListEntity = await CheckListEntityAsync(serviceProvider);
 
-        // testing
-        string x = await Tools.DmlTools.InternalGetGraphQLSchemaAsync(serviceProvider);
-        Console.WriteLine(x);   
-
-        return new[] { serviceRegistrationCheck, clientConnectionCheck };
+        return new[] { serviceRegistrationCheck, clientConnectionCheck, checkListEntity };
     }
 
     /// <summary>
@@ -54,7 +52,7 @@ public class McpCheck
                 Name: _serviceRegistrationCheckName,
                 IsHealthy: toolNames.Length != 0,
                 Message: toolNames.Length != 0 ? "Tools registered in services" : "No tools registered in services",
-                Tags: new Dictionary<string, string>
+                Tags: new Dictionary<string, object>
                 {
                     { "check_type", "service_registration" },
                     { "tools", string.Join(", ", toolNames) },
@@ -67,7 +65,7 @@ public class McpCheck
                 Name: _serviceRegistrationCheckName,
                 IsHealthy: false,
                 Message: $"Service registration check failed: {ex.Message}",
-                Tags: new Dictionary<string, string>
+                Tags: new Dictionary<string, object>
                 {
                     { "check_type", "service_registration" },
                     { "error_type", "general_error" },
@@ -95,7 +93,7 @@ public class McpCheck
                     Name: _clientConnectionCheckName,
                     IsHealthy: false,
                     Message: "HttpContext not available for client connection test",
-                    Tags: new Dictionary<string, string>
+                    Tags: new Dictionary<string, object>
                     {
                         { "check_type", "client_connection" },
                         { "error_type", "no_http_context" }
@@ -132,7 +130,7 @@ public class McpCheck
                 Name: _clientConnectionCheckName,
                 IsHealthy: toolNames.Length != 0,
                 Message: toolNames.Length != 0 ? "Client successfully connected and listed tools" : "Client connected but no tools found",
-                Tags: new Dictionary<string, string>
+                Tags: new Dictionary<string, object>
                 {
                     { "check_type", "client_connection" },
                     { "endpoint", endpoint },
@@ -146,7 +144,7 @@ public class McpCheck
                 Name: _clientConnectionCheckName,
                 IsHealthy: false,
                 Message: "MCP SSE endpoint returned 500 error - endpoint may not be properly configured",
-                Tags: new Dictionary<string, string>
+                Tags: new Dictionary<string, object>
                 {
                     { "check_type", "client_connection" },
                     { "error_type", "http_500" },
@@ -160,7 +158,7 @@ public class McpCheck
                 Name: _clientConnectionCheckName,
                 IsHealthy: false,
                 Message: $"HTTP error connecting to MCP server: {httpEx.Message}",
-                Tags: new Dictionary<string, string>
+                Tags: new Dictionary<string, object>
                 {
                     { "check_type", "client_connection" },
                     { "error_type", "http_error" },
@@ -174,7 +172,7 @@ public class McpCheck
                 Name: _clientConnectionCheckName,
                 IsHealthy: false,
                 Message: "Timeout connecting to MCP server",
-                Tags: new Dictionary<string, string>
+                Tags: new Dictionary<string, object>
                 {
                     { "check_type", "client_connection" },
                     { "error_type", "timeout" }
@@ -187,7 +185,7 @@ public class McpCheck
                 Name: _clientConnectionCheckName,
                 IsHealthy: false,
                 Message: $"Client connection check failed: {ex.Message}",
-                Tags: new Dictionary<string, string>
+                Tags: new Dictionary<string, object>
                 {
                     { "check_type", "client_connection" },
                     { "error_type", "general_error" },
@@ -200,8 +198,20 @@ public class McpCheck
     /// <summary>
     /// Legacy method for backward compatibility - returns service registration check
     /// </summary>
-    public static Task<CheckResult> CheckAsync(IServiceProvider serviceProvider)
+    public static async Task<CheckResult> CheckListEntityAsync(IServiceProvider serviceProvider)
     {
-        return Task.FromResult(CheckServiceRegistration(serviceProvider));
+        SchemaLogic schemaLogic = new(serviceProvider);
+        string json = await schemaLogic.GetEntityMetadataAsJsonAsync(false);
+        JsonDocument doc = JsonDocument.Parse(json);
+        return new CheckResult(
+            Name: "List Entities",
+            IsHealthy: !string.IsNullOrEmpty(json),
+            Message: !string.IsNullOrEmpty(json) ? "Successfully listed entities" : "No entities found",
+            Tags: new Dictionary<string, object>
+            {
+                { "check_type", "list_entities" },
+                { "entities", doc }
+            });
+
     }
 }

@@ -38,3 +38,4 @@ dab-config*.json
 
 # Verify test files
 *.received.*
+/src/git

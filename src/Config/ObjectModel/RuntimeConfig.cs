@@ -20,13 +20,12 @@ public record McpOptions
 {
     public bool Enabled { get; init; } = true;
     public string Path { get; init; } = "/mcp";
-    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.Echo, McpDmlTool.GetGraphQLSchema];
+    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.ListEntities];
 }
 
 public enum McpDmlTool
 {
-    Echo,
-    GetGraphQLSchema
+    ListEntities
 }
 
 public record RuntimeConfig

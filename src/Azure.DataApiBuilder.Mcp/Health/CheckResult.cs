@@ -3,7 +3,7 @@
 
 namespace Azure.DataApiBuilder.Mcp.Health;
 
-public record CheckResult(string Name, bool IsHealthy, string? Message, Dictionary<string, string> Tags)
+public record CheckResult(string Name, bool IsHealthy, string? Message, Dictionary<string, object> Tags)
 {
     public string Status => IsHealthy ? "Healthy" : "Unhealthy";
 

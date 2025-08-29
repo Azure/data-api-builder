@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Serilog;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -19,12 +20,12 @@ public record FileSinkOptions
     /// <summary>
     /// Default path for File Sink.
     /// </summary>
-    public const string DEFAULT_PATH = "/logs/dab-log.txt";
+    public const string DEFAULT_PATH = @"logs\dab-log.txt";
 
     /// <summary>
     /// Default rolling interval for File Sink.
     /// </summary>
-    public const string DEFAULT_ROLLING_INTERVAL = nameof(RollingIntervalMode.Day);
+    public const string DEFAULT_ROLLING_INTERVAL = nameof(Serilog.RollingInterval.Day);
 
     /// <summary>
     /// Default retained file count limit for File Sink.
@@ -44,25 +45,25 @@ public record FileSinkOptions
     /// <summary>
     /// Path to the file where logs will be uploaded.
     /// </summary>
-    public string? Path { get; init; }
+    public string Path { get; init; }
 
     /// <summary>
     /// Time it takes for files with logs to be discarded.
     /// </summary>
-    public string? RollingInterval { get; init; }
+    public string RollingInterval { get; init; }
 
     /// <summary>
     /// Amount of files that can exist simultaneously in which logs are saved.
     /// </summary>
-    public int? RetainedFileCountLimit { get; init; }
+    public int RetainedFileCountLimit { get; init; }
 
     /// <summary>
     /// File size limit in bytes before a new file needs to be created.
     /// </summary>
-    public int? FileSizeLimitBytes { get; init; }
+    public long FileSizeLimitBytes { get; init; }
 
     [JsonConstructor]
-    public FileSinkOptions(bool? enabled = null, string? path = null, RollingIntervalMode? rollingInterval = null, int? retainedFileCountLimit = null, int? fileSizeLimitBytes = null)
+    public FileSinkOptions(bool? enabled = null, string? path = null, RollingInterval? rollingInterval = null, int? retainedFileCountLimit = null, long? fileSizeLimitBytes = null)
     {
         if (enabled is not null)
         {
@@ -86,7 +87,7 @@ public record FileSinkOptions
 
         if (rollingInterval is not null)
         {
-            RollingInterval = rollingInterval.ToString();
+            RollingInterval = ((RollingInterval)rollingInterval).ToString();
             UserProvidedRollingInterval = true;
         }
         else
@@ -96,7 +97,7 @@ public record FileSinkOptions
 
         if (retainedFileCountLimit is not null)
         {
-            RetainedFileCountLimit = retainedFileCountLimit;
+            RetainedFileCountLimit = (int)retainedFileCountLimit;
             UserProvidedRetainedFileCountLimit = true;
         }
         else
@@ -106,7 +107,7 @@ public record FileSinkOptions
 
         if (fileSizeLimitBytes is not null)
         {
-            FileSizeLimitBytes = fileSizeLimitBytes;
+            FileSizeLimitBytes = (long)fileSizeLimitBytes;
             UserProvidedFileSizeLimitBytes = true;
         }
         else

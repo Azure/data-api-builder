@@ -47,6 +47,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Moq.Protected;
+using Serilog;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
@@ -4170,21 +4171,21 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, "/file/path/exists.txt", RollingIntervalMode.Minute, 27, 256, true, "/file/path/exists.txt", RollingIntervalMode.Minute, 27, 256)]
-        [DataRow(true, "/test/path.csv", RollingIntervalMode.Hour, 10, 3000, true, "/test/path.csv", RollingIntervalMode.Hour, 10, 3000)]
-        [DataRow(false, "C://absolute/file/path.log", RollingIntervalMode.Month, 2147483647, 2048, false, "C://absolute/file/path.log", RollingIntervalMode.Month, 2147483647, 2048)]
-        [DataRow(false, "D://absolute/test/path.txt", RollingIntervalMode.Year, 10, 2147483647, false, "D://absolute/test/path.txt", RollingIntervalMode.Year, 10, 2147483647)]
-        [DataRow(false, "", RollingIntervalMode.Infinite, 5, 512, false, "", RollingIntervalMode.Infinite, 5, 512)]
-        [DataRow(null, null, null, null, null, false, "/logs/dab-log.txt", RollingIntervalMode.Day, 1, 1048576)]
+        [DataRow(true, "/file/path/exists.txt", RollingInterval.Minute, 27, 256, true, "/file/path/exists.txt", RollingInterval.Minute, 27, 256)]
+        [DataRow(true, "/test/path.csv", RollingInterval.Hour, 10, 3000, true, "/test/path.csv", RollingInterval.Hour, 10, 3000)]
+        [DataRow(false, "C://absolute/file/path.log", RollingInterval.Month, 2147483647, 2048, false, "C://absolute/file/path.log", RollingInterval.Month, 2147483647, 2048)]
+        [DataRow(false, "D://absolute/test/path.txt", RollingInterval.Year, 10, 2147483647, false, "D://absolute/test/path.txt", RollingInterval.Year, 10, 2147483647)]
+        [DataRow(false, "", RollingInterval.Infinite, 5, 512, false, "", RollingInterval.Infinite, 5, 512)]
+        [DataRow(null, null, null, null, null, false, "/logs/dab-log.txt", RollingInterval.Day, 1, 1048576)]
         public void FileSinkSerialization(
             bool? enabled,
             string? path,
-            RollingIntervalMode? rollingInterval,
+            RollingInterval? rollingInterval,
             int? retainedFileCountLimit,
             int? fileSizeLimitBytes,
             bool expectedEnabled,
             string expectedPath,
-            RollingIntervalMode expectedRollingInterval,
+            RollingInterval expectedRollingInterval,
             int expectedRetainedFileCountLimit,
             int expectedFileSizeLimitBytes)
         {

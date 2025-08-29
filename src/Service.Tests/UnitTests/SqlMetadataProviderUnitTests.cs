@@ -419,24 +419,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Create a RuntimeEntities with ONLY our test stored procedure entity
             Dictionary<string, Entity> entitiesDictionary = new()
-    {
-        {
-            "get_book_by_id", new Entity(
-                Source: new("dbo.get_book_by_id", EntitySourceType.StoredProcedure, null, null),
-                Rest: new(Enabled: true),
-                GraphQL: new("get_book_by_id", "get_book_by_ids", Enabled: true),
-                Permissions: new EntityPermission[] {
-                    new(
-                        Role: "anonymous",
-                        Actions: new EntityAction[] {
-                            new(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
-                        })
-                },
-                Relationships: null,
-                Mappings: null
-            )
-        }
-    };
+            {
+                {
+                    "get_book_by_id", new Entity(
+                        Source: new("dbo.get_book_by_id", EntitySourceType.StoredProcedure, null, null),
+                        Rest: new(Enabled: true),
+                        GraphQL: new("get_book_by_id", "get_book_by_ids", Enabled: true),
+                        Permissions: new EntityPermission[] {
+                            new(
+                                Role: "anonymous",
+                                Actions: new EntityAction[] {
+                                    new(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
+                                })
+                        },
+                        Relationships: null,
+                        Mappings: null
+                    )
+                }
+            };
 
             RuntimeEntities entities = new(entitiesDictionary);
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { Entities = entities };

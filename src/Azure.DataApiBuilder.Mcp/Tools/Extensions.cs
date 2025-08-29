@@ -8,7 +8,7 @@ using ModelContextProtocol.Server;
 
 namespace Azure.DataApiBuilder.Mcp.Tools;
 
-public static class Extensions
+internal static class Extensions
 {
     public static IServiceProvider? ServiceProvider { get; set; }
 
@@ -42,6 +42,10 @@ public static class Extensions
                 });
             return tool;
         };
+        
+        // Register the tool both as the factory function and as the McpServerTool type
+        // so that ServiceRegistrationHealthCheck can find it
         _ = services.AddSingleton(factory);
+        _ = services.AddSingleton<McpServerTool>(factory);
     }
 }

@@ -2,38 +2,33 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp.Health;
 
-public static class Extensions
+internal static class Extensions
 {
-    public static IEndpointRouteBuilder MapDabHealthChecks(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string pattern = "")
+    private const string MCP_TAG = "mcp";
+
+    public static IMcpServerBuilder AddMcpHealthChecks(this IMcpServerBuilder builder)
     {
-        endpoints.MapHealthChecks(pattern, new()
-        {
-            ResponseWriter = async (context, report) =>
-            {
-                CheckResult[] mcpChecks = await McpCheck.CheckAllAsync(context.RequestServices);
+        _ = builder.Services.AddHttpContextAccessor();
+        _ = builder.Services.AddHealthChecks()
+            .AddCheck<ClientConnectionHealthCheck>("MCP Registration", tags: [MCP_TAG])
+            .AddCheck<ListEntitiesHealthCheck>("MCP Tool: list_entities", tags: [MCP_TAG]);
+        return builder;
+    }
 
-                var response = new
-                {
-                    Status = mcpChecks.All(c => c.IsHealthy) ? "Healthy" : "Unhealthy",
-                    Timestamp = DateTime.UtcNow,
-                    Checks = mcpChecks.Select(c => c.ToReport()).ToArray()
-                };
-
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsync(JsonSerializer.Serialize(response, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true
-                }));
-            }
-        });
+    /// <summary>
+    /// Maps a MCP-only health endpoint (default: /mcp/health). Predicate filters to MCP-tagged checks only.
+    /// </summary>
+    public static IEndpointRouteBuilder MapMcpHealthEndpoint(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string? pattern)
+    {
+        _ = endpoints.MapHealthChecks(
+            pattern: pattern ?? "/mcp/health",
+            options: new McpHealthCheckOptions(MCP_TAG));
         return endpoints;
     }
 }

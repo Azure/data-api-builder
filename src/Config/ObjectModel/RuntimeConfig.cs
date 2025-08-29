@@ -20,12 +20,22 @@ public record McpOptions
 {
     public bool Enabled { get; init; } = true;
     public string Path { get; init; } = "/mcp";
-    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.ListEntities];
+    public McpDmlTool[] DmlTools { get; init; } = [
+        McpDmlTool.ListEntitiesAsync,
+        McpDmlTool.CreateEntityRecordAsync,
+        McpDmlTool.ReadEntityRecordsAsync,
+        McpDmlTool.UpdateEntityRecordAsync,
+        McpDmlTool.DeleteEntityRecordAsync
+    ];
 }
 
 public enum McpDmlTool
 {
-    ListEntities
+    ListEntitiesAsync,
+    CreateEntityRecordAsync,
+    ReadEntityRecordsAsync,
+    UpdateEntityRecordAsync,
+    DeleteEntityRecordAsync
 }
 
 public record RuntimeConfig
@@ -594,11 +604,11 @@ public record RuntimeConfig
     public bool IsMultipleCreateOperationEnabled()
     {
         return Enum.GetNames(typeof(MultipleCreateSupportingDatabaseType)).Any(x => x.Equals(DataSource.DatabaseType.ToString(), StringComparison.OrdinalIgnoreCase)) &&
-               (Runtime is not null &&
+               Runtime is not null &&
                Runtime.GraphQL is not null &&
                Runtime.GraphQL.MultipleMutationOptions is not null &&
                Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
-               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled;
     }
 
     public uint DefaultPageSize()
@@ -649,7 +659,7 @@ public record RuntimeConfig
             }
             else
             {
-                return (first == -1 ? maxPageSize : (uint)first);
+                return first == -1 ? maxPageSize : (uint)first;
             }
         }
         else

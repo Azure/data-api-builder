@@ -27,15 +27,16 @@ namespace Azure.DataApiBuilder.Mcp
 
             services
                 .AddMcpServer()
+                .AddMcpHealthChecks()
                 .WithHttpTransport();
 
             return services;
         }
 
-        public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string pattern = "")
+        public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string? pattern = null)
         {
             endpoints.MapMcp();
-            endpoints.MapDabHealthChecks("/jerry");
+            endpoints.MapMcpHealthEndpoint(pattern);
             return endpoints;
         }
     }

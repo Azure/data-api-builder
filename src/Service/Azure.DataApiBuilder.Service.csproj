@@ -70,6 +70,8 @@
         <PackageReference Include="Microsoft.OData.Edm" />
         <PackageReference Include="Microsoft.OData.Core" />
         <PackageReference Include="Microsoft.OpenApi" />
+        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" />
         <PackageReference Include="MySqlConnector" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Npgsql" />

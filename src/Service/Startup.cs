@@ -27,6 +27,7 @@ using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
+using Azure.DataApiBuilder.Service.Mcp.Helpers;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
 using Azure.Identity;
@@ -52,6 +53,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol;
+using ModelContextProtocol.AspNetCore;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -263,6 +266,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<HttpUtilities>();
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
+            services.AddSingleton<McpUtility>();
 
             // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
             services.AddSingleton<ILogger<BasicHealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
@@ -452,6 +456,11 @@ namespace Azure.DataApiBuilder.Service
             }
 
             services.AddSingleton<DabCacheService>();
+
+            services.AddMcpServer()
+                    .WithHttpTransport()
+                    .WithToolsFromAssembly();
+
             services.AddControllers();
         }
 
@@ -673,6 +682,7 @@ namespace Azure.DataApiBuilder.Service
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapMcp("/mcp");
                 endpoints.MapControllers();
 
                 endpoints

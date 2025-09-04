@@ -779,6 +779,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestNoAggregationOptionsForTableWithoutNumericFields();
         }
 
+        [TestMethod]
+        public void TestEntityDescriptionInGraphQLSchema()
+        {
+            // Create a config with an entity description
+            EntitySource source = new("TestTable", EntitySourceType.Table, null, null);
+            EntityGraphQLOptions gqlOptions = new("TestEntity", "TestEntities", true);
+            EntityRestOptions restOptions = new(null, "/test", true);
+            Entity entity = new(
+                source,
+                gqlOptions,
+                restOptions,
+                [],
+                null,
+                null,
+                null,
+                false,
+                null,
+                Description: "This is a test entity description for MSSQL."
+            );
+
+            Dictionary<string, Entity> entityDict = new() { { "TestEntity", entity } };
+            RuntimeEntities entities = new(entityDict);
+            RuntimeConfig config = new(
+                "",
+                new DataSource(DatabaseType.MSSQL, "", null),
+                entities,
+                null
+            );
+            List<JsonDocument> jsonArray = [
+                JsonDocument.Parse("{ \"id\": 1, \"name\": \"Test\" }")
+            ];
+
+            string actualSchema = Core.Generator.SchemaGenerator.Generate(jsonArray, "TestEntity", config);
+            string expectedComment = "\"\"\"This is a test entity description for MSSQL.\"\"\"";
+            Assert.IsTrue(actualSchema.Contains(expectedComment, StringComparison.Ordinal), "Entity description should be present as a GraphQL comment for MSSQL.");
+        }
+
         #endregion
     }
 }

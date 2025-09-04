@@ -120,7 +120,7 @@ public class AzureLogAnalyticsTests
 
         _ = Task.Run(() => flusherService.StartAsync(tokenSource.Token));
 
-        await Task.Delay(1000);
+        await Task.Delay(2000);
 
         // Assert
         AzureLogAnalyticsLogs actualLog = customClient.LogAnalyticsLogs[0];

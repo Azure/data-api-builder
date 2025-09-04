@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Health;
@@ -10,7 +9,6 @@ using Azure.DataApiBuilder.Mcp.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -27,10 +25,13 @@ namespace Azure.DataApiBuilder.Mcp
                 _mcpOptions = runtimeConfig?.Ai?.Mcp ?? throw new NullReferenceException("Configuration is required.");
             }
 
-            // Register domain tools
+            // ✅ Register domain tools using the extensible mechanism
             services.AddDmlTools(_mcpOptions);
 
-            // Register MCP server with dynamic tool handlers
+            // ✅ Register the ToolHandler for centralized tool call handling
+            services.AddSingleton<ToolHandler>();
+
+            // ✅ Register MCP server with DYNAMIC tool handlers that use the extensible registration
             services.AddMcpServer(options =>
             {
                 options.ServerInfo = new Implementation { Name = "MyServer", Version = "1.0.0" };
@@ -39,58 +40,47 @@ namespace Azure.DataApiBuilder.Mcp
                 {
                     Tools = new ToolsCapability
                     {
+                        // Get tools from registered McpServerTool instances
                         ListToolsHandler = (request, ct) =>
-                            ValueTask.FromResult(new ListToolsResult
-                            {
-                                Tools =
-                                [
-                                    new Tool
-                                    {
-                                        Name = "echonew",
-                                        Description = "Echoes the input back to the client.",
-                                        InputSchema = JsonSerializer.Deserialize<JsonElement>(
-                                            @"{
-                                                ""type"": ""object"",
-                                                ""properties"": { ""message"": { ""type"": ""string"" } },
-                                                ""required"": [""message""]
-                                            }"
-                                        )
-                                    },
-                                    new Tool
-                                    {
-                                        Name = "list_entities",
-                                        Description = "Lists all entities in the database."
-                                    }
-                                ]
-                            }),
-
-                        CallToolHandler = (request, ct) =>
                         {
-                            if (request.Params?.Name == "echonew" &&
-                                request.Params.Arguments?.TryGetValue("message", out JsonElement messageEl) == true)
-                            {
-                                string? msg = messageEl.ValueKind == JsonValueKind.String
-                                    ? messageEl.GetString()
-                                    : messageEl.ToString();
+                            List<Tool> tools = new();
 
-                                return ValueTask.FromResult(new CallToolResult
-                                {
-                                    Content = [new TextContentBlock { Type = "text", Text = $"Echo: {msg}" }]
-                                });
-                            }
-                            else if (request.Params?.Name == "list_entities")
+                            // Access registered tools from ServiceProvider if available
+                            IServiceProvider? serviceProvider = Tools.Extensions.ServiceProvider;
+                            if (serviceProvider != null)
                             {
-                                // Call the ListEntities tool method from DmlTools
-                                Task<string> listEntitiesTask = DmlTools.ListEntities();
-                                listEntitiesTask.Wait(); // Wait for the async method to complete
-                                string entitiesJson = listEntitiesTask.Result;
-                                return ValueTask.FromResult(new CallToolResult
+                                IEnumerable<McpServerTool> registeredTools = serviceProvider.GetServices<McpServerTool>();
+
+                                foreach (McpServerTool tool in registeredTools)
                                 {
-                                    Content = [new TextContentBlock { Type = "application/json", Text = entitiesJson }]
-                                });
+                                    tools.Add(new Tool
+                                    {
+                                        Name = tool.ProtocolTool.Name,
+                                        Description = tool.ProtocolTool.Description ?? string.Empty,
+                                        InputSchema = tool.ProtocolTool.InputSchema
+                                    });
+                                }
                             }
 
-                            throw new McpException($"Unknown tool: '{request.Params?.Name}'");
+                            return ValueTask.FromResult(new ListToolsResult { Tools = tools });
+                        },
+
+                        // Use ToolHandler to delegate tool call handling - completely modular
+                        CallToolHandler = async (request, ct) =>
+                        {
+                            IServiceProvider? serviceProvider = Tools.Extensions.ServiceProvider;
+                            if (serviceProvider == null)
+                            {
+                                return new CallToolResult
+                                {
+                                    Content = [new TextContentBlock { Type = "text", Text = "Error: Service provider not available" }],
+                                    IsError = true
+                                };
+                            }
+
+                            // Get the ToolHandler from DI and delegate to it
+                            ToolHandler toolHandler = serviceProvider.GetRequiredService<ToolHandler>();
+                            return await toolHandler.HandleToolCallAsync(request, ct);
                         }
                     }
                 };

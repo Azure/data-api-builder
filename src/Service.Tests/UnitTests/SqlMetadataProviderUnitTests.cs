@@ -3,19 +3,23 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.IO;
 using System.Net;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -397,6 +401,100 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DatabaseEngine = TestCategory.POSTGRESQL;
             await SetupTestFixtureAndInferMetadata();
             ValidateInferredRelationshipInfoForTables();
+        }
+
+        /// <summary>
+        /// Data-driven test to validate that DataApiBuilderException is thrown for various invalid resultFieldName values
+        /// during stored procedure result set definition population.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow(null, DisplayName = "Null result field name")]
+        [DataRow("", DisplayName = "Empty result field name")]
+        [DataRow("   ", DisplayName = "Multiple spaces result field name")]
+        public async Task ValidateExceptionForInvalidResultFieldNames(string invalidFieldName)
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
+
+            // Create a RuntimeEntities with ONLY our test stored procedure entity
+            Dictionary<string, Entity> entitiesDictionary = new()
+            {
+                {
+                    "get_book_by_id", new Entity(
+                        Source: new("dbo.get_book_by_id", EntitySourceType.StoredProcedure, null, null),
+                        Rest: new(Enabled: true),
+                        GraphQL: new("get_book_by_id", "get_book_by_ids", Enabled: true),
+                        Permissions: new EntityPermission[] {
+                            new(
+                                Role: "anonymous",
+                                Actions: new EntityAction[] {
+                                    new(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
+                                })
+                        },
+                        Relationships: null,
+                        Mappings: null
+                    )
+                }
+            };
+
+            RuntimeEntities entities = new(entitiesDictionary);
+            RuntimeConfig runtimeConfig = baseConfigFromDisk with { Entities = entities };
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+
+            // Setup query builder
+            _queryBuilder = new MsSqlQueryBuilder();
+
+            try
+            {
+                string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+
+                // Create mock query executor that always returns JsonArray with invalid field name
+                Mock<IQueryExecutor> mockQueryExecutor = new();
+
+                // Create a JsonArray that simulates the stored procedure result with invalid field name
+                JsonArray invalidFieldJsonArray = new();
+                JsonObject jsonObject = new()
+                {
+                    [BaseSqlQueryBuilder.STOREDPROC_COLUMN_NAME] = invalidFieldName, // This will be null, empty, or whitespace
+                    [BaseSqlQueryBuilder.STOREDPROC_COLUMN_SYSTEMTYPENAME] = "varchar",
+                    [BaseSqlQueryBuilder.STOREDPROC_COLUMN_ISNULLABLE] = false
+                };
+                invalidFieldJsonArray.Add(jsonObject);
+
+                // Setup the mock to return our malformed JsonArray for all ExecuteQueryAsync calls
+                mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                    It.IsAny<Func<DbDataReader, List<string>, Task<JsonArray>>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<HttpContext>(),
+                    It.IsAny<List<string>>()))
+                    .ReturnsAsync(invalidFieldJsonArray);
+
+                // Setup Mock query manager Factory
+                Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+                queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(mockQueryExecutor.Object);
+
+                ISqlMetadataProvider sqlMetadataProvider = new MsSqlMetadataProvider(
+                    runtimeConfigProvider,
+                    queryManagerFactory.Object,
+                    sqlMetadataLogger,
+                    dataSourceName);
+
+                await sqlMetadataProvider.InitializeAsync();
+                Assert.Fail($"Expected DataApiBuilderException was not thrown for invalid resultFieldName: '{invalidFieldName}'.");
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.IsTrue(ex.Message.Contains("returns a column without a name"));
+            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>

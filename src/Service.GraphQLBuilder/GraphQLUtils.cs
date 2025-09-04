@@ -202,10 +202,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <param name="fieldDirectives">Collection of directives on GraphQL field.</param>
         /// <param name="modelName">Value of @model directive, if present.</param>
         /// <returns>True when name resolution succeeded, false otherwise.</returns>
-        public static bool TryExtractGraphQLFieldModelName(IDirectiveCollection fieldDirectives,
+        public static bool TryExtractGraphQLFieldModelName(
+            DirectiveCollection fieldDirectives,
             [NotNullWhen(true)] out string? modelName)
         {
-            modelName = fieldDirectives.FirstOrDefault<ModelDirective>()?.AsValue<ModelDirective>().Name;
+            modelName = fieldDirectives.FirstOrDefault<ModelDirective>()?.ToValue<ModelDirective>().Name;
             return !string.IsNullOrEmpty(modelName);
         }
 
@@ -276,7 +277,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 // Example: CustomersConnectionObject - for get all scenarios.
                 if (QueryBuilder.IsPaginationType(underlyingFieldType))
                 {
-                    IObjectField subField = context.Selection.Type.NamedType<ObjectType>()
+                    ObjectField subField = context.Selection.Type.NamedType<ObjectType>()
                         .Fields[QueryBuilder.PAGINATION_FIELD_NAME];
                     type = subField.Type;
                     underlyingFieldType = type.NamedType<ObjectType>();
@@ -332,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             if (value.Kind == SyntaxKind.Variable)
             {
                 string variableName = ((VariableNode)value).Name.Value;
-                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
+                IValueNode? variableValue = variables.GetValue<IValueNode>(variableName);
                 return GetFieldDetails(variableValue, variables);
             }
 

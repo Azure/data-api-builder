@@ -93,10 +93,10 @@ public class DabCacheService
     /// <summary>
     /// Try to get cacheValue from the cache with the derived cache key.
     /// </summary>
-    /// <typeparam name="JsonElement">The type of value in the cache</typeparam>
+    /// <typeparam name="T">The type of value in the cache</typeparam>
     /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
     /// <returns>JSON Response</returns>
-    public MaybeValue<JsonElement>? TryGet<JsonElement>(DatabaseQueryMetadata queryMetadata, EntityCacheLevel cacheEntryLevel)
+    public MaybeValue<T>? TryGet<T>(DatabaseQueryMetadata queryMetadata, EntityCacheLevel cacheEntryLevel)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
         FusionCacheEntryOptions options = new();
@@ -106,7 +106,7 @@ public class DabCacheService
             options.SetSkipDistributedCache(true, true);
         }
 
-        return _cache.TryGet<JsonElement>(key: cacheKey);
+        return _cache.TryGet<T>(key: cacheKey);
     }
 
     /// <summary>

@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Extracts the *Connection.items schema field from the *Connection schema field
         /// </summary>
-        internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
+        internal static ObjectField ExtractItemsSchemaField(ObjectField connectionSchemaField)
         {
             return connectionSchemaField.Type.NamedType<ObjectType>().Fields[QueryBuilder.PAGINATION_FIELD_NAME];
         }

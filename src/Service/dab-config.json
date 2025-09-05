@@ -1,11 +1,11 @@
 {
-    "data-source": {
-      "database-type": "@env('db-type')",
-      "connection-string": "@env('ConnectionStrings__Trek')",
-      "options": {
-        "set-session-context": false
-      }
-    },
+  "data-source": {
+    "database-type": "@env('db-type')",
+    "connection-string": "@env('ConnectionStrings__Database')",
+    "options": {
+      "set-session-context": false
+    }
+  },
     "runtime": {
       "rest": {
         "enabled": true,

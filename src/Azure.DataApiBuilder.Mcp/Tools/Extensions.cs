@@ -12,10 +12,45 @@ public static class Extensions
 {
     public static IServiceProvider? ServiceProvider { get; set; }
 
-    public static void AddDmlTools(this IServiceCollection services, McpOptions mcpOptions)
+    public static void AddDmlTools(this IServiceCollection services, McpRuntimeOptions? mcpOptions)
     {
-        HashSet<string> DmlToolNames = mcpOptions.DmlTools
-            .Select(x => x.ToString()).ToHashSet();
+        if (mcpOptions?.DmlTools == null || !mcpOptions.DmlTools.Enabled)
+        {
+            return;
+        }
+
+        HashSet<string> DmlToolNames = new();
+
+        // Check each DML tool property and add to the set if enabled
+        if (mcpOptions.DmlTools.DescribeEntities)
+        {
+            DmlToolNames.Add("DescribeEntities");
+        }
+
+        if (mcpOptions.DmlTools.CreateRecord)
+        {
+            DmlToolNames.Add("CreateRecord");
+        }
+
+        if (mcpOptions.DmlTools.ReadRecord)
+        {
+            DmlToolNames.Add("ReadRecord");
+        }
+
+        if (mcpOptions.DmlTools.UpdateRecord)
+        {
+            DmlToolNames.Add("UpdateRecord");
+        }
+
+        if (mcpOptions.DmlTools.DeleteRecord)
+        {
+            DmlToolNames.Add("DeleteRecord");
+        }
+
+        if (mcpOptions.DmlTools.ExecuteRecord)
+        {
+            DmlToolNames.Add("ExecuteRecord");
+        }
 
         IEnumerable<MethodInfo> methods = typeof(DmlTools).GetMethods()
             .Where(method => DmlToolNames.Contains(method.Name));

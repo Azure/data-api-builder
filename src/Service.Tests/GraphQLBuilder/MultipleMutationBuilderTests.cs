@@ -360,6 +360,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             {
                 Runtime = new RuntimeOptions(Rest: runtimeConfig.Runtime.Rest,
                                                                 GraphQL: new GraphQLRuntimeOptions(MultipleMutationOptions: new MultipleMutationOptions(new MultipleCreateOptions(enabled: true))),
+                                                                Mcp: runtimeConfig.Runtime.Mcp,
                                                                 Host: runtimeConfig.Runtime.Host,
                                                                 BaseRoute: runtimeConfig.Runtime.BaseRoute,
                                                                 Telemetry: runtimeConfig.Runtime.Telemetry,

@@ -147,6 +147,25 @@ public record RuntimeConfig
     }
 
     /// <summary>
+    /// The path at which MCP API is available
+    /// </summary>
+    [JsonIgnore]
+    public string McpPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.Mcp is null)
+            {
+                return McpRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.Mcp.Path;
+            }
+        }
+    }
+
+    /// <summary>
     /// Indicates whether introspection is allowed or not.
     /// </summary>
     [JsonIgnore]

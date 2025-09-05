@@ -131,6 +131,7 @@ public class AuthorizationResolverHotReloadTests
             Runtime: new(
                 Rest: new(Enabled: true),
                 GraphQL: new(), // GraphQL doesn't yet support hot-reload
+                Mcp: new(),
                 Host: hostOptions
             ),
             Entities: new(entityMap));

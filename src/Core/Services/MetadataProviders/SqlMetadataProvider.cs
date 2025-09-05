@@ -1151,6 +1151,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 Type resultFieldType = SqlToCLRType(element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_SYSTEMTYPENAME).ToString());
                 bool isResultFieldNullable = element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_ISNULLABLE).GetBoolean();
 
+                // Validate that the stored procedure returns columns with proper names
+                // This commonly occurs when using aggregate functions or expressions without aliases
+                if (string.IsNullOrWhiteSpace(resultFieldName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The stored procedure '{dbStoredProcedureName}' returns a column without a name. " +
+                                "This typically happens when using aggregate functions (like MAX, MIN, COUNT) or expressions " +
+                                "without providing an alias. Please add column aliases to your SELECT statement. " +
+                                "For example: 'SELECT MAX(id) AS MaxId' instead of 'SELECT MAX(id)'.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
                 // Store the dictionary containing result set field with its type as Columns
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }

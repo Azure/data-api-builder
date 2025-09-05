@@ -39,7 +39,7 @@ public class FileSinkTests
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-        _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new());
+        _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new(), mcpOptions: new());
 
         TelemetryOptions _testTelemetryOptions = new(File: new FileSinkOptions(isFileSinkEnabled, fileSinkPath, rollingInterval));
         _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };

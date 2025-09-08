@@ -33,6 +33,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.DataApiBuilder.Produc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataApiBuilder.Mcp", "Azure.DataApiBuilder.Mcp\Azure.DataApiBuilder.Mcp.csproj", "{A287E849-A043-4F37-BC40-A87C4705F583}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.DataApiBuilder.Mcp.Tests", "Azure.DataApiBuilder.Mcp.Tests\Azure.DataApiBuilder.Mcp.Tests.csproj", "{57ABA46C-F821-4C90-925C-5D755198942D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -79,6 +81,10 @@ Global
 		{A287E849-A043-4F37-BC40-A87C4705F583}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A287E849-A043-4F37-BC40-A87C4705F583}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A287E849-A043-4F37-BC40-A87C4705F583}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57ABA46C-F821-4C90-925C-5D755198942D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57ABA46C-F821-4C90-925C-5D755198942D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57ABA46C-F821-4C90-925C-5D755198942D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57ABA46C-F821-4C90-925C-5D755198942D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using Azure.DataApiBuilder.Mcp.Health.Checks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,8 +17,7 @@ internal static class Extensions
     {
         _ = builder.Services.AddHttpContextAccessor();
         _ = builder.Services.AddHealthChecks()
-            .AddCheck<ClientConnectionHealthCheck>("MCP Registration", tags: [MCP_TAG])
-            .AddCheck<ListEntitiesHealthCheck>("MCP Tool: list_entities", tags: [MCP_TAG]);
+            .AddCheck<McpRegistrationCheck>("MCP Registration", tags: [MCP_TAG]);
         return builder;
     }
 

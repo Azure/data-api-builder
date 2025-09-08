@@ -12,12 +12,12 @@ internal static class Extensions
 {
     public static IServiceProvider? ServiceProvider { get; set; }
 
-    public static void AddDmlTools(this IServiceCollection services, McpOptions mcpOptions)
+    public static IServiceCollection AddDmlTools(this IServiceCollection services, McpOptions mcpOptions)
     {
         HashSet<string> DmlToolNames = mcpOptions.DmlTools
             .Select(x => x.ToString()).ToHashSet();
 
-        IEnumerable<MethodInfo> methods = typeof(DmlTools).GetMethods()
+        IEnumerable<MethodInfo> methods = typeof(Dml).GetMethods()
             .Where(method => DmlToolNames.Contains(method.Name));
 
         foreach (MethodInfo method in methods)
@@ -25,12 +25,15 @@ internal static class Extensions
             AddTool(services, method);
         }
 
-        AddTool(services, typeof(DmlTools).GetMethod("Echo")!);
+        // this is special during development
+        AddTool(services, typeof(Dml).GetMethod("Echo") ?? throw new Exception("Echo method not found"));
+
+        return services;
     }
 
     private static void AddTool(IServiceCollection services, MethodInfo method)
     {
-        Func<IServiceProvider, McpServerTool> factory = (services) =>
+        McpServerTool factory(IServiceProvider services)
         {
             ServiceProvider ??= services;
 
@@ -41,11 +44,8 @@ internal static class Extensions
                     SerializerOptions = default
                 });
             return tool;
-        };
-        
-        // Register the tool both as the factory function and as the McpServerTool type
-        // so that ServiceRegistrationHealthCheck can find it
+        }
+
         _ = services.AddSingleton(factory);
-        _ = services.AddSingleton<McpServerTool>(factory);
     }
 }

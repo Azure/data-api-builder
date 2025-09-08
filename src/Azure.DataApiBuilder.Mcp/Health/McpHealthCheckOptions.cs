@@ -21,20 +21,17 @@ public class McpHealthCheckOptions : HealthCheckOptions
 
     public McpHealthCheckOptions(string tag)
     {
-        ResultStatusCodes.Clear();
-        ResultStatusCodes.Add(HealthStatus.Healthy, StatusCodes.Status200OK);
-        ResultStatusCodes.Add(HealthStatus.Degraded, StatusCodes.Status200OK);
-        ResultStatusCodes.Add(HealthStatus.Unhealthy, StatusCodes.Status503ServiceUnavailable);
-
         AllowCachingResponses = true;
-
         ResponseWriter = WriteAsync;
-
         Predicate = r => r.Tags.Contains(tag);
     }
 
-    private Task WriteAsync(HttpContext context, HealthReport report)
+    private async Task WriteAsync(HttpContext context, HealthReport report)
     {
+        string json = await new Tools
+                .SchemaLogic(context.RequestServices)
+                .GetEntityMetadataAsJsonAsync();
+
         var response = new
         {
             status = report.Status.ToString(),
@@ -45,10 +42,11 @@ public class McpHealthCheckOptions : HealthCheckOptions
                 status = kvp.Value.Status.ToString(),
                 description = kvp.Value.Description,
                 data = kvp.Value.Data
-            })
+            }),
+            describe_entities = JsonDocument.Parse(json)
         };
 
         context.Response.ContentType = "application/json";
-        return context.Response.WriteAsync(JsonSerializer.Serialize(response, _jsonOptions));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response, _jsonOptions));
     }
 }

@@ -6,18 +6,18 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 
-namespace Azure.DataApiBuilder.Mcp.Health;
+namespace Azure.DataApiBuilder.Mcp.Health.Checks;
 
 /// <summary>
 /// Attempts to connect to local MCP SSE endpoint and list tools.
 /// </summary>
-public sealed class ClientConnectionHealthCheck : IHealthCheck
+public sealed class McpRegistrationCheck : IHealthCheck
 {
     private readonly IHttpContextAccessor _http;
-    private readonly ILogger<ClientConnectionHealthCheck> _logger;
+    private readonly ILogger<McpRegistrationCheck> _logger;
     private readonly ILoggerFactory _loggerFactory;
 
-    public ClientConnectionHealthCheck(IHttpContextAccessor http, ILogger<ClientConnectionHealthCheck> logger, ILoggerFactory loggerFactory)
+    public McpRegistrationCheck(IHttpContextAccessor http, ILogger<McpRegistrationCheck> logger, ILoggerFactory loggerFactory)
     {
         _http = http;
         _logger = logger;

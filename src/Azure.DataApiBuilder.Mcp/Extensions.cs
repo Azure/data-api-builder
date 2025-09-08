@@ -20,12 +20,11 @@ namespace Azure.DataApiBuilder.Mcp
         {
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                _mcpOptions = runtimeConfig?.Ai?.Mcp ?? throw new NullReferenceException("Configuration is required.");
+                _mcpOptions = runtimeConfig?.Mcp ?? throw new NullReferenceException("Configuration is required.");
             }
 
-            services.AddDmlTools(_mcpOptions);
-
-            services
+            _ = services
+                .AddDmlTools(_mcpOptions)
                 .AddMcpServer()
                 .AddMcpHealthChecks()
                 .WithHttpTransport();

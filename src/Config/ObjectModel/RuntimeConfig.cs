@@ -20,12 +20,12 @@ public record McpOptions
 {
     public bool Enabled { get; init; } = true;
     public string Path { get; init; } = "/mcp";
-    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.ListEntities];
+    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.DescribeEntities];
 }
 
 public enum McpDmlTool
 {
-    ListEntities
+    DescribeEntities
 }
 
 public record RuntimeConfig
@@ -154,7 +154,7 @@ public record RuntimeConfig
     {
         get
         {
-            if (Runtime is null || Runtime.Mcp is null)
+            if (Runtime is null || Runtime.Mcp is null || Runtime.Mcp.Path is null)
             {
                 return McpRuntimeOptions.DEFAULT_PATH;
             }

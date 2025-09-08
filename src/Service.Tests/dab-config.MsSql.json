@@ -24,7 +24,7 @@
       }
     },
     "mcp": {
-      "enabled": false,
+      "enabled": true,
       "path": "/mcp",
       "dml-tools": {
         "enabled": true,

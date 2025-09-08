@@ -264,32 +264,32 @@
                 },
                 "describe-entities": {
                   "type": "boolean",
-                  "description": "Allow enabling/disabling the describe-entities command.",
+                  "description": "Allow enabling/disabling the describe-entities tool.",
                   "default": false
                 },
                 "create-record": {
                   "type": "boolean",
-                  "description": "Allow enabling/disabling the create-record command.",
+                  "description": "Allow enabling/disabling the create-record tool.",
                   "default": false
                 },
                 "read-record": {
                   "type": "boolean",
-                  "description": "Allow enabling/disabling the read-record command.",
+                  "description": "Allow enabling/disabling the read-record tool.",
                   "default": false
                 },
                 "update-record": {
                   "type": "boolean",
-                  "description": "Allow enabling/disabling the update-record command.",
+                  "description": "Allow enabling/disabling the update-record tool.",
                   "default": false
                 },
                 "delete-record": {
                   "type": "boolean",
-                  "description": "Allow enabling/disabling the delete-record command.",
+                  "description": "Allow enabling/disabling the delete-record tool.",
                   "default": false
                 },
                 "execute-record": {
                   "type": "boolean",
-                  "description": "Allow enabling/disabling the execute-record command.",
+                  "description": "Allow enabling/disabling the execute-record tool.",
                   "default": false
                 }
               }

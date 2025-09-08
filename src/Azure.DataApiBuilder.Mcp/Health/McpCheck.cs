@@ -23,9 +23,9 @@ public class McpCheck
     {
         CheckResult serviceRegistrationCheck = CheckServiceRegistration(serviceProvider);
         CheckResult clientConnectionCheck = await CheckClientConnectionAsync(serviceProvider);
-        CheckResult checkListEntity = await CheckListEntityAsync(serviceProvider);
+        CheckResult checkDescribeEntity = await CheckDescribeEntityAsync(serviceProvider);
 
-        return new[] { serviceRegistrationCheck, clientConnectionCheck, checkListEntity };
+        return new[] { serviceRegistrationCheck, clientConnectionCheck, checkDescribeEntity };
     }
 
     /// <summary>
@@ -198,18 +198,18 @@ public class McpCheck
     /// <summary>
     /// Legacy method for backward compatibility - returns service registration check
     /// </summary>
-    public static async Task<CheckResult> CheckListEntityAsync(IServiceProvider serviceProvider)
+    public static async Task<CheckResult> CheckDescribeEntityAsync(IServiceProvider serviceProvider)
     {
         SchemaLogic schemaLogic = new(serviceProvider);
         string json = await schemaLogic.GetEntityMetadataAsJsonAsync(false);
         JsonDocument doc = JsonDocument.Parse(json);
         return new CheckResult(
-            Name: "List Entities",
+            Name: "Describe Entities",
             IsHealthy: !string.IsNullOrEmpty(json),
             Message: !string.IsNullOrEmpty(json) ? "Successfully listed entities" : "No entities found",
             Tags: new Dictionary<string, object>
             {
-                { "check_type", "list_entities" },
+                { "check_type", "describe_entities" },
                 { "entities", doc }
             });
 

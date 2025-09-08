@@ -22,11 +22,6 @@ namespace Azure.DataApiBuilder.Mcp
 
         public static IServiceCollection AddDabMcpServer(this IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
         {
-            if (!Debugger.IsAttached)
-            {
-                Debugger.Launch(); // Forces Visual Studio/VS Code to attach
-            }
-
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 // If config is not available, skip MCP setup
@@ -72,7 +67,7 @@ namespace Azure.DataApiBuilder.Mcp
                                     },
                                     new()
                                     {
-                                        Name = "list_entities",
+                                        Name = "describe_entities",
                                         Description = "Lists all entities in the database."
                                     }
                                 ]
@@ -91,7 +86,7 @@ namespace Azure.DataApiBuilder.Mcp
                                     Content = [new TextContentBlock { Type = "text", Text = $"Echo: {msg}" }]
                                 };
                             }
-                            else if (request.Params?.Name == "list_entities")
+                            else if (request.Params?.Name == "describe_entities")
                             {
                                 // Get the service provider from the MCP context
                                 IServiceProvider? serviceProvider = request.Services;
@@ -107,8 +102,8 @@ namespace Azure.DataApiBuilder.Mcp
                                 // Set the service provider for DmlTools
                                 Azure.DataApiBuilder.Mcp.Tools.Extensions.ServiceProvider = scopedProvider;
 
-                                // Call the ListEntities tool method
-                                string entitiesJson = await DmlTools.ListEntities();
+                                // Call the DescribeEntities tool method
+                                string entitiesJson = await DmlTools.DescribeEntities();
                                 
                                 return new CallToolResult
                                 {
@@ -128,11 +123,6 @@ namespace Azure.DataApiBuilder.Mcp
 
         public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, RuntimeConfigProvider runtimeConfigProvider, [StringSyntax("Route")] string pattern = "")
         {
-            if (!Debugger.IsAttached)
-            {
-                Debugger.Launch(); // Forces Visual Studio/VS Code to attach
-            }
-
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 // If config is not available, skip MCP mapping

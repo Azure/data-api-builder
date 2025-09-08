@@ -1751,7 +1751,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             GraphQLRuntimeOptions graphQL = new(Enabled: graphqlEnabled);
             RestRuntimeOptions rest = new(Enabled: restEnabled);
-            McpRuntimeOptions mcp = new(Enabled: false);
+            McpRuntimeOptions mcp = new(Enabled: mcpEnabled);
 
             RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
                 new(DatabaseType.MSSQL, "", Options: null),

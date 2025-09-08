@@ -461,6 +461,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 ValidateConfigurationIsCorrectFlag(configPropertyValues, "rest", enableGlobalRest);
                 ValidateConfigurationIsNotNull(configPropertyValues, "graphql");
                 ValidateConfigurationIsCorrectFlag(configPropertyValues, "graphql", enableGlobalGraphQL);
+                ValidateConfigurationIsNotNull(configPropertyValues, "mcp");
                 ValidateConfigurationIsCorrectFlag(configPropertyValues, "mcp", enableGlobalMcp);
                 ValidateConfigurationIsNotNull(configPropertyValues, "caching");
                 ValidateConfigurationIsNotNull(configPropertyValues, "telemetry");

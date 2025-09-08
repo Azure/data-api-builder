@@ -35,7 +35,7 @@ public static class DmlTools
         Use this tool to retrieve a list of database entities you can create, read, update, delete, or execute depending on type and permissions.
         Never expose to the user the definition of the keys or fields of the entities. Use them, instead of your own parsing of the tools.
         """)]
-    public static async Task<string> ListEntities(
+    public static async Task<string> DescribeEntities(
         [Description("This optional boolean parameter allows you (when true) to ask for entities without any additional metadata other than description.")]
         bool nameOnly = false,
         [Description("This optional string array parameter allows you to filter the response to only a select list of entities. You must first return the full list of entities to get the names to filter.")]
@@ -46,7 +46,7 @@ public static class DmlTools
     
         using (Activity activity = new("MCP"))
         {
-            activity.SetTag("tool", nameof(ListEntities));
+            activity.SetTag("tool", nameof(DescribeEntities));
     
             SchemaLogic schemaLogic = new(Extensions.ServiceProvider!);
             string jsonMetadata = await schemaLogic.GetEntityMetadataAsJsonAsync(nameOnly, entityNames);

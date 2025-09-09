@@ -7,8 +7,21 @@ using Azure.DataApiBuilder.Config.Converters;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+/// <summary>
+/// Global MCP endpoint runtime configuration.
+/// </summary>
 public record McpRuntimeOptions
 {
+    public McpRuntimeOptions(
+        bool Enabled = false,
+        string? Path = null,
+        McpDmlToolsOptions? DmlTools = null)
+    {
+        this.Enabled = Enabled;
+        this.Path = Path ?? DEFAULT_PATH;
+        this.DmlTools = DmlTools ?? new McpDmlToolsOptions();
+    }
+
     public const string DEFAULT_PATH = "/mcp";
 
     /// <summary>
@@ -35,7 +48,7 @@ public record McpRuntimeOptions
         bool Enabled = true,
         string? Path = null,
         DmlToolsConfig? DmlTools = null)
-    {
+{
         this.Enabled = Enabled;
 
         if (Path is not null)

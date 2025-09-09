@@ -165,6 +165,33 @@ namespace Cli.Commands
         [Option("runtime.graphql.multiple-mutations.create.enabled", Required = false, HelpText = "Enable/Disable multiple-mutation create operations on DAB's generated GraphQL schema. Default: true (boolean).")]
         public bool? RuntimeGraphQLMultipleMutationsCreateEnabled { get; }
 
+        [Option("runtime.mcp.enabled", Required = false, HelpText = "Enable DAB's MCP endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpEnabled { get; }
+
+        [Option("runtime.mcp.path", Required = false, HelpText = "Customize DAB's MCP endpoint path. Default: '/mcp' Conditions: Prefix path with '/'.")]
+        public string? RuntimeMcpPath { get; }
+
+        [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.describe-entities.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools describe entities endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsDescribeEntitiesEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.create-record.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools create record endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsCreateRecordEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.read-record.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools read record endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsReadRecordEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.update-record.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools update record endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsUpdateRecordEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.delete-record.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools delete record endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsDeleteRecordEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.execute-record.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools execute record endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsExecuteRecordEnabled { get; }
+
         [Option("runtime.rest.enabled", Required = false, HelpText = "Enable DAB's Rest endpoint. Default: true (boolean).")]
         public bool? RuntimeRestEnabled { get; }
 

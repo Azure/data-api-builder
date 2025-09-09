@@ -20,12 +20,12 @@ public record McpOptions
 {
     public bool Enabled { get; init; } = true;
     public string Path { get; init; } = "/mcp";
-    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.ListEntities];
+    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.DescribeEntities];
 }
 
 public enum McpDmlTool
 {
-    ListEntities
+    DescribeEntities
 }
 
 public record RuntimeConfig

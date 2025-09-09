@@ -106,6 +106,9 @@ namespace Cli.Commands
         [Option("rest.path", Default = RestRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }
 
+        [Option("mcp.path", Default = McpRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the MCP endpoint's default prefix.")]
+        public string McpPath { get; }
+
         [Option("runtime.base-route", Default = null, Required = false, HelpText = "Specifies the base route for API requests.")]
         public string? RuntimeBaseRoute { get; }
 

@@ -1,13 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
+using Azure.DataApiBuilder.Mcp.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Server;
 using ModelContextProtocol.Client;
-using Azure.DataApiBuilder.Mcp.Tools;
-using System.Text.Json;
+using ModelContextProtocol.Server;
 
 namespace Azure.DataApiBuilder.Mcp.Health;
 

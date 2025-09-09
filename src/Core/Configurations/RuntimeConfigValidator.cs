@@ -827,7 +827,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
-    }   
+    }
 
     private void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
     {

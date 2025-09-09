@@ -23,7 +23,7 @@ public record McpRuntimeOptions
     public const string DEFAULT_PATH = "/mcp";
 
     public bool Enabled { get; init; }
-    
+
     public string Path { get; init; }
 
     [JsonPropertyName("dml-tools")]

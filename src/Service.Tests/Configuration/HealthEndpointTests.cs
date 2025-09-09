@@ -118,7 +118,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-
         /// <summary>
         /// Simulates the function call to HttpUtilities.ExecuteRestQueryAsync.
         /// while setting up mock HTTP client to simulate the response from the server to send OK code.

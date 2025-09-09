@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -104,7 +103,7 @@ namespace Azure.DataApiBuilder.Mcp
 
                                 // Call the DescribeEntities tool method
                                 string entitiesJson = await DmlTools.DescribeEntities();
-                                
+
                                 return new CallToolResult
                                 {
                                     Content = [new TextContentBlock { Type = "application/json", Text = entitiesJson }]
@@ -139,14 +138,14 @@ namespace Azure.DataApiBuilder.Mcp
 
             // Get the MCP path with proper null handling and default
             string mcpPath = mcpOptions.Path ?? McpRuntimeOptions.DEFAULT_PATH;
-            
+
             // Map the MCP endpoint
             endpoints.MapMcp(mcpPath);
-            
+
             // Map health checks relative to the MCP path
             string healthPath = mcpPath.TrimEnd('/') + "/health";
             endpoints.MapDabHealthChecks(healthPath);
-            
+
             return endpoints;
         }
     }

@@ -41,7 +41,7 @@
     "MsSql": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "mcp/health",
+      "launchUrl": "jerry",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "MsSql"
       },

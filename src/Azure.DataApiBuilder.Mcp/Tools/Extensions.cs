@@ -8,16 +8,16 @@ using ModelContextProtocol.Server;
 
 namespace Azure.DataApiBuilder.Mcp.Tools;
 
-internal static class Extensions
+public static class Extensions
 {
     public static IServiceProvider? ServiceProvider { get; set; }
 
-    public static IServiceCollection AddDmlTools(this IServiceCollection services, McpOptions mcpOptions)
+    public static void AddDmlTools(this IServiceCollection services, McpOptions mcpOptions)
     {
         HashSet<string> DmlToolNames = mcpOptions.DmlTools
             .Select(x => x.ToString()).ToHashSet();
 
-        IEnumerable<MethodInfo> methods = typeof(Dml).GetMethods()
+        IEnumerable<MethodInfo> methods = typeof(DmlTools).GetMethods()
             .Where(method => DmlToolNames.Contains(method.Name));
 
         foreach (MethodInfo method in methods)
@@ -25,15 +25,12 @@ internal static class Extensions
             AddTool(services, method);
         }
 
-        // this is special during development
-        AddTool(services, typeof(Dml).GetMethod("Echo") ?? throw new Exception("Echo method not found"));
-
-        return services;
+        AddTool(services, typeof(DmlTools).GetMethod("Echo")!);
     }
 
     private static void AddTool(IServiceCollection services, MethodInfo method)
     {
-        McpServerTool factory(IServiceProvider services)
+        Func<IServiceProvider, McpServerTool> factory = (services) =>
         {
             ServiceProvider ??= services;
 
@@ -44,8 +41,7 @@ internal static class Extensions
                     SerializerOptions = default
                 });
             return tool;
-        }
-
+        };
         _ = services.AddSingleton(factory);
     }
 }

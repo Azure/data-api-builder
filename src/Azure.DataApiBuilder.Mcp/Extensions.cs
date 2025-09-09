@@ -20,19 +20,83 @@ namespace Azure.DataApiBuilder.Mcp
         {
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                _mcpOptions = runtimeConfig?.Mcp ?? throw new NullReferenceException("Configuration is required.");
+                _mcpOptions = runtimeConfig?.Ai?.Mcp ?? throw new NullReferenceException("Configuration is required.");
             }
 
-            _ = services
-                .AddDmlTools(_mcpOptions)
-                .AddMcpServer()
-                .AddMcpHealthChecks()
-                .WithHttpTransport();
+            // Register domain tools
+            services.AddDmlTools(_mcpOptions);
+
+            // Register MCP server with dynamic tool handlers
+            services.AddMcpServer(options =>
+            {
+                options.ServerInfo = new Implementation { Name = "MyServer", Version = "1.0.0" };
+
+                options.Capabilities = new ServerCapabilities
+                {
+                    Tools = new ToolsCapability
+                    {
+                        ListToolsHandler = (request, ct) =>
+                            ValueTask.FromResult(new ListToolsResult
+                            {
+                                Tools =
+                                [
+                                    new Tool
+                                    {
+                                        Name = "echonew",
+                                        Description = "Echoes the input back to the client.",
+                                        InputSchema = JsonSerializer.Deserialize<JsonElement>(
+                                            @"{
+                                                ""type"": ""object"",
+                                                ""properties"": { ""message"": { ""type"": ""string"" } },
+                                                ""required"": [""message""]
+                                            }"
+                                        )
+                                    },
+                                    new Tool
+                                    {
+                                        Name = "list_entities",
+                                        Description = "Lists all entities in the database."
+                                    }
+                                ]
+                            }),
+
+                        CallToolHandler = (request, ct) =>
+                        {
+                            if (request.Params?.Name == "echonew" &&
+                                request.Params.Arguments?.TryGetValue("message", out JsonElement messageEl) == true)
+                            {
+                                string? msg = messageEl.ValueKind == JsonValueKind.String
+                                    ? messageEl.GetString()
+                                    : messageEl.ToString();
+
+                                return ValueTask.FromResult(new CallToolResult
+                                {
+                                    Content = [new TextContentBlock { Type = "text", Text = $"Echo: {msg}" }]
+                                });
+                            }
+                            else if (request.Params?.Name == "list_entities")
+                            {
+                                // Call the ListEntities tool method from DmlTools
+                                Task<string> listEntitiesTask = DmlTools.ListEntities();
+                                listEntitiesTask.Wait(); // Wait for the async method to complete
+                                string entitiesJson = listEntitiesTask.Result;
+                                return ValueTask.FromResult(new CallToolResult
+                                {
+                                    Content = [new TextContentBlock { Type = "application/json", Text = entitiesJson }]
+                                });
+                            }
+
+                            throw new McpException($"Unknown tool: '{request.Params?.Name}'");
+                        }
+                    }
+                };
+            })
+            .WithHttpTransport();
 
             return services;
         }
 
-        public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string? pattern = null)
+        public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string pattern = "")
         {
             endpoints.MapMcp();
             endpoints.MapMcpHealthEndpoint(pattern);

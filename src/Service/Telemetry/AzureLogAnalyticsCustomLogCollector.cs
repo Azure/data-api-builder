@@ -65,10 +65,6 @@ public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
                     item.Identifier = dabIdentifier;
                     list.Add(item);
                 }
-                else
-                {
-                    break;
-                }
 
                 if (time.Elapsed >= TimeSpan.FromSeconds(flushIntervalSeconds))
                 {

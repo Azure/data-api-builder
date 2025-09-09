@@ -493,10 +493,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 Assert.IsTrue(ex.Message.Contains("returns a column without a name"));
             }
-            finally
-            {
-                TestHelper.UnsetAllDABEnvironmentVariables();
-            }
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>

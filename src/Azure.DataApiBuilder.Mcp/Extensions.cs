@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Health;
@@ -10,9 +9,6 @@ using Azure.DataApiBuilder.Mcp.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol;
-using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 
 namespace Azure.DataApiBuilder.Mcp
 {
@@ -38,8 +34,8 @@ namespace Azure.DataApiBuilder.Mcp
 
         public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string? pattern = null)
         {
-            endpoints.MapMcp(pattern);
-            endpoints.MapMcpHealthEndpoint(pattern & "/health");
+            endpoints.MapMcp();
+            endpoints.MapMcpHealthEndpoint(pattern);
             return endpoints;
         }
     }

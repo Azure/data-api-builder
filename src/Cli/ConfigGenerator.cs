@@ -89,6 +89,7 @@ namespace Cli
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
+            string mcpPath = options.McpPath;
             string? runtimeBaseRoute = options.RuntimeBaseRoute;
             Dictionary<string, object?> dbOptions = new();
 
@@ -108,9 +109,10 @@ namespace Cli
                     " We recommend that you use the --graphql.enabled option instead.");
             }
 
-            bool restEnabled, graphQLEnabled;
+            bool restEnabled, graphQLEnabled, mcpEnabled;
             if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
-                !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled))
+                !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled) ||
+                !TryDetermineIfApiIsEnabled(options.McpDisabled, options.McpEnabled, ApiType.MCP, out mcpEnabled))
             {
                 return false;
             }
@@ -262,6 +264,7 @@ namespace Cli
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
+                    Mcp: new(mcpEnabled, mcpPath ?? McpRuntimeOptions.DEFAULT_PATH),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -743,6 +746,23 @@ namespace Cli
                 }
             }
 
+            // MCP: Enabled and Path
+            if (options.RuntimeMcpEnabled != null ||
+                options.RuntimeMcpPath != null)
+            {
+                McpRuntimeOptions? updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
+                bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
+
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Mcp = updatedMcpOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             // Cache: Enabled and TTL
             if (options.RuntimeCacheEnabled != null ||
                 options.RuntimeCacheTTL != null)
@@ -939,6 +959,126 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Mcp runtime settings based on the provided value.
+        /// Validates that any user-provided values are valid and then returns true if the updated Mcp options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedMcpOptions">updatedMcpOptions</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredMcpValues(
+            ConfigureOptions options,
+            ref McpRuntimeOptions? updatedMcpOptions)
+        {
+            object? updatedValue;
+
+            try
+            {
+                // Runtime.Mcp.Enabled
+                updatedValue = options?.RuntimeMcpEnabled;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Path
+                updatedValue = options?.RuntimeMcpPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedMcpOptions = updatedMcpOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Path as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                        return false;
+                    }
+                }
+
+                // Runtime.Mcp.Dml-Tools.Enabled
+                updatedValue = options?.RuntimeMcpDmlToolsEnabled;
+                if (updatedValue != null)
+                {
+                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
+                    dmlToolsOptions = dmlToolsOptions with { Enabled = (bool)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Dml-Tools.Describe-Entities
+                updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
+                if (updatedValue != null)
+                {
+                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
+                    dmlToolsOptions = dmlToolsOptions with { DescribeEntities = (bool)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Describe-Entities as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Dml-Tools.Create-Record
+                updatedValue = options?.RuntimeMcpDmlToolsCreateRecordEnabled;
+                if (updatedValue != null)
+                {
+                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
+                    dmlToolsOptions = dmlToolsOptions with { CreateRecord = (bool)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Create-Record as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Dml-Tools.Read-Record
+                updatedValue = options?.RuntimeMcpDmlToolsReadRecordEnabled;
+                if (updatedValue != null)
+                {
+                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
+                    dmlToolsOptions = dmlToolsOptions with { ReadRecord = (bool)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Read-Record as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Dml-Tools.Update-Record
+                updatedValue = options?.RuntimeMcpDmlToolsUpdateRecordEnabled;
+                if (updatedValue != null)
+                {
+                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
+                    dmlToolsOptions = dmlToolsOptions with { UpdateRecord = (bool)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Update-Record as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Dml-Tools.Delete-Record
+                updatedValue = options?.RuntimeMcpDmlToolsDeleteRecordEnabled;
+                if (updatedValue != null)
+                {
+                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
+                    dmlToolsOptions = dmlToolsOptions with { DeleteRecord = (bool)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Delete-Record as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Dml-Tools.Execute-Record
+                updatedValue = options?.RuntimeMcpDmlToolsExecuteRecordEnabled;
+                if (updatedValue != null)
+                {
+                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
+                    dmlToolsOptions = dmlToolsOptions with { ExecuteRecord = (bool)updatedValue };
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Execute-Record as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

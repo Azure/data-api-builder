@@ -214,7 +214,7 @@
               "description": "Allow enabling/disabling GraphQL requests for all entities."
             },
             "depth-limit": {
-              "type": ["integer", "null"],
+              "type": [ "integer", "null" ],
               "description": "Maximum allowed depth of a GraphQL query.",
               "default": null
             },
@@ -234,6 +234,63 @@
                       "default": false
                     }
                   }
+                }
+              }
+            }
+          }
+        },
+        "mcp": {
+          "type": "object",
+          "description": "Global MCP endpoint configuration",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "default": "/mcp",
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Allow enabling/disabling MCP requests for all entities.",
+              "default": false
+            },
+            "dml-tools": {
+              "type": "object",
+              "description": "Global DML tools configuration",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling DML tools for all entities.",
+                  "default": false
+                },
+                "describe-entities": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling the describe-entities tool.",
+                  "default": false
+                },
+                "create-record": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling the create-record tool.",
+                  "default": false
+                },
+                "read-record": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling the read-record tool.",
+                  "default": false
+                },
+                "update-record": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling the update-record tool.",
+                  "default": false
+                },
+                "delete-record": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling the delete-record tool.",
+                  "default": false
+                },
+                "execute-record": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling the execute-record tool.",
+                  "default": false
                 }
               }
             }

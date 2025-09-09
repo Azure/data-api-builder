@@ -20,12 +20,12 @@ public record McpOptions
 {
     public bool Enabled { get; init; } = true;
     public string Path { get; init; } = "/mcp";
-    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.ListEntities];
+    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.DescribeEntities];
 }
 
 public enum McpDmlTool
 {
-    ListEntities
+    DescribeEntities
 }
 
 public record RuntimeConfig
@@ -142,6 +142,25 @@ public record RuntimeConfig
             else
             {
                 return Runtime.GraphQL.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The path at which MCP API is available
+    /// </summary>
+    [JsonIgnore]
+    public string McpPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.Mcp is null || Runtime.Mcp.Path is null)
+            {
+                return McpRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.Mcp.Path;
             }
         }
     }

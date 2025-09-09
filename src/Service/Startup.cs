@@ -681,7 +681,7 @@ namespace Azure.DataApiBuilder.Service
                 endpoints.MapControllers();
 
                 // Special for MCP
-                endpoints.MapDabMcp();
+                endpoints.MapDabMcp(runtimeConfigProvider);
 
                 endpoints
                     .MapGraphQL()

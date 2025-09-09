@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Health;
@@ -9,18 +10,29 @@ using Azure.DataApiBuilder.Mcp.Tools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 
 namespace Azure.DataApiBuilder.Mcp
 {
     public static class Extensions
     {
-        private static McpOptions _mcpOptions = default!;
+        private static McpRuntimeOptions? _mcpOptions;
 
         public static IServiceCollection AddDabMcpServer(this IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
         {
-            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                _mcpOptions = runtimeConfig?.Ai?.Mcp ?? throw new NullReferenceException("Configuration is required.");
+                // If config is not available, skip MCP setup
+                return services;
+            }
+
+            _mcpOptions = runtimeConfig?.Runtime?.Mcp;
+
+            // Only add MCP server if it's enabled in the configuration
+            if (_mcpOptions == null || !_mcpOptions.Enabled)
+            {
+                return services;
             }
 
             // Register domain tools
@@ -29,18 +41,18 @@ namespace Azure.DataApiBuilder.Mcp
             // Register MCP server with dynamic tool handlers
             services.AddMcpServer(options =>
             {
-                options.ServerInfo = new Implementation { Name = "MyServer", Version = "1.0.0" };
+                options.ServerInfo = new() { Name = "Data API Builder MCP Server", Version = "1.0.0" };
 
-                options.Capabilities = new ServerCapabilities
+                options.Capabilities = new()
                 {
-                    Tools = new ToolsCapability
+                    Tools = new()
                     {
                         ListToolsHandler = (request, ct) =>
                             ValueTask.FromResult(new ListToolsResult
                             {
                                 Tools =
                                 [
-                                    new Tool
+                                    new()
                                     {
                                         Name = "echonew",
                                         Description = "Echoes the input back to the client.",
@@ -52,15 +64,14 @@ namespace Azure.DataApiBuilder.Mcp
                                             }"
                                         )
                                     },
-                                    new Tool
+                                    new()
                                     {
-                                        Name = "list_entities",
+                                        Name = "describe_entities",
                                         Description = "Lists all entities in the database."
                                     }
                                 ]
                             }),
-
-                        CallToolHandler = (request, ct) =>
+                        CallToolHandler = async (request, ct) =>
                         {
                             if (request.Params?.Name == "echonew" &&
                                 request.Params.Arguments?.TryGetValue("message", out JsonElement messageEl) == true)
@@ -69,21 +80,34 @@ namespace Azure.DataApiBuilder.Mcp
                                     ? messageEl.GetString()
                                     : messageEl.ToString();
 
-                                return ValueTask.FromResult(new CallToolResult
+                                return new CallToolResult
                                 {
                                     Content = [new TextContentBlock { Type = "text", Text = $"Echo: {msg}" }]
-                                });
+                                };
                             }
-                            else if (request.Params?.Name == "list_entities")
+                            else if (request.Params?.Name == "describe_entities")
                             {
-                                // Call the ListEntities tool method from DmlTools
-                                Task<string> listEntitiesTask = DmlTools.ListEntities();
-                                listEntitiesTask.Wait(); // Wait for the async method to complete
-                                string entitiesJson = listEntitiesTask.Result;
-                                return ValueTask.FromResult(new CallToolResult
+                                // Get the service provider from the MCP context
+                                IServiceProvider? serviceProvider = request.Services;
+                                if (serviceProvider == null)
+                                {
+                                    throw new InvalidOperationException("Service provider is not available in the request context.");
+                                }
+
+                                // Create a scope to resolve scoped services
+                                using IServiceScope scope = serviceProvider.CreateScope();
+                                IServiceProvider scopedProvider = scope.ServiceProvider;
+
+                                // Set the service provider for DmlTools
+                                Azure.DataApiBuilder.Mcp.Tools.Extensions.ServiceProvider = scopedProvider;
+
+                                // Call the DescribeEntities tool method
+                                string entitiesJson = await DmlTools.DescribeEntities();
+
+                                return new CallToolResult
                                 {
                                     Content = [new TextContentBlock { Type = "application/json", Text = entitiesJson }]
-                                });
+                                };
                             }
 
                             throw new McpException($"Unknown tool: '{request.Params?.Name}'");
@@ -96,10 +120,32 @@ namespace Azure.DataApiBuilder.Mcp
             return services;
         }
 
-        public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, [StringSyntax("Route")] string pattern = "")
+        public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, RuntimeConfigProvider runtimeConfigProvider, [StringSyntax("Route")] string pattern = "")
         {
-            endpoints.MapMcp();
-            endpoints.MapMcpHealthEndpoint(pattern);
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            {
+                // If config is not available, skip MCP mapping
+                return endpoints;
+            }
+
+            McpRuntimeOptions? mcpOptions = runtimeConfig?.Runtime?.Mcp;
+
+            // Only map MCP endpoints if MCP is enabled
+            if (mcpOptions == null || !mcpOptions.Enabled)
+            {
+                return endpoints;
+            }
+
+            // Get the MCP path with proper null handling and default
+            string mcpPath = mcpOptions.Path ?? McpRuntimeOptions.DEFAULT_PATH;
+
+            // Map the MCP endpoint
+            endpoints.MapMcp(mcpPath);
+
+            // Map health checks relative to the MCP path
+            string healthPath = mcpPath.TrimEnd('/') + "/health";
+            endpoints.MapDabHealthChecks(healthPath);
+
             return endpoints;
         }
     }

@@ -794,6 +794,41 @@ public class RuntimeConfigValidator : IConfigValidator
         }
     }
 
+    /// <summary>
+    /// Method to validate that the MCP URI (MCP path prefix).
+    /// </summary>
+    /// <param name="runtimeConfig"></param>
+    public void ValidateMcpUri(RuntimeConfig runtimeConfig)
+    {
+        // Skip validation if MCP is not configured
+        if (runtimeConfig.Runtime?.Mcp is null)
+        {
+            return;
+        }
+
+        // Get the MCP path from the configuration
+        string? mcpPath = runtimeConfig.Runtime.Mcp.Path;
+
+        // Validate that the path is not null or empty when MCP is configured
+        if (string.IsNullOrWhiteSpace(mcpPath))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "MCP path cannot be null or empty when MCP is configured.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            return;
+        }
+
+        // Validate the MCP path using the same validation as REST and GraphQL
+        if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(mcpPath, out string exceptionMsgSuffix))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"MCP path {exceptionMsgSuffix}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+    }
+
     private void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
     {
         // Bypass validation of auth if there is no auth provided

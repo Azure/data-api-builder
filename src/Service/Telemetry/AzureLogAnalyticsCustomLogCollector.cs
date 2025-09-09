@@ -53,14 +53,22 @@ public class AzureLogAnalyticsCustomLogCollector : ICustomLogCollector
     public async Task<List<AzureLogAnalyticsLogs>> DequeueAllAsync(string dabIdentifier, int flushIntervalSeconds)
     {
         List<AzureLogAnalyticsLogs> list = new();
-        Stopwatch time = Stopwatch.StartNew();
 
         if (await _logs.Reader.WaitToReadAsync())
         {
-            while (_logs.Reader.TryRead(out AzureLogAnalyticsLogs? item))
+            Stopwatch time = Stopwatch.StartNew();
+
+            while (true)
             {
-                item.Identifier = dabIdentifier;
-                list.Add(item);
+                if (_logs.Reader.TryRead(out AzureLogAnalyticsLogs? item))
+                {
+                    item.Identifier = dabIdentifier;
+                    list.Add(item);
+                }
+                else
+                {
+                    break;
+                }
 
                 if (time.Elapsed >= TimeSpan.FromSeconds(flushIntervalSeconds))
                 {

@@ -25,7 +25,8 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string? config)
+            string? config,
+            string? description)
             : base(config)
         {
             Entity = entity;
@@ -42,6 +43,7 @@ namespace Cli.Commands
             PolicyDatabase = policyDatabase;
             CacheEnabled = cacheEnabled;
             CacheTtl = cacheTtl;
+            Description = description;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -86,5 +88,8 @@ namespace Cli.Commands
 
         [Option("cache.ttl", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
         public string? CacheTtl { get; }
+
+        [Option("description", Required = false, HelpText = "Description of the entity.")]
+        public string? Description { get; }
     }
 }

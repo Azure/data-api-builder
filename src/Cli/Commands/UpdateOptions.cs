@@ -42,7 +42,8 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string config)
+            string config,
+            string? description)
             : base(entity,
                   sourceType,
                   sourceParameters,
@@ -57,7 +58,8 @@ namespace Cli.Commands
                   policyDatabase,
                   cacheEnabled,
                   cacheTtl,
-                  config)
+                  config,
+                  description)
         {
             Source = source;
             Permissions = permissions;

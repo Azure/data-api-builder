@@ -1063,6 +1063,41 @@ namespace Cli.Tests
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: "SampleEntity2"));
         }
 
+        /// <summary>
+        /// Test to verify updating the description property of an entity.
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateEntityDescription()
+        {
+            // Initial config with an old description
+            string initialConfig = GetInitialConfigString() + "," + @"
+                ""entities"": {
+                    ""MyEntity"": {
+                        ""source"": ""MyTable"",
+                        ""description"": ""Old description"",
+                        ""permissions"": [
+                            {
+                                ""role"": ""anonymous"",
+                                ""actions"": [""read""]
+                            }
+                        ]
+                    }
+                }
+            }";
+
+            // UpdateOptions with a new description
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                entity: "MyEntity",
+                description: "Updated description"
+            );
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Successfully updated entity in the config.");
+
+            // Assert that the description was updated
+            Assert.AreEqual("Updated description", updatedRuntimeConfig.Entities["MyEntity"].Description);
+        }
+
         private static string GetInitialConfigString()
         {
             return @"{" +
@@ -1122,7 +1157,8 @@ namespace Cli.Tests
             IEnumerable<string>? restMethodsForStoredProcedure = null,
             string? graphQLOperationForStoredProcedure = null,
             string? cacheEnabled = null,
-            string? cacheTtl = null
+            string? cacheTtl = null,
+            string? description = null
             )
         {
             return new(
@@ -1150,7 +1186,8 @@ namespace Cli.Tests
                 cacheTtl: cacheTtl,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethodsForStoredProcedure,
-                graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure
+                graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure,
+                description: description
             );
         }
 

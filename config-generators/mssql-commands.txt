@@ -236,3 +236,4 @@ add dbo_DimAccount --config "dab-config.MsSql.json" --source "DimAccount" --perm
 update dbo_DimAccount --config "dab-config.MsSql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "ParentAccountKey:AccountKey"
 update dbo_DimAccount --config "dab-config.MsSql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "AccountKey:ParentAccountKey"
 add DateOnlyTable --config "dab-config.MsSql.json" --source "date_only_table" --permissions "anonymous:*" --rest true --graphql true --source.key-fields "event_date"
+add GetBooksAuth --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "teststoredprocauth:execute" --rest true --graphql true --graphql.operation "Query" --rest.methods "Get"

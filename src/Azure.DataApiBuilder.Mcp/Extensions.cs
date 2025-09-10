@@ -35,6 +35,14 @@ namespace Azure.DataApiBuilder.Mcp
                 return services;
             }
 
+            // Register the tool registry
+            services.AddSingleton<McpToolRegistry>();
+
+            // Register individual tools
+            services.AddSingleton<IMcpTool, EchoTool>();
+            services.AddSingleton<IMcpTool, DescribeEntitiesTool>();
+            services.AddSingleton<IMcpTool, ComplexTool>();
+
             // Register domain tools
             services.AddDmlTools(_mcpOptions);
 
@@ -48,74 +56,74 @@ namespace Azure.DataApiBuilder.Mcp
                     Tools = new()
                     {
                         ListToolsHandler = (request, ct) =>
-                            ValueTask.FromResult(new ListToolsResult
+                        {
+                            McpToolRegistry? toolRegistry = request.Services?.GetRequiredService<McpToolRegistry>();
+                            if (toolRegistry == null)
                             {
-                                Tools =
-                                [
-                                    new()
-                                    {
-                                        Name = "echonew",
-                                        Description = "Echoes the input back to the client.",
-                                        InputSchema = JsonSerializer.Deserialize<JsonElement>(
-                                            @"{
-                                                ""type"": ""object"",
-                                                ""properties"": { ""message"": { ""type"": ""string"" } },
-                                                ""required"": [""message""]
-                                            }"
-                                        )
-                                    },
-                                    new()
-                                    {
-                                        Name = "describe_entities",
-                                        Description = "Lists all entities in the database."
-                                    }
-                                ]
-                            }),
+                                throw new InvalidOperationException("Tool registry is not available.");
+                            }
+
+                            List<Tool> tools = toolRegistry.GetAllTools().ToList();
+                            
+                            return ValueTask.FromResult(new ListToolsResult
+                            {
+                                Tools = tools
+                            });
+                        },
                         CallToolHandler = async (request, ct) =>
                         {
-                            if (request.Params?.Name == "echonew" &&
-                                request.Params.Arguments?.TryGetValue("message", out JsonElement messageEl) == true)
+                            McpToolRegistry? toolRegistry = request.Services?.GetRequiredService<McpToolRegistry>();
+                            if (toolRegistry == null)
                             {
-                                string? msg = messageEl.ValueKind == JsonValueKind.String
-                                    ? messageEl.GetString()
-                                    : messageEl.ToString();
-
-                                return new CallToolResult
-                                {
-                                    Content = [new TextContentBlock { Type = "text", Text = $"Echo: {msg}" }]
-                                };
+                                throw new InvalidOperationException("Tool registry is not available.");
                             }
-                            else if (request.Params?.Name == "describe_entities")
+
+                            string? toolName = request.Params?.Name;
+                            if (string.IsNullOrEmpty(toolName))
                             {
-                                // Get the service provider from the MCP context
-                                IServiceProvider? serviceProvider = request.Services;
-                                if (serviceProvider == null)
+                                throw new McpException("Tool name is required.");
+                            }
+
+                            if (!toolRegistry.TryGetTool(toolName, out IMcpTool? tool) || tool == null)
+                            {
+                                throw new McpException($"Unknown tool: '{toolName}'");
+                            }
+
+                            JsonDocument? arguments = null;
+                            if (request.Params?.Arguments != null)
+                            {
+                                // Convert IReadOnlyDictionary<string, JsonElement> to JsonDocument
+                                Dictionary<string, object?> jsonObject = new();
+                                foreach (KeyValuePair<string, JsonElement> kvp in request.Params.Arguments)
+                                {
+                                    jsonObject[kvp.Key] = kvp.Value;
+                                }
+                                
+                                string json = JsonSerializer.Serialize(jsonObject);
+                                arguments = JsonDocument.Parse(json);
+                            }
+
+                            try
+                            {
+                                if (request.Services == null)
                                 {
                                     throw new InvalidOperationException("Service provider is not available in the request context.");
                                 }
 
-                                // Create a scope to resolve scoped services
-                                using IServiceScope scope = serviceProvider.CreateScope();
-                                IServiceProvider scopedProvider = scope.ServiceProvider;
-
-                                // Set the service provider for DmlTools
-                                Azure.DataApiBuilder.Mcp.Tools.Extensions.ServiceProvider = scopedProvider;
-
-                                // Call the DescribeEntities tool method
-                                string entitiesJson = await DmlTools.DescribeEntities();
-
-                                return new CallToolResult
-                                {
-                                    Content = [new TextContentBlock { Type = "application/json", Text = entitiesJson }]
-                                };
+                                return await tool.ExecuteAsync(arguments, request.Services, ct);
                             }
-
-                            throw new McpException($"Unknown tool: '{request.Params?.Name}'");
+                            finally
+                            {
+                                arguments?.Dispose();
+                            }
                         }
                     }
                 };
             })
             .WithHttpTransport();
+
+            // Build the tool registry
+            services.AddHostedService<McpToolRegistryInitializer>();
 
             return services;
         }

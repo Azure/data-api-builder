@@ -143,7 +143,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     Entity entity = kvp.Value;
                     string restPath = entity.Rest?.Path ?? kvp.Key;
-                    globalTags.Add(new OpenApiTag {
+                    globalTags.Add(new OpenApiTag
+                    {
                         Name = restPath,
                         Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
                     });

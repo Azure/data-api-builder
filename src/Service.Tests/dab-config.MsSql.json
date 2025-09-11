@@ -3580,6 +3580,19 @@
               "action": "read"
             }
           ]
+        },
+        {
+          "role": "TestFieldExcludedForAggregation",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            }
+          ]
         }
       ],
       "mappings": {
@@ -3794,6 +3807,36 @@
           "actions": [
             {
               "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "GetBooksAuth": {
+      "source": {
+        "object": "get_books",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "GetBooksAuth",
+          "plural": "GetBooksAuths"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "teststoredprocauth",
+          "actions": [
+            {
+              "action": "execute"
             }
           ]
         }

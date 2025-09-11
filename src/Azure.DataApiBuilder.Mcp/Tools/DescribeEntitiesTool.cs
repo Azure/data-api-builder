@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Mcp.Tools
 
                 // Extract entity information from the runtime config
                 Dictionary<string, object> entities = new();
-                
+
                 if (runtimeConfig.Entities != null)
                 {
                     foreach (KeyValuePair<string, Entity> entity in runtimeConfig.Entities)
@@ -56,8 +56,8 @@ namespace Azure.DataApiBuilder.Mcp.Tools
                     }
                 }
 
-                string entitiesJson = JsonSerializer.Serialize(entities, new JsonSerializerOptions 
-                { 
+                string entitiesJson = JsonSerializer.Serialize(entities, new JsonSerializerOptions
+                {
                     WriteIndented = true,
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 });

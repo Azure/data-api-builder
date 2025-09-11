@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Mcp
                             }
 
                             List<Tool> tools = toolRegistry.GetAllTools().ToList();
-                            
+
                             return ValueTask.FromResult(new ListToolsResult
                             {
                                 Tools = tools
@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Mcp
                                 {
                                     jsonObject[kvp.Key] = kvp.Value;
                                 }
-                                
+
                                 string json = JsonSerializer.Serialize(jsonObject);
                                 arguments = JsonDocument.Parse(json);
                             }

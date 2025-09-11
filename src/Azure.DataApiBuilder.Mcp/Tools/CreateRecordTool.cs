@@ -50,8 +50,8 @@ namespace Azure.DataApiBuilder.Mcp.Tools
             {
                 // Extract arguments
                 JsonElement root = arguments.RootElement;
-                
-                if (!root.TryGetProperty("entity", out JsonElement entityElement) || 
+
+                if (!root.TryGetProperty("entity", out JsonElement entityElement) ||
                     !root.TryGetProperty("data", out JsonElement dataElement))
                 {
                     return Task.FromResult(new CallToolResult
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Mcp.Tools
                 }
 
                 string entityName = entityElement.GetString() ?? string.Empty;
-                
+
                 // TODO: Implement actual create logic using DAB's internal services
                 // For now, return a placeholder response
                 string result = $"Would create record in entity '{entityName}' with data: {dataElement.GetRawText()}";

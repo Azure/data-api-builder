@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Mcp.Tools
             if (root.TryGetProperty("options", out JsonElement optionsEl) && optionsEl.ValueKind == JsonValueKind.Object)
             {
                 verbose = optionsEl.TryGetProperty("verbose", out JsonElement verboseEl) && verboseEl.ValueKind == JsonValueKind.True;
-                
+
                 if (optionsEl.TryGetProperty("timeout", out JsonElement timeoutEl) && timeoutEl.ValueKind == JsonValueKind.Number)
                 {
                     timeout = timeoutEl.GetInt32();

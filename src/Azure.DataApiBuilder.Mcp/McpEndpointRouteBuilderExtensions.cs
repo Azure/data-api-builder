@@ -1,0 +1,57 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using System.Diagnostics.CodeAnalysis;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Mcp.Health;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using ModelContextProtocol;
+
+namespace Azure.DataApiBuilder.Mcp
+{
+    /// <summary>
+    /// Extension methods for mapping MCP endpoints
+    /// </summary>
+    public static class McpEndpointRouteBuilderExtensions
+    {
+        /// <summary>
+        /// Maps MCP endpoints and health checks if MCP is enabled
+        /// </summary>
+        public static IEndpointRouteBuilder MapDabMcp(
+            this IEndpointRouteBuilder endpoints, 
+            RuntimeConfigProvider runtimeConfigProvider, 
+            [StringSyntax("Route")] string pattern = "")
+        {
+            if (!TryGetMcpOptions(runtimeConfigProvider, out McpRuntimeOptions? mcpOptions) || mcpOptions == null || !mcpOptions.Enabled)
+            {
+                return endpoints;
+            }
+
+            string mcpPath = mcpOptions.Path ?? McpRuntimeOptions.DEFAULT_PATH;
+
+            // Map the MCP endpoint
+            endpoints.MapMcp(mcpPath);
+
+            // Map health checks relative to the MCP path
+            string healthPath = $"{mcpPath.TrimEnd('/')}/health";
+            endpoints.MapDabHealthChecks(healthPath);
+
+            return endpoints;
+        }
+
+        private static bool TryGetMcpOptions(RuntimeConfigProvider runtimeConfigProvider, out McpRuntimeOptions? mcpOptions)
+        {
+            mcpOptions = null;
+            
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            {
+                return false;
+            }
+
+            mcpOptions = runtimeConfig?.Runtime?.Mcp;
+            return mcpOptions != null;
+        }
+    }
+}

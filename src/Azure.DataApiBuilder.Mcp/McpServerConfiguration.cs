@@ -1,56 +1,26 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Mcp.Health;
-using Azure.DataApiBuilder.Mcp.Tools;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
 namespace Azure.DataApiBuilder.Mcp
 {
-    public static class Extensions
+    /// <summary>
+    /// Configuration for MCP server capabilities and handlers
+    /// </summary>
+    internal static class McpServerConfiguration
     {
-        private static McpRuntimeOptions? _mcpOptions;
-
-        public static IServiceCollection AddDabMcpServer(this IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
+        /// <summary>
+        /// Configures the MCP server with tool capabilities
+        /// </summary>
+        internal static IServiceCollection ConfigureMcpServer(this IServiceCollection services)
         {
-            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
-            {
-                // If config is not available, skip MCP setup
-                return services;
-            }
-
-            _mcpOptions = runtimeConfig?.Runtime?.Mcp;
-
-            // Only add MCP server if it's enabled in the configuration
-            if (_mcpOptions == null || !_mcpOptions.Enabled)
-            {
-                return services;
-            }
-
-            // Register the tool registry
-            services.AddSingleton<McpToolRegistry>();
-
-            // Register individual tools
-            services.AddSingleton<IMcpTool, EchoTool>();
-            services.AddSingleton<IMcpTool, DescribeEntitiesTool>();
-            services.AddSingleton<IMcpTool, ComplexTool>();
-
-            // Register domain tools
-            services.AddDmlTools(_mcpOptions);
-
-            // Register MCP server with dynamic tool handlers
             services.AddMcpServer(options =>
             {
                 options.ServerInfo = new() { Name = "Data API Builder MCP Server", Version = "1.0.0" };
-
                 options.Capabilities = new()
                 {
                     Tools = new()
@@ -122,39 +92,7 @@ namespace Azure.DataApiBuilder.Mcp
             })
             .WithHttpTransport();
 
-            // Build the tool registry
-            services.AddHostedService<McpToolRegistryInitializer>();
-
             return services;
-        }
-
-        public static IEndpointRouteBuilder MapDabMcp(this IEndpointRouteBuilder endpoints, RuntimeConfigProvider runtimeConfigProvider, [StringSyntax("Route")] string pattern = "")
-        {
-            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
-            {
-                // If config is not available, skip MCP mapping
-                return endpoints;
-            }
-
-            McpRuntimeOptions? mcpOptions = runtimeConfig?.Runtime?.Mcp;
-
-            // Only map MCP endpoints if MCP is enabled
-            if (mcpOptions == null || !mcpOptions.Enabled)
-            {
-                return endpoints;
-            }
-
-            // Get the MCP path with proper null handling and default
-            string mcpPath = mcpOptions.Path ?? McpRuntimeOptions.DEFAULT_PATH;
-
-            // Map the MCP endpoint
-            endpoints.MapMcp(mcpPath);
-
-            // Map health checks relative to the MCP path
-            string healthPath = mcpPath.TrimEnd('/') + "/health";
-            endpoints.MapDabHealthChecks(healthPath);
-
-            return endpoints;
         }
     }
 }

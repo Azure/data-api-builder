@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 
@@ -18,25 +20,60 @@ namespace Azure.DataApiBuilder.Mcp.Tools
             };
         }
 
-        public async Task<CallToolResult> ExecuteAsync(
+        public Task<CallToolResult> ExecuteAsync(
             JsonDocument? arguments,
             IServiceProvider serviceProvider,
             CancellationToken cancellationToken = default)
         {
-            // Create a scope to resolve scoped services
-            using IServiceScope scope = serviceProvider.CreateScope();
-            IServiceProvider scopedProvider = scope.ServiceProvider;
-
-            // Set the service provider for DmlTools
-            Extensions.ServiceProvider = scopedProvider;
-
-            // Call the DescribeEntities tool method
-            string entitiesJson = await DmlTools.DescribeEntities();
-
-            return new CallToolResult
+            try
             {
-                Content = [new TextContentBlock { Type = "application/json", Text = entitiesJson }]
-            };
+                // Get the runtime config provider
+                RuntimeConfigProvider? runtimeConfigProvider = serviceProvider.GetService<RuntimeConfigProvider>();
+                if (runtimeConfigProvider == null || !runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+                {
+                    return Task.FromResult(new CallToolResult
+                    {
+                        Content = [new TextContentBlock { Type = "text", Text = "Error: Runtime configuration not available." }]
+                    });
+                }
+
+                // Extract entity information from the runtime config
+                Dictionary<string, object> entities = new();
+                
+                if (runtimeConfig.Entities != null)
+                {
+                    foreach (KeyValuePair<string, Entity> entity in runtimeConfig.Entities)
+                    {
+                        entities[entity.Key] = new
+                        {
+                            source = entity.Value.Source,
+                            permissions = entity.Value.Permissions?.Select(p => new
+                            {
+                                role = p.Role,
+                                actions = p.Actions
+                            })
+                        };
+                    }
+                }
+
+                string entitiesJson = JsonSerializer.Serialize(entities, new JsonSerializerOptions 
+                { 
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                return Task.FromResult(new CallToolResult
+                {
+                    Content = [new TextContentBlock { Type = "application/json", Text = entitiesJson }]
+                });
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult(new CallToolResult
+                {
+                    Content = [new TextContentBlock { Type = "text", Text = $"Error: {ex.Message}" }]
+                });
+            }
         }
     }
 }

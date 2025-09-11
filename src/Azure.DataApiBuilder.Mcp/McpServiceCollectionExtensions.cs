@@ -4,7 +4,6 @@
 using System.Reflection;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp
@@ -40,9 +39,6 @@ namespace Azure.DataApiBuilder.Mcp
             // Auto-discover and register all MCP tools
             RegisterAllMcpTools(services);
 
-            // Register domain-specific tools
-            services.AddDmlTools(mcpOptions);
-
             // Configure MCP server
             services.ConfigureMcpServer();
 
@@ -63,7 +59,6 @@ namespace Azure.DataApiBuilder.Mcp
 
             foreach (Type toolType in toolTypes)
             {
-                // Additional logic can be added to skip regstration, for e.g., if a tool is disabled in config
                 services.AddSingleton(typeof(IMcpTool), toolType);
             }
         }

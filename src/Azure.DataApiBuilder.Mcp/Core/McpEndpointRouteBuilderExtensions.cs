@@ -20,8 +20,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// Maps MCP endpoints and health checks if MCP is enabled
         /// </summary>
         public static IEndpointRouteBuilder MapDabMcp(
-            this IEndpointRouteBuilder endpoints, 
-            RuntimeConfigProvider runtimeConfigProvider, 
+            this IEndpointRouteBuilder endpoints,
+            RuntimeConfigProvider runtimeConfigProvider,
             [StringSyntax("Route")] string pattern = "")
         {
             if (!TryGetMcpOptions(runtimeConfigProvider, out McpRuntimeOptions? mcpOptions) || mcpOptions == null || !mcpOptions.Enabled)
@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private static bool TryGetMcpOptions(RuntimeConfigProvider runtimeConfigProvider, out McpRuntimeOptions? mcpOptions)
         {
             mcpOptions = null;
-            
+
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 return false;

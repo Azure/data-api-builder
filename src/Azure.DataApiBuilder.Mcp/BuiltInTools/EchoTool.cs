@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             string? message = null;
-            
+
             if (arguments?.RootElement.TryGetProperty("message", out JsonElement messageEl) == true)
             {
                 message = messageEl.ValueKind == JsonValueKind.String

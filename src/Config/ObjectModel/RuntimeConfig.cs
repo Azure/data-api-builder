@@ -420,7 +420,7 @@ public record RuntimeConfig
     public string ToJson(JsonSerializerOptions? jsonSerializerOptions = null)
     {
         // get default serializer options if none provided.
-        jsonSerializerOptions = jsonSerializerOptions ?? RuntimeConfigLoader.GetSerializationOptions();
+        jsonSerializerOptions = jsonSerializerOptions ?? RuntimeConfigLoader.GetSerializationOptions(replacementSettings: null);
         return JsonSerializer.Serialize(this, jsonSerializerOptions);
     }
 

@@ -467,7 +467,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
         string? schemaPath = _fileSystem.Path.Combine(assemblyDirectory, "dab.draft.schema.json");
         string schemaFileContent = _fileSystem.File.ReadAllText(schemaPath);
-        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions());
+        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions(replacementSettings: null));
 
         if (jsonDictionary is null)
         {

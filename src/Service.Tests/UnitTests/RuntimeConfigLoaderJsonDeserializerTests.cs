@@ -10,7 +10,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -302,10 +301,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
             SetEnvVariables();
-            StringJsonConverterFactory stringConverterFactory = new(EnvironmentVariableReplacementFailureMode.Throw);
-            JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
-            options.Converters.Add(stringConverterFactory);
-            Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
+            Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json));
         }
 
         [DataRow("\"notsupporteddb\"", "",

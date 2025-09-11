@@ -36,7 +36,12 @@ static internal class Utf8JsonReaderExtensions
         JsonSerializerOptions options = new();
         if (replaceEnvVar)
         {
-            options.Converters.Add(new StringJsonConverterFactory(replacementFailureMode));
+            // Create a simple replacement settings for environment variables only
+            DeserializationVariableReplacementSettings replacementSettings = new(
+                doReplaceEnvVar: true, 
+                doReplaceAKVVar: false, 
+                envFailureMode: replacementFailureMode);
+            options.Converters.Add(new StringJsonConverterFactory(replacementSettings));
         }
 
         return JsonSerializer.Deserialize<string>(ref reader, options);

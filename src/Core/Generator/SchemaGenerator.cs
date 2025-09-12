@@ -28,10 +28,15 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         // List of JSON documents to process.
         private List<JsonDocument> _data;
+
         // Name of the Azure Cosmos DB container from which the JSON data is obtained.
         private string _containerName;
+
         // Dictionary mapping plural entity names to singular names based on the provided configuration.
         private Dictionary<string, string> _entityAndSingularNameMapping = new();
+
+        // Entities from config for description lookup
+        private IReadOnlyDictionary<string, Entity>? _entities;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SchemaGenerator"/> class.
@@ -57,6 +62,9 @@ namespace Azure.DataApiBuilder.Core.Generator
                 {
                     _entityAndSingularNameMapping.Add(item.Value.GraphQL.Singular.Pascalize(), item.Key);
                 }
+
+                // Convert RuntimeEntities to Dictionary for description lookup
+                _entities = config.Entities.ToDictionary(x => x.Key, x => x.Value);
             }
         }
 
@@ -128,6 +136,22 @@ namespace Azure.DataApiBuilder.Core.Generator
             {
                 // Determine if the entity is the root entity.
                 bool isRoot = entity.Key == _containerName.Pascalize();
+
+                // Get description from config if available
+                string? description = null;
+                if (_entityAndSingularNameMapping.ContainsKey(entity.Key) && _entities != null)
+                {
+                    string configEntityName = _entityAndSingularNameMapping[entity.Key];
+                    if (_entities.ContainsKey(configEntityName))
+                    {
+                        description = _entities[configEntityName].Description;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(description))
+                {
+                    sb.AppendLine($"\"\"\"{description}\"\"\"");
+                }
 
                 sb.Append($"type {entity.Key} ");
 

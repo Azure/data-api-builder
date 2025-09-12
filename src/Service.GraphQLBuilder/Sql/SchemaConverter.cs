@@ -78,6 +78,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
 
+            StringValueNode? descriptionNode = null;
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
+            {
+                descriptionNode = new StringValueNode(configEntity.Description);
+            }
+
+            // Set the description node if available
+            if (descriptionNode != null)
+            {
+                objectDefinitionNode = objectDefinitionNode.WithDescription(descriptionNode);
+            }
+
             return objectDefinitionNode;
         }
 
@@ -122,6 +134,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
+            StringValueNode? descriptionNode = null;
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
+            {
+                descriptionNode = new StringValueNode(configEntity.Description);
+            }
+
             // Top-level object type definition name should be singular.
             // The singularPlural.Singular value is used, and if not configured,
             // the top-level entity name value is used. No singularization occurs
@@ -129,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             return new ObjectTypeDefinitionNode(
                 location: null,
                 name: new(value: GetDefinedSingularName(entityName, configEntity)),
-                description: null,
+                description: descriptionNode,
                 directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
@@ -213,6 +231,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
+            StringValueNode? descriptionNode = null;
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
+            {
+                descriptionNode = new StringValueNode(configEntity.Description);
+            }
+
             // Top-level object type definition name should be singular.
             // The singularPlural.Singular value is used, and if not configured,
             // the top-level entity name value is used. No singularization occurs
@@ -220,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             return new ObjectTypeDefinitionNode(
                 location: null,
                 name: new(value: GetDefinedSingularName(entityName, configEntity)),
-                description: null,
+                description: descriptionNode,
                 directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
                 new List<NamedTypeNode>(),
                 fieldDefinitionNodes.Values.ToImmutableList());
@@ -580,8 +604,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             bool isNullableRelationship = false;
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                &&
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo) &&
                 // From the relationship information, obtain the foreign key definition for the given target entity
                 relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                 out List<ForeignKeyDefinition>? listOfForeignKeys))

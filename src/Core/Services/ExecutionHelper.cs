@@ -78,7 +78,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         }
 
                         return ValueTask.CompletedTask;
-                    });
+                    },
+                    cleanAfter: CleanAfter.Request);
 
                 context.Result = result.Item1.Select(t => t.RootElement).ToArray();
                 SetNewMetadata(context, result.Item2);
@@ -125,7 +126,8 @@ namespace Azure.DataApiBuilder.Service.Services
                         }
 
                         return ValueTask.CompletedTask;
-                    });
+                    },
+                    cleanAfter: CleanAfter.Request);
 
                 context.Result = result.Item1.Select(t => t.RootElement).ToArray();
                 SetNewMetadata(context, result.Item2);
@@ -312,6 +314,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     result.Dispose();
                     return ValueTask.CompletedTask;
                 });
+
                 // The disposal could occur before we were finished using the value from the jsondocument,
                 // thus needing to ensure copying the root element. Hence, we clone the root element.
                 context.Result = result.RootElement.Clone();

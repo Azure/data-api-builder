@@ -3651,6 +3651,36 @@
           }
         ]
       }
+    },
+    {
+      GetBooksAuth: {
+        Source: {
+          Object: get_books,
+          Type: stored-procedure
+        },
+        GraphQL: {
+          Singular: GetBooksAuth,
+          Plural: GetBooksAuths,
+          Enabled: true,
+          Operation: Query
+        },
+        Rest: {
+          Methods: [
+            Get
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: teststoredprocauth,
+            Actions: [
+              {
+                Action: Execute
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

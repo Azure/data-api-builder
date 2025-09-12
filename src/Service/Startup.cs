@@ -472,7 +472,10 @@ namespace Azure.DataApiBuilder.Service
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
+                    // The GraphQLSchemaCreator is an application service that is not available on 
+                    // the schema specific service provider, this means we have to get it with 
+                    // the GetRootServiceProvider helper.
+                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
                     graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()

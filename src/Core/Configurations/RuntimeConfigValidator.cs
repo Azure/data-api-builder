@@ -703,10 +703,10 @@ public class RuntimeConfigValidator : IConfigValidator
     public void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
     {
         // Both REST and GraphQL endpoints cannot be disabled at the same time.
-        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
+        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled && !runtimeConfig.IsMcpEnabled)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Both GraphQL and REST endpoints are disabled.",
+                message: $"GraphQL, REST, and MCP endpoints are disabled.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
@@ -742,12 +742,20 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         if (string.Equals(
-            a: runtimeConfig.RestPath,
-            b: runtimeConfig.GraphQLPath,
-            comparisonType: StringComparison.OrdinalIgnoreCase))
+                a: runtimeConfig.RestPath,
+                b: runtimeConfig.GraphQLPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                a: runtimeConfig.RestPath,
+                b: runtimeConfig.McpPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                a: runtimeConfig.McpPath,
+                b: runtimeConfig.GraphQLPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase))
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Conflicting GraphQL and REST path configuration.",
+                message: $"Conflicting path configuration between GraphQL, REST, and MCP.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }

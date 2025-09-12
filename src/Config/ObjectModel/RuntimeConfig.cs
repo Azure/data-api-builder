@@ -91,6 +91,15 @@ public record RuntimeConfig
          Runtime.Rest.Enabled) &&
          DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
 
+    /// <summary>
+    /// Retrieves the value of runtime.mcp.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsMcpEnabled =>
+        Runtime is null ||
+         Runtime.Mcp is null ||
+         Runtime.Mcp.Enabled;
+
     [JsonIgnore]
     public bool IsHealthEnabled =>
         Runtime is null ||

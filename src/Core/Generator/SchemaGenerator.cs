@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                     }
                 }
 
-                if (!string.IsNullOrEmpty(description))
+                if (!string.IsNullOrWhiteSpace(description))
                 {
                     sb.AppendLine($"\"\"\"{description}\"\"\"");
                 }

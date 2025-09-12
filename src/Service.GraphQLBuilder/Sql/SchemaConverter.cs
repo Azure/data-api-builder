@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             StringValueNode? descriptionNode = null;
-            if (!string.IsNullOrEmpty(configEntity.Description))
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
             {
                 descriptionNode = new StringValueNode(configEntity.Description);
             }
@@ -135,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             StringValueNode? descriptionNode = null;
-            if (!string.IsNullOrEmpty(configEntity.Description))
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
             {
                 descriptionNode = new StringValueNode(configEntity.Description);
             }
@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             StringValueNode? descriptionNode = null;
-            if (!string.IsNullOrEmpty(configEntity.Description))
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
             {
                 descriptionNode = new StringValueNode(configEntity.Description);
             }

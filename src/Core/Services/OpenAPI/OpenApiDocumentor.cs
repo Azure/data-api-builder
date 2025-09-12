@@ -137,6 +137,19 @@ namespace Azure.DataApiBuilder.Core.Services
                     Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName)
                 };
 
+                // Collect all entity tags and their descriptions for the top-level tags array
+                List<OpenApiTag> globalTags = new();
+                foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
+                {
+                    Entity entity = kvp.Value;
+                    string restPath = entity.Rest?.Path ?? kvp.Key;
+                    globalTags.Add(new OpenApiTag
+                    {
+                        Name = restPath,
+                        Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
+                    });
+                }
+
                 OpenApiDocument doc = new()
                 {
                     Info = new OpenApiInfo
@@ -149,7 +162,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         new() { Url = url }
                     },
                     Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName),
-                    Components = components
+                    Components = components,
+                    Tags = globalTags
                 };
                 _openApiDocument = doc;
             }
@@ -212,10 +226,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                // Explicitly exclude setting the tag's Description property since the Name property is self-explanatory.
+                // Set the tag's Description property to the entity's semantic description if present.
                 OpenApiTag openApiTag = new()
                 {
-                    Name = entityRestPath
+                    Name = entityRestPath,
+                    Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
                 };
 
                 // The OpenApiTag will categorize all paths created using the entity's name or overridden REST path value.

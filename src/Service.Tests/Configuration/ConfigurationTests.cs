@@ -1608,7 +1608,7 @@ type Moon {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), new());
 
             // creating an entity with invalid table name
             Entity entityWithInvalidSourceName = new(
@@ -1679,7 +1679,7 @@ type Moon {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), new());
 
             // creating an entity with invalid table name
             Entity entityWithInvalidSource = new(
@@ -2214,7 +2214,7 @@ type Moon {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, new(), new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -2524,80 +2524,93 @@ type Moon {
         /// <param name="expectedStatusCodeForGraphQL">Expected HTTP status code code for the GraphQL request</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Both Rest and GraphQL endpoints enabled globally")]
-        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled and GraphQL endpoints disabled globally")]
-        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest disabled and GraphQL endpoints enabled globally")]
-        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Both Rest and GraphQL endpoints enabled globally")]
-        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled and GraphQL endpoints disabled globally")]
-        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest disabled and GraphQL endpoints enabled globally")]
-        public async Task TestGlobalFlagToEnableRestAndGraphQLForHostedAndNonHostedEnvironment(
+        [DataRow(true, true, true, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest, GraphQL, MCP all enabled globally")]
+        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled, GraphQL and MCP disabled")]
+        [DataRow(false, true, false, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - GraphQL enabled, Rest and MCP disabled")]
+        [DataRow(false, false, true, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - MCP enabled, Rest and GraphQL disabled")]
+        [DataRow(true, true, true, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest, GraphQL, MCP all enabled globally")]
+        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled, GraphQL and MCP disabled")]
+        [DataRow(false, true, false, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - GraphQL enabled, Rest and MCP disabled")]
+        [DataRow(false, false, true, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - MCP enabled, Rest and GraphQL disabled")]
+        public async Task TestGlobalFlagToEnableRestGraphQLMcpForHostedAndNonHostedEnvironment(
             bool isRestEnabled,
             bool isGraphQLEnabled,
+            bool isMcpEnabled,
             HttpStatusCode expectedStatusCodeForREST,
             HttpStatusCode expectedStatusCodeForGraphQL,
+            HttpStatusCode expectedStatusCodeForMcp,
             string configurationEndpoint)
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: isGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: isRestEnabled);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: isMcpEnabled);
 
-            DataSource dataSource = new(DatabaseType.MSSQL,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            DataSource dataSource = new(
+                DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(
+                dataSource,
+                graphqlOptions,
+                restRuntimeOptions,
+                mcpRuntimeOptions);
+
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
-            string[] args = new[]
-            {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG}" };
 
             // Non-Hosted Scenario
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                string query = @"{
-                    book_by_pk(id: 1) {
-                       id,
-                       title,
-                       publisher_id
-                    }
-                }";
-
+                // GraphQL request
+                string query = @"{ book_by_pk(id: 1) { id, title, publisher_id } }";
                 object payload = new { query };
-
                 HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
                 {
                     Content = JsonContent.Create(payload)
                 };
-
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
                 Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
 
+                // REST request
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
+
+                // MCP request
+                object mcpPayload = new
+                {
+                    jsonrpc = "2.0",
+                    id = 1,
+                    method = "tools/list"
+                };
+                HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
+                {
+                    Content = JsonContent.Create(mcpPayload)
+                };
+                HttpResponseMessage mcpResponse = await client.SendAsync(mcpRequest);
+                Assert.AreEqual(expectedStatusCodeForMcp, mcpResponse.StatusCode);
             }
 
             // Hosted Scenario
-            // Instantiate new server with no runtime config for post-startup configuration hydration tests.
             using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
-
-                HttpResponseMessage postResult =
-                await client.PostAsync(configurationEndpoint, content);
+                HttpResponseMessage postResult = await client.PostAsync(configurationEndpoint, content);
                 Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
                 HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
-
                 Assert.AreEqual(expected: expectedStatusCodeForREST, actual: restResponseCode);
 
                 HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
-
                 Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode);
 
+                HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client);
+                Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode);
             }
         }
 
@@ -2618,6 +2631,7 @@ type Moon {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -2648,7 +2662,7 @@ type Moon {
                                   Mappings: null);
 
             string entityName = "Stock";
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
 
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
@@ -2919,6 +2933,7 @@ type Moon {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -2949,7 +2964,7 @@ type Moon {
                                   Mappings: null);
 
             string entityName = "Stock";
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
 
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
@@ -3060,6 +3075,7 @@ type Moon {
 
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -3077,11 +3093,11 @@ type Moon {
                              );
 
                 string entityName = "GetBooks";
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
             }
             else
             {
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
             }
 
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -3158,6 +3174,7 @@ type Moon {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -3175,11 +3192,11 @@ type Moon {
                              );
 
                 string entityName = "GetBooks";
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
             }
             else
             {
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
             }
 
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -3188,7 +3205,7 @@ type Moon {
             HostOptions staticWebAppsHostOptions = new(null, authenticationOptions);
 
             RuntimeOptions runtimeOptions = configuration.Runtime;
-            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, staticWebAppsHostOptions, "/data-api");
+            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, runtimeOptions?.Mcp, staticWebAppsHostOptions, "/data-api");
             RuntimeConfig baseRouteEnabledConfig = configuration with { Runtime = baseRouteEnabledRuntimeOptions };
             File.WriteAllText(CUSTOM_CONFIG, baseRouteEnabledConfig.ToJson());
 
@@ -3347,7 +3364,7 @@ type Moon {
                 Mappings: null
             );
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), viewEntity, "books_view_all");
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), new(), viewEntity, "books_view_all");
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
@@ -3568,6 +3585,7 @@ type Planet @model(name:""PlanetAlias"") {
             RuntimeOptions runtimeOptions = new(
                 Rest: new(),
                 GraphQL: new(),
+                Mcp: new(),
                 Host: new(Cors: null, authenticationOptions, hostMode)
             );
             RuntimeConfig configWithCustomHostMode = config with { Runtime = runtimeOptions };
@@ -3608,10 +3626,11 @@ type Planet @model(name:""PlanetAlias"") {
         {
             GraphQLRuntimeOptions graphqlOptions = new(AllowIntrospection: enableIntrospection);
             RestRuntimeOptions restRuntimeOptions = new();
+            McpRuntimeOptions mcpRuntimeOptions = new();
 
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -3660,6 +3679,7 @@ type Planet @model(name:""PlanetAlias"") {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: globalGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+            McpRuntimeOptions mcpOptions = new(Enabled: true);
 
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
@@ -3683,7 +3703,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Mappings: mappings
             );
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, "graphqlNameCompat");
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpOptions, entity, "graphqlNameCompat");
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -3739,7 +3759,8 @@ type Planet @model(name:""PlanetAlias"") {
             RuntimeConfig configuration = InitMinimalRuntimeConfig(
                 dataSource: dataSource,
                 graphqlOptions: new(),
-                restOptions: new(Path: customRestPath));
+                restOptions: new(Path: customRestPath),
+                mcpOptions: new());
 
             configuration = configuration
                 with
@@ -4057,6 +4078,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null),
                     Telemetry: new(LoggerLevel: logLevelOptions)
                 ),
@@ -4270,6 +4292,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null),
                     Telemetry: telemetryOptions
                 ),
@@ -4739,7 +4762,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -4838,7 +4861,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -4921,7 +4944,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -4984,11 +5007,13 @@ type Planet @model(name:""PlanetAlias"") {
                 ? new(
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: true),
                     Host: hostOptions,
                     Pagination: paginationOptions)
                 : new(
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: true),
                     Host: hostOptions);
 
             RuntimeConfig runtimeConfig = new(
@@ -5303,6 +5328,49 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Executing MCP POST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
+        /// else the response code from the MCP request</returns>
+        private static async Task<HttpStatusCode> GetMcpResponsePostConfigHydration(HttpClient httpClient)
+        {
+            // Retry request RETRY_COUNT times in 1 second increments to allow required services
+            // time to instantiate and hydrate permissions.
+            int retryCount = RETRY_COUNT;
+            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
+            while (retryCount > 0)
+            {
+                // Minimal MCP request (list tools) – valid JSON-RPC request
+                object payload = new
+                {
+                    jsonrpc = "2.0",
+                    id = 1,
+                    method = "tools/list"
+                };
+
+                HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
+                responseCode = mcpResponse.StatusCode;
+
+                if (responseCode == HttpStatusCode.ServiceUnavailable)
+                {
+                    retryCount--;
+                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    continue;
+                }
+
+                break;
+            }
+
+            return responseCode;
+        }
+
+        /// <summary>
         /// Helper  method to instantiate RuntimeConfig object needed for multiple create tests.
         /// </summary>
         public static RuntimeConfig InitialzieRuntimeConfigForMultipleCreateTests(bool isMultipleCreateOperationEnabled)
@@ -5311,6 +5379,8 @@ type Planet @model(name:""PlanetAlias"") {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: isMultipleCreateOperationEnabled)));
 
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
@@ -5370,7 +5440,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
                                               DataSource: dataSource,
-                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: null),
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, mcpRuntimeOptions, Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: null),
                                               Entities: new(entityMap));
             return runtimeConfig;
         }
@@ -5383,6 +5453,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource,
             GraphQLRuntimeOptions graphqlOptions,
             RestRuntimeOptions restOptions,
+            McpRuntimeOptions mcpOptions,
             Entity entity = null,
             string entityName = null,
             RuntimeCacheOptions cacheOptions = null
@@ -5420,7 +5491,7 @@ type Planet @model(name:""PlanetAlias"") {
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
-                Runtime: new(restOptions, graphqlOptions,
+                Runtime: new(restOptions, graphqlOptions, mcpOptions,
                     Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development),
                     Cache: cacheOptions
                 ),
@@ -5496,6 +5567,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(new Dictionary<string, Entity>())
@@ -5533,6 +5605,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(Cors: null, Authentication: authenticationOptions)
                 ),
                 Entities: new(entityMap)

@@ -80,6 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -154,6 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -229,6 +231,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -344,6 +347,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -446,6 +450,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -512,6 +517,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                         Rest: new(),
                         GraphQL: new(),
+                        Mcp: new(),
                         Host: new(Cors: null, Authentication: null, MaxResponseSizeMB: 5)
                     ),
                 Entities: new(new Dictionary<string, Entity>()));
@@ -573,6 +579,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                         Rest: new(),
                         GraphQL: new(),
+                        Mcp: new(),
                         Host: new(Cors: null, Authentication: null, MaxResponseSizeMB: 4)
                     ),
                 Entities: new(new Dictionary<string, Entity>()));

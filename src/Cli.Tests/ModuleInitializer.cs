@@ -73,6 +73,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.RestPath);
         // Ignore the GraphQLPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.GraphQLPath);
+        // Ignore the McpPath as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpPath);
         // Ignore the AllowIntrospection as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.

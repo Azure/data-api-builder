@@ -23,6 +23,31 @@
         }
       }
     },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp",
+      "dml-tools": {
+        "enabled": true,
+        "describe-entities": {
+          "enabled": true
+        },
+        "create-record": {
+          "enabled": true
+        },
+        "read-record": {
+          "enabled": true
+        },
+        "update-record": {
+          "enabled": true
+        },
+        "delete-record": {
+          "enabled": true
+        },
+        "execute-record": {
+          "enabled": true
+        }
+      }
+    },
     "host": {
       "cors": {
         "origins": [
@@ -2314,7 +2339,18 @@
     "Notebook": {
       "source": {
         "object": "notebooks",
-        "type": "table"
+        "type": "table",
+        "object-description": "Table containing notebook information",
+        "parameters" : {
+          "id": {
+            "type": "int",
+            "description": "An integer parameter for testing"
+          },
+          "name": {
+            "type": "string",
+            "description": "A string parameter for testing"
+          }
+        }
       },
       "graphql": {
         "enabled": true,

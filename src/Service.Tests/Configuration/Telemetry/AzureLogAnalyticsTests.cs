@@ -43,7 +43,7 @@ public class AzureLogAnalyticsTests
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-        _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new());
+        _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new(), mcpOptions: new());
 
         TelemetryOptions _testTelemetryOptions = new(AzureLogAnalytics: new AzureLogAnalyticsOptions(isLogAnalyticsEnabled, new AzureLogAnalyticsAuthOptions(logAnalyticsCustomTable, logAnalyticsDcrImmutableId, logAnalyticsDceEndpoint)));
         _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };

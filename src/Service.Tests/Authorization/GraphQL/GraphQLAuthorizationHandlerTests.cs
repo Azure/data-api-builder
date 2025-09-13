@@ -139,5 +139,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 path: @"[""booksNF""]"
             );
         }
+
+        /// <summary>
+        /// Tests that a GraphQL query backed by stored procedure with a client role is allowed access and returns results.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task Query_StoredProc_Allowed()
+        {
+            string graphQLQueryName = "executeGetBooksAuth";
+            string graphQLQuery = @"{
+                executeGetBooksAuth {
+                    id
+                    title
+                    publisher_id
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "teststoredprocauth");
+
+            string dbQuery = $"EXEC dbo.get_books";
+            string expected = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests that a GraphQL query backed by stored procedure with a client role is not allowed access and results in an
+        /// appropriate error message.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task Query_StoredProc_NotAllowed()
+        {
+            string graphQLQueryName = "executeGetBooksAuth";
+            string graphQLQuery = @"{
+                executeGetBooksAuth {
+                    id
+                    title
+                    publisher_id
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "roledoesnotexist");
+
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                actual.ToString(),
+                message: "The current user is not authorized to access this resource.",
+                path: @"[""executeGetBooksAuth""]"
+            );
+        }
     }
 }

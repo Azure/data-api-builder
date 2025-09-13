@@ -130,12 +130,14 @@ public abstract class RuntimeConfigLoader
     public abstract string GetPublishedDraftSchemaLink();
 
     /// <summary>
-    /// Extracts AzureKeyVaultOptions from JSON string without performing variable replacement.
-    /// This is needed to get the AKV configuration for setting up variable replacement.
+    /// Extracts AzureKeyVaultOptions from JSON string with environment variable replacement but no AKV replacement.
+    /// This is needed to get the actual AKV configuration (resolving any @env() variables) for setting up variable replacement.
     /// </summary>
     /// <param name="json">JSON that represents the config file.</param>
+    /// <param name="replacementFailureMode">Failure mode for environment variable replacement.</param>
     /// <returns>AzureKeyVaultOptions if present, null otherwise.</returns>
-    private static AzureKeyVaultOptions? ExtractAzureKeyVaultOptions(string json)
+    private static AzureKeyVaultOptions? ExtractAzureKeyVaultOptions(string json, 
+        Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode replacementFailureMode)
     {
         JsonSerializerOptions options = new()
         {
@@ -144,8 +146,16 @@ public abstract class RuntimeConfigLoader
             ReadCommentHandling = JsonCommentHandling.Skip
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
-        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory());
-        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replaceEnvVar: false));
+        // Enable environment variable replacement for AKV extraction so @env('AKV_ENDPOINT') works
+        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replaceEnvVar: true));
+        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replaceEnvVar: true));
+        
+        // Add environment variable replacement only (no AKV replacement in first pass)
+        DeserializationVariableReplacementSettings envOnlySettings = new(
+            doReplaceEnvVar: true,
+            doReplaceAKVVar: false,
+            envFailureMode: replacementFailureMode);
+        options.Converters.Add(new StringJsonConverterFactory(envOnlySettings));
 
         try
         {
@@ -182,14 +192,16 @@ public abstract class RuntimeConfigLoader
         bool replaceEnvVar = false,
         Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode replacementFailureMode = Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode.Throw)
     {
-        // First pass: extract AzureKeyVault options without variable replacement
+        // First pass: extract AzureKeyVault options with environment variable replacement (but no AKV replacement)
+        // This ensures that @env('AKV_ENDPOINT') in the azure-key-vault section gets resolved properly
         AzureKeyVaultOptions? azureKeyVaultOptions = null;
         if (replaceEnvVar)
         {
-            azureKeyVaultOptions = ExtractAzureKeyVaultOptions(json);
+            azureKeyVaultOptions = ExtractAzureKeyVaultOptions(json, replacementFailureMode);
         }
 
-        // Create replacement settings based on extracted AKV options
+        // Second pass: Create replacement settings based on extracted AKV options for full config deserialization
+        // This enables both environment variable and AKV variable replacement for the entire configuration
         DeserializationVariableReplacementSettings? replacementSettings = null;
         if (replaceEnvVar)
         {
@@ -348,7 +360,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new FileSinkConverter(replacementSettings?.DoReplaceEnvVar ?? false));
         
         // Add AzureKeyVaultOptionsConverterFactory to ensure AKV config is deserialized properly
-        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory());
+        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
 
         // Only add the extensible string converter if we have replacement settings
         if (replacementSettings is not null)

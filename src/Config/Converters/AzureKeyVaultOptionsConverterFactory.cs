@@ -8,11 +8,21 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 namespace Azure.DataApiBuilder.Config.Converters;
 
 /// <summary>
-/// Converter factory for AzureKeyVaultOptions that does not perform variable replacement.
-/// This ensures we can read the raw AKV configuration needed to set up variable replacement.
+/// Converter factory for AzureKeyVaultOptions that can optionally perform variable replacement.
 /// </summary>
 internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private readonly bool _replaceEnvVar;
+
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
+    internal AzureKeyVaultOptionsConverterFactory(bool replaceEnvVar = false)
+    {
+        _replaceEnvVar = replaceEnvVar;
+    }
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -22,14 +32,24 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new AzureKeyVaultOptionsConverter();
+        return new AzureKeyVaultOptionsConverter(_replaceEnvVar);
     }
 
     private class AzureKeyVaultOptionsConverter : JsonConverter<AzureKeyVaultOptions>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private readonly bool _replaceEnvVar;
+
+        /// <param name="replaceEnvVar">Whether to replace environment variable with its
+        /// value or not while deserializing.</param>
+        public AzureKeyVaultOptionsConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         /// <summary>
-        /// Reads AzureKeyVaultOptions without performing variable replacement.
-        /// Variable replacement will be handled in subsequent passes.
+        /// Reads AzureKeyVaultOptions with optional variable replacement.
         /// </summary>
         public override AzureKeyVaultOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -57,7 +77,7 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
                         case "endpoint":
                             if (reader.TokenType is JsonTokenType.String)
                             {
-                                endpoint = reader.GetString();
+                                endpoint = reader.DeserializeString(_replaceEnvVar);
                             }
 
                             break;
@@ -65,7 +85,7 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
                         case "retry-policy":
                             if (reader.TokenType is JsonTokenType.StartObject)
                             {
-                                // Use the existing AKVRetryPolicyOptionsConverter without variable replacement
+                                // Pass the replaceEnvVar setting to the retry policy converter
                                 retryPolicy = JsonSerializer.Deserialize<AKVRetryPolicyOptions>(ref reader, options);
                             }
 

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -14,7 +15,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
@@ -49,19 +49,32 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the DB query by establishing a connection to the DB.
-        public async Task<string?> ExecuteDbQueryAsync(string query, string connectionString)
+        public async Task<string?> ExecuteDbQueryAsync(string query, string connectionString, DbProviderFactory providerFactory)
         {
             string? errorMessage = null;
             // Execute the query on DB and return the response time.
-            using (SqlConnection connection = new(connectionString))
+            DbConnection? connection = providerFactory.CreateConnection();
+            if (connection == null)
+            {
+                errorMessage = "Failed to create database connection.";
+                _logger.LogError(errorMessage);
+                return errorMessage;
+            }
+
+            using (connection)
             {
                 try
                 {
-                    SqlCommand command = new(query, connection);
-                    connection.Open();
-                    SqlDataReader reader = await command.ExecuteReaderAsync();
-                    _logger.LogTrace("The health check query for datasource executed successfully.");
-                    reader.Close();
+                    connection.ConnectionString = connectionString;
+                    using (DbCommand command = connection.CreateCommand())
+                    {
+                        command.CommandText = query;
+                        await connection.OpenAsync();
+                        using (DbDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            _logger.LogTrace("The health check query for datasource executed successfully.");
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -145,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 List<string> columnNames = dbObject.SourceDefinition.Columns.Keys.ToList();
 
                 // In case of GraphQL API, use the plural value specified in [entity.graphql.type.plural].
-                // Further, we need to camel case this plural value to match the GraphQL object name.                  
+                // Further, we need to camel case this plural value to match the GraphQL object name.
                 string graphqlObjectName = GraphQLNaming.GenerateListQueryName(entityName, entity);
 
                 // In case any primitive column names are present, execute the query

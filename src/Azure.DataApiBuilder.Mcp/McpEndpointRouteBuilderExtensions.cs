@@ -41,6 +41,12 @@ namespace Azure.DataApiBuilder.Mcp
             return endpoints;
         }
 
+        /// <summary>
+        /// Gets MCP options from the runtime configuration
+        /// </summary>
+        /// <param name="runtimeConfigProvider">Runtime config provider</param>
+        /// <param name="mcpOptions">MCP options</param>
+        /// <returns>True if MCP options were found, false otherwise</returns>
         private static bool TryGetMcpOptions(RuntimeConfigProvider runtimeConfigProvider, out McpRuntimeOptions? mcpOptions)
         {
             mcpOptions = null;

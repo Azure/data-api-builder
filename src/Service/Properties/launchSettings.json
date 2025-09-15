@@ -41,7 +41,7 @@
     "MsSql": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "jerry",
+      "launchUrl": "graphql",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "MsSql"
       },

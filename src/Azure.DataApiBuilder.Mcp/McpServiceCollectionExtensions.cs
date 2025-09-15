@@ -51,10 +51,10 @@ namespace Azure.DataApiBuilder.Mcp
         private static void RegisterAllMcpTools(IServiceCollection services)
         {
             Assembly mcpAssembly = typeof(IMcpTool).Assembly;
-            
+
             IEnumerable<Type> toolTypes = mcpAssembly.GetTypes()
-                .Where(t => t.IsClass && 
-                           !t.IsAbstract && 
+                .Where(t => t.IsClass &&
+                           !t.IsAbstract &&
                            typeof(IMcpTool).IsAssignableFrom(t));
 
             foreach (Type toolType in toolTypes)

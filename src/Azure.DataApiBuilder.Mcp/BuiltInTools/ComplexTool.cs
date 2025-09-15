@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Mcp.Model;
 using ModelContextProtocol.Protocol;
+using static Azure.DataApiBuilder.Mcp.Model.Enums;
 
 namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
@@ -33,6 +34,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
     */
     public class ComplexTool : IMcpTool
     {
+        public ToolType ToolType { get; } = ToolType.BuiltIn;
+
         public Tool GetToolMetadata()
         {
             return new Tool

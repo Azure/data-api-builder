@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
+using static Azure.DataApiBuilder.Mcp.Model.Enums;
 
 namespace Azure.DataApiBuilder.Mcp.Model
 {
@@ -11,6 +12,11 @@ namespace Azure.DataApiBuilder.Mcp.Model
     /// </summary>
     public interface IMcpTool
     {
+        /// <summary>
+        /// Gets the type of the tool.
+        /// </summary>
+        ToolType ToolType { get; }
+
         /// <summary>
         /// Gets the tool metadata
         /// </summary>

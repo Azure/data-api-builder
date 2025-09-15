@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using ModelContextProtocol;
 
-namespace Azure.DataApiBuilder.Mcp
+namespace Azure.DataApiBuilder.Mcp.Core
 {
     /// <summary>
     /// Extension methods for mapping MCP endpoints

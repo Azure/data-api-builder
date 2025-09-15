@@ -1,10 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Azure.DataApiBuilder.Mcp
+namespace Azure.DataApiBuilder.Mcp.Core
 {
     /// <summary>
     /// Hosted service to initialize the MCP tool registry

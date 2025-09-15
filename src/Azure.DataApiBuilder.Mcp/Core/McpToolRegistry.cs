@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Mcp.Model;
 using ModelContextProtocol.Protocol;
 
-namespace Azure.DataApiBuilder.Mcp
+namespace Azure.DataApiBuilder.Mcp.Core
 {
     /// <summary>
     /// Registry for managing MCP tools

@@ -4,9 +4,10 @@
 using System.Reflection;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Azure.DataApiBuilder.Mcp
+namespace Azure.DataApiBuilder.Mcp.Core
 {
     /// <summary>
     /// Extension methods for configuring MCP services in the DI container

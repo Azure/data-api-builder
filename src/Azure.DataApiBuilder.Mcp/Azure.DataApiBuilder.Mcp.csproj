@@ -15,4 +15,8 @@
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="CustomTools\" />
+  </ItemGroup>
+
 </Project>

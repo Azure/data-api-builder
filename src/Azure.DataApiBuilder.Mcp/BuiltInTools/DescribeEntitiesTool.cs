@@ -4,10 +4,11 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 
-namespace Azure.DataApiBuilder.Mcp.Tools
+namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     public class DescribeEntitiesTool : IMcpTool
     {

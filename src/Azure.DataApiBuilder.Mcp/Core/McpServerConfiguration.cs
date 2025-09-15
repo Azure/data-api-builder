@@ -2,11 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
-namespace Azure.DataApiBuilder.Mcp
+namespace Azure.DataApiBuilder.Mcp.Core
 {
     /// <summary>
     /// Configuration for MCP server capabilities and handlers

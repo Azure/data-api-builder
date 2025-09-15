@@ -2,9 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Mcp.Model;
 using ModelContextProtocol.Protocol;
 
-namespace Azure.DataApiBuilder.Mcp.Tools
+namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     /* This is a sample for reference and will be deleted
     // to call the tool, use the following JSON payload body and make POST request to: http://localhost:5000/mcp

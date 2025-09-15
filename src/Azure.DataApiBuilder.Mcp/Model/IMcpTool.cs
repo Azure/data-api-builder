@@ -4,7 +4,7 @@
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 
-namespace Azure.DataApiBuilder.Mcp
+namespace Azure.DataApiBuilder.Mcp.Model
 {
     /// <summary>
     /// Interface for MCP tool implementations

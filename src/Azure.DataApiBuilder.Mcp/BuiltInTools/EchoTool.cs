@@ -2,9 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Mcp.Model;
 using ModelContextProtocol.Protocol;
 
-namespace Azure.DataApiBuilder.Mcp.Tools
+namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     public class EchoTool : IMcpTool
     {

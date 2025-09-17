@@ -1452,9 +1452,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="mcpConfiguredPath">MCP global path</param>
         /// <param name="expectError">Exception expected</param>
         [DataTestMethod]
-        [DataRow("/graphql", "/graphql", "/mcp", true, DisplayName = "GraphQL and REST conflict (same path), MCP different.")]
-        [DataRow("/api", "/api", "/mcp", true, DisplayName = "REST and GraphQL conflict (same path), MCP different.")]
-        [DataRow("/graphql", "/api", "/mcp", false, DisplayName = "GraphQL and REST distinct, MCP different.")]
+        [DataRow("/graphql", "/graphql", "/mcp", true, DisplayName = "GraphQL and REST conflict (same path).")]
+        [DataRow("/api", "/api", "/mcp", true, DisplayName = "REST and GraphQL conflict (same path).")]
+        [DataRow("/graphql", "/api", "/mcp", false, DisplayName = "GraphQL, REST, and MCP distinct.")]
         // Extra case: conflict with MCP
         [DataRow("/mcp", "/api", "/mcp", true, DisplayName = "MCP and GraphQL conflict (same path).")]
         [DataRow("/graphql", "/mcp", "/mcp", true, DisplayName = "MCP and REST conflict (same path).")]
@@ -1470,7 +1470,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 graphQL,
                 rest,
                 mcp);
-            string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
+            string expectedErrorMessage = "Conflicting path configuration between GraphQL, REST, and MCP.";
 
             try
             {
@@ -1733,17 +1733,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="restEnabled">Boolean flag to indicate if REST endpoints are enabled globally.</param>
         /// <param name="graphqlEnabled">Boolean flag to indicate if GraphQL endpoints are enabled globally.</param>
+        /// <param name="mcpEnabled">Boolean flag to indicate if MCP endpoints are enabled globally.</param>
         /// <param name="expectError">Boolean flag to indicate if exception is expected.</param>
-        [DataRow(true, true, false, DisplayName = "Both REST and GraphQL enabled.")]
-        [DataRow(true, false, false, DisplayName = "REST enabled, and GraphQL disabled.")]
-        [DataRow(false, true, false, DisplayName = "REST disabled, and GraphQL enabled.")]
-        [DataRow(false, false, true, DisplayName = "Both REST and GraphQL are disabled.")]
-        [DataRow(true, true, true, false, DisplayName = "Both REST and GraphQL enabled, MCP enabled.")]
-        [DataRow(true, false, true, false, DisplayName = "REST enabled, and GraphQL disabled, MCP enabled.")]
-        [DataRow(false, true, true, false, DisplayName = "REST disabled, and GraphQL enabled, MCP enabled.")]
-        [DataRow(false, false, true, false, DisplayName = "Both REST and GraphQL are disabled, but MCP enabled.")]
+        [DataRow(true, true, true, false, DisplayName = "REST, GraphQL, and MCP enabled.")]
+        [DataRow(true, true, false, false, DisplayName = "REST and GraphQL enabled, MCP disabled.")]
+        [DataRow(true, false, true, false, DisplayName = "REST enabled, GraphQL disabled, and MCP enabled.")]
+        [DataRow(true, false, false, false, DisplayName = "REST enabled, GraphQL and MCP disabled.")]
+        [DataRow(false, true, true, false, DisplayName = "REST disabled, GraphQL and MCP enabled.")]
+        [DataRow(false, true, false, false, DisplayName = "REST disabled, GraphQL enabled, and MCP disabled.")]
+        [DataRow(false, false, true, false, DisplayName = "REST and GraphQL disabled, MCP enabled.")]
+        [DataRow(false, false, false, true, DisplayName = "REST, GraphQL, and MCP disabled.")]
         [DataTestMethod]
-        public void EnsureFailureWhenBothRestAndGraphQLAreDisabled(
+        public void EnsureFailureWhenRestAndGraphQLAndMcpAreDisabled(
             bool restEnabled,
             bool graphqlEnabled,
             bool mcpEnabled,
@@ -1758,7 +1759,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 graphQL,
                 rest,
                 mcp);
-            string expectedErrorMessage = "Both GraphQL and REST endpoints are disabled.";
+            string expectedErrorMessage = "GraphQL, REST, and MCP endpoints are disabled.";
 
             try
             {

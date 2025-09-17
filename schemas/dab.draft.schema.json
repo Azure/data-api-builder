@@ -697,6 +697,10 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "description": {
+              "type": "string",
+              "description": "Optional description for the entity. Will be surfaced in generated API documentation and GraphQL schema as comments."
+            },
             "health": {
               "description": "Health check configuration for entity",
               "type": [ "object", "null" ],

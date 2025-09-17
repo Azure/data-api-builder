@@ -43,7 +43,7 @@ public class GQLFilterParser
     /// Parse a predicate for a *FilterInput input type
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
-    /// <param name="filterArgumentSchema">An IInputField object which describes the schema of the filter argument</param>
+    /// <param name="filterArgumentSchema">An IInputValueDefinition object which describes the schema of the filter argument</param>
     /// <param name="fields">The fields in the *FilterInput being processed</param>
     /// <param name="queryStructure">The query structure for the entity being filtered providing
     /// the source alias of the underlying *FilterInput being processed,
@@ -51,7 +51,7 @@ public class GQLFilterParser
     /// and the function that parametrizes literals before they are written in string predicate operands.</param>
     public Predicate Parse(
         IMiddlewareContext ctx,
-        IInputField filterArgumentSchema,
+        IInputValueDefinition filterArgumentSchema,
         List<ObjectFieldNode> fields,
         BaseQueryStructure queryStructure)
     {
@@ -285,7 +285,7 @@ public class GQLFilterParser
     /// <exception cref="DataApiBuilderException">
     private void HandleNestedFilterForCosmos(
         IMiddlewareContext ctx,
-        IInputField filterField,
+        IInputValueDefinition filterField,
         List<ObjectFieldNode> subfields,
         string columnName,
         string entityType,
@@ -466,7 +466,7 @@ public class GQLFilterParser
     /// the fields.
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
-    /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
+    /// <param name="argumentSchema">An IInputValueDefinition object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
     /// <param name="fieldName">The name of the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="schemaName">The db schema name to which the table belongs</param>
@@ -476,7 +476,7 @@ public class GQLFilterParser
     /// <param name="isListType">Flag to give a hint about the node type. It is only applicable for CosmosDB</param>
     private static Predicate ParseScalarType(
         IMiddlewareContext ctx,
-        IInputField argumentSchema,
+        IInputValueDefinition argumentSchema,
         string fieldName,
         List<ObjectFieldNode> fields,
         string schemaName,
@@ -498,8 +498,8 @@ public class GQLFilterParser
     /// If and/or is passed as empty, a predicate representing 1 != 1 is returned
     /// </returns>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
-    /// <param name="argumentSchema">An IInputField object which describes the and/or filter input argument</param>
-    /// <param name="filterArgumentSchema">An IInputField object which describes the base filter input argument (e.g. BookFilterInput)
+    /// <param name="argumentSchema">An IInputValueDefinition object which describes the and/or filter input argument</param>
+    /// <param name="filterArgumentSchema">An IInputValueDefinition object which describes the base filter input argument (e.g. BookFilterInput)
     /// to which the and/or belongs </param>
     /// <param name="fields">The subfields of the and/or field</param>
     /// <param name="schemaName">The db schema name to which the table belongs</param>
@@ -510,8 +510,8 @@ public class GQLFilterParser
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
     private Predicate ParseAndOr(
         IMiddlewareContext ctx,
-        IInputField argumentSchema,
-        IInputField filterArgumentSchema,
+        IInputValueDefinition argumentSchema,
+        IInputValueDefinition filterArgumentSchema,
         List<IValueNode> fields,
         BaseQueryStructure baseQuery,
         PredicateOperation op)
@@ -600,14 +600,14 @@ public static class FieldFilterParser
     /// Parse a scalar field into a predicate
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
-    /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
+    /// <param name="argumentSchema">An IInputValueDefinition object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
     /// <param name="column">The table column targeted by the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
     /// <param name="isListType">Flag which gives a hint about the node type in the given schema. only for CosmosDB it can be of list type. Refer <a href=https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/query/array-contains>here</a>.</param>
     public static Predicate Parse(
         IMiddlewareContext ctx,
-        IInputField argumentSchema,
+        IInputValueDefinition argumentSchema,
         Column column,
         List<ObjectFieldNode> fields,
         Func<object, string?, string> processLiterals,

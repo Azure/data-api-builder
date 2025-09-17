@@ -97,8 +97,8 @@ public record RuntimeConfig
     [JsonIgnore]
     public bool IsMcpEnabled =>
         Runtime is null ||
-         Runtime.Mcp is null ||
-         Runtime.Mcp.Enabled;
+        Runtime.Mcp is null ||
+        Runtime.Mcp.Enabled;
 
     [JsonIgnore]
     public bool IsHealthEnabled =>

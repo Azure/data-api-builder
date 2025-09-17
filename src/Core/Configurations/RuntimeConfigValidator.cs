@@ -702,7 +702,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig">The config that will be validated.</param>
     public void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
     {
-        // Both REST and GraphQL endpoints cannot be disabled at the same time.
+        // REST, GraphQL and MCP endpoints cannot be disabled at the same time.
         if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled && !runtimeConfig.IsMcpEnabled)
         {
             HandleOrRecordException(new DataApiBuilderException(
@@ -735,8 +735,10 @@ public class RuntimeConfigValidator : IConfigValidator
 
         ValidateRestURI(runtimeConfig);
         ValidateGraphQLURI(runtimeConfig);
-        // Do not check for conflicts if GraphQL or REST endpoints are disabled.
-        if (!runtimeConfig.IsRestEnabled || !runtimeConfig.IsGraphQLEnabled)
+        // Do not check for conflicts if two of the endpoints are disabled between GraphQL, REST, and MCP.
+        if ((!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled) ||
+            (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsMcpEnabled) ||
+            (!runtimeConfig.IsGraphQLEnabled && !runtimeConfig.IsMcpEnabled))
         {
             return;
         }

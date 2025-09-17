@@ -152,7 +152,7 @@ namespace Cli.Commands
 
         [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
         public CliBool MultipleCreateOperationEnabled { get; set; }
- 
+
         [Option('c', "config", Required = false, HelpText = "Path to config file. Defaults to 'dab-config.json' unless 'dab-config.<DAB_ENVIRONMENT>.json' exists, where DAB_ENVIRONMENT is an environment variable.")]
         public new string? Config { get; set; }
 

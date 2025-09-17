@@ -20,6 +20,7 @@ public class EnvironmentTests
     public void TestInitialize()
     {
         DeserializationVariableReplacementSettings replacementSettings = new(
+            azureKeyVaultOptions: null,
             doReplaceEnvVar: true,
             doReplaceAKVVar: false,
             envFailureMode: EnvironmentVariableReplacementFailureMode.Throw);

@@ -38,6 +38,7 @@ static internal class Utf8JsonReaderExtensions
         {
             // Create a simple replacement settings for environment variables only
             DeserializationVariableReplacementSettings replacementSettings = new(
+                azureKeyVaultOptions: null,
                 doReplaceEnvVar: true, 
                 doReplaceAKVVar: false, 
                 envFailureMode: replacementFailureMode);

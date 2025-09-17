@@ -45,38 +45,13 @@ namespace Azure.DataApiBuilder.Config
         public const string INNER_ENV_PATTERN = @"[^@env\(].*(?=\))";
         public const string INNER_AKV_PATTERN = @"[^@AKV\(].*(?=\))";
 
-        private AzureKeyVaultOptions? _azureKeyVaultOptions;
+        private readonly AzureKeyVaultOptions? _azureKeyVaultOptions;
         private readonly SecretClient? _akvClient;
 
         public Dictionary<Regex, Func<Match, string>> ReplacementStrategies { get; private set; } = new();
 
         public DeserializationVariableReplacementSettings(
-            bool doReplaceEnvVar = true,
-            bool doReplaceAKVVar = true,
-            EnvironmentVariableReplacementFailureMode envFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
-        {
-            DoReplaceEnvVar = doReplaceEnvVar;
-            DoReplaceAKVVar = doReplaceAKVVar;
-            EnvFailureMode = envFailureMode;
-
-            if (DoReplaceEnvVar)
-            {
-                ReplacementStrategies.Add(
-                    new Regex(INNER_ENV_PATTERN, RegexOptions.Compiled),
-                    ReplaceEnvVariable);
-            }
-
-            if (DoReplaceAKVVar && _azureKeyVaultOptions is not null)
-            {
-                _akvClient = CreateSecretClient(_azureKeyVaultOptions);
-                ReplacementStrategies.Add(
-                    new Regex(INNER_AKV_PATTERN, RegexOptions.Compiled),
-                    ReplaceAKVVariable);
-            }
-        }
-
-        public DeserializationVariableReplacementSettings(
-            AzureKeyVaultOptions azureKeyVaultOptions,
+            AzureKeyVaultOptions? azureKeyVaultOptions = null,
             bool doReplaceEnvVar = true,
             bool doReplaceAKVVar = true,
             EnvironmentVariableReplacementFailureMode envFailureMode = EnvironmentVariableReplacementFailureMode.Throw)

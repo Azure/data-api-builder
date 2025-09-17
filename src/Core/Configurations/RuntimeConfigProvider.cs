@@ -189,8 +189,7 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
-                replaceEnvVar: false,
-                replacementFailureMode: EnvironmentVariableReplacementFailureMode.Ignore))
+                replacementSettings: null))
         {
             _configLoader.RuntimeConfig = runtimeConfig;
 
@@ -272,7 +271,8 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: replaceEnvVar, replacementFailureMode: replacementFailureMode))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, 
+            new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAKVVar: true, envFailureMode: replacementFailureMode)))
         {
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

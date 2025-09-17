@@ -51,7 +51,7 @@ public abstract class RuntimeConfigLoader
     /// <returns>DabChangeToken</returns>
 #pragma warning disable CA1024 // Use properties where appropriate
     public IChangeToken GetChangeToken()
-#pragma warning restore CA1024 // Use properties where appropriate
+#pragma warning restore CA1024 // Use properties where Appropriate
     {
         return _changeToken;
     }
@@ -130,14 +130,15 @@ public abstract class RuntimeConfigLoader
     public abstract string GetPublishedDraftSchemaLink();
 
     /// <summary>
-    /// Extracts AzureKeyVaultOptions from JSON string with environment variable replacement but no AKV replacement.
-    /// This is needed to get the actual AKV configuration (resolving any @env() variables) for setting up variable replacement.
+    /// Extracts AzureKeyVaultOptions from JSON string with configurable variable replacement.
     /// </summary>
     /// <param name="json">JSON that represents the config file.</param>
-    /// <param name="replacementFailureMode">Failure mode for environment variable replacement.</param>
+    /// <param name="enableEnvReplacement">Whether to enable environment variable replacement during extraction.</param>
+    /// <param name="replacementFailureMode">Failure mode for environment variable replacement if enabled.</param>
     /// <returns>AzureKeyVaultOptions if present, null otherwise.</returns>
     private static AzureKeyVaultOptions? ExtractAzureKeyVaultOptions(string json, 
-        Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode replacementFailureMode)
+        bool enableEnvReplacement,
+        Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode replacementFailureMode = Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode.Throw)
     {
         JsonSerializerOptions options = new()
         {
@@ -146,16 +147,19 @@ public abstract class RuntimeConfigLoader
             ReadCommentHandling = JsonCommentHandling.Skip
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
-        // Enable environment variable replacement for AKV extraction so @env('AKV_ENDPOINT') works
-        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replaceEnvVar: true));
-        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replaceEnvVar: true));
+        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replaceEnvVar: enableEnvReplacement));
+        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replaceEnvVar: enableEnvReplacement));
         
-        // Add environment variable replacement only (no AKV replacement in first pass)
-        DeserializationVariableReplacementSettings envOnlySettings = new(
-            doReplaceEnvVar: true,
-            doReplaceAKVVar: false,
-            envFailureMode: replacementFailureMode);
-        options.Converters.Add(new StringJsonConverterFactory(envOnlySettings));
+        // Add environment variable replacement if enabled
+        if (enableEnvReplacement)
+        {
+            DeserializationVariableReplacementSettings envOnlySettings = new(
+                azureKeyVaultOptions: null,
+                doReplaceEnvVar: true,
+                doReplaceAKVVar: false,
+                envFailureMode: replacementFailureMode);
+            options.Converters.Add(new StringJsonConverterFactory(envOnlySettings));
+        }
 
         try
         {
@@ -179,46 +183,32 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
-    /// <returns>True if the config was parsed, otherwise false.</returns>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
     /// <param name="logger">logger to log messages</param>
     /// <param name="connectionString">connectionString to add to config if specified</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing. By default, no replacement happens.</param>
-    /// <param name="replacementFailureMode">Determines failure mode for env variable replacement.</param>
+    /// <returns>True if the config was parsed, otherwise false.</returns>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
+        DeserializationVariableReplacementSettings? replacementSettings = null,
         ILogger? logger = null,
-        string? connectionString = null,
-        bool replaceEnvVar = false,
-        Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode replacementFailureMode = Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode.Throw)
+        string? connectionString = null)
     {
-        // First pass: extract AzureKeyVault options with environment variable replacement (but no AKV replacement)
-        // This ensures that @env('AKV_ENDPOINT') in the azure-key-vault section gets resolved properly
-        AzureKeyVaultOptions? azureKeyVaultOptions = null;
-        if (replaceEnvVar)
+        // First pass: extract AzureKeyVault options if AKV replacement is requested
+        if (replacementSettings?.DoReplaceAKVVar == true)
         {
-            azureKeyVaultOptions = ExtractAzureKeyVaultOptions(json, replacementFailureMode);
-        }
-
-        // Second pass: Create replacement settings based on extracted AKV options for full config deserialization
-        // This enables both environment variable and AKV variable replacement for the entire configuration
-        DeserializationVariableReplacementSettings? replacementSettings = null;
-        if (replaceEnvVar)
-        {
+            AzureKeyVaultOptions? azureKeyVaultOptions = ExtractAzureKeyVaultOptions(
+                json, 
+                enableEnvReplacement: replacementSettings.DoReplaceEnvVar,
+                replacementFailureMode: replacementSettings.EnvFailureMode);
+            
+            // Update replacement settings with the extracted AKV options
             if (azureKeyVaultOptions is not null)
             {
                 replacementSettings = new DeserializationVariableReplacementSettings(
-                    azureKeyVaultOptions,
-                    doReplaceEnvVar: true,
-                    doReplaceAKVVar: true,
-                    envFailureMode: replacementFailureMode);
-            }
-            else
-            {
-                replacementSettings = new DeserializationVariableReplacementSettings(
-                    doReplaceEnvVar: true,
-                    doReplaceAKVVar: false,
-                    envFailureMode: replacementFailureMode);
+                    azureKeyVaultOptions: azureKeyVaultOptions,
+                    doReplaceEnvVar: replacementSettings.DoReplaceEnvVar,
+                    doReplaceAKVVar: replacementSettings.DoReplaceAKVVar,
+                    envFailureMode: replacementSettings.EnvFailureMode);
             }
         }
 
@@ -255,11 +245,11 @@ public abstract class RuntimeConfigLoader
                 DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
 
                 // Add Application Name for telemetry for MsSQL or PgSql
-                if (ds.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
+                if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
                 {
                     updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
                 }
-                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replaceEnvVar)
+                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
                 {
                     updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
                 }
@@ -295,28 +285,6 @@ public abstract class RuntimeConfigLoader
         }
 
         return true;
-    }
-
-    /// <summary>
-    /// Get Serializer options for the config file.
-    /// </summary>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with value or not while deserializing.
-    /// By default, no replacement happens.</param>
-    /// <param name="replacementFailureMode">Determines failure mode for env variable replacement.</param>
-    public static JsonSerializerOptions GetSerializationOptions(
-        bool replaceEnvVar = false,
-        Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode replacementFailureMode = Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode.Throw)
-    {
-        DeserializationVariableReplacementSettings? replacementSettings = null;
-        if (replaceEnvVar)
-        {
-            replacementSettings = new DeserializationVariableReplacementSettings(
-                doReplaceEnvVar: true,
-                doReplaceAKVVar: false, // No AKV replacement without explicit AKV options
-                envFailureMode: replacementFailureMode);
-        }
-
-        return GetSerializationOptions(replacementSettings);
     }
 
     /// <summary>

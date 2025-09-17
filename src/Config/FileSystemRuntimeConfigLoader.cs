@@ -226,7 +226,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 }
             }
 
-            if (!string.IsNullOrEmpty(json) && TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
+            if (!string.IsNullOrEmpty(json) && TryParseConfig(json, out RuntimeConfig, 
+                new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAKVVar: true), logger: null, connectionString: _connectionString))
             {
                 if (TrySetupConfigFileWatcher())
                 {

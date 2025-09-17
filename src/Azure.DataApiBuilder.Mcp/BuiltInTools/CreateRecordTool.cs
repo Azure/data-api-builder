@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Extract arguments
                 JsonElement root = arguments.RootElement;
 
-                if (!root.TryGetProperty("entity", out JsonElement entityElement) || 
+                if (!root.TryGetProperty("entity", out JsonElement entityElement) ||
                     !root.TryGetProperty("data", out JsonElement dataElement))
                 {
                     return Task.FromResult(new CallToolResult

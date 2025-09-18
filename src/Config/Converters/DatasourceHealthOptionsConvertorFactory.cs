@@ -11,7 +11,7 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
 {
     // Determines whether to replace environment variable with its
     // value or not while deserializing.
-    private bool _replaceEnvVar;
+    private DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -22,27 +22,27 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new HealthCheckOptionsConverter(_replaceEnvVar);
+        return new HealthCheckOptionsConverter(_replacementSettings);
     }
 
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    internal DataSourceHealthOptionsConvertorFactory(bool replaceEnvVar)
+    internal DataSourceHealthOptionsConvertorFactory(DeserializationVariableReplacementSettings? replacementSettings)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     private class HealthCheckOptionsConverter : JsonConverter<DatasourceHealthCheckConfig>
     {
         // Determines whether to replace environment variable with its
         // value or not while deserializing.
-        private bool _replaceEnvVar;
+        private DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replaceEnvVar">Whether to replace environment variable with its
         /// value or not while deserializing.</param>
-        public HealthCheckOptionsConverter(bool replaceEnvVar)
+        public HealthCheckOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <summary>
@@ -85,7 +85,7 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
                         case "name":
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
-                                name = reader.DeserializeString(_replaceEnvVar);
+                                name = reader.DeserializeString(_replacementSettings);
                             }
 
                             break;

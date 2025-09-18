@@ -9,9 +9,8 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 {
-    // Determines whether to replace environment variable with its
-    // value or not while deserializing.
-    private bool _replaceEnvVar;
+    // Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -22,25 +21,26 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new GraphQLRuntimeOptionsConverter(_replaceEnvVar);
+        return new GraphQLRuntimeOptionsConverter(_replacementSettings);
     }
 
-    internal GraphQLRuntimeOptionsConverterFactory(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    internal GraphQLRuntimeOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     private class GraphQLRuntimeOptionsConverter : JsonConverter<GraphQLRuntimeOptions>
     {
-        // Determines whether to replace environment variable with its
-        // value or not while deserializing.
-        private bool _replaceEnvVar;
+        // Settings for variable replacement during deserialization.
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-        /// <param name="replaceEnvVar">Whether to replace environment variable with its
-        /// value or not while deserializing.</param>
-        internal GraphQLRuntimeOptionsConverter(bool replaceEnvVar)
+        /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+        /// If null, no variable replacement will be performed.</param>
+        internal GraphQLRuntimeOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         public override GraphQLRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -117,7 +117,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                         case "path":
                             if (reader.TokenType is JsonTokenType.String)
                             {
-                                string? path = reader.DeserializeString(_replaceEnvVar);
+                                string? path = reader.DeserializeString(_replacementSettings);
                                 if (path is null)
                                 {
                                     path = "/graphql";

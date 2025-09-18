@@ -14,7 +14,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
 {
     // Determines whether to replace environment variable with its
     // value or not while deserializing.
-    private bool _replaceEnvVar;
+    private DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -25,27 +25,27 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new EntityCacheOptionsConverter(_replaceEnvVar);
+        return new EntityCacheOptionsConverter(_replacementSettings);
     }
 
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    internal EntityCacheOptionsConverterFactory(bool replaceEnvVar)
+    internal EntityCacheOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     private class EntityCacheOptionsConverter : JsonConverter<EntityCacheOptions>
     {
         // Determines whether to replace environment variable with its
         // value or not while deserializing.
-        private bool _replaceEnvVar;
+        private DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replaceEnvVar">Whether to replace environment variable with its
         /// value or not while deserializing.</param>
-        public EntityCacheOptionsConverter(bool replaceEnvVar)
+        public EntityCacheOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
                                 throw new JsonException("level property cannot be null.");
                             }
 
-                            level = EnumExtensions.Deserialize<EntityCacheLevel>(reader.DeserializeString(_replaceEnvVar)!);
+                            level = EnumExtensions.Deserialize<EntityCacheLevel>(reader.DeserializeString(_replacementSettings)!);
 
                             break;
                     }

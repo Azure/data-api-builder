@@ -14,13 +14,13 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
 {
     // Determines whether to replace environment variable with its
     // value or not while deserializing.
-    private readonly bool _replaceEnvVar;
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    internal AzureKeyVaultOptionsConverterFactory(bool replaceEnvVar = false)
+    internal AzureKeyVaultOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     /// <inheritdoc/>
@@ -32,20 +32,20 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new AzureKeyVaultOptionsConverter(_replaceEnvVar);
+        return new AzureKeyVaultOptionsConverter(_replacementSettings);
     }
 
     private class AzureKeyVaultOptionsConverter : JsonConverter<AzureKeyVaultOptions>
     {
         // Determines whether to replace environment variable with its
         // value or not while deserializing.
-        private readonly bool _replaceEnvVar;
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replaceEnvVar">Whether to replace environment variable with its
         /// value or not while deserializing.</param>
-        public AzureKeyVaultOptionsConverter(bool replaceEnvVar)
+        public AzureKeyVaultOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
                         case "endpoint":
                             if (reader.TokenType is JsonTokenType.String)
                             {
-                                endpoint = reader.DeserializeString(_replaceEnvVar);
+                                endpoint = reader.DeserializeString(_replacementSettings);
                             }
 
                             break;

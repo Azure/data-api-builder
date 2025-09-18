@@ -146,19 +146,20 @@ public abstract class RuntimeConfigLoader
             PropertyNamingPolicy = new HyphenatedNamingPolicy(),
             ReadCommentHandling = JsonCommentHandling.Skip
         };
+        DeserializationVariableReplacementSettings envOnlySettings = new(
+            azureKeyVaultOptions: null,
+            doReplaceEnvVar: enableEnvReplacement,
+            doReplaceAKVVar: false,
+            envFailureMode: replacementFailureMode);
+        options.Converters.Add(new StringJsonConverterFactory(envOnlySettings));
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
-        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replaceEnvVar: enableEnvReplacement));
-        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replaceEnvVar: enableEnvReplacement));
-        
+        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings: envOnlySettings));
+        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings: envOnlySettings));
+
         // Add environment variable replacement if enabled
         if (enableEnvReplacement)
         {
-            DeserializationVariableReplacementSettings envOnlySettings = new(
-                azureKeyVaultOptions: null,
-                doReplaceEnvVar: true,
-                doReplaceAKVVar: false,
-                envFailureMode: replacementFailureMode);
-            options.Converters.Add(new StringJsonConverterFactory(envOnlySettings));
+
         }
 
         try
@@ -305,30 +306,30 @@ public abstract class RuntimeConfigLoader
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
-        options.Converters.Add(new RuntimeHealthOptionsConvertorFactory(replacementSettings?.DoReplaceEnvVar ?? false));
-        options.Converters.Add(new DataSourceHealthOptionsConvertorFactory(replacementSettings?.DoReplaceEnvVar ?? false));
+        options.Converters.Add(new RuntimeHealthOptionsConvertorFactory(replacementSettings));
+        options.Converters.Add(new DataSourceHealthOptionsConvertorFactory(replacementSettings));
         options.Converters.Add(new EntityHealthOptionsConvertorFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
-        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
-        options.Converters.Add(new EntitySourceConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
-        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
-        options.Converters.Add(new EntityRestOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
+        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new EntitySourceConverterFactory(replacementSettings));
+        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new EntityRestOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
-        options.Converters.Add(new EntityCacheOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
+        options.Converters.Add(new EntityCacheOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new RuntimeCacheOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheLevel2OptionsConverterFactory());
         options.Converters.Add(new MultipleCreateOptionsConverter());
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
-        options.Converters.Add(new DataSourceConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
+        options.Converters.Add(new DataSourceConverterFactory(replacementSettings));
         options.Converters.Add(new HostOptionsConvertorFactory());
-        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
-        options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
-        options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replacementSettings?.DoReplaceEnvVar ?? false));
-        options.Converters.Add(new FileSinkConverter(replacementSettings?.DoReplaceEnvVar ?? false));
+        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replacementSettings));
+        options.Converters.Add(new FileSinkConverter(replacementSettings));
         
         // Add AzureKeyVaultOptionsConverterFactory to ensure AKV config is deserialized properly
-        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings?.DoReplaceEnvVar ?? false));
+        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings));
 
         // Only add the extensible string converter if we have replacement settings
         if (replacementSettings is not null)

@@ -19,8 +19,7 @@ static internal class Utf8JsonReaderExtensions
     /// <returns>The result of deserialization.</returns>
     /// <exception cref="JsonException">Thrown if the <see cref="JsonTokenType"/> is not String.</exception>
     public static string? DeserializeString(this Utf8JsonReader reader,
-        bool replaceEnvVar,
-        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
+        DeserializationVariableReplacementSettings? replacementSettings)
     {
         if (reader.TokenType is JsonTokenType.Null)
         {
@@ -34,14 +33,8 @@ static internal class Utf8JsonReaderExtensions
 
         // Add the StringConverterFactory so that we can do environment variable substitution.
         JsonSerializerOptions options = new();
-        if (replaceEnvVar)
+        if (replacementSettings is not null)
         {
-            // Create a simple replacement settings for environment variables only
-            DeserializationVariableReplacementSettings replacementSettings = new(
-                azureKeyVaultOptions: null,
-                doReplaceEnvVar: true, 
-                doReplaceAKVVar: false, 
-                envFailureMode: replacementFailureMode);
             options.Converters.Add(new StringJsonConverterFactory(replacementSettings));
         }
 

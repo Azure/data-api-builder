@@ -16,7 +16,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
-        return typeToConvert.IsAssignableTo(typeof(GraphQLRuntimeOptions));
+        return typeToConvert.IsAssignableTo(typeof(McpRuntimeOptions));
     }
 
     /// <inheritdoc/>
@@ -50,6 +50,16 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
         /// <exception cref="JsonException">Thrown when improperly formatted MCP options are provided.</exception>
         public override McpRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
+            {
+                return new McpRuntimeOptions();
+            }
+
+            if (reader.TokenType == JsonTokenType.False)
+            {
+                return new McpRuntimeOptions(Enabled: false);
+            }
+
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 McpDmlToolsOptionsConverter dmlToolsOptionsConverter = new();
@@ -108,7 +118,6 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
         public override void Write(Utf8JsonWriter writer, McpRuntimeOptions value, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
-
             writer.WriteBoolean("enabled", value.Enabled);
 
             if (value?.UserProvidedPath is true)

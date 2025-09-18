@@ -38,7 +38,17 @@ public record McpRuntimeOptions
         McpDmlToolsOptions? DmlTools = null)
     {
         this.Enabled = Enabled;
-        this.Path = Path ?? DEFAULT_PATH;
+
+        if (Path is not null)
+        {
+            this.Path = Path;
+            UserProvidedPath = true;
+        }
+        else
+        {
+            this.Path = DEFAULT_PATH;
+        }
+
         this.DmlTools = DmlTools ?? new McpDmlToolsOptions();
     }
 

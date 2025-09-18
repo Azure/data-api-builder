@@ -16,9 +16,18 @@ internal class McpDmlToolsOptionsConverter : JsonConverter<McpDmlToolsOptions>
     /// <exception cref="JsonException">Thrown when improperly formatted MCP DML Tools options are provided.</exception>
     public override McpDmlToolsOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
+        if (reader.TokenType == JsonTokenType.True)
+        {
+            return new McpDmlToolsOptions(true, true, true, true, true, true);
+        }
+
+        if (reader.TokenType == JsonTokenType.False || reader.TokenType == JsonTokenType.Null)
+        {
+            return new McpDmlToolsOptions();
+        }
+
         if (reader.TokenType is JsonTokenType.StartObject)
         {
-            bool? enabled = null;
             bool? describeEntities = null;
             bool? createRecord = null;
             bool? readRecord = null;
@@ -30,7 +39,7 @@ internal class McpDmlToolsOptionsConverter : JsonConverter<McpDmlToolsOptions>
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    return new McpDmlToolsOptions(enabled, describeEntities, createRecord, readRecord, updateRecord, deleteRecord, executeRecord);
+                    return new McpDmlToolsOptions(describeEntities, createRecord, readRecord, updateRecord, deleteRecord, executeRecord);
                 }
 
                 string? propertyName = reader.GetString();
@@ -38,14 +47,6 @@ internal class McpDmlToolsOptionsConverter : JsonConverter<McpDmlToolsOptions>
                 reader.Read();
                 switch (propertyName)
                 {
-                    case "enabled":
-                        if (reader.TokenType is not JsonTokenType.Null)
-                        {
-                            enabled = reader.GetBoolean();
-                        }
-
-                        break;
-
                     case "describe-entities":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
@@ -112,12 +113,6 @@ internal class McpDmlToolsOptionsConverter : JsonConverter<McpDmlToolsOptions>
     public override void Write(Utf8JsonWriter writer, McpDmlToolsOptions value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-
-        if (value?.UserProvidedEnabled is true)
-        {
-            writer.WritePropertyName("enabled");
-            JsonSerializer.Serialize(writer, value.Enabled, options);
-        }
 
         if (value?.UserProvidedDescribeEntities is true)
         {

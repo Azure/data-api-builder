@@ -11,8 +11,6 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </summary>
 public record McpDmlToolsOptions
 {
-    public bool Enabled { get; init; }
-
     public bool DescribeEntities { get; init; }
 
     public bool CreateRecord { get; init; }
@@ -26,7 +24,6 @@ public record McpDmlToolsOptions
     public bool ExecuteRecord { get; init; }
 
     public McpDmlToolsOptions(
-        bool? Enabled = null,
         bool? DescribeEntities = null,
         bool? CreateRecord = null,
         bool? ReadRecord = null,
@@ -34,16 +31,6 @@ public record McpDmlToolsOptions
         bool? DeleteRecord = null,
         bool? ExecuteRecord = null)
     {
-        if (Enabled is not null)
-        {
-            this.Enabled = (bool)Enabled;
-            UserProvidedEnabled = true;
-        }
-        else
-        {
-            this.Enabled = false;
-        }
-
         if (DescribeEntities is not null)
         {
             this.DescribeEntities = (bool)DescribeEntities;
@@ -106,23 +93,13 @@ public record McpDmlToolsOptions
     }
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write enabled
-    /// property and value to the runtime config file.
-    /// When user doesn't provide the enabled property/value, which signals DAB to use the default,
-    /// the DAB CLI should not write the default value to a serialized config.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Enabled))]
-    public bool UserProvidedEnabled { get; init; } = false;
-
-    /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write describe-entities
     /// property and value to the runtime config file.
     /// When user doesn't provide the describe-entities property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Enabled))]
+    [MemberNotNullWhen(true, nameof(DescribeEntities))]
     public bool UserProvidedDescribeEntities { get; init; } = false;
 
     /// <summary>
@@ -132,7 +109,7 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Enabled))]
+    [MemberNotNullWhen(true, nameof(CreateRecord))]
     public bool UserProvidedCreateRecord { get; init; } = false;
 
     /// <summary>
@@ -142,7 +119,7 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Enabled))]
+    [MemberNotNullWhen(true, nameof(ReadRecord))]
     public bool UserProvidedReadRecord { get; init; } = false;
 
     /// <summary>
@@ -152,7 +129,7 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Enabled))]
+    [MemberNotNullWhen(true, nameof(UpdateRecord))]
     public bool UserProvidedUpdateRecord { get; init; } = false;
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write delete-record
@@ -161,7 +138,7 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Enabled))]
+    [MemberNotNullWhen(true, nameof(DeleteRecord))]
     public bool UserProvidedDeleteRecord { get; init; } = false;
 
     /// <summary>
@@ -171,7 +148,7 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Enabled))]
+    [MemberNotNullWhen(true, nameof(ExecuteRecord))]
     public bool UserProvidedExecuteRecord { get; init; } = false;
 }
 

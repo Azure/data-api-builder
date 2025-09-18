@@ -6,7 +6,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Net;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -256,8 +255,7 @@ public class RuntimeConfigProvider
         string? graphQLSchema,
         string connectionString,
         string? accessToken,
-        bool replaceEnvVar = true,
-        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
+        DeserializationVariableReplacementSettings? replacementSettings)
     {
         if (string.IsNullOrEmpty(connectionString))
         {
@@ -271,8 +269,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, 
-            new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAKVVar: true, envFailureMode: replacementFailureMode)))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replacementSettings))
         {
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

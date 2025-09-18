@@ -64,6 +64,12 @@ public record RuntimeOptions
         GraphQL?.Enabled is true;
 
     [JsonIgnore]
+    public bool IsMcpEnabled =>
+        Mcp is null ||
+        Mcp?.Enabled is null ||
+        Mcp?.Enabled is true;
+
+    [JsonIgnore]
     public bool IsHealthCheckEnabled =>
         Health is null ||
         Health?.Enabled is null ||

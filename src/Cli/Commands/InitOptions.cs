@@ -36,6 +36,7 @@ namespace Cli.Commands
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
             string mcpPath = McpRuntimeOptions.DEFAULT_PATH,
+            bool mcpDisabled = false,
             CliBool restEnabled = CliBool.None,
             CliBool graphqlEnabled = CliBool.None,
             CliBool mcpEnabled = CliBool.None,
@@ -61,6 +62,7 @@ namespace Cli.Commands
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
             McpPath = mcpPath;
+            McpDisabled = mcpDisabled;
             RestEnabled = restEnabled;
             GraphQLEnabled = graphqlEnabled;
             McpEnabled = mcpEnabled;
@@ -104,9 +106,6 @@ namespace Cli.Commands
         [Option("rest.path", Default = RestRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the REST endpoint's default prefix.")]
         public string RestPath { get; }
 
-        [Option("mcp.path", Default = McpRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the MCP endpoint's default prefix.")]
-        public string McpPath { get; }
-
         [Option("runtime.base-route", Default = null, Required = false, HelpText = "Specifies the base route for API requests.")]
         public string? RuntimeBaseRoute { get; }
 
@@ -118,6 +117,12 @@ namespace Cli.Commands
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
+
+        [Option("mcp.path", Default = McpRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the MCP endpoint's default prefix.")]
+        public string McpPath { get; }
+
+        [Option("mcp.disabled", Default = false, Required = false, HelpText = "Disables MCP endpoint for all entities.")]
+        public bool McpDisabled { get; }
 
         [Option("rest.enabled", Required = false, HelpText = "(Default: true) Enables REST endpoint for all entities. Supported values: true, false.")]
         public CliBool RestEnabled { get; }

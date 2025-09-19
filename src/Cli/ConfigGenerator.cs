@@ -989,32 +989,32 @@ namespace Cli
         {
             object? updatedValue;
 
-            try
-            {
-                // Runtime.Mcp.Enabled
-                updatedValue = options?.RuntimeMcpEnabled;
-                if (updatedValue != null)
-                {
-                    updatedMcpOptions = updatedMcpOptions! with { Enabled = (bool)updatedValue };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Enabled as '{updatedValue}'", updatedValue);
-                }
+    try
+    {
+        // Runtime.Mcp.Enabled
+        updatedValue = options?.RuntimeMcpEnabled;
+        if (updatedValue != null)
+        {
+            updatedMcpOptions = updatedMcpOptions! with { Enabled = (bool)updatedValue };
+            _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Enabled as '{updatedValue}'", updatedValue);
+        }
 
-                // Runtime.Mcp.Path
-                updatedValue = options?.RuntimeMcpPath;
-                if (updatedValue != null)
-                {
-                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
-                    if (status)
-                    {
-                        updatedMcpOptions = updatedMcpOptions! with { Path = (string)updatedValue };
-                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Path as '{updatedValue}'", updatedValue);
-                    }
-                    else
-                    {
-                        _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
-                        return false;
-                    }
-                }
+        // Runtime.Mcp.Path
+        updatedValue = options?.RuntimeMcpPath;
+        if (updatedValue != null)
+        {
+            bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+            if (status)
+            {
+                updatedMcpOptions = updatedMcpOptions! with { Path = (string)updatedValue };
+                _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Path as '{updatedValue}'", updatedValue);
+            }
+            else
+            {
+                _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                return false;
+            }
+        }
 
                 // Handle DML tools configuration
                 bool hasToolUpdates = false;
@@ -1102,14 +1102,14 @@ namespace Cli
                     };
                 }
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
-                return false;
-            }
-        }
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
+        return false;
+    }
+}
 
         /// <summary>
         /// Attempts to update the Config parameters in the Cache runtime settings based on the provided value.

@@ -12,17 +12,42 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </summary>
 public record McpRuntimeOptions
 {
+    public const string DEFAULT_PATH = "/mcp";
+
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; init; }
+
+    [JsonPropertyName("path")]
+    public string? Path { get; init; }
+
+    [JsonPropertyName("dml-tools")]
+    public DmlToolsConfig? DmlTools { get; init; }
+
+    [JsonConstructor]
     public McpRuntimeOptions(
         bool Enabled = false,
         string? Path = null,
-        McpDmlToolsOptions? DmlTools = null)
+        DmlToolsConfig? DmlTools = null)
     {
         this.Enabled = Enabled;
         this.Path = Path ?? DEFAULT_PATH;
-        this.DmlTools = DmlTools ?? new McpDmlToolsOptions();
+        this.DmlTools = DmlTools;
     }
+}
 
-    public const string DEFAULT_PATH = "/mcp";
+/// <summary>
+/// DML Tools configuration that can be either a boolean or object with individual tool settings
+/// </summary>
+[JsonConverter(typeof(McpOptionsConverterFactory))]
+public record DmlToolsConfig
+{
+    public bool AllToolsEnabled { get; init; }
+    public bool? DescribeEntities { get; init; }
+    public bool? CreateRecord { get; init; }
+    public bool? ReadRecord { get; init; }
+    public bool? UpdateRecord { get; init; }
+    public bool? DeleteRecord { get; init; }
+    public bool? ExecuteRecord { get; init; }
 
     /// <summary>
     /// Whether MCP endpoints are enabled

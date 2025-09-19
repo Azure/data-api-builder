@@ -458,7 +458,8 @@ namespace Cli
                 Permissions: permissionSettings,
                 Relationships: null,
                 Mappings: null,
-                Cache: cacheOptions);
+                Cache: cacheOptions,
+                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
@@ -1661,7 +1662,8 @@ namespace Cli
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
-                Cache: updatedCacheOptions);
+                Cache: updatedCacheOptions,
+                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description);
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
                 [options.Entity] = updatedEntity

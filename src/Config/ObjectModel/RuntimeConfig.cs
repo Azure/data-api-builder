@@ -11,8 +11,27 @@ using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
+public record AiOptions
+{
+    public McpOptions? Mcp { get; init; } = new();
+}
+
+public record McpOptions
+{
+    public bool Enabled { get; init; } = true;
+    public string Path { get; init; } = "/mcp";
+    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.DescribeEntities];
+}
+
+public enum McpDmlTool
+{
+    DescribeEntities
+}
+
 public record RuntimeConfig
 {
+    public AiOptions? Ai { get; init; } = new();
+
     [JsonPropertyName("$schema")]
     public string Schema { get; init; }
 

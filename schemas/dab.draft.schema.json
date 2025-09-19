@@ -158,13 +158,13 @@
           "type": "object",
           "properties": {
             "max-page-size": {
-              "type": ["integer", "null"],
+              "type": [ "integer", "null" ],
               "description": "Defines the maximum number of records that can be returned in a single page of results. If set to null, the default value is 100,000.",
               "default": 100000,
               "minimum": 1
             },
             "default-page-size": {
-              "type": ["integer", "null"],
+              "type": [ "integer", "null" ],
               "description": "Sets the default number of records returned in a single response. When this limit is reached, a continuation token is provided to retrieve the next page. If set to null, the default value is 100.",
               "default": 100,
               "minimum": 1
@@ -254,45 +254,49 @@
               "default": false
             },
             "dml-tools": {
-              "type": "object",
-              "description": "Global DML tools configuration",
-              "properties": {
-                "enabled": {
+              "oneOf": [
+                {
                   "type": "boolean",
-                  "description": "Allow enabling/disabling DML tools for all entities.",
-                  "default": false
+                  "description": "Enable/disable all DML tools with default settings."
                 },
-                "describe-entities": {
-                  "type": "boolean",
-                  "description": "Allow enabling/disabling the describe-entities tool.",
-                  "default": false
-                },
-                "create-record": {
-                  "type": "boolean",
-                  "description": "Allow enabling/disabling the create-record tool.",
-                  "default": false
-                },
-                "read-record": {
-                  "type": "boolean",
-                  "description": "Allow enabling/disabling the read-record tool.",
-                  "default": false
-                },
-                "update-record": {
-                  "type": "boolean",
-                  "description": "Allow enabling/disabling the update-record tool.",
-                  "default": false
-                },
-                "delete-record": {
-                  "type": "boolean",
-                  "description": "Allow enabling/disabling the delete-record tool.",
-                  "default": false
-                },
-                "execute-record": {
-                  "type": "boolean",
-                  "description": "Allow enabling/disabling the execute-record tool.",
-                  "default": false
+                {
+                  "type": "object",
+                  "description": "Individual DML tools configuration",
+                  "additionalProperties": false,
+                  "properties": {
+                    "describe-entities": {
+                      "type": "boolean",
+                      "description": "Enable/disable the describe-entities tool.",
+                      "default": false
+                    },
+                    "create-record": {
+                      "type": "boolean",
+                      "description": "Enable/disable the create-record tool.",
+                      "default": false
+                    },
+                    "read-record": {
+                      "type": "boolean",
+                      "description": "Enable/disable the read-record tool.",
+                      "default": false
+                    },
+                    "update-record": {
+                      "type": "boolean",
+                      "description": "Enable/disable the update-record tool.",
+                      "default": false
+                    },
+                    "delete-record": {
+                      "type": "boolean",
+                      "description": "Enable/disable the delete-record tool.",
+                      "default": false
+                    },
+                    "execute-record": {
+                      "type": "boolean",
+                      "description": "Enable/disable the execute-record tool.",
+                      "default": false
+                    }
+                  }
                 }
-              }
+              ]
             }
           }
         },
@@ -302,7 +306,7 @@
           "additionalProperties": false,
           "properties": {
             "max-response-size-mb": {
-              "type": ["integer", "null"],
+              "type": [ "integer", "null" ],
               "description": "Specifies the maximum size, in megabytes, of the database response allowed in a single result. If set to null, the default value is 158 MB.",
               "default": 158,
               "minimum": 1,
@@ -310,12 +314,12 @@
             },
             "mode": {
               "description": "Set if running in Development or Production mode",
-              "type": ["string", "null"],
+              "type": [ "string", "null" ],
               "default": "production",
-              "enum": ["production", "development"]
+              "enum": [ "production", "development" ]
             },
             "cors": {
-              "type": ["object", "null"],
+              "type": [ "object", "null" ],
               "description": "Configure CORS",
               "additionalProperties": false,
               "properties": {
@@ -335,7 +339,7 @@
               }
             },
             "authentication": {
-              "type": ["object", "null"],
+              "type": [ "object", "null" ],
               "additionalProperties": false,
               "properties": {
                 "provider": {
@@ -379,7 +383,7 @@
                       "type": "string"
                     }
                   },
-                  "required": ["audience", "issuer"]
+                  "required": [ "audience", "issuer" ]
                 }
               },
               "allOf": [
@@ -395,9 +399,9 @@
                         ]
                       }
                     },
-                    "required": ["provider"]
+                    "required": [ "provider" ]
                   },
-                  "then": { "required": ["jwt"] },
+                  "then": { "required": [ "jwt" ] },
                   "else": { "properties": { "jwt": false } }
                 }
               ]
@@ -439,7 +443,7 @@
                   "default": true
                 }
               },
-              "required": ["connection-string"]
+              "required": [ "connection-string" ]
             },
             "open-telemetry": {
               "type": "object",
@@ -462,7 +466,7 @@
                   "type": "string",
                   "description": "Open Telemetry protocol",
                   "default": "grpc",
-                  "enum": ["grpc", "httpprotobuf"]
+                  "enum": [ "grpc", "httpprotobuf" ]
                 },
                 "enabled": {
                   "type": "boolean",
@@ -470,7 +474,7 @@
                   "default": true
                 }
               },
-              "required": ["endpoint"]
+              "required": [ "endpoint" ]
             },
             "azure-log-analytics": {
               "type": "object",

@@ -972,116 +972,119 @@ namespace Cli
         /// <param name="updatedMcpOptions">updatedMcpOptions</param>
         /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
         private static bool TryUpdateConfiguredMcpValues(
-            ConfigureOptions options,
-            ref McpRuntimeOptions? updatedMcpOptions)
+    ConfigureOptions options,
+    ref McpRuntimeOptions? updatedMcpOptions)
+{
+    object? updatedValue;
+
+    try
+    {
+        // Runtime.Mcp.Enabled
+        updatedValue = options?.RuntimeMcpEnabled;
+        if (updatedValue != null)
         {
-            object? updatedValue;
+            updatedMcpOptions = updatedMcpOptions! with { Enabled = (bool)updatedValue };
+            _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Enabled as '{updatedValue}'", updatedValue);
+        }
 
-            try
+        // Runtime.Mcp.Path
+        updatedValue = options?.RuntimeMcpPath;
+        if (updatedValue != null)
+        {
+            bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+            if (status)
             {
-                // Runtime.Mcp.Enabled
-                updatedValue = options?.RuntimeMcpEnabled;
-                if (updatedValue != null)
-                {
-                    updatedMcpOptions = updatedMcpOptions! with { Enabled = (bool)updatedValue };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Enabled as '{updatedValue}'", updatedValue);
-                }
-
-                // Runtime.Mcp.Path
-                updatedValue = options?.RuntimeMcpPath;
-                if (updatedValue != null)
-                {
-                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
-                    if (status)
-                    {
-                        updatedMcpOptions = updatedMcpOptions! with { Path = (string)updatedValue };
-                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Path as '{updatedValue}'", updatedValue);
-                    }
-                    else
-                    {
-                        _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
-                        return false;
-                    }
-                }
-
-                // Runtime.Mcp.Dml-Tools.Enabled
-                updatedValue = options?.RuntimeMcpDmlToolsEnabled;
-                if (updatedValue != null)
-                {
-                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
-                    dmlToolsOptions = dmlToolsOptions with { Enabled = (bool)updatedValue };
-                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Enabled as '{updatedValue}'", updatedValue);
-                }
-
-                // Runtime.Mcp.Dml-Tools.Describe-Entities
-                updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
-                if (updatedValue != null)
-                {
-                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
-                    dmlToolsOptions = dmlToolsOptions with { DescribeEntities = (bool)updatedValue };
-                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Describe-Entities as '{updatedValue}'", updatedValue);
-                }
-
-                // Runtime.Mcp.Dml-Tools.Create-Record
-                updatedValue = options?.RuntimeMcpDmlToolsCreateRecordEnabled;
-                if (updatedValue != null)
-                {
-                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
-                    dmlToolsOptions = dmlToolsOptions with { CreateRecord = (bool)updatedValue };
-                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Create-Record as '{updatedValue}'", updatedValue);
-                }
-
-                // Runtime.Mcp.Dml-Tools.Read-Record
-                updatedValue = options?.RuntimeMcpDmlToolsReadRecordEnabled;
-                if (updatedValue != null)
-                {
-                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
-                    dmlToolsOptions = dmlToolsOptions with { ReadRecord = (bool)updatedValue };
-                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Read-Record as '{updatedValue}'", updatedValue);
-                }
-
-                // Runtime.Mcp.Dml-Tools.Update-Record
-                updatedValue = options?.RuntimeMcpDmlToolsUpdateRecordEnabled;
-                if (updatedValue != null)
-                {
-                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
-                    dmlToolsOptions = dmlToolsOptions with { UpdateRecord = (bool)updatedValue };
-                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Update-Record as '{updatedValue}'", updatedValue);
-                }
-
-                // Runtime.Mcp.Dml-Tools.Delete-Record
-                updatedValue = options?.RuntimeMcpDmlToolsDeleteRecordEnabled;
-                if (updatedValue != null)
-                {
-                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
-                    dmlToolsOptions = dmlToolsOptions with { DeleteRecord = (bool)updatedValue };
-                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Delete-Record as '{updatedValue}'", updatedValue);
-                }
-
-                // Runtime.Mcp.Dml-Tools.Execute-Record
-                updatedValue = options?.RuntimeMcpDmlToolsExecuteRecordEnabled;
-                if (updatedValue != null)
-                {
-                    McpDmlToolsOptions dmlToolsOptions = updatedMcpOptions?.DmlTools ?? new();
-                    dmlToolsOptions = dmlToolsOptions with { ExecuteRecord = (bool)updatedValue };
-                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = dmlToolsOptions };
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Execute-Record as '{updatedValue}'", updatedValue);
-                }
-
-                return true;
+                updatedMcpOptions = updatedMcpOptions! with { Path = (string)updatedValue };
+                _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Path as '{updatedValue}'", updatedValue);
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
                 return false;
             }
         }
+
+        // Runtime.Mcp.Dml-Tools (as boolean)
+        updatedValue = options?.RuntimeMcpDmlToolsEnabled;
+        if (updatedValue != null)
+        {
+            updatedMcpOptions = updatedMcpOptions! with { DmlTools = DmlToolsConfig.FromBoolean((bool)updatedValue) };
+            _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools as '{updatedValue}'", updatedValue);
+        }
+
+        // Individual tool configurations
+        DmlToolsConfig? currentConfig = updatedMcpOptions?.DmlTools;
+        bool hasToolUpdates = false;
+
+        // Build new config with individual tool settings
+        bool? describeEntities = currentConfig?.DescribeEntities;
+        bool? createRecord = currentConfig?.CreateRecord;
+        bool? readRecord = currentConfig?.ReadRecord;
+        bool? updateRecord = currentConfig?.UpdateRecord;
+        bool? deleteRecord = currentConfig?.DeleteRecord;
+        bool? executeRecord = currentConfig?.ExecuteRecord;
+
+        if (options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null)
+        {
+            describeEntities = (bool)options.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
+            hasToolUpdates = true;
+        }
+
+        if (options?.RuntimeMcpDmlToolsCreateRecordEnabled != null)
+        {
+            createRecord = (bool)options.RuntimeMcpDmlToolsCreateRecordEnabled;
+            hasToolUpdates = true;
+        }
+
+        if (options?.RuntimeMcpDmlToolsReadRecordEnabled != null)
+        {
+            readRecord = (bool)options.RuntimeMcpDmlToolsReadRecordEnabled;
+            hasToolUpdates = true;
+        }
+
+        if (options?.RuntimeMcpDmlToolsUpdateRecordEnabled != null)
+        {
+            updateRecord = (bool)options.RuntimeMcpDmlToolsUpdateRecordEnabled;
+            hasToolUpdates = true;
+        }
+
+        if (options?.RuntimeMcpDmlToolsDeleteRecordEnabled != null)
+        {
+            deleteRecord = (bool)options.RuntimeMcpDmlToolsDeleteRecordEnabled;
+            hasToolUpdates = true;
+        }
+
+        if (options?.RuntimeMcpDmlToolsExecuteRecordEnabled != null)
+        {
+            executeRecord = (bool)options.RuntimeMcpDmlToolsExecuteRecordEnabled;
+            hasToolUpdates = true;
+        }
+
+        if (hasToolUpdates)
+        {
+            updatedMcpOptions = updatedMcpOptions! with 
+            { 
+                DmlTools = new DmlToolsConfig
+                {
+                    AllToolsEnabled = false,
+                    DescribeEntities = describeEntities,
+                    CreateRecord = createRecord,
+                    ReadRecord = readRecord,
+                    UpdateRecord = updateRecord,
+                    DeleteRecord = deleteRecord,
+                    ExecuteRecord = executeRecord
+                }
+            };
+        }
+
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
+        return false;
+    }
+}
 
         /// <summary>
         /// Attempts to update the Config parameters in the Cache runtime settings based on the provided value.
@@ -2367,7 +2370,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyMaxCount.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.max-count. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2382,7 +2385,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyDelaySeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.delay-seconds. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2397,7 +2400,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.max-delay-seconds. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2412,7 +2415,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.network-timeout-seconds. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 

@@ -11,27 +11,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
-public record AiOptions
-{
-    public McpOptions? Mcp { get; init; } = new();
-}
-
-public record McpOptions
-{
-    public bool Enabled { get; init; } = true;
-    public string Path { get; init; } = "/mcp";
-    public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.DescribeEntities];
-}
-
-public enum McpDmlTool
-{
-    DescribeEntities
-}
-
 public record RuntimeConfig
 {
-    public AiOptions? Ai { get; init; } = new();
-
     [JsonPropertyName("$schema")]
     public string Schema { get; init; }
 
@@ -754,4 +735,23 @@ public record RuntimeConfig
 
         return LogLevel.Error;
     }
+
+    /// <summary>
+    /// Checks if the specified DML tool is enabled in MCP runtime options.
+    /// </summary>
+    public bool IsMcpDmlToolEnabled(string toolName)
+    {
+        if (Runtime?.Mcp?.Enabled != true || Runtime.Mcp.DmlTools == null)
+        {
+            return false;
+        }
+
+        return Runtime.Mcp.DmlTools.IsToolEnabled(toolName);
+    }
+
+    /// <summary>
+    /// Gets the MCP DML tools configuration
+    /// </summary>
+    [JsonIgnore]
+    public DmlToolsConfig? McpDmlTools => Runtime?.Mcp?.DmlTools;
 }

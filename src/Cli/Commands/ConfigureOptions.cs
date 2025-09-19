@@ -201,7 +201,6 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.execute-record.enabled", Required = false, HelpText = "Enable DAB's MCP execute record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteRecordEnabled { get; }
 
-
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }
 

@@ -36,7 +36,6 @@ namespace Cli.Commands
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
             string mcpPath = McpRuntimeOptions.DEFAULT_PATH,
-            bool mcpDisabled = false,
             CliBool restEnabled = CliBool.None,
             CliBool graphqlEnabled = CliBool.None,
             CliBool mcpEnabled = CliBool.None,
@@ -62,7 +61,6 @@ namespace Cli.Commands
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
             McpPath = mcpPath;
-            McpDisabled = mcpDisabled;
             RestEnabled = restEnabled;
             GraphQLEnabled = graphqlEnabled;
             McpEnabled = mcpEnabled;

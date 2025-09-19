@@ -127,6 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     Health: new(enabled: true, roles: role != null ? new HashSet<string> { role } : null),
                     Rest: new(Enabled: true),
                     GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: true),
                     Host: hostOptions
                 ),
                 Entities: new(entityMap));

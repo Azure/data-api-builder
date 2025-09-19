@@ -51,6 +51,10 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsGraphQLEnabled);
         // Ignore the entity IsGraphQLEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsGraphQLEnabled);
+        // Ignore the global IsMcpEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsMcpEnabled);
+        // Ignore the global RuntimeOptions.IsMcpEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsMcpEnabled);
         // Ignore the global IsHealthEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsHealthEnabled);
         // Ignore the global RuntimeOptions.IsHealthCheckEnabled as that's unimportant from a test standpoint.
@@ -73,12 +77,16 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsGraphQLEnabled);
         // Ignore the IsRestEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
+        // Ignore the IsMcpEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsMcpEnabled);
         // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.RestPath);
         // Ignore the GraphQLPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.GraphQLPath);
+        // Ignore the McpPath as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpPath);
         // Ignore the AllowIntrospection as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
         // Ignore the EnableAggregation as that's unimportant from a test standpoint.

@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                    {"database", globalDatabase},
                    {"container", globalContainer}
                    }),
-                   Runtime: new(Rest: null, GraphQL: new(), Host: new(null, null)),
+                   Runtime: new(Rest: null, GraphQL: new(), Mcp: new(), Host: new(null, null)),
                    Entities: new(new Dictionary<string, Entity>()
                    {
                        {"Container1", new Entity(

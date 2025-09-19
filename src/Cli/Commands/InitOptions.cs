@@ -35,8 +35,11 @@ namespace Cli.Commands
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
+            string mcpPath = McpRuntimeOptions.DEFAULT_PATH,
+            bool mcpDisabled = false,
             CliBool restEnabled = CliBool.None,
             CliBool graphqlEnabled = CliBool.None,
+            CliBool mcpEnabled = CliBool.None,
             CliBool restRequestBodyStrict = CliBool.None,
             CliBool multipleCreateOperationEnabled = CliBool.None,
             string? config = null)
@@ -58,8 +61,11 @@ namespace Cli.Commands
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
+            McpPath = mcpPath;
+            McpDisabled = mcpDisabled;
             RestEnabled = restEnabled;
             GraphQLEnabled = graphqlEnabled;
+            McpEnabled = mcpEnabled;
             RestRequestBodyStrict = restRequestBodyStrict;
             MultipleCreateOperationEnabled = multipleCreateOperationEnabled;
         }
@@ -112,11 +118,20 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
+        [Option("mcp.path", Default = McpRuntimeOptions.DEFAULT_PATH, Required = false, HelpText = "Specify the MCP endpoint's default prefix.")]
+        public string McpPath { get; }
+
+        [Option("mcp.disabled", Default = false, Required = false, HelpText = "Disables MCP endpoint for all entities.")]
+        public bool McpDisabled { get; }
+
         [Option("rest.enabled", Required = false, HelpText = "(Default: true) Enables REST endpoint for all entities. Supported values: true, false.")]
         public CliBool RestEnabled { get; }
 
         [Option("graphql.enabled", Required = false, HelpText = "(Default: true) Enables GraphQL endpoint for all entities. Supported values: true, false.")]
         public CliBool GraphQLEnabled { get; }
+
+        [Option("mcp.enabled", Required = false, HelpText = "(Default: true) Enables MCP endpoint for all entities. Supported values: true, false.")]
+        public CliBool McpEnabled { get; }
 
         // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
         // included in the init command.

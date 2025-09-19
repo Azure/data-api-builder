@@ -7,7 +7,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
-using static Azure.DataApiBuilder.Mcp.Model.Enums;
+using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
 namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {

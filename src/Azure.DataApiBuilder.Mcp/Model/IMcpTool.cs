@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
-using static Azure.DataApiBuilder.Mcp.Model.Enums;
+using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
 namespace Azure.DataApiBuilder.Mcp.Model
 {

@@ -36,7 +36,6 @@ namespace Cli.Commands
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
             string mcpPath = McpRuntimeOptions.DEFAULT_PATH,
-            bool mcpDisabled = false,
             CliBool restEnabled = CliBool.None,
             CliBool graphqlEnabled = CliBool.None,
             CliBool mcpEnabled = CliBool.None,
@@ -62,7 +61,6 @@ namespace Cli.Commands
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
             McpPath = mcpPath;
-            McpDisabled = mcpDisabled;
             RestEnabled = restEnabled;
             GraphQLEnabled = graphqlEnabled;
             McpEnabled = mcpEnabled;
@@ -120,9 +118,6 @@ namespace Cli.Commands
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
-
-        [Option("mcp.disabled", Default = false, Required = false, HelpText = "Disables MCP endpoint for all entities.")]
-        public bool McpDisabled { get; }
 
         [Option("rest.enabled", Required = false, HelpText = "(Default: true) Enables REST endpoint for all entities. Supported values: true, false.")]
         public CliBool RestEnabled { get; }

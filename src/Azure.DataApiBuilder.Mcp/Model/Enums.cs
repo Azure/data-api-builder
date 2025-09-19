@@ -3,7 +3,7 @@
 
 namespace Azure.DataApiBuilder.Mcp.Model
 {
-    public class Enums
+    public class McpEnums
     {
         /// <summary>
         /// Specifies the type of tool.

@@ -112,7 +112,7 @@ namespace Cli
             bool restEnabled, graphQLEnabled, mcpEnabled;
             if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
                 !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled) ||
-                !TryDetermineIfApiIsEnabled(options.McpDisabled, options.McpEnabled, ApiType.MCP, out mcpEnabled))
+                !TryDetermineIfMcpIsEnabled(options.McpEnabled, out mcpEnabled))
             {
                 return false;
             }
@@ -315,6 +315,17 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the mcp api is enabled or not based on the enabled/disabled options in the dab init command.
+        /// </summary>
+        /// <param name="mcpEnabledOptionValue">True, if MCP is enabled</param>
+        /// <param name="isMcpEnabled">Out param isMcpEnabled</param>
+        /// <returns>True if MCP is enabled</returns>
+        private static bool TryDetermineIfMcpIsEnabled(CliBool mcpEnabledOptionValue, out bool isMcpEnabled)
+        {
+            return TryDetermineIfApiIsEnabled(false, mcpEnabledOptionValue, ApiType.MCP, out isMcpEnabled);
         }
 
         /// <summary>
@@ -750,7 +761,7 @@ namespace Cli
             if (options.RuntimeMcpEnabled != null ||
                 options.RuntimeMcpPath != null)
             {
-                McpRuntimeOptions? updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
+                McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
 
                 if (status)
@@ -973,7 +984,7 @@ namespace Cli
         /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
         private static bool TryUpdateConfiguredMcpValues(
     ConfigureOptions options,
-    ref McpRuntimeOptions? updatedMcpOptions)
+    ref McpRuntimeOptions updatedMcpOptions)
         {
             object? updatedValue;
 

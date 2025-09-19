@@ -58,6 +58,11 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                 return new McpRuntimeOptions(Enabled: reader.GetBoolean());
             }
 
+            if (reader.TokenType == JsonTokenType.False)
+            {
+                return new McpRuntimeOptions(Enabled: false);
+            }
+
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 DmlToolsConfigConverter dmlToolsConfigConverter = new();
@@ -131,6 +136,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                 DmlToolsConfigConverter dmlToolsOptionsConverter = options.GetConverter(typeof(DmlToolsConfig)) as DmlToolsConfigConverter ??
                                     throw new JsonException("Failed to get mcp.dml-tools options converter");
 
+                writer.WritePropertyName("dml-tools");
                 dmlToolsOptionsConverter.Write(writer, value.DmlTools, options);
             }
 

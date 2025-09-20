@@ -13,6 +13,10 @@
       Path: /graphql,
       AllowIntrospection: true
     },
+    Mcp: {
+      Enabled: true,
+      Path: /mcp
+    },
     Host: {
       Cors: {
         Origins: [

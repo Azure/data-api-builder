@@ -29,17 +29,17 @@ internal class McpDmlToolsOptionsConverter : JsonConverter<McpDmlToolsOptions>
         if (reader.TokenType is JsonTokenType.StartObject)
         {
             bool? describeEntities = null;
-            bool? createRecord = null;
-            bool? readRecord = null;
-            bool? updateRecord = null;
-            bool? deleteRecord = null;
-            bool? executeRecord = null;
+            bool? createEntity = null;
+            bool? readEntity = null;
+            bool? updateEntity = null;
+            bool? deleteEntity = null;
+            bool? executeEntity = null;
 
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    return new McpDmlToolsOptions(describeEntities, createRecord, readRecord, updateRecord, deleteRecord, executeRecord);
+                    return new McpDmlToolsOptions(describeEntities, createEntity, readEntity, updateEntity, deleteEntity, executeEntity);
                 }
 
                 string? propertyName = reader.GetString();
@@ -55,42 +55,42 @@ internal class McpDmlToolsOptionsConverter : JsonConverter<McpDmlToolsOptions>
 
                         break;
 
-                    case "create-record":
+                    case "create-entity":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            createRecord = reader.GetBoolean();
+                            createEntity = reader.GetBoolean();
                         }
 
                         break;
 
-                    case "read-record":
+                    case "read-entity":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            readRecord = reader.GetBoolean();
+                            readEntity = reader.GetBoolean();
                         }
 
                         break;
 
-                    case "update-record":
+                    case "update-entity":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            updateRecord = reader.GetBoolean();
+                            updateEntity = reader.GetBoolean();
                         }
 
                         break;
 
-                    case "delete-record":
+                    case "delete-entity":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            deleteRecord = reader.GetBoolean();
+                            deleteEntity = reader.GetBoolean();
                         }
 
                         break;
 
-                    case "execute-record":
+                    case "execute-entity":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            executeRecord = reader.GetBoolean();
+                            executeEntity = reader.GetBoolean();
                         }
 
                         break;
@@ -120,34 +120,34 @@ internal class McpDmlToolsOptionsConverter : JsonConverter<McpDmlToolsOptions>
             JsonSerializer.Serialize(writer, value.DescribeEntities, options);
         }
 
-        if (value?.UserProvidedCreateRecord is true)
+        if (value?.UserProvidedCreateEntity is true)
         {
-            writer.WritePropertyName("create-record");
-            JsonSerializer.Serialize(writer, value.CreateRecord, options);
+            writer.WritePropertyName("create-entity");
+            JsonSerializer.Serialize(writer, value.CreateEntity, options);
         }
 
-        if (value?.UserProvidedReadRecord is true)
+        if (value?.UserProvidedReadEntity is true)
         {
-            writer.WritePropertyName("read-record");
-            JsonSerializer.Serialize(writer, value.ReadRecord, options);
+            writer.WritePropertyName("read-entity");
+            JsonSerializer.Serialize(writer, value.ReadEntity, options);
         }
 
-        if (value?.UserProvidedUpdateRecord is true)
+        if (value?.UserProvidedUpdateEntity is true)
         {
-            writer.WritePropertyName("update-record");
-            JsonSerializer.Serialize(writer, value.UpdateRecord, options);
+            writer.WritePropertyName("update-entity");
+            JsonSerializer.Serialize(writer, value.UpdateEntity, options);
         }
 
-        if (value?.UserProvidedDeleteRecord is true)
+        if (value?.UserProvidedDeleteEntity is true)
         {
-            writer.WritePropertyName("delete-record");
-            JsonSerializer.Serialize(writer, value.DeleteRecord, options);
+            writer.WritePropertyName("delete-entity");
+            JsonSerializer.Serialize(writer, value.DeleteEntity, options);
         }
 
-        if (value?.UserProvidedExecuteRecord is true)
+        if (value?.UserProvidedExecuteEntity is true)
         {
-            writer.WritePropertyName("execute-record");
-            JsonSerializer.Serialize(writer, value.ExecuteRecord, options);
+            writer.WritePropertyName("execute-entity");
+            JsonSerializer.Serialize(writer, value.ExecuteEntity, options);
         }
     }
 }

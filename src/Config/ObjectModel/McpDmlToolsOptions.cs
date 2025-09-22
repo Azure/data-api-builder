@@ -13,23 +13,23 @@ public record McpDmlToolsOptions
 {
     public bool DescribeEntities { get; init; }
 
-    public bool CreateRecord { get; init; }
+    public bool CreateEntity { get; init; }
 
-    public bool ReadRecord { get; init; }
+    public bool ReadEntity { get; init; }
 
-    public bool UpdateRecord { get; init; }
+    public bool UpdateEntity { get; init; }
 
-    public bool DeleteRecord { get; init; }
+    public bool DeleteEntity { get; init; }
 
-    public bool ExecuteRecord { get; init; }
+    public bool ExecuteEntity { get; init; }
 
     public McpDmlToolsOptions(
         bool? DescribeEntities = null,
-        bool? CreateRecord = null,
-        bool? ReadRecord = null,
-        bool? UpdateRecord = null,
-        bool? DeleteRecord = null,
-        bool? ExecuteRecord = null)
+        bool? CreateEntity = null,
+        bool? ReadEntity = null,
+        bool? UpdateEntity = null,
+        bool? DeleteEntity = null,
+        bool? ExecuteEntity = null)
     {
         if (DescribeEntities is not null)
         {
@@ -41,54 +41,54 @@ public record McpDmlToolsOptions
             this.DescribeEntities = false;
         }
 
-        if (CreateRecord is not null)
+        if (CreateEntity is not null)
         {
-            this.CreateRecord = (bool)CreateRecord;
-            UserProvidedCreateRecord = true;
+            this.CreateEntity = (bool)CreateEntity;
+            UserProvidedCreateEntity = true;
         }
         else
         {
-            this.CreateRecord = false;
+            this.CreateEntity = false;
         }
 
-        if (ReadRecord is not null)
+        if (ReadEntity is not null)
         {
-            this.ReadRecord = (bool)ReadRecord;
-            UserProvidedReadRecord = true;
+            this.ReadEntity = (bool)ReadEntity;
+            UserProvidedReadEntity = true;
         }
         else
         {
-            this.ReadRecord = false;
+            this.ReadEntity = false;
         }
 
-        if (UpdateRecord is not null)
+        if (UpdateEntity is not null)
         {
-            this.UpdateRecord = (bool)UpdateRecord;
-            UserProvidedUpdateRecord = true;
+            this.UpdateEntity = (bool)UpdateEntity;
+            UserProvidedUpdateEntity = true;
         }
         else
         {
-            this.UpdateRecord = false;
+            this.UpdateEntity = false;
         }
 
-        if (DeleteRecord is not null)
+        if (DeleteEntity is not null)
         {
-            this.DeleteRecord = (bool)DeleteRecord;
-            UserProvidedDeleteRecord = true;
+            this.DeleteEntity = (bool)DeleteEntity;
+            UserProvidedDeleteEntity = true;
         }
         else
         {
-            this.DeleteRecord = false;
+            this.DeleteEntity = false;
         }
 
-        if (ExecuteRecord is not null)
+        if (ExecuteEntity is not null)
         {
-            this.ExecuteRecord = (bool)ExecuteRecord;
-            UserProvidedExecuteRecord = true;
+            this.ExecuteEntity = (bool)ExecuteEntity;
+            UserProvidedExecuteEntity = true;
         }
         else
         {
-            this.ExecuteRecord = false;
+            this.ExecuteEntity = false;
         }
     }
 
@@ -103,52 +103,52 @@ public record McpDmlToolsOptions
     public bool UserProvidedDescribeEntities { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write create-record
+    /// Flag which informs CLI and JSON serializer whether to write create-entity
     /// property and value to the runtime config file.
-    /// When user doesn't provide the create-record property/value, which signals DAB to use the default,
+    /// When user doesn't provide the create-entity property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(CreateRecord))]
-    public bool UserProvidedCreateRecord { get; init; } = false;
+    [MemberNotNullWhen(true, nameof(CreateEntity))]
+    public bool UserProvidedCreateEntity { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write read-record
+    /// Flag which informs CLI and JSON serializer whether to write read-entity
     /// property and value to the runtime config file.
-    /// When user doesn't provide the read-record property/value, which signals DAB to use the default,
+    /// When user doesn't provide the read-entity property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(ReadRecord))]
-    public bool UserProvidedReadRecord { get; init; } = false;
+    [MemberNotNullWhen(true, nameof(ReadEntity))]
+    public bool UserProvidedReadEntity { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write update-record
+    /// Flag which informs CLI and JSON serializer whether to write update-entity
     /// property and value to the runtime config file.
-    /// When user doesn't provide the update-record property/value, which signals DAB to use the default,
+    /// When user doesn't provide the update-entity property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(UpdateRecord))]
-    public bool UserProvidedUpdateRecord { get; init; } = false;
+    [MemberNotNullWhen(true, nameof(UpdateEntity))]
+    public bool UserProvidedUpdateEntity { get; init; } = false;
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write delete-record
+    /// Flag which informs CLI and JSON serializer whether to write delete-entity
     /// property and value to the runtime config file.
-    /// When user doesn't provide the delete-record property/value, which signals DAB to use the default,
+    /// When user doesn't provide the delete-entity property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(DeleteRecord))]
-    public bool UserProvidedDeleteRecord { get; init; } = false;
+    [MemberNotNullWhen(true, nameof(DeleteEntity))]
+    public bool UserProvidedDeleteEntity { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write execute-record
+    /// Flag which informs CLI and JSON serializer whether to write execute-entity
     /// property and value to the runtime config file.
-    /// When user doesn't provide the execute-record property/value, which signals DAB to use the default,
+    /// When user doesn't provide the execute-entity property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(ExecuteRecord))]
-    public bool UserProvidedExecuteRecord { get; init; } = false;
+    [MemberNotNullWhen(true, nameof(ExecuteEntity))]
+    public bool UserProvidedExecuteEntity { get; init; } = false;
 }
 

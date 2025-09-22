@@ -49,11 +49,11 @@ internal class McpOptionsConverterFactory : JsonConverterFactory
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool? describeEntities = null;
-                bool? createRecord = null;
-                bool? readRecord = null;
-                bool? updateRecord = null;
-                bool? deleteRecord = null;
-                bool? executeRecord = null;
+                bool? createEntity = null;
+                bool? readEntity = null;
+                bool? updateEntity = null;
+                bool? deleteEntity = null;
+                bool? executeEntity = null;
 
                 while (reader.Read())
                 {
@@ -63,11 +63,11 @@ internal class McpOptionsConverterFactory : JsonConverterFactory
                         {
                             AllToolsEnabled = false, // Default when using object format
                             DescribeEntities = describeEntities,
-                            CreateRecord = createRecord,
-                            ReadRecord = readRecord,
-                            UpdateRecord = updateRecord,
-                            DeleteRecord = deleteRecord,
-                            ExecuteRecord = executeRecord
+                            CreateEntity = createEntity,
+                            ReadEntity = readEntity,
+                            UpdateEntity = updateEntity,
+                            DeleteEntity = deleteEntity,
+                            ExecuteEntity = executeEntity
                         };
                     }
 
@@ -79,20 +79,20 @@ internal class McpOptionsConverterFactory : JsonConverterFactory
                         case "describe-entities":
                             describeEntities = reader.GetBoolean();
                             break;
-                        case "create-record":
-                            createRecord = reader.GetBoolean();
+                        case "create-entity":
+                            createEntity = reader.GetBoolean();
                             break;
-                        case "read-record":
-                            readRecord = reader.GetBoolean();
+                        case "read-entity":
+                            readEntity = reader.GetBoolean();
                             break;
-                        case "update-record":
-                            updateRecord = reader.GetBoolean();
+                        case "update-entity":
+                            updateEntity = reader.GetBoolean();
                             break;
-                        case "delete-record":
-                            deleteRecord = reader.GetBoolean();
+                        case "delete-entity":
+                            deleteEntity = reader.GetBoolean();
                             break;
-                        case "execute-record":
-                            executeRecord = reader.GetBoolean();
+                        case "execute-entity":
+                            executeEntity = reader.GetBoolean();
                             break;
                         default:
                             throw new JsonException($"Unexpected property '{property}' in dml-tools configuration.");
@@ -118,11 +118,11 @@ internal class McpOptionsConverterFactory : JsonConverterFactory
 
             // Check if this can be simplified to a boolean
             bool hasIndividualSettings = value.DescribeEntities.HasValue ||
-                                       value.CreateRecord.HasValue ||
-                                       value.ReadRecord.HasValue ||
-                                       value.UpdateRecord.HasValue ||
-                                       value.DeleteRecord.HasValue ||
-                                       value.ExecuteRecord.HasValue;
+                                       value.CreateEntity.HasValue ||
+                                       value.ReadEntity.HasValue ||
+                                       value.UpdateEntity.HasValue ||
+                                       value.DeleteEntity.HasValue ||
+                                       value.ExecuteEntity.HasValue;
 
             if (!hasIndividualSettings)
             {
@@ -137,29 +137,29 @@ internal class McpOptionsConverterFactory : JsonConverterFactory
                     writer.WriteBoolean("describe-entities", value.DescribeEntities.Value);
                 }
 
-                if (value.CreateRecord.HasValue)
+                if (value.CreateEntity.HasValue)
                 {
-                    writer.WriteBoolean("create-record", value.CreateRecord.Value);
+                    writer.WriteBoolean("create-entity", value.CreateEntity.Value);
                 }
 
-                if (value.ReadRecord.HasValue)
+                if (value.ReadEntity.HasValue)
                 {
-                    writer.WriteBoolean("read-record", value.ReadRecord.Value);
+                    writer.WriteBoolean("read-entity", value.ReadEntity.Value);
                 }
 
-                if (value.UpdateRecord.HasValue)
+                if (value.UpdateEntity.HasValue)
                 {
-                    writer.WriteBoolean("update-record", value.UpdateRecord.Value);
+                    writer.WriteBoolean("update-entity", value.UpdateEntity.Value);
                 }
 
-                if (value.DeleteRecord.HasValue)
+                if (value.DeleteEntity.HasValue)
                 {
-                    writer.WriteBoolean("delete-record", value.DeleteRecord.Value);
+                    writer.WriteBoolean("delete-entity", value.DeleteEntity.Value);
                 }
 
-                if (value.ExecuteRecord.HasValue)
+                if (value.ExecuteEntity.HasValue)
                 {
-                    writer.WriteBoolean("execute-record", value.ExecuteRecord.Value);
+                    writer.WriteBoolean("execute-entity", value.ExecuteEntity.Value);
                 }
 
                 writer.WriteEndObject();

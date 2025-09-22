@@ -186,19 +186,19 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.describe-entities.enabled", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDescribeEntitiesEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.create-entity.enabled", Required = false, HelpText = "Enable DAB's MCP create record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.create-entity.enabled", Required = false, HelpText = "Enable DAB's MCP create entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsCreateEntityEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.read-entity.enabled", Required = false, HelpText = "Enable DAB's MCP read record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.read-entity.enabled", Required = false, HelpText = "Enable DAB's MCP read entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsReadEntityEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.update-entity.enabled", Required = false, HelpText = "Enable DAB's MCP update record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.update-entity.enabled", Required = false, HelpText = "Enable DAB's MCP update entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsUpdateEntityEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.delete-entity.enabled", Required = false, HelpText = "Enable DAB's MCP delete record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.delete-entity.enabled", Required = false, HelpText = "Enable DAB's MCP delete entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDeleteEntityEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute record tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]

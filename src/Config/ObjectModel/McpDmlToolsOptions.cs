@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
-/// DML Tools found in global MCP configuration.
+/// DML Tools for general CRUD operations on configured entities
 /// </summary>
 public record McpDmlToolsOptions
 {

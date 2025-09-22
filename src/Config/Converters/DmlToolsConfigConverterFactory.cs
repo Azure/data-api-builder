@@ -10,7 +10,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// <summary>
 /// JSON converter factory for DmlToolsConfig that handles both boolean and object formats.
 /// </summary>
-internal class McpOptionsConverterFactory : JsonConverterFactory
+internal class DmlToolsConfigConverterFactory : JsonConverterFactory
 {
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -112,7 +112,6 @@ internal class McpOptionsConverterFactory : JsonConverterFactory
         {
             if (value is null)
             {
-                writer.WriteNullValue();
                 return;
             }
 

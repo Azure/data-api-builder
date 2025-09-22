@@ -77,8 +77,6 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsGraphQLEnabled);
         // Ignore the IsRestEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
-        // Ignore the IsMcpEnabled as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsMcpEnabled);
         // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.

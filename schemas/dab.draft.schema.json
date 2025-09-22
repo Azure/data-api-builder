@@ -251,7 +251,7 @@
             "enabled": {
               "type": "boolean",
               "description": "Allow enabling/disabling MCP requests for all entities.",
-              "default": false
+              "default": true
             },
             "dml-tools": {
               "oneOf": [

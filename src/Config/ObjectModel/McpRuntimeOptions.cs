@@ -20,12 +20,12 @@ public record McpRuntimeOptions
     public string? Path { get; init; }
 
     [JsonPropertyName("dml-tools")]
-    [JsonConverter(typeof(McpOptionsConverterFactory))]
+    [JsonConverter(typeof(DmlToolsConfigConverterFactory))]
     public DmlToolsConfig? DmlTools { get; init; }
 
     [JsonConstructor]
     public McpRuntimeOptions(
-        bool Enabled = false,
+        bool Enabled = true,
         string? Path = null,
         DmlToolsConfig? DmlTools = null)
     {

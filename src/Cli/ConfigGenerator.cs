@@ -984,8 +984,8 @@ namespace Cli
         /// <param name="updatedMcpOptions">updatedMcpOptions</param>
         /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
         private static bool TryUpdateConfiguredMcpValues(
-    ConfigureOptions options,
-    ref McpRuntimeOptions updatedMcpOptions)
+            ConfigureOptions options,
+            ref McpRuntimeOptions updatedMcpOptions)
         {
             object? updatedValue;
 

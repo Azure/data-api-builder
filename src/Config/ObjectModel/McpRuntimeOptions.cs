@@ -3,7 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.Converters;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {

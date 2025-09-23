@@ -30,12 +30,14 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
         /// Reads DmlToolsConfig from JSON which can be either:
         /// - A boolean: all tools are enabled/disabled
         /// - An object: individual tool settings
+        /// - Null/undefined: defaults to all tools enabled (true)
         /// </summary>
         public override DmlToolsConfig? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType is JsonTokenType.Null)
             {
-                return null;
+                // Return default config with all tools enabled
+                return DmlToolsConfig.Default;
             }
 
             // Handle boolean format: "dml-tools": true/false
@@ -50,7 +52,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
             {
                 bool? describeEntities = null;
                 bool? createRecord = null;
-                bool? readRecords = null;
+                bool? readRecord = null;
                 bool? updateRecord = null;
                 bool? deleteRecord = null;
                 bool? executeRecord = null;
@@ -59,16 +61,14 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new DmlToolsConfig
-                        {
-                            AllToolsEnabled = false, // Default when using object format
-                            DescribeEntities = describeEntities,
-                            CreateRecord = createRecord,
-                            ReadRecords = readRecords,
-                            UpdateRecord = updateRecord,
-                            DeleteRecord = deleteRecord,
-                            ExecuteRecord = executeRecord
-                        };
+                        return new DmlToolsConfig(
+                            allToolsEnabled: null,
+                            describeEntities: describeEntities,
+                            createRecord: createRecord,
+                            readRecords: readRecord,
+                            updateRecord: updateRecord,
+                            deleteRecord: deleteRecord,
+                            executeRecord: executeRecord);
                     }
 
                     string? property = reader.GetString();
@@ -83,7 +83,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                             createRecord = reader.GetBoolean();
                             break;
                         case "read-records":
-                            readRecords = reader.GetBoolean();
+                            readRecord = reader.GetBoolean();
                             break;
                         case "update-record":
                             updateRecord = reader.GetBoolean();
@@ -105,58 +105,66 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
 
         /// <summary>
         /// Writes DmlToolsConfig to JSON.
-        /// If all tools have the same state, writes as boolean.
-        /// Otherwise, writes as an object with individual tool settings.
+        /// Only writes user-provided properties to avoid bloating the config file.
+        /// If no individual settings provided, writes as boolean.
         /// </summary>
         public override void Write(Utf8JsonWriter writer, DmlToolsConfig? value, JsonSerializerOptions options)
         {
             if (value is null)
             {
+                // Don't write null - omit the property entirely
                 return;
             }
 
-            // Check if this can be simplified to a boolean
-            bool hasIndividualSettings = value.DescribeEntities.HasValue ||
-                                       value.CreateRecord.HasValue ||
-                                       value.ReadRecords.HasValue ||
-                                       value.UpdateRecord.HasValue ||
-                                       value.DeleteRecord.HasValue ||
-                                       value.ExecuteRecord.HasValue;
+            // Check if any individual settings were provided by the user
+            bool hasIndividualSettings = value.UserProvidedDescribeEntities ||
+                                       value.UserProvidedCreateRecord ||
+                                       value.UserProvidedReadRecords ||
+                                       value.UserProvidedUpdateRecord ||
+                                       value.UserProvidedDeleteRecord ||
+                                       value.UserProvidedExecuteRecord;
 
             if (!hasIndividualSettings)
             {
-                writer.WriteBooleanValue(value.AllToolsEnabled);
+                // Only write the boolean value if it's not the default (true)
+                // This prevents writing "dml-tools": true when it's the default
+                if (value.AllToolsEnabled != DmlToolsConfig.DEFAULT_ENABLED)
+                {
+                    writer.WriteBooleanValue(value.AllToolsEnabled);
+                }
+                // Otherwise, don't write anything (property will be omitted)
             }
             else
             {
+                // Write as object with only user-provided properties
                 writer.WriteStartObject();
 
-                if (value.DescribeEntities.HasValue)
+                if (value.UserProvidedDescribeEntities)
                 {
                     writer.WriteBoolean("describe-entities", value.DescribeEntities.Value);
                 }
 
-                if (value.CreateRecord.HasValue)
+                if (value.UserProvidedCreateRecord)
                 {
                     writer.WriteBoolean("create-record", value.CreateRecord.Value);
                 }
 
-                if (value.ReadRecords.HasValue)
+                if (value.UserProvidedReadRecords)
                 {
                     writer.WriteBoolean("read-records", value.ReadRecords.Value);
                 }
 
-                if (value.UpdateRecord.HasValue)
+                if (value.UserProvidedUpdateRecord)
                 {
                     writer.WriteBoolean("update-record", value.UpdateRecord.Value);
                 }
 
-                if (value.DeleteRecord.HasValue)
+                if (value.UserProvidedDeleteRecord)
                 {
                     writer.WriteBoolean("delete-record", value.DeleteRecord.Value);
                 }
 
-                if (value.ExecuteRecord.HasValue)
+                if (value.UserProvidedExecuteRecord)
                 {
                     writer.WriteBoolean("execute-record", value.ExecuteRecord.Value);
                 }

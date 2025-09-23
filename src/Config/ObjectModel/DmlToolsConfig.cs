@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
+
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
@@ -8,16 +11,97 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </summary>
 public record DmlToolsConfig
 {
-    public bool AllToolsEnabled { get; init; }
-    public bool? DescribeEntities { get; init; }
-    public bool? CreateRecord { get; init; }
-    public bool? ReadRecords { get; init; }
-    public bool? UpdateRecord { get; init; }
-    public bool? DeleteRecord { get; init; }
-    public bool? ExecuteRecord { get; init; }
+    /// <summary>
+    /// Default value for all tools when not specified
+    /// </summary>
+    public const bool DEFAULT_ENABLED = true;
 
     /// <summary>
-    /// Creates a DmlToolsConfig with all tools enabled/disabled
+    /// Indicates if all tools are enabled/disabled uniformly
+    /// </summary>
+    public bool AllToolsEnabled { get; init; }
+
+    /// <summary>
+    /// Whether describe-entities tool is enabled
+    /// </summary>
+    public bool? DescribeEntities { get; init; }
+
+    /// <summary>
+    /// Whether create-record tool is enabled
+    /// </summary>
+    public bool? CreateRecord { get; init; }
+
+    /// <summary>
+    /// Whether read-records tool is enabled
+    /// </summary>
+    public bool? ReadRecords { get; init; }
+
+    /// <summary>
+    /// Whether update-record tool is enabled
+    /// </summary>
+    public bool? UpdateRecord { get; init; }
+
+    /// <summary>
+    /// Whether delete-record tool is enabled
+    /// </summary>
+    public bool? DeleteRecord { get; init; }
+
+    /// <summary>
+    /// Whether execute-record tool is enabled
+    /// </summary>
+    public bool? ExecuteRecord { get; init; }
+
+    [JsonConstructor]
+    public DmlToolsConfig(
+        bool? allToolsEnabled = null,
+        bool? describeEntities = null,
+        bool? createRecord = null,
+        bool? readRecords = null,
+        bool? updateRecord = null,
+        bool? deleteRecord = null,
+        bool? executeRecord = null)
+    {
+        AllToolsEnabled = allToolsEnabled ?? DEFAULT_ENABLED;
+
+        if (describeEntities is not null)
+        {
+            DescribeEntities = describeEntities;
+            UserProvidedDescribeEntities = true;
+        }
+
+        if (createRecord is not null)
+        {
+            CreateRecord = createRecord;
+            UserProvidedCreateRecord = true;
+        }
+
+        if (readRecords is not null)
+        {
+            ReadRecords = readRecords;
+            UserProvidedReadRecords = true;
+        }
+
+        if (updateRecord is not null)
+        {
+            UpdateRecord = updateRecord;
+            UserProvidedUpdateRecord = true;
+        }
+
+        if (deleteRecord is not null)
+        {
+            DeleteRecord = deleteRecord;
+            UserProvidedDeleteRecord = true;
+        }
+
+        if (executeRecord is not null)
+        {
+            ExecuteRecord = executeRecord;
+            UserProvidedExecuteRecord = true;
+        }
+    }
+
+    /// <summary>
+    /// Creates a DmlToolsConfig with all tools set to the same state
     /// </summary>
     public static DmlToolsConfig FromBoolean(bool enabled)
     {
@@ -34,8 +118,15 @@ public record DmlToolsConfig
     }
 
     /// <summary>
-    /// Checks if a specific tool is enabled
+    /// Creates a default DmlToolsConfig with all tools enabled
     /// </summary>
+    public static DmlToolsConfig Default => FromBoolean(DEFAULT_ENABLED);
+
+    /// <summary>
+    /// Checks if a specific tool is enabled based on its name
+    /// </summary>
+    /// <param name="toolName">The name of the tool to check</param>
+    /// <returns>True if the tool is enabled, false otherwise</returns>
     public bool IsToolEnabled(string toolName)
     {
         return toolName switch
@@ -46,7 +137,55 @@ public record DmlToolsConfig
             "update-record" => UpdateRecord ?? AllToolsEnabled,
             "delete-record" => DeleteRecord ?? AllToolsEnabled,
             "execute-record" => ExecuteRecord ?? AllToolsEnabled,
-            _ => false
+            _ => AllToolsEnabled
         };
     }
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write describe-entities
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(DescribeEntities))]
+    public bool UserProvidedDescribeEntities { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write create-record
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(CreateRecord))]
+    public bool UserProvidedCreateRecord { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write read-records
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(ReadRecords))]
+    public bool UserProvidedReadRecords { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write update-record
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(UpdateRecord))]
+    public bool UserProvidedUpdateRecord { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write delete-record
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(DeleteRecord))]
+    public bool UserProvidedDeleteRecord { get; init; } = false;
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write execute-record
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(ExecuteRecord))]
+    public bool UserProvidedExecuteRecord { get; init; } = false;
 }

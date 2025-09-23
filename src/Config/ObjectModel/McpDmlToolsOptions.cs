@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -38,7 +37,7 @@ public record McpDmlToolsOptions
         }
         else
         {
-            this.DescribeEntities = false;
+            this.DescribeEntities = true;
         }
 
         if (CreateRecord is not null)
@@ -48,7 +47,7 @@ public record McpDmlToolsOptions
         }
         else
         {
-            this.CreateRecord = false;
+            this.CreateRecord = true;
         }
 
         if (ReadRecords is not null)
@@ -58,7 +57,7 @@ public record McpDmlToolsOptions
         }
         else
         {
-            this.ReadRecords = false;
+            this.ReadRecords = true;
         }
 
         if (UpdateRecord is not null)
@@ -68,7 +67,7 @@ public record McpDmlToolsOptions
         }
         else
         {
-            this.UpdateRecord = false;
+            this.UpdateRecord = true;
         }
 
         if (DeleteRecord is not null)
@@ -78,7 +77,7 @@ public record McpDmlToolsOptions
         }
         else
         {
-            this.DeleteRecord = false;
+            this.DeleteRecord = true;
         }
 
         if (ExecuteRecord is not null)
@@ -88,7 +87,7 @@ public record McpDmlToolsOptions
         }
         else
         {
-            this.ExecuteRecord = false;
+            this.ExecuteRecord = true;
         }
     }
 
@@ -99,7 +98,6 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(DescribeEntities))]
     public bool UserProvidedDescribeEntities { get; init; } = false;
 
     /// <summary>
@@ -109,7 +107,6 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(CreateRecord))]
     public bool UserProvidedCreateRecord { get; init; } = false;
 
     /// <summary>
@@ -119,7 +116,6 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(ReadRecords))]
     public bool UserProvidedReadRecords { get; init; } = false;
 
     /// <summary>
@@ -129,8 +125,8 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(UpdateRecord))]
     public bool UserProvidedUpdateRecord { get; init; } = false;
+
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write delete-record
     /// property and value to the runtime config file.
@@ -138,7 +134,6 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(DeleteRecord))]
     public bool UserProvidedDeleteRecord { get; init; } = false;
 
     /// <summary>
@@ -148,7 +143,6 @@ public record McpDmlToolsOptions
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(ExecuteRecord))]
     public bool UserProvidedExecuteRecord { get; init; } = false;
 }
 

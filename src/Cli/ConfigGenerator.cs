@@ -1032,7 +1032,7 @@ namespace Cli
                 // Handle individual tool updates
                 bool? describeEntities = currentDmlTools?.DescribeEntities;
                 bool? createRecord = currentDmlTools?.CreateRecord;
-                bool? readRecords = currentDmlTools?.ReadRecords;
+                bool? readRecord = currentDmlTools?.ReadRecords;
                 bool? updateRecord = currentDmlTools?.UpdateRecord;
                 bool? deleteRecord = currentDmlTools?.DeleteRecord;
                 bool? executeRecord = currentDmlTools?.ExecuteRecord;
@@ -1056,7 +1056,7 @@ namespace Cli
                 updatedValue = options?.RuntimeMcpDmlToolsReadRecordsEnabled;
                 if (updatedValue != null)
                 {
-                    readRecords = (bool)updatedValue;
+                    readRecord = (bool)updatedValue;
                     hasToolUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.read-records as '{updatedValue}'", updatedValue);
                 }
@@ -1094,7 +1094,7 @@ namespace Cli
                             AllToolsEnabled = false,
                             DescribeEntities = describeEntities,
                             CreateRecord = createRecord,
-                            ReadRecords = readRecords,
+                            ReadRecords = readRecord,
                             UpdateRecord = updateRecord,
                             DeleteRecord = deleteRecord,
                             ExecuteRecord = executeRecord

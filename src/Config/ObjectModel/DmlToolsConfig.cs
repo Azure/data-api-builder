@@ -10,11 +10,11 @@ public record DmlToolsConfig
 {
     public bool AllToolsEnabled { get; init; }
     public bool? DescribeEntities { get; init; }
-    public bool? CreateEntity { get; init; }
-    public bool? ReadEntity { get; init; }
-    public bool? UpdateEntity { get; init; }
-    public bool? DeleteEntity { get; init; }
-    public bool? ExecuteEntity { get; init; }
+    public bool? CreateRecord { get; init; }
+    public bool? ReadRecords { get; init; }
+    public bool? UpdateRecord { get; init; }
+    public bool? DeleteRecord { get; init; }
+    public bool? ExecuteRecord { get; init; }
 
     /// <summary>
     /// Creates a DmlToolsConfig with all tools enabled/disabled
@@ -25,11 +25,11 @@ public record DmlToolsConfig
         {
             AllToolsEnabled = enabled,
             DescribeEntities = null,
-            CreateEntity = null,
-            ReadEntity = null,
-            UpdateEntity = null,
-            DeleteEntity = null,
-            ExecuteEntity = null
+            CreateRecord = null,
+            ReadRecords = null,
+            UpdateRecord = null,
+            DeleteRecord = null,
+            ExecuteRecord = null
         };
     }
 
@@ -41,11 +41,11 @@ public record DmlToolsConfig
         return toolName switch
         {
             "describe-entities" => DescribeEntities ?? AllToolsEnabled,
-            "create-entity" => CreateEntity ?? AllToolsEnabled,
-            "read-entity" => ReadEntity ?? AllToolsEnabled,
-            "update-entity" => UpdateEntity ?? AllToolsEnabled,
-            "delete-entity" => DeleteEntity ?? AllToolsEnabled,
-            "execute-entity" => ExecuteEntity ?? AllToolsEnabled,
+            "create-record" => CreateRecord ?? AllToolsEnabled,
+            "read-records" => ReadRecords ?? AllToolsEnabled,
+            "update-record" => UpdateRecord ?? AllToolsEnabled,
+            "delete-record" => DeleteRecord ?? AllToolsEnabled,
+            "execute-record" => ExecuteRecord ?? AllToolsEnabled,
             _ => false
         };
     }

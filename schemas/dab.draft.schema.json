@@ -269,29 +269,29 @@
                       "description": "Enable/disable the describe-entities tool.",
                       "default": false
                     },
-                    "create-entity": {
+                    "create-record": {
                       "type": "boolean",
-                      "description": "Enable/disable the create-entity tool.",
+                      "description": "Enable/disable the create-record tool.",
                       "default": false
                     },
-                    "read-entity": {
+                    "read-records": {
                       "type": "boolean",
-                      "description": "Enable/disable the read-entity tool.",
+                      "description": "Enable/disable the read-records tool.",
                       "default": false
                     },
-                    "update-entity": {
+                    "update-record": {
                       "type": "boolean",
-                      "description": "Enable/disable the update-entity tool.",
+                      "description": "Enable/disable the update-record tool.",
                       "default": false
                     },
-                    "delete-entity": {
+                    "delete-record": {
                       "type": "boolean",
-                      "description": "Enable/disable the delete-entity tool.",
+                      "description": "Enable/disable the delete-record tool.",
                       "default": false
                     },
-                    "execute-entity": {
+                    "execute-record": {
                       "type": "boolean",
-                      "description": "Enable/disable the execute-entity tool.",
+                      "description": "Enable/disable the execute-record tool.",
                       "default": false
                     }
                   }

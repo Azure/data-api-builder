@@ -49,11 +49,11 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 bool? describeEntities = null;
-                bool? createEntity = null;
-                bool? readEntity = null;
-                bool? updateEntity = null;
-                bool? deleteEntity = null;
-                bool? executeEntity = null;
+                bool? createRecord = null;
+                bool? readRecords = null;
+                bool? updateRecord = null;
+                bool? deleteRecord = null;
+                bool? executeRecord = null;
 
                 while (reader.Read())
                 {
@@ -63,11 +63,11 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                         {
                             AllToolsEnabled = false, // Default when using object format
                             DescribeEntities = describeEntities,
-                            CreateEntity = createEntity,
-                            ReadEntity = readEntity,
-                            UpdateEntity = updateEntity,
-                            DeleteEntity = deleteEntity,
-                            ExecuteEntity = executeEntity
+                            CreateRecord = createRecord,
+                            ReadRecords = readRecords,
+                            UpdateRecord = updateRecord,
+                            DeleteRecord = deleteRecord,
+                            ExecuteRecord = executeRecord
                         };
                     }
 
@@ -79,20 +79,20 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                         case "describe-entities":
                             describeEntities = reader.GetBoolean();
                             break;
-                        case "create-entity":
-                            createEntity = reader.GetBoolean();
+                        case "create-record":
+                            createRecord = reader.GetBoolean();
                             break;
-                        case "read-entity":
-                            readEntity = reader.GetBoolean();
+                        case "read-records":
+                            readRecords = reader.GetBoolean();
                             break;
-                        case "update-entity":
-                            updateEntity = reader.GetBoolean();
+                        case "update-record":
+                            updateRecord = reader.GetBoolean();
                             break;
-                        case "delete-entity":
-                            deleteEntity = reader.GetBoolean();
+                        case "delete-record":
+                            deleteRecord = reader.GetBoolean();
                             break;
-                        case "execute-entity":
-                            executeEntity = reader.GetBoolean();
+                        case "execute-record":
+                            executeRecord = reader.GetBoolean();
                             break;
                         default:
                             throw new JsonException($"Unexpected property '{property}' in dml-tools configuration.");
@@ -117,11 +117,11 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
 
             // Check if this can be simplified to a boolean
             bool hasIndividualSettings = value.DescribeEntities.HasValue ||
-                                       value.CreateEntity.HasValue ||
-                                       value.ReadEntity.HasValue ||
-                                       value.UpdateEntity.HasValue ||
-                                       value.DeleteEntity.HasValue ||
-                                       value.ExecuteEntity.HasValue;
+                                       value.CreateRecord.HasValue ||
+                                       value.ReadRecords.HasValue ||
+                                       value.UpdateRecord.HasValue ||
+                                       value.DeleteRecord.HasValue ||
+                                       value.ExecuteRecord.HasValue;
 
             if (!hasIndividualSettings)
             {
@@ -136,29 +136,29 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                     writer.WriteBoolean("describe-entities", value.DescribeEntities.Value);
                 }
 
-                if (value.CreateEntity.HasValue)
+                if (value.CreateRecord.HasValue)
                 {
-                    writer.WriteBoolean("create-entity", value.CreateEntity.Value);
+                    writer.WriteBoolean("create-record", value.CreateRecord.Value);
                 }
 
-                if (value.ReadEntity.HasValue)
+                if (value.ReadRecords.HasValue)
                 {
-                    writer.WriteBoolean("read-entity", value.ReadEntity.Value);
+                    writer.WriteBoolean("read-records", value.ReadRecords.Value);
                 }
 
-                if (value.UpdateEntity.HasValue)
+                if (value.UpdateRecord.HasValue)
                 {
-                    writer.WriteBoolean("update-entity", value.UpdateEntity.Value);
+                    writer.WriteBoolean("update-record", value.UpdateRecord.Value);
                 }
 
-                if (value.DeleteEntity.HasValue)
+                if (value.DeleteRecord.HasValue)
                 {
-                    writer.WriteBoolean("delete-entity", value.DeleteEntity.Value);
+                    writer.WriteBoolean("delete-record", value.DeleteRecord.Value);
                 }
 
-                if (value.ExecuteEntity.HasValue)
+                if (value.ExecuteRecord.HasValue)
                 {
-                    writer.WriteBoolean("execute-entity", value.ExecuteEntity.Value);
+                    writer.WriteBoolean("execute-record", value.ExecuteRecord.Value);
                 }
 
                 writer.WriteEndObject();

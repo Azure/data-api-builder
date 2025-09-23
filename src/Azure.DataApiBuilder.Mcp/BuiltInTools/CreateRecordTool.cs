@@ -8,7 +8,7 @@ using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
 namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
-    public class CreateEntityTool : IMcpTool
+    public class CreateRecordTool : IMcpTool
     {
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             return new Tool
             {
-                Name = "create_entity",
+                Name = "create_record",
                 Description = "Creates a new record in the specified entity.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{

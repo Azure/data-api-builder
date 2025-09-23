@@ -1031,11 +1031,11 @@ namespace Cli
 
                 // Handle individual tool updates
                 bool? describeEntities = currentDmlTools?.DescribeEntities;
-                bool? createEntity = currentDmlTools?.CreateEntity;
-                bool? readEntity = currentDmlTools?.ReadEntity;
-                bool? updateEntity = currentDmlTools?.UpdateEntity;
-                bool? deleteEntity = currentDmlTools?.DeleteEntity;
-                bool? executeEntity = currentDmlTools?.ExecuteEntity;
+                bool? createRecord = currentDmlTools?.CreateRecord;
+                bool? readRecords = currentDmlTools?.ReadRecords;
+                bool? updateRecord = currentDmlTools?.UpdateRecord;
+                bool? deleteRecord = currentDmlTools?.DeleteRecord;
+                bool? executeRecord = currentDmlTools?.ExecuteRecord;
 
                 updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
                 if (updatedValue != null)
@@ -1045,44 +1045,44 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Describe-Entities as '{updatedValue}'", updatedValue);
                 }
 
-                updatedValue = options?.RuntimeMcpDmlToolsCreateEntityEnabled;
+                updatedValue = options?.RuntimeMcpDmlToolsCreateRecordEnabled;
                 if (updatedValue != null)
                 {
-                    createEntity = (bool)updatedValue;
+                    createRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.create-entity as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Create-Record as '{updatedValue}'", updatedValue);
                 }
 
-                updatedValue = options?.RuntimeMcpDmlToolsReadEntityEnabled;
+                updatedValue = options?.RuntimeMcpDmlToolsReadRecordsEnabled;
                 if (updatedValue != null)
                 {
-                    readEntity = (bool)updatedValue;
+                    readRecords = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.read-entity as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.read-records as '{updatedValue}'", updatedValue);
                 }
 
-                updatedValue = options?.RuntimeMcpDmlToolsUpdateEntityEnabled;
+                updatedValue = options?.RuntimeMcpDmlToolsUpdateRecordEnabled;
                 if (updatedValue != null)
                 {
-                    updateEntity = (bool)updatedValue;
+                    updateRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.update-entity as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Update-Record as '{updatedValue}'", updatedValue);
                 }
 
-                updatedValue = options?.RuntimeMcpDmlToolsDeleteEntityEnabled;
+                updatedValue = options?.RuntimeMcpDmlToolsDeleteRecordEnabled;
                 if (updatedValue != null)
                 {
-                    deleteEntity = (bool)updatedValue;
+                    deleteRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.delete-entity as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Delete-Record as '{updatedValue}'", updatedValue);
                 }
 
-                updatedValue = options?.RuntimeMcpDmlToolsExecuteEntityEnabled;
+                updatedValue = options?.RuntimeMcpDmlToolsExecuteRecordEnabled;
                 if (updatedValue != null)
                 {
-                    executeEntity = (bool)updatedValue;
+                    executeRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.execute-entity as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Execute-Record as '{updatedValue}'", updatedValue);
                 }
 
                 if (hasToolUpdates)
@@ -1093,11 +1093,11 @@ namespace Cli
                         {
                             AllToolsEnabled = false,
                             DescribeEntities = describeEntities,
-                            CreateEntity = createEntity,
-                            ReadEntity = readEntity,
-                            UpdateEntity = updateEntity,
-                            DeleteEntity = deleteEntity,
-                            ExecuteEntity = executeEntity
+                            CreateRecord = createRecord,
+                            ReadRecords = readRecords,
+                            UpdateRecord = updateRecord,
+                            DeleteRecord = deleteRecord,
+                            ExecuteRecord = executeRecord
                         }
                     };
                 }

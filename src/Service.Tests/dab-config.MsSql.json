@@ -28,11 +28,11 @@
       "path": "/mcp",
       "dml-tools": {
         "describe-entities": true,
-        "create-entity": true,
-        "read-entity": true,
-        "update-entity": false,
-        "delete-entity": false,
-        "execute-entity": true
+        "create-record": true,
+        "read-records": true,
+        "update-record": false,
+        "delete-record": false,
+        "execute-record": true
       }
     },
     "host": {

@@ -2320,17 +2320,7 @@
       "source": {
         "object": "notebooks",
         "type": "table",
-        "object-description": "Table containing notebook information",
-        "parameters" : {
-          "id": {
-            "type": "int",
-            "description": "An integer parameter for testing"
-          },
-          "name": {
-            "type": "string",
-            "description": "A string parameter for testing"
-          }
-        }
+        "object-description": "Table containing notebook information"
       },
       "graphql": {
         "enabled": true,

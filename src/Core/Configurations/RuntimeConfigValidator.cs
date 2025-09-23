@@ -735,6 +735,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         ValidateRestURI(runtimeConfig);
         ValidateGraphQLURI(runtimeConfig);
+        ValidateMcpUri(runtimeConfig);
         // Do not check for conflicts if two of the endpoints are disabled between GraphQL, REST, and MCP.
         if ((!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled) ||
             (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsMcpEnabled) ||

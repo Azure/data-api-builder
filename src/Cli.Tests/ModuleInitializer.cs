@@ -73,6 +73,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
         // Ignore the IsMcpEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsMcpEnabled);
+        // Ignore the McpDmlTools as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpDmlTools);
         // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.
@@ -109,6 +111,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.UserProvidedDepthLimit);
         // Ignore EnableLegacyDateTimeScalar as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableLegacyDateTimeScalar);
+        // Ignore UserProvidedPath as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<McpRuntimeOptions>(options => options.UserProvidedPath);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

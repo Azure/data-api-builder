@@ -47,9 +47,9 @@ public record DmlToolsConfig
     public bool? DeleteRecord { get; init; }
 
     /// <summary>
-    /// Whether execute-record tool is enabled
+    /// Whether execute-entity tool is enabled
     /// </summary>
-    public bool? ExecuteRecord { get; init; }
+    public bool? ExecuteEntity { get; init; }
 
     [JsonConstructor]
     public DmlToolsConfig(
@@ -59,7 +59,7 @@ public record DmlToolsConfig
         bool? readRecords = null,
         bool? updateRecord = null,
         bool? deleteRecord = null,
-        bool? executeRecord = null)
+        bool? executeEntity = null)
     {
         AllToolsEnabled = allToolsEnabled ?? DEFAULT_ENABLED;
 
@@ -93,10 +93,10 @@ public record DmlToolsConfig
             UserProvidedDeleteRecord = true;
         }
 
-        if (executeRecord is not null)
+        if (executeEntity is not null)
         {
-            ExecuteRecord = executeRecord;
-            UserProvidedExecuteRecord = true;
+            ExecuteEntity = executeEntity;
+            UserProvidedExecuteEntity = true;
         }
     }
 
@@ -113,7 +113,7 @@ public record DmlToolsConfig
             ReadRecords = null,
             UpdateRecord = null,
             DeleteRecord = null,
-            ExecuteRecord = null
+            ExecuteEntity = null
         };
     }
 
@@ -136,7 +136,7 @@ public record DmlToolsConfig
             "read-records" => ReadRecords ?? AllToolsEnabled,
             "update-record" => UpdateRecord ?? AllToolsEnabled,
             "delete-record" => DeleteRecord ?? AllToolsEnabled,
-            "execute-record" => ExecuteRecord ?? AllToolsEnabled,
+            "execute-entity" => ExecuteEntity ?? AllToolsEnabled,
             _ => AllToolsEnabled
         };
     }
@@ -182,10 +182,10 @@ public record DmlToolsConfig
     public bool UserProvidedDeleteRecord { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write execute-record
+    /// Flag which informs CLI and JSON serializer whether to write execute-entity
     /// property/value to the runtime config file.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(ExecuteRecord))]
-    public bool UserProvidedExecuteRecord { get; init; } = false;
+    [MemberNotNullWhen(true, nameof(ExecuteEntity))]
+    public bool UserProvidedExecuteEntity { get; init; } = false;
 }

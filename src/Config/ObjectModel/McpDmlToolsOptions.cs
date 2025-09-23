@@ -20,7 +20,7 @@ public record McpDmlToolsOptions
 
     public bool DeleteRecord { get; init; }
 
-    public bool ExecuteRecord { get; init; }
+    public bool ExecuteEntity { get; init; }
 
     public McpDmlToolsOptions(
         bool? DescribeEntities = null,
@@ -28,7 +28,7 @@ public record McpDmlToolsOptions
         bool? ReadRecords = null,
         bool? UpdateRecord = null,
         bool? DeleteRecord = null,
-        bool? ExecuteRecord = null)
+        bool? ExecuteEntity = null)
     {
         if (DescribeEntities is not null)
         {
@@ -80,14 +80,14 @@ public record McpDmlToolsOptions
             this.DeleteRecord = true;
         }
 
-        if (ExecuteRecord is not null)
+        if (ExecuteEntity is not null)
         {
-            this.ExecuteRecord = (bool)ExecuteRecord;
-            UserProvidedExecuteRecord = true;
+            this.ExecuteEntity = (bool)ExecuteEntity;
+            UserProvidedExecuteEntity = true;
         }
         else
         {
-            this.ExecuteRecord = true;
+            this.ExecuteEntity = true;
         }
     }
 
@@ -137,12 +137,12 @@ public record McpDmlToolsOptions
     public bool UserProvidedDeleteRecord { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write execute-record
+    /// Flag which informs CLI and JSON serializer whether to write execute-entity
     /// property and value to the runtime config file.
-    /// When user doesn't provide the execute-record property/value, which signals DAB to use the default,
+    /// When user doesn't provide the execute-entity property/value, which signals DAB to use the default,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    public bool UserProvidedExecuteRecord { get; init; } = false;
+    public bool UserProvidedExecuteEntity { get; init; } = false;
 }
 

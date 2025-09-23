@@ -55,7 +55,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                 bool? readRecord = null;
                 bool? updateRecord = null;
                 bool? deleteRecord = null;
-                bool? executeRecord = null;
+                bool? executeEntity = null;
 
                 while (reader.Read())
                 {
@@ -68,7 +68,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                             readRecords: readRecord,
                             updateRecord: updateRecord,
                             deleteRecord: deleteRecord,
-                            executeRecord: executeRecord);
+                            executeEntity: executeEntity);
                     }
 
                     string? property = reader.GetString();
@@ -91,8 +91,8 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                         case "delete-record":
                             deleteRecord = reader.GetBoolean();
                             break;
-                        case "execute-record":
-                            executeRecord = reader.GetBoolean();
+                        case "execute-entity":
+                            executeEntity = reader.GetBoolean();
                             break;
                         default:
                             throw new JsonException($"Unexpected property '{property}' in dml-tools configuration.");
@@ -122,7 +122,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                                        value.UserProvidedReadRecords ||
                                        value.UserProvidedUpdateRecord ||
                                        value.UserProvidedDeleteRecord ||
-                                       value.UserProvidedExecuteRecord;
+                                       value.UserProvidedExecuteEntity;
 
             if (!hasIndividualSettings)
             {
@@ -164,9 +164,9 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                     writer.WriteBoolean("delete-record", value.DeleteRecord.Value);
                 }
 
-                if (value.UserProvidedExecuteRecord)
+                if (value.UserProvidedExecuteEntity)
                 {
-                    writer.WriteBoolean("execute-record", value.ExecuteRecord.Value);
+                    writer.WriteBoolean("execute-entity", value.ExecuteEntity.Value);
                 }
 
                 writer.WriteEndObject();

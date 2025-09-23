@@ -44,7 +44,7 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsReadRecordsEnabled = null,
             bool? runtimeMcpDmlToolsUpdateRecordEnabled = null,
             bool? runtimeMcpDmlToolsDeleteRecordEnabled = null,
-            bool? runtimeMcpDmlToolsExecuteRecordEnabled = null,
+            bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
             HostMode? runtimeHostMode = null,
@@ -99,7 +99,7 @@ namespace Cli.Commands
             RuntimeMcpDmlToolsReadRecordsEnabled = runtimeMcpDmlToolsReadRecordsEnabled;
             RuntimeMcpDmlToolsUpdateRecordEnabled = runtimeMcpDmlToolsUpdateRecordEnabled;
             RuntimeMcpDmlToolsDeleteRecordEnabled = runtimeMcpDmlToolsDeleteRecordEnabled;
-            RuntimeMcpDmlToolsExecuteRecordEnabled = runtimeMcpDmlToolsExecuteRecordEnabled;
+            RuntimeMcpDmlToolsExecuteEntityEnabled = runtimeMcpDmlToolsExecuteEntityEnabled;
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
@@ -198,8 +198,8 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.delete-record.enabled", Required = false, HelpText = "Enable DAB's MCP delete record tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDeleteRecordEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.execute-record.enabled", Required = false, HelpText = "Enable DAB's MCP execute record tool. Default: true (boolean).")]
-        public bool? RuntimeMcpDmlToolsExecuteRecordEnabled { get; }
+        [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }

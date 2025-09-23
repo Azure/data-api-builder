@@ -289,9 +289,9 @@
                       "description": "Enable/disable the delete-record tool.",
                       "default": false
                     },
-                    "execute-record": {
+                    "execute-entity": {
                       "type": "boolean",
-                      "description": "Enable/disable the execute-record tool.",
+                      "description": "Enable/disable the execute-entity tool.",
                       "default": false
                     }
                   }

@@ -1035,7 +1035,7 @@ namespace Cli
                 bool? readRecord = currentDmlTools?.ReadRecords;
                 bool? updateRecord = currentDmlTools?.UpdateRecord;
                 bool? deleteRecord = currentDmlTools?.DeleteRecord;
-                bool? executeRecord = currentDmlTools?.ExecuteRecord;
+                bool? executeEntity = currentDmlTools?.ExecuteEntity;
 
                 updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
                 if (updatedValue != null)
@@ -1077,12 +1077,12 @@ namespace Cli
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Delete-Record as '{updatedValue}'", updatedValue);
                 }
 
-                updatedValue = options?.RuntimeMcpDmlToolsExecuteRecordEnabled;
+                updatedValue = options?.RuntimeMcpDmlToolsExecuteEntityEnabled;
                 if (updatedValue != null)
                 {
-                    executeRecord = (bool)updatedValue;
+                    executeEntity = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Execute-Record as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Execute-Entity as '{updatedValue}'", updatedValue);
                 }
 
                 if (hasToolUpdates)
@@ -1097,7 +1097,7 @@ namespace Cli
                             ReadRecords = readRecord,
                             UpdateRecord = updateRecord,
                             DeleteRecord = deleteRecord,
-                            ExecuteRecord = executeRecord
+                            ExecuteEntity = executeEntity
                         }
                     };
                 }

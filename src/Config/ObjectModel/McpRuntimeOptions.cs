@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// The path where MCP endpoints will be exposed
         /// </summary>
         [JsonPropertyName("path")]
-        public string? Path { get; init; } = DEFAULT_PATH;
+        public string Path { get; init; } = DEFAULT_PATH;
 
         /// <summary>
         /// Configuration for DML tools

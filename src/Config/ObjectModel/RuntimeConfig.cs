@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record McpOptions
 {
     public bool Enabled { get; init; } = true;
-    public string Path { get; init; } = "/mcp";
+    public string Path { get; init; } = McpRuntimeOptions.DEFAULT_PATH;
     public McpDmlTool[] DmlTools { get; init; } = [McpDmlTool.DescribeEntities];
 }
 

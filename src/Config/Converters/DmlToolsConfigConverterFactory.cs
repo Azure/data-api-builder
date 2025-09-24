@@ -75,7 +75,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                         if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
                         {
                             bool value = reader.GetBoolean();
-                            
+
                             switch (property?.ToLowerInvariant())
                             {
                                 case "describe-entities":
@@ -94,7 +94,6 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                                     deleteRecord = value;
                                     break;
                                 case "execute-entity":
-                                case "execute-record": // Support both names for backward compatibility
                                     executeEntity = value;
                                     break;
                                 default:

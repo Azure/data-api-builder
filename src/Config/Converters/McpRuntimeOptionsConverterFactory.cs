@@ -53,14 +53,9 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
         /// <exception cref="JsonException">Thrown when improperly formatted MCP options are provided.</exception>
         public override McpRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
+            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
             {
-                return new McpRuntimeOptions();
-            }
-
-            if (reader.TokenType == JsonTokenType.False)
-            {
-                return new McpRuntimeOptions(Enabled: false);
+                return new McpRuntimeOptions(Enabled: reader.GetBoolean());
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
@@ -129,12 +124,13 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                 JsonSerializer.Serialize(writer, value.Path, options);
             }
 
+            // Only write the boolean value if it's not the default (true)
+            // This prevents writing "dml-tools": true when it's the default
             if (value?.DmlTools is not null)
             {
                 DmlToolsConfigConverter dmlToolsOptionsConverter = options.GetConverter(typeof(DmlToolsConfig)) as DmlToolsConfigConverter ??
                                     throw new JsonException("Failed to get mcp.dml-tools options converter");
 
-                writer.WritePropertyName("dml-tools");
                 dmlToolsOptionsConverter.Write(writer, value.DmlTools, options);
             }
 

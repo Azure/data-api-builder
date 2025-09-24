@@ -132,18 +132,17 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                                     value.UserProvidedDeleteRecord ||
                                     value.UserProvidedExecuteEntity;
 
-        if (!hasIndividualSettings && value.AllToolsEnabled == DmlToolsConfig.DEFAULT_ENABLED)
+        // Only write the boolean value if it's provided by user
+        // This prevents writing "dml-tools": true when it's the default
+        if (!hasIndividualSettings && value.UserProvidedAllToolsEnabled)
         {
-            // If using default (all true), write as boolean true
-            writer.WriteBooleanValue(true);
-        }
-        else if (!hasIndividualSettings)
-        {
-            // If all tools have the same non-default value, write as boolean
+            writer.WritePropertyName("dml-tools");
             writer.WriteBooleanValue(value.AllToolsEnabled);
         }
         else
         {
+            writer.WritePropertyName("dml-tools");
+
             // Write as object with only user-provided properties
             writer.WriteStartObject();
 

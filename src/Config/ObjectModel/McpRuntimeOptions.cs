@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Converters;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
@@ -24,7 +25,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     /// Configuration for DML tools
     /// </summary>
     [JsonPropertyName("dml-tools")]
-    [JsonConverter(typeof(DmlToolsConfigConverterFactory))]
+    [JsonConverter(typeof(DmlToolsConfigConverter))]
     public DmlToolsConfig? DmlTools { get; init; }
 
     [JsonConstructor]

@@ -52,7 +52,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
             {
                 bool? describeEntities = null;
                 bool? createRecord = null;
-                bool? readRecord = null;
+                bool? readRecords = null;
                 bool? updateRecord = null;
                 bool? deleteRecord = null;
                 bool? executeEntity = null;
@@ -65,7 +65,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                             allToolsEnabled: null,
                             describeEntities: describeEntities,
                             createRecord: createRecord,
-                            readRecords: readRecord,
+                            readRecords: readRecords,
                             updateRecord: updateRecord,
                             deleteRecord: deleteRecord,
                             executeEntity: executeEntity);
@@ -83,7 +83,7 @@ internal class DmlToolsConfigConverterFactory : JsonConverterFactory
                             createRecord = reader.GetBoolean();
                             break;
                         case "read-records":
-                            readRecord = reader.GetBoolean();
+                            readRecords = reader.GetBoolean();
                             break;
                         case "update-record":
                             updateRecord = reader.GetBoolean();

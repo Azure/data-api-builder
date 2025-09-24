@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 throw new McpException("Tool name is required.");
                             }
 
-                            if (!toolRegistry.TryGetTool(toolName, out IMcpTool? tool) || tool == null)
+                            if (!toolRegistry.TryGetTool(toolName, out IMcpTool? tool))
                             {
                                 throw new McpException($"Unknown tool: '{toolName}'");
                             }
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                     throw new InvalidOperationException("Service provider is not available in the request context.");
                                 }
 
-                                return await tool.ExecuteAsync(arguments, request.Services, ct);
+                                return await tool!.ExecuteAsync(arguments, request.Services, ct);
                             }
                             finally
                             {

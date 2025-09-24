@@ -1042,7 +1042,7 @@ namespace Cli
                 {
                     describeEntities = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Describe-Entities as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.describe-entities as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeMcpDmlToolsCreateRecordEnabled;
@@ -1050,7 +1050,7 @@ namespace Cli
                 {
                     createRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Create-Record as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.create-record as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeMcpDmlToolsReadRecordsEnabled;
@@ -1058,7 +1058,7 @@ namespace Cli
                 {
                     readRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.read-records as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.read-records as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeMcpDmlToolsUpdateRecordEnabled;
@@ -1066,7 +1066,7 @@ namespace Cli
                 {
                     updateRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Update-Record as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.update-record as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeMcpDmlToolsDeleteRecordEnabled;
@@ -1074,7 +1074,7 @@ namespace Cli
                 {
                     deleteRecord = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Delete-Record as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.delete-record as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeMcpDmlToolsExecuteEntityEnabled;
@@ -1082,7 +1082,7 @@ namespace Cli
                 {
                     executeEntity = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools.Execute-Entity as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.execute-entity as '{updatedValue}'", updatedValue);
                 }
 
                 if (hasToolUpdates)

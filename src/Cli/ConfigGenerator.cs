@@ -2396,7 +2396,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyMaxCount.Value < 1)
                     {
-                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.max-count. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2411,7 +2411,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyDelaySeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.delay-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2426,7 +2426,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.max-delay-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2441,7 +2441,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update configuration with runtime.telemetry.azure-log-analytics.flush-interval-seconds. Value must be a positive integer greater than 0.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.network-timeout-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 

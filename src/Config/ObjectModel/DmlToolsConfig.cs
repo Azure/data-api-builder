@@ -68,7 +68,7 @@ public record DmlToolsConfig
         }
         else
         {
-            AllToolsEnabled =  DEFAULT_ENABLED;
+            AllToolsEnabled = DEFAULT_ENABLED;
         }
 
         if (describeEntities is not null)

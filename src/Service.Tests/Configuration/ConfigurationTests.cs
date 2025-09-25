@@ -5315,49 +5315,6 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
-        /// Executing MCP POST requests against the engine until a non-503 error is received.
-        /// </summary>
-        /// <param name="httpClient">Client used for request execution.</param>
-        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
-        /// else the response code from the MCP request</returns>
-        private static async Task<HttpStatusCode> GetMcpResponsePostConfigHydration(HttpClient httpClient)
-        {
-            // Retry request RETRY_COUNT times in 1 second increments to allow required services
-            // time to instantiate and hydrate permissions.
-            int retryCount = RETRY_COUNT;
-            HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
-            while (retryCount > 0)
-            {
-                // Minimal MCP request (list tools) – valid JSON-RPC request
-                object payload = new
-                {
-                    jsonrpc = "2.0",
-                    id = 1,
-                    method = "tools/list"
-                };
-
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
-                {
-                    Content = JsonContent.Create(payload)
-                };
-
-                HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
-                responseCode = mcpResponse.StatusCode;
-
-                if (responseCode == HttpStatusCode.ServiceUnavailable)
-                {
-                    retryCount--;
-                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
-                    continue;
-                }
-
-                break;
-            }
-
-            return responseCode;
-        }
-
-        /// <summary>
         /// Helper  method to instantiate RuntimeConfig object needed for multiple create tests.
         /// </summary>
         public static RuntimeConfig InitialzieRuntimeConfigForMultipleCreateTests(bool isMultipleCreateOperationEnabled)

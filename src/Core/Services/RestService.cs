@@ -391,6 +391,14 @@ namespace Azure.DataApiBuilder.Core.Services
             // forward slash '/'.
             configuredRestPathBase = configuredRestPathBase.Substring(1);
 
+            if (route.Contains(_runtimeConfigProvider.GetConfig().McpPath.Substring(1)))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Invalid Path for route: {route}.",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.GlobalMcpEndpointDisabled);
+            }
+
             if (!route.StartsWith(configuredRestPathBase))
             {
                 throw new DataApiBuilderException(

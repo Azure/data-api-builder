@@ -21,6 +21,20 @@
         }
       }
     },
+    Mcp: {
+      Enabled: true,
+      Path: /mcp,
+      DmlTools: {
+        AllToolsEnabled: true,
+        UserProvidedAllToolsEnabled: false,
+        UserProvidedDescribeEntities: false,
+        UserProvidedCreateRecord: false,
+        UserProvidedReadRecords: false,
+        UserProvidedUpdateRecord: false,
+        UserProvidedDeleteRecord: false,
+        UserProvidedExecuteEntity: false
+      }
+    },
     Host: {
       Cors: {
         Origins: [

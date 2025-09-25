@@ -61,7 +61,15 @@ public record DmlToolsConfig
         bool? deleteRecord = null,
         bool? executeEntity = null)
     {
-        AllToolsEnabled = allToolsEnabled ?? DEFAULT_ENABLED;
+        if (allToolsEnabled is not null)
+        {
+            AllToolsEnabled = allToolsEnabled.Value;
+            UserProvidedAllToolsEnabled = true;
+        }
+        else
+        {
+            AllToolsEnabled = DEFAULT_ENABLED;
+        }
 
         if (describeEntities is not null)
         {
@@ -140,6 +148,14 @@ public record DmlToolsConfig
             _ => AllToolsEnabled
         };
     }
+
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write all-tools-enabled
+    /// property/value to the runtime config file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(AllToolsEnabled))]
+    public bool UserProvidedAllToolsEnabled { get; init; } = false;
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write describe-entities

@@ -131,25 +131,6 @@ public record DmlToolsConfig
     public static DmlToolsConfig Default => FromBoolean(DEFAULT_ENABLED);
 
     /// <summary>
-    /// Checks if a specific tool is enabled based on its name
-    /// </summary>
-    /// <param name="toolName">The name of the tool to check</param>
-    /// <returns>True if the tool is enabled, false otherwise</returns>
-    public bool IsToolEnabled(string toolName)
-    {
-        return toolName switch
-        {
-            "describe-entities" => DescribeEntities ?? AllToolsEnabled,
-            "create-record" => CreateRecord ?? AllToolsEnabled,
-            "read-records" => ReadRecords ?? AllToolsEnabled,
-            "update-record" => UpdateRecord ?? AllToolsEnabled,
-            "delete-record" => DeleteRecord ?? AllToolsEnabled,
-            "execute-entity" => ExecuteEntity ?? AllToolsEnabled,
-            _ => AllToolsEnabled
-        };
-    }
-
-    /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write all-tools-enabled
     /// property/value to the runtime config file.
     /// </summary>

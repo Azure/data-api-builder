@@ -737,19 +737,6 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Checks if the specified DML tool is enabled in MCP runtime options.
-    /// </summary>
-    public bool IsMcpDmlToolEnabled(string toolName)
-    {
-        if (Runtime?.Mcp?.Enabled is not true || Runtime.Mcp.DmlTools is null)
-        {
-            return false;
-        }
-
-        return Runtime.Mcp.DmlTools.IsToolEnabled(toolName);
-    }
-
-    /// <summary>
     /// Gets the MCP DML tools configuration
     /// </summary>
     [JsonIgnore]

@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
     public static class McpEndpointRouteBuilderExtensions
     {
         /// <summary>
-        /// Maps MCP endpoints and health checks if MCP is enabled
+        /// Maps the MCP endpoint to the specified <see cref="IEndpointRouteBuilder"/> if MCP is enabled in the runtime configuration.
         /// </summary>
         public static IEndpointRouteBuilder MapDabMcp(
             this IEndpointRouteBuilder endpoints,

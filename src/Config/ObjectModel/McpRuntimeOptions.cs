@@ -44,13 +44,13 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// </summary>
         [JsonConstructor]
         public McpRuntimeOptions(
-            bool enabled = true,
-            string? path = null,
-            DmlToolsConfig? dmlTools = null)
+            bool Enabled = true,
+            string? Path = null,
+            DmlToolsConfig? DmlTools = null)
         {
-            this.Enabled = enabled;
-            this.Path = path ?? DEFAULT_PATH;
-            this.DmlTools = dmlTools;
+            this.Enabled = Enabled;
+            this.Path = Path ?? DEFAULT_PATH;
+            this.DmlTools = DmlTools;
         }
 
         /// <summary>

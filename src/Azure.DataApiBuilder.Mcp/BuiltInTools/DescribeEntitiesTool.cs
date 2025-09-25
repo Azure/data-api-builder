@@ -19,8 +19,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             return new Tool
             {
-                Name = "describe_entities",
-                Description = "Lists all entities in the database."
+                Name = "describe-entities",
+                Description = "Lists and describes all entities in the database."
             };
         }
 

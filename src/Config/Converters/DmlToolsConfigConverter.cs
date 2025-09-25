@@ -89,7 +89,14 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                     }
                     else
                     {
-                        // Skip non-boolean values
+                        // Error on non-boolean values for known properties
+                        if (property?.ToLowerInvariant() is "describe-entities" or "create-record" 
+                            or "read-records" or "update-record" or "delete-record" or "execute-entity")
+                        {
+                            throw new JsonException($"Property '{property}' must be a boolean value.");
+                        }
+                        
+                        // Skip unknown properties
                         reader.Skip();
                     }
                 }
@@ -120,7 +127,6 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
     {
         if (value is null)
         {
-            writer.WriteNullValue();
             return;
         }
 

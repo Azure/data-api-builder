@@ -76,12 +76,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                             try
                             {
-                                if (request.Services == null)
-                                {
-                                    throw new InvalidOperationException("Service provider is not available in the request context.");
-                                }
-
-                                return await tool!.ExecuteAsync(arguments, request.Services, ct);
+                                return await tool!.ExecuteAsync(arguments, request.Services!, ct);
                             }
                             finally
                             {

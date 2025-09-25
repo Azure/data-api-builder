@@ -1458,7 +1458,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         // Extra case: conflict with MCP
         [DataRow("/mcp", "/api", "/mcp", true, DisplayName = "MCP and GraphQL conflict (same path).")]
         [DataRow("/graphql", "/mcp", "/mcp", true, DisplayName = "MCP and REST conflict (same path).")]
-
         public void TestGlobalRouteValidation(string graphQLConfiguredPath, string restConfiguredPath, string mcpConfiguredPath, bool expectError)
         {
             GraphQLRuntimeOptions graphQL = new(Path: graphQLConfiguredPath);

@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Routing;
 namespace Azure.DataApiBuilder.Mcp.Core
 {
     /// <summary>
-    /// Extension methods for mapping MCP endpoints
+    /// Extension methods for mapping MCP endpoints to an <see cref="IEndpointRouteBuilder"/>.
     /// </summary>
     public static class McpEndpointRouteBuilderExtensions
     {

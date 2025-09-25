@@ -394,7 +394,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (route.Contains(_runtimeConfigProvider.GetConfig().McpPath.Substring(1)))
             {
                 throw new DataApiBuilderException(
-                    message: $"Invalid Path for route: {route}.",
+                    message: $"Route {route} was not found.",
                     statusCode: HttpStatusCode.NotFound,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.GlobalMcpEndpointDisabled);
             }

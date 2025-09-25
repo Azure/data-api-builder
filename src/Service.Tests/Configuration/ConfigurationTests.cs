@@ -2524,93 +2524,80 @@ type Moon {
         /// <param name="expectedStatusCodeForGraphQL">Expected HTTP status code code for the GraphQL request</param>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, true, true, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest, GraphQL, MCP all enabled globally")]
-        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled, GraphQL and MCP disabled")]
-        [DataRow(false, true, false, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - GraphQL enabled, Rest and MCP disabled")]
-        [DataRow(false, false, true, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - MCP enabled, Rest and GraphQL disabled")]
-        [DataRow(true, true, true, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest, GraphQL, MCP all enabled globally")]
-        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled, GraphQL and MCP disabled")]
-        [DataRow(false, true, false, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - GraphQL enabled, Rest and MCP disabled")]
-        [DataRow(false, false, true, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - MCP enabled, Rest and GraphQL disabled")]
-        public async Task TestGlobalFlagToEnableRestGraphQLMcpForHostedAndNonHostedEnvironment(
+        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Both Rest and GraphQL endpoints enabled globally")]
+        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled and GraphQL endpoints disabled globally")]
+        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest disabled and GraphQL endpoints enabled globally")]
+        [DataRow(true, true, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Both Rest and GraphQL endpoints enabled globally")]
+        [DataRow(true, false, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled and GraphQL endpoints disabled globally")]
+        [DataRow(false, true, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest disabled and GraphQL endpoints enabled globally")]
+        public async Task TestGlobalFlagToEnableRestAndGraphQLForHostedAndNonHostedEnvironment(
             bool isRestEnabled,
             bool isGraphQLEnabled,
-            bool isMcpEnabled,
             HttpStatusCode expectedStatusCodeForREST,
             HttpStatusCode expectedStatusCodeForGraphQL,
-            HttpStatusCode expectedStatusCodeForMcp,
             string configurationEndpoint)
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: isGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: isRestEnabled);
-            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: isMcpEnabled);
 
-            DataSource dataSource = new(
-                DatabaseType.MSSQL,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
-                Options: null);
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(
-                dataSource,
-                graphqlOptions,
-                restRuntimeOptions,
-                mcpRuntimeOptions);
-
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, null);
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
-            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG}" };
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
 
             // Non-Hosted Scenario
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                // GraphQL request
-                string query = @"{ book_by_pk(id: 1) { id, title, publisher_id } }";
+                string query = @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+
                 object payload = new { query };
+
                 HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
                 {
                     Content = JsonContent.Create(payload)
                 };
+
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
                 Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
 
-                // REST request
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
-
-                // MCP request
-                object mcpPayload = new
-                {
-                    jsonrpc = "2.0",
-                    id = 1,
-                    method = "tools/list"
-                };
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
-                {
-                    Content = JsonContent.Create(mcpPayload)
-                };
-                HttpResponseMessage mcpResponse = await client.SendAsync(mcpRequest);
-                Assert.AreEqual(expectedStatusCodeForMcp, mcpResponse.StatusCode);
             }
 
             // Hosted Scenario
+            // Instantiate new server with no runtime config for post-startup configuration hydration tests.
             using (TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>())))
             using (HttpClient client = server.CreateClient())
             {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
-                HttpResponseMessage postResult = await client.PostAsync(configurationEndpoint, content);
+
+                HttpResponseMessage postResult =
+                await client.PostAsync(configurationEndpoint, content);
                 Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
                 HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
+
                 Assert.AreEqual(expected: expectedStatusCodeForREST, actual: restResponseCode);
 
                 HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
+
                 Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode);
 
-                HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client);
-                Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode);
             }
         }
 

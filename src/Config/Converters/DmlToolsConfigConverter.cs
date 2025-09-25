@@ -90,12 +90,12 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                     else
                     {
                         // Error on non-boolean values for known properties
-                        if (property?.ToLowerInvariant() is "describe-entities" or "create-record" 
+                        if (property?.ToLowerInvariant() is "describe-entities" or "create-record"
                             or "read-records" or "update-record" or "delete-record" or "execute-entity")
                         {
                             throw new JsonException($"Property '{property}' must be a boolean value.");
                         }
-                        
+
                         // Skip unknown properties
                         reader.Skip();
                     }

@@ -454,7 +454,6 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<DabCacheService>();
 
-            // special for MCP
             services.AddDabMcpServer(configProvider);
 
             services.AddControllers();

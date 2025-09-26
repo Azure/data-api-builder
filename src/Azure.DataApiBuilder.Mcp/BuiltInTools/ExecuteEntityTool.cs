@@ -12,22 +12,20 @@ using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
-namespace Azure.DataApiBuilder.Mcp.CustomTools
+namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     /// <summary>
-    /// Custom tool for executing stored procedures configured in DAB
+    /// Tool to execute a stored procedure entity configured in DAB and return the results.
     /// </summary>
-    public class ExecuteStoredProcedureTool : IMcpTool
+    public class ExecuteEntityTool : IMcpTool
     {
-        public ToolType ToolType { get; } = ToolType.Custom;
-
-        McpEnums.ToolType IMcpTool.ToolType => throw new NotImplementedException();
+        public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         public Tool GetToolMetadata()
         {
             return new Tool
             {
-                Name = "execute_stored_procedure",
+                Name = "execute-entity",
                 Description = "Executes a stored procedure configured in DAB and returns the results",
                 InputSchema = JsonSerializer.SerializeToElement(new
                 {
@@ -64,7 +62,7 @@ namespace Azure.DataApiBuilder.Mcp.CustomTools
                 }
 
                 // Extract entity name
-                if (!arguments.RootElement.TryGetProperty("entityName", out var entityNameElement) ||
+                if (!arguments.RootElement.TryGetProperty("entityName", out JsonElement entityNameElement) ||
                     entityNameElement.ValueKind != JsonValueKind.String)
                 {
                     return CreateErrorResult("Missing or invalid 'entityName' parameter");
@@ -73,11 +71,11 @@ namespace Azure.DataApiBuilder.Mcp.CustomTools
                 string entityName = entityNameElement.GetString()!;
 
                 // Get runtime configuration
-                var runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                var runtimeConfig = runtimeConfigProvider.GetConfig();
+                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
                 // Validate entity exists
-                if (!runtimeConfig.Entities.TryGetValue(entityName, out var entity))
+                if (!runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
                 {
                     return CreateErrorResult($"Entity '{entityName}' not found in configuration");
                 }
@@ -94,17 +92,17 @@ namespace Azure.DataApiBuilder.Mcp.CustomTools
                 // Add default parameters from configuration
                 if (entity.Source.Parameters != null)
                 {
-                    foreach (var param in entity.Source.Parameters)
+                    foreach (KeyValuePair<string, object> param in entity.Source.Parameters)
                     {
                         parameters[param.Key] = param.Value;
                     }
                 }
                 
                 // Override with runtime parameters
-                if (arguments.RootElement.TryGetProperty("parameters", out var parametersElement) &&
+                if (arguments.RootElement.TryGetProperty("parameters", out JsonElement parametersElement) &&
                     parametersElement.ValueKind == JsonValueKind.Object)
                 {
-                    foreach (var property in parametersElement.EnumerateObject())
+                    foreach (JsonProperty property in parametersElement.EnumerateObject())
                     {
                         parameters[property.Name] = GetParameterValue(property.Value);
                     }
@@ -115,38 +113,40 @@ namespace Azure.DataApiBuilder.Mcp.CustomTools
 
                 // Get the database connection string
                 string dataSourceName = runtimeConfig.DefaultDataSourceName;
-                var dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
+                DataSource? dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
                 string connectionString = dataSource.ConnectionString;
 
                 // Execute stored procedure directly
-                var results = new List<Dictionary<string, object?>>();
+                List<Dictionary<string, object?>> results = new();
                 
-                using (var connection = new SqlConnection(connectionString))
+                using (SqlConnection connection = new(connectionString))
                 {
                     await connection.OpenAsync(cancellationToken);
-                    
-                    using (var command = new SqlCommand(storedProcedureName, connection))
+
+                    using (SqlCommand command = new(storedProcedureName, connection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
                         
                         // Add parameters
-                        foreach (var param in parameters)
+                        foreach (KeyValuePair<string, object?> param in parameters)
                         {
                             command.Parameters.AddWithValue($"@{param.Key}", param.Value ?? DBNull.Value);
                         }
                         
                         // Execute and read results
-                        using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken))
                         {
                             while (await reader.ReadAsync(cancellationToken))
                             {
-                                var row = new Dictionary<string, object?>();
+                                Dictionary<string, object?> row = new();
+
                                 for (int i = 0; i < reader.FieldCount; i++)
                                 {
                                     string columnName = reader.GetName(i);
                                     object? value = reader.IsDBNull(i) ? null : reader.GetValue(i);
                                     row[columnName] = value;
                                 }
+
                                 results.Add(row);
                             }
                         }
@@ -193,7 +193,7 @@ namespace Azure.DataApiBuilder.Mcp.CustomTools
             return element.ValueKind switch
             {
                 JsonValueKind.String => element.GetString(),
-                JsonValueKind.Number => element.TryGetInt32(out var intValue) ? intValue : element.GetDouble(),
+                JsonValueKind.Number => element.TryGetInt32(out int intValue) ? intValue : element.GetDouble(),
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 JsonValueKind.Null => null,

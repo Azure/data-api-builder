@@ -185,9 +185,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, param.Key, GetColumnSystemType(param.Key)), param.Key)}"));
+                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn)}"));
             }
 
             return predicate;

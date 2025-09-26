@@ -25,10 +25,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return services;
             }
 
-            McpRuntimeOptions? mcpOptions = runtimeConfig?.Runtime?.Mcp;
-
             // Only add MCP server if it's enabled in the configuration
-            if (mcpOptions == null || !mcpOptions.Enabled)
+            if (!runtimeConfig.IsMcpEnabled)
             {
                 return services;
             }

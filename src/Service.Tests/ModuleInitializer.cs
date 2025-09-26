@@ -73,12 +73,6 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CosmosDataSourceUsed);
         // Ignore the IsRequestBodyStrict as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRequestBodyStrict);
-        // Ignore the IsGraphQLEnabled as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsGraphQLEnabled);
-        // Ignore the IsRestEnabled as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
-        // Ignore the IsMcpEnabled as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsMcpEnabled);
         // Ignore the McpDmlTools as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpDmlTools);
         // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.

@@ -36,6 +36,15 @@ namespace Cli.Commands
             bool? runtimeRestEnabled = null,
             string? runtimeRestPath = null,
             bool? runtimeRestRequestBodyStrict = null,
+            bool? runtimeMcpEnabled = null,
+            string? runtimeMcpPath = null,
+            bool? runtimeMcpDmlToolsEnabled = null,
+            bool? runtimeMcpDmlToolsDescribeEntitiesEnabled = null,
+            bool? runtimeMcpDmlToolsCreateRecordEnabled = null,
+            bool? runtimeMcpDmlToolsReadRecordsEnabled = null,
+            bool? runtimeMcpDmlToolsUpdateRecordEnabled = null,
+            bool? runtimeMcpDmlToolsDeleteRecordEnabled = null,
+            bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
             HostMode? runtimeHostMode = null,
@@ -81,6 +90,16 @@ namespace Cli.Commands
             RuntimeRestEnabled = runtimeRestEnabled;
             RuntimeRestPath = runtimeRestPath;
             RuntimeRestRequestBodyStrict = runtimeRestRequestBodyStrict;
+            // Mcp
+            RuntimeMcpEnabled = runtimeMcpEnabled;
+            RuntimeMcpPath = runtimeMcpPath;
+            RuntimeMcpDmlToolsEnabled = runtimeMcpDmlToolsEnabled;
+            RuntimeMcpDmlToolsDescribeEntitiesEnabled = runtimeMcpDmlToolsDescribeEntitiesEnabled;
+            RuntimeMcpDmlToolsCreateRecordEnabled = runtimeMcpDmlToolsCreateRecordEnabled;
+            RuntimeMcpDmlToolsReadRecordsEnabled = runtimeMcpDmlToolsReadRecordsEnabled;
+            RuntimeMcpDmlToolsUpdateRecordEnabled = runtimeMcpDmlToolsUpdateRecordEnabled;
+            RuntimeMcpDmlToolsDeleteRecordEnabled = runtimeMcpDmlToolsDeleteRecordEnabled;
+            RuntimeMcpDmlToolsExecuteEntityEnabled = runtimeMcpDmlToolsExecuteEntityEnabled;
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
@@ -154,6 +173,33 @@ namespace Cli.Commands
 
         [Option("runtime.rest.request-body-strict", Required = false, HelpText = "Prohibit extraneous REST request body fields. Default: true (boolean).")]
         public bool? RuntimeRestRequestBodyStrict { get; }
+
+        [Option("runtime.mcp.enabled", Required = false, HelpText = "Enable DAB's MCP endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpEnabled { get; }
+
+        [Option("runtime.mcp.path", Required = false, HelpText = "Customize DAB's MCP endpoint path. Default: '/mcp' Conditions: Prefix path with '/'.")]
+        public string? RuntimeMcpPath { get; }
+
+        [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.describe-entities.enabled", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsDescribeEntitiesEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.create-record.enabled", Required = false, HelpText = "Enable DAB's MCP create record tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsCreateRecordEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.read-records.enabled", Required = false, HelpText = "Enable DAB's MCP read record tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsReadRecordsEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.update-record.enabled", Required = false, HelpText = "Enable DAB's MCP update record tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsUpdateRecordEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.delete-record.enabled", Required = false, HelpText = "Enable DAB's MCP delete record tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsDeleteRecordEnabled { get; }
+
+        [Option("runtime.mcp.dml-tools.execute-entity.enabled", Required = false, HelpText = "Enable DAB's MCP execute entity tool. Default: true (boolean).")]
+        public bool? RuntimeMcpDmlToolsExecuteEntityEnabled { get; }
 
         [Option("runtime.cache.enabled", Required = false, HelpText = "Enable DAB's cache globally. (You must also enable each entity's cache separately.). Default: false (boolean).")]
         public bool? RuntimeCacheEnabled { get; }

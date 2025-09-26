@@ -389,6 +389,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(Cors: null, Authentication: authenticationOptions)
                 ),
                 Entities: new(new Dictionary<string, Entity>())

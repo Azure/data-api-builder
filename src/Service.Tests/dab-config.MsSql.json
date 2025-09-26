@@ -23,6 +23,11 @@
         }
       }
     },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp",
+      "dml-tools": true
+    },
     "host": {
       "cors": {
         "origins": [
@@ -2314,7 +2319,8 @@
     "Notebook": {
       "source": {
         "object": "notebooks",
-        "type": "table"
+        "type": "table",
+        "object-description": "Table containing notebook information"
       },
       "graphql": {
         "enabled": true,

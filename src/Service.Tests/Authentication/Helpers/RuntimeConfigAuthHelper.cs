@@ -20,6 +20,7 @@ internal static class RuntimeConfigAuthHelper
             Runtime: new(
                 Rest: new(),
                 GraphQL: new(),
+                Mcp: new(),
                 Host: hostOptions
             ),
             Entities: new(new Dictionary<string, Entity>())

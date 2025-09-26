@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             return new Tool
             {
-                Name = "create_record",
+                Name = "create-record",
                 Description = "Creates a new record in the specified entity.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{

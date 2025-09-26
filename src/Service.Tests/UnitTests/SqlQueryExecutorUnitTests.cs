@@ -616,6 +616,50 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Makes sure the stream logic handles cells with empty strings correctly.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        public void ValidateStreamingLogicForEmptyCellsAsync()
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            FileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Host: new(Cors: null, Authentication: null, MaxResponseSizeMB: 5)
+                    ),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+
+            // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+
+            Mock<DbDataReader> dbDataReader = new();
+            dbDataReader.Setup(d => d.HasRows).Returns(true);
+
+            // Make sure GetChars returns 0 when buffer is null
+            dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), null, It.IsAny<int>(), It.IsAny<int>())).Returns(0);
+
+            // Make sure available size is set to > 0
+            int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
+
+            // Stream char data should not return an exception
+            availableSize -= msSqlQueryExecutor.StreamCharData(
+                dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new(), ordinal: 0);
+
+            Assert.AreEqual(availableSize, (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024);
+        }
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {

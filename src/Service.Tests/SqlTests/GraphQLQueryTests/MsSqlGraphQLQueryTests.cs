@@ -779,6 +779,105 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestNoAggregationOptionsForTableWithoutNumericFields();
         }
 
+        /// <summary>
+        /// Tests that the entity description is present as a GraphQL comment in the generated schema for MSSQL.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescriptionInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription("This is a test entity description for MSSQL.");
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            List<JsonDocument> jsonArray = [
+                JsonDocument.Parse("{ \"id\": 1, \"name\": \"Test\" }")
+            ];
+
+            string actualSchema = Core.Generator.SchemaGenerator.Generate(jsonArray, "TestEntity", config);
+            string expectedComment = "\"\"\"This is a test entity description for MSSQL.\"\"\"";
+            Assert.IsTrue(actualSchema.Contains(expectedComment, StringComparison.Ordinal), "Entity description should be present as a GraphQL comment for MSSQL.");
+        }
+
+        /// <summary>
+        /// Description = null should not emit GraphQL description block.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescription_Null_NotInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription(null);
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            string schema = Core.Generator.SchemaGenerator.Generate(
+                [JsonDocument.Parse("{\"id\":1}")],
+                "TestEntity",
+                config);
+
+            Assert.IsFalse(schema.Contains("Test entity description null", StringComparison.Ordinal), "Null description must not appear in schema.");
+            Assert.IsTrue(schema.Contains("type TestEntity", StringComparison.Ordinal), "Type definition should still exist.");
+        }
+
+        /// <summary>
+        /// Description = "" (empty) should not emit GraphQL description block.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescription_Empty_NotInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription(string.Empty);
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            string schema = Core.Generator.SchemaGenerator.Generate(
+                [JsonDocument.Parse("{\"id\":1}")],
+                "TestEntity",
+                config);
+
+            Assert.IsFalse(schema.Contains("\"\"\"\"\"\"", StringComparison.Ordinal), "Empty description triple quotes should not be emitted.");
+            Assert.IsTrue(schema.Contains("type TestEntity", StringComparison.Ordinal), "Type definition should still exist.");
+        }
+
+        /// <summary>
+        /// Description = whitespace should not emit GraphQL description block.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescription_Whitespace_NotInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription("   \t  ");
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            string schema = Core.Generator.SchemaGenerator.Generate(
+                [JsonDocument.Parse("{\"id\":1}")],
+                "TestEntity",
+                config);
+
+            Assert.IsFalse(schema.Contains("\"\"\"", StringComparison.Ordinal), "Whitespace-only description should not produce a GraphQL description block.");
+            Assert.IsTrue(schema.Contains("type TestEntity", StringComparison.Ordinal), "Type definition should still exist.");
+        }
+
+        private static Entity CreateEntityWithDescription(string description)
+        {
+            EntitySource source = new("TestTable", EntitySourceType.Table, null, null);
+            EntityGraphQLOptions gqlOptions = new("TestEntity", "TestEntities", true);
+            EntityRestOptions restOptions = new(null, "/test", true);
+            return new(
+                source,
+                gqlOptions,
+                restOptions,
+                [],
+                null,
+                null,
+                null,
+                false,
+                null,
+                Description: description
+            );
+        }
+
+        private static RuntimeConfig CreateRuntimeConfig(Entity entity)
+        {
+            Dictionary<string, Entity> entityDict = new() { { "TestEntity", entity } };
+            RuntimeEntities entities = new(entityDict);
+            return new(
+                "",
+                new DataSource(DatabaseType.MSSQL, "", null),
+                entities,
+                null
+            );
+        }
+
         #endregion
     }
 }

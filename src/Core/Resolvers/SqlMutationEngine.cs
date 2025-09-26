@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 mutationOperation is EntityActionOperation.Create)
             {
                 // Multiple create mutation request is validated to ensure that the request is valid semantically.
-                IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
+                IInputValueDefinition schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
                 MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext = new(
                     entityName: entityName,
                     parentEntityName: string.Empty,
@@ -1689,8 +1689,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (mutationParameters.TryGetValue(rootFieldName, out object? inputParameters))
             {
-                IObjectField fieldSchema = context.Selection.Field;
-                IInputField itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
+                ObjectField fieldSchema = context.Selection.Field;
+                IInputValueDefinition itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
                 InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
                 return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters);
             }
@@ -1871,7 +1871,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <exception cref="DataApiBuilderException"></exception>
         private static InputObjectType GetInputObjectTypeForAField(string fieldName, FieldCollection<InputField> fields)
         {
-            if (fields.TryGetField(fieldName, out IInputField? field))
+            if (fields.TryGetField(fieldName, out InputField? field))
             {
                 return ExecutionHelper.InputObjectTypeFromIInputField(field);
             }
@@ -1886,7 +1886,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="parameters">The parameters for the DELETE operation.</param>
-        /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
+        /// <param name="sqlMetadataProvider">Metadata provider for db on which to perform operation.</param>
         /// <returns>A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         private async Task<Dictionary<string, object>?>
             PerformDeleteOperation(
@@ -2127,7 +2127,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object?> parametersDictionary
         )
         {
-            if (context.Selection.Field.Arguments.TryGetField(inputArgumentName, out IInputField? schemaForArgument))
+            if (context.Selection.Field.Arguments.TryGetField(inputArgumentName, out Argument? schemaForArgument))
             {
                 // Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.
                 Dictionary<string, HashSet<string>> entityToExposedColumns = new();
@@ -2173,42 +2173,53 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="entityToExposedColumns">Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.</param>
         /// <param name="schema">Schema for the input field.</param>
         /// <param name="entityName">Name of the entity.</param>
-        /// <param name="context">Middleware Context.</param>
+        /// <param name="context">Middleware context.</param>
         /// <param name="parameters">Value for the input field.</param>
-        /// <example>       1. mutation {
-        ///                 createbook(
-        ///                     item: {
-        ///                         title: "book #1",
-        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.6 }]
-        ///                     })
-        ///                 {
-        ///                     id
-        ///                 }
-        ///                 2. mutation {
-        ///                 createbooks(
-        ///                     items: [{
-        ///                         title: "book #1",
-        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.9 }]
-        ///                     },
-        ///                     {
-        ///                         title: "book #2",
-        ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
-        ///                         publishers: { name: "Pearson Education" },
-        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", royal_percentage: 8.2  }]
-        ///                     }])
-        ///                 {
-        ///                     items{
-        ///                         id
-        ///                         title
-        ///                     }
-        ///                 }</example>
+        /// <example>
+        /// Example 1 - Single item creation:
+        /// <code>
+        /// mutation {
+        ///     createbook(
+        ///         item: {
+        ///             title: "book #1",
+        ///             reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///             publishers: { name: "Macmillan publishers" },
+        ///             authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.6 }]
+        ///         })
+        ///     {
+        ///         id
+        ///     }
+        /// }
+        /// </code>
+        /// 
+        /// Example 2 - Multiple items creation:
+        /// <code>
+        /// mutation {
+        ///     createbooks(
+        ///         items: [{
+        ///             title: "book #1",
+        ///             reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///             publishers: { name: "Macmillan publishers" },
+        ///             authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.9 }]
+        ///         },
+        ///         {
+        ///             title: "book #2",
+        ///             reviews: [{ content: "Awesome book." }, { content: "Average book." }],
+        ///             publishers: { name: "Pearson Education" },
+        ///             authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", royal_percentage: 8.2 }]
+        ///         }])
+        ///     {
+        ///         items {
+        ///             id
+        ///             title
+        ///         }
+        ///     }
+        /// }
+        /// </code>
+        /// </example>
         private void PopulateMutationEntityAndFieldsToAuthorize(
             Dictionary<string, HashSet<string>> entityToExposedColumns,
-            IInputField schema,
+            IInputValueDefinition schema,
             string entityName,
             IMiddlewareContext context,
             object parameters)

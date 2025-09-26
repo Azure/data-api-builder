@@ -105,6 +105,10 @@ public class DataApiBuilderException : Exception
         /// </summary>
         GlobalRestEndpointDisabled,
         /// <summary>
+        /// Global MCP endpoint disabled in runtime configuration.
+        /// </summary>
+        GlobalMcpEndpointDisabled,
+        /// <summary>
         /// DataSource not found for multiple db scenario.
         /// </summary>
         DataSourceNotFound,

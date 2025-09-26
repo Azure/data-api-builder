@@ -2,12 +2,23 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using ModelContextProtocol.Protocol;
+using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
+
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
@@ -38,7 +49,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
-        /// <summary>
+         /// <summary>
         /// Gets the metadata for the update_record tool, including its name, description, and input schema.
         /// </summary>
         public Tool GetToolMetadata()
@@ -114,13 +125,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
+                // 2) Resolve required services & configuration
+                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig config = runtimeConfigProvider.GetConfig();
+
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
 
                 // 4) Resolve metadata for entity existence check
                 string dataSourceName;
                 ISqlMetadataProvider sqlMetadataProvider;
-
+                
                 try
                 {
                     dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
@@ -160,6 +175,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     dbo: dbObject,
                     insertPayloadRoot: upsertPayloadRoot,
                     operationType: EntityActionOperation.UpdateIncremental);
+
+                context.UpdateReturnFields(keys.Keys.Concat(fields.Keys).Distinct().ToList());
 
                 foreach (KeyValuePair<string, object?> kvp in keys)
                 {
@@ -206,7 +223,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
-
+                
                 // 8) Normalize response (success or engine error payload)
                 string rawPayloadJson = ExtractResultJson(mutationResult);
                 using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
@@ -214,6 +231,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 return BuildSuccessResult(
                     entityName: entityName,
+                    keys: keys,
+                    updatedFields: fields.Keys.ToArray(),
                     engineRootElement: root.Clone(),
                     logger: logger);
             }
@@ -353,9 +372,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         private static CallToolResult BuildSuccessResult(
             string entityName,
+            IDictionary<string, object?> keys,
+            IEnumerable<string> updatedFields,
             JsonElement engineRootElement,
             ILogger? logger)
         {
+            string[] updatedFieldsArray = updatedFields.ToArray();
+
             // Extract only requested keys and updated fields from engineRootElement
             Dictionary<string, object?> filteredResult = new();
 
@@ -368,7 +391,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // Include all properties from the result
                 foreach (JsonProperty prop in firstItem.EnumerateObject())
-                {
+                    {
                     filteredResult[prop.Name] = GetJsonValue(prop.Value);
                 }
             }
@@ -456,7 +479,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         return jd.RootElement.GetRawText();
                     }
-
+                    
                     return JsonSerializer.Serialize(obj.Value ?? new object());
 
                 case ContentResult content:

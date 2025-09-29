@@ -53,19 +53,36 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(true, true, true, true, true, true, true, DisplayName = "Validate Health Report all enabled.")]
-        [DataRow(false, true, true, true, true, true, true, DisplayName = "Validate when Comprehensive Health Report is disabled")]
-        [DataRow(true, true, true, false, true, true, true, DisplayName = "Validate Health Report when data-source health is disabled")]
-        [DataRow(true, true, true, true, false, true, true, DisplayName = "Validate Health Report when entity health is disabled")]
-        [DataRow(true, false, true, true, true, true, true, DisplayName = "Validate Health Report when global rest health is disabled")]
-        [DataRow(true, true, true, true, true, false, true, DisplayName = "Validate Health Report when entity rest health is disabled")]
-        [DataRow(true, true, false, true, true, true, true, DisplayName = "Validate Health Report when global graphql health is disabled")]
-        [DataRow(true, true, true, true, true, true, false, DisplayName = "Validate Health Report when entity graphql health is disabled")]
-        public async Task ComprehensiveHealthEndpoint_ValidateContents(bool enableGlobalHealth, bool enableGlobalRest, bool enableGlobalGraphql, bool enableDatasourceHealth, bool enableEntityHealth, bool enableEntityRest, bool enableEntityGraphQL)
+        [DataRow(true, true, true, true, true, true, true, true, DisplayName = "Validate Health Report all enabled.")]
+        [DataRow(false, true, true, true, true, true, true, true, DisplayName = "Validate when Comprehensive Health Report is disabled")]
+        [DataRow(true, true, true, false, true, true, true, true, DisplayName = "Validate Health Report when global MCP health is disabled")]
+        [DataRow(true, true, true, true, false, true, true, true, DisplayName = "Validate Health Report when data-source health is disabled")]
+        [DataRow(true, true, true, true, true, false, true, true, DisplayName = "Validate Health Report when entity health is disabled")]
+        [DataRow(true, false, true, true, true, true, true, true, DisplayName = "Validate Health Report when global REST health is disabled")]
+        [DataRow(true, true, false, true, true, true, true, true, DisplayName = "Validate Health Report when global GraphQL health is disabled")]
+        [DataRow(true, true, true, true, true, true, false, true, DisplayName = "Validate Health Report when entity REST health is disabled")]
+        [DataRow(true, true, true, true, true, true, true, false, DisplayName = "Validate Health Report when entity GraphQL health is disabled")]
+        public async Task ComprehensiveHealthEndpoint_ValidateContents(
+            bool enableGlobalHealth,
+            bool enableGlobalRest,
+            bool enableGlobalGraphql,
+            bool enableGlobalMcp,
+            bool enableDatasourceHealth,
+            bool enableEntityHealth,
+            bool enableEntityRest,
+            bool enableEntityGraphQL)
         {
-            // Arrange
-            // Create a mock entity map with a single entity for testing
-            RuntimeConfig runtimeConfig = SetupCustomConfigFile(enableGlobalHealth, enableGlobalRest, enableGlobalGraphql, enableDatasourceHealth, enableEntityHealth, enableEntityRest, enableEntityGraphQL);
+            // The body remains exactly the same except passing enableGlobalMcp
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(
+                enableGlobalHealth,
+                enableGlobalRest,
+                enableGlobalGraphql,
+                enableGlobalMcp,
+                enableDatasourceHealth,
+                enableEntityHealth,
+                enableEntityRest,
+                enableEntityGraphQL);
+
             WriteToCustomConfigFile(runtimeConfig);
 
             string[] args = new[]
@@ -90,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
 
                     ValidateBasicDetailsHealthCheckResponse(responseProperties);
-                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties, enableGlobalRest, enableGlobalGraphql);
+                    ValidateConfigurationDetailsHealthCheckResponse(responseProperties, enableGlobalRest, enableGlobalGraphql, enableGlobalMcp);
                     ValidateIfAttributePresentInResponse(responseProperties, enableDatasourceHealth, HealthCheckConstants.DATASOURCE);
                     ValidateIfAttributePresentInResponse(responseProperties, enableEntityHealth, HealthCheckConstants.ENDPOINT);
                     if (enableEntityHealth)
@@ -110,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task TestHealthCheckRestResponseAsync()
         {
             // Arrange
-            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true, true);
             HttpUtilities httpUtilities = SetupRestTest(runtimeConfig);
 
             // Act
@@ -139,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task TestFailureHealthCheckRestResponseAsync()
         {
             // Arrange
-            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true, true);
             HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig, HttpStatusCode.BadRequest);
 
             // Act
@@ -167,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task TestHealthCheckGraphQLResponseAsync()
         {
             // Arrange
-            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true, true);
             HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig);
 
             // Act
@@ -191,7 +208,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task TestFailureHealthCheckGraphQLResponseAsync()
         {
             // Arrange
-            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true);
+            RuntimeConfig runtimeConfig = SetupCustomConfigFile(true, true, true, true, true, true, true, true);
             HttpUtilities httpUtilities = SetupGraphQLTest(runtimeConfig, HttpStatusCode.InternalServerError);
 
             // Act
@@ -427,7 +444,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(enableFlag, configElement[objectKey].GetBoolean(), $"Expected {objectKey} to be set to {enableFlag}.");
         }
 
-        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableGlobalRest, bool enableGlobalGraphQL)
+        private static void ValidateConfigurationDetailsHealthCheckResponse(Dictionary<string, JsonElement> responseProperties, bool enableGlobalRest, bool enableGlobalGraphQL, bool enableGlobalMcp)
         {
             if (responseProperties.TryGetValue("configuration", out JsonElement configElement) && configElement.ValueKind == JsonValueKind.Object)
             {
@@ -443,6 +460,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 ValidateConfigurationIsCorrectFlag(configPropertyValues, "rest", enableGlobalRest);
                 ValidateConfigurationIsNotNull(configPropertyValues, "graphql");
                 ValidateConfigurationIsCorrectFlag(configPropertyValues, "graphql", enableGlobalGraphQL);
+                ValidateConfigurationIsNotNull(configPropertyValues, "mcp");
+                ValidateConfigurationIsCorrectFlag(configPropertyValues, "mcp", enableGlobalMcp);
                 ValidateConfigurationIsNotNull(configPropertyValues, "caching");
                 ValidateConfigurationIsNotNull(configPropertyValues, "telemetry");
                 ValidateConfigurationIsNotNull(configPropertyValues, "mode");
@@ -492,7 +511,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        private static RuntimeConfig SetupCustomConfigFile(bool enableGlobalHealth, bool enableGlobalRest, bool enableGlobalGraphql, bool enableDatasourceHealth, bool enableEntityHealth, bool enableEntityRest, bool enableEntityGraphQL)
+        private static RuntimeConfig SetupCustomConfigFile(bool enableGlobalHealth, bool enableGlobalRest, bool enableGlobalGraphql, bool enabledGlobalMcp, bool enableDatasourceHealth, bool enableEntityHealth, bool enableEntityRest, bool enableEntityGraphQL)
         {
             // At least one entity is required in the runtime config for the engine to start.
             // Even though this entity is not under test, it must be supplied enable successful
@@ -511,7 +530,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 { "Book", requiredEntity }
             };
 
-            return CreateRuntimeConfig(entityMap, enableGlobalRest, enableGlobalGraphql, enableGlobalHealth, enableDatasourceHealth, HostMode.Development);
+            return CreateRuntimeConfig(entityMap, enableGlobalRest, enableGlobalGraphql, enabledGlobalMcp, enableGlobalHealth, enableDatasourceHealth, HostMode.Development);
         }
 
         /// <summary>
@@ -520,7 +539,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
-        private static RuntimeConfig CreateRuntimeConfig(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true, HostMode hostMode = HostMode.Production)
+        private static RuntimeConfig CreateRuntimeConfig(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, bool enableGlobalGraphql = true, bool enabledGlobalMcp = true, bool enableGlobalHealth = true, bool enableDatasourceHealth = true, HostMode hostMode = HostMode.Production)
         {
             DataSource dataSource = new(
                 DatabaseType.MSSQL,
@@ -536,6 +555,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     Health: new(enabled: enableGlobalHealth),
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: enableGlobalGraphql),
+                    Mcp: new(Enabled: enabledGlobalMcp),
                     Host: hostOptions
                 ),
                 Entities: new(entityMap));

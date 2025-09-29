@@ -10,6 +10,7 @@ public enum ApiType
 {
     REST,
     GraphQL,
+    MCP,
     // This is required to indicate features common between all APIs.
     All
 }

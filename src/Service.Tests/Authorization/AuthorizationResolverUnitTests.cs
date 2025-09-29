@@ -1441,6 +1441,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap)

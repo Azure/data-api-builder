@@ -140,6 +140,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 Rest = runtimeConfig.IsRestEnabled,
                 GraphQL = runtimeConfig.IsGraphQLEnabled,
+                Mcp = runtimeConfig.IsMcpEnabled,
                 Caching = runtimeConfig.IsCachingEnabled,
                 Telemetry = runtimeConfig?.Runtime?.Telemetry != null,
                 Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Production, // Modify to runtimeConfig.HostMode in Roles PR

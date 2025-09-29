@@ -2,7 +2,22 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
@@ -37,50 +52,175 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             };
         }
 
-        public Task<CallToolResult> ExecuteAsync(
+        public async Task<CallToolResult> ExecuteAsync(
             JsonDocument? arguments,
             IServiceProvider serviceProvider,
             CancellationToken cancellationToken = default)
         {
             if (arguments == null)
             {
-                return Task.FromResult(new CallToolResult
+                return new CallToolResult
                 {
                     Content = [new TextContentBlock { Type = "text", Text = "Error: No arguments provided" }]
-                });
+                };
             }
 
             try
             {
-                // Extract arguments
                 JsonElement root = arguments.RootElement;
 
                 if (!root.TryGetProperty("entity", out JsonElement entityElement) ||
                     !root.TryGetProperty("data", out JsonElement dataElement))
                 {
-                    return Task.FromResult(new CallToolResult
+                    return new CallToolResult
                     {
                         Content = [new TextContentBlock { Type = "text", Text = "Error: Missing required arguments 'entity' or 'data'" }]
-                    });
+                    };
                 }
 
                 string entityName = entityElement.GetString() ?? string.Empty;
-
-                // TODO: Implement actual create logic using DAB's internal services
-                // For now, return a placeholder response
-                string result = $"Would create record in entity '{entityName}' with data: {dataElement.GetRawText()}";
-
-                return Task.FromResult(new CallToolResult
+                if (string.IsNullOrEmpty(entityName))
                 {
-                    Content = [new TextContentBlock { Type = "text", Text = result }]
-                });
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock { Type = "text", Text = "Error: Entity name cannot be empty" }]
+                    };
+                }
+
+                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+                {
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock { Type = "text", Text = "Error: Runtime configuration not available" }]
+                    };
+                }
+
+                string dataSourceName;
+                try
+                {
+                    dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                }
+                catch (DataApiBuilderException)
+                {
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock { Type = "text", Text = $"Error: Entity '{entityName}' not found in configuration" }]
+                    };
+                }
+
+                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                ISqlMetadataProvider sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
+
+                DatabaseObject dbObject;
+                try
+                {
+                    dbObject = sqlMetadataProvider.GetDatabaseObjectByKey(entityName);
+                }
+                catch (Exception)
+                {
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock { Type = "text", Text = $"Error: Database object for entity '{entityName}' not found" }]
+                    };
+                }
+
+                // Create an HTTP context for authorization
+                IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                HttpContext httpContext = httpContextAccessor.HttpContext ?? new DefaultHttpContext();
+                
+                // Resolve client role(s) from the AuthorizationResolver.CLIENT_ROLE_HEADER
+                string clientRole;
+                if (httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeader) && 
+                    !string.IsNullOrEmpty(roleHeader.ToString()))
+                {
+                    clientRole = roleHeader.ToString();
+                }
+                else
+                {
+                    // Default to anonymous role if no client role header is provided
+                    clientRole = AuthorizationResolver.ROLE_ANONYMOUS;
+                    httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = new StringValues(clientRole);
+                }
+
+                IAuthorizationResolver authorizationResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
+                
+                // Validate that we have at least one role authorized for create
+                if (!authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, clientRole, EntityActionOperation.Create))
+                {
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock { Type = "text", Text = $"Error: Role '{clientRole}' is not authorized to create records in entity '{entityName}'" }]
+                    };
+                }
+
+                JsonElement insertPayloadRoot = dataElement.Clone();
+                InsertRequestContext insertRequestContext = new(
+                    entityName,
+                    dbObject,
+                    insertPayloadRoot,
+                    EntityActionOperation.Insert);
+
+                RequestValidator requestValidator = serviceProvider.GetRequiredService<RequestValidator>();
+                
+                // Only validate tables
+                if (dbObject.SourceType is EntitySourceType.Table)
+                {
+                    try
+                    {
+                        requestValidator.ValidateInsertRequestContext(insertRequestContext);
+                    }
+                    catch (DataApiBuilderException ex)
+                    {
+                        return new CallToolResult
+                        {
+                            Content = [new TextContentBlock { Type = "text", Text = $"Error: Request validation failed: {ex.Message}" }]
+                        };
+                    }
+                }
+
+                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
+                DatabaseType databaseType = sqlMetadataProvider.GetDatabaseType();
+                IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(databaseType);
+
+                IActionResult? result = await mutationEngine.ExecuteAsync(insertRequestContext);
+
+                if (result is CreatedResult createdResult)
+                {
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock 
+                        { 
+                            Type = "text", 
+                            Text = $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(createdResult.Value)}"
+                        }]
+                    };
+                }
+                else if (result is ObjectResult objectResult)
+                {
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock 
+                        { 
+                            Type = "text", 
+                            Text = $"Record creation completed with status {objectResult.StatusCode}. Result: {JsonSerializer.Serialize(objectResult.Value)}"
+                        }]
+                    };
+                }
+                else
+                {
+                    return new CallToolResult
+                    {
+                        Content = [new TextContentBlock { Type = "text", Text = $"Successfully created record in entity '{entityName}'" }]
+                    };
+                }
             }
             catch (Exception ex)
             {
-                return Task.FromResult(new CallToolResult
+                return new CallToolResult
                 {
                     Content = [new TextContentBlock { Type = "text", Text = $"Error: {ex.Message}" }]
-                });
+                };
             }
         }
     }

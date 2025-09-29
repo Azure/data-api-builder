@@ -740,6 +740,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // else we throw exception.
             ValidateSize(availableSize, resultFieldSize);
 
+            // If the cell is empty, don't append anything to the resultJsonString and return 0.
+            if (resultFieldSize == 0)
+            {
+                return 0;
+            }
+
             char[] buffer = new char[resultFieldSize];
 
             // read entire field into buffer and reduce available size.

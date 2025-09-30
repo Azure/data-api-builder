@@ -41,14 +41,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
-         /// <summary>
-        /// Gets the metadata for the update-record tool, including its name, description, and input schema.
+        /// <summary>
+        /// Gets the metadata for the update_record tool, including its name, description, and input schema.
         /// </summary>
         public Tool GetToolMetadata()
         {
             return new Tool
             {
-                Name = "update-record",
+                Name = "update_record",
                 Description = "Updates an existing record in the specified entity. Requires 'keys' to locate the record and 'fields' to specify new values.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Executes the update-record tool, updating an existing record in the specified entity using provided keys and fields.
+        /// Executes the update_record tool, updating an existing record in the specified entity using provided keys and fields.
         /// </summary>
         /// <param name="arguments">The JSON arguments containing entity, keys, and fields.</param>
         /// <param name="serviceProvider">The service provider for resolving dependencies.</param>
@@ -136,12 +136,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
-                    return BuildErrorResult("PermissionDenied", "You do not have permission to update records for this entity.", logger);
+                    return BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
                 }
 
                 if (!TryResolveAuthorizedRole(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
                 {
-                    return BuildErrorResult("PermissionDenied", authError, logger);
+                    return BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
                 }
 
                 // 5) Build and validate Upsert (UpdateIncremental) context
@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             "InvalidArguments",
                             "No entity found with the given key.",
                             logger);
-                    }
+                    } 
                     else
                     {
                         // Unexpected error, rethrow to be handled by outer catch
@@ -209,8 +209,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 return BuildSuccessResult(
                     entityName: entityName,
-                    keys: keys,
-                    updatedFields: fields.Keys.ToArray(),
                     engineRootElement: root.Clone(),
                     logger: logger);
             }
@@ -229,7 +227,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 return BuildErrorResult(
                     "UnexpectedError",
-                    "An unexpected error occurred while updating the record.",
+                    ex.Message ?? "An unexpected error occurred during the update operation.",
                     logger: null);
             }
         }
@@ -256,6 +254,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return false;
             }
 
+            // Parse and validate required arguments: entity, keys, fields
             entityName = entityEl.GetString() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(entityName))
             {
@@ -349,13 +348,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
         private static CallToolResult BuildSuccessResult(
             string entityName,
-            IDictionary<string, object?> keys,
-            IEnumerable<string> updatedFields,
             JsonElement engineRootElement,
             ILogger? logger)
         {
-            string[] updatedFieldsArray = updatedFields.ToArray();
-
             // Extract only requested keys and updated fields from engineRootElement
             Dictionary<string, object?> filteredResult = new();
 
@@ -366,22 +361,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 JsonElement firstItem = valueArray[0];
 
-                // Include key values
-                foreach (string key in keys.Keys)
+                // Include all properties from the result
+                foreach (JsonProperty prop in firstItem.EnumerateObject())
                 {
-                    if (firstItem.TryGetProperty(key, out JsonElement keyProp))
-                    {
-                        filteredResult[key] = GetJsonValue(keyProp);
-                    }
-                }
-
-                // Include updated field values
-                foreach (string field in updatedFieldsArray)
-                {
-                    if (firstItem.TryGetProperty(field, out JsonElement fieldProp))
-                    {
-                        filteredResult[field] = GetJsonValue(fieldProp);
-                    }
+                    filteredResult[prop.Name] = GetJsonValue(prop.Value);
                 }
             }
 

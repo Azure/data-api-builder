@@ -9,6 +9,14 @@
         <NoWarn>NU1603</NoWarn>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <OutputPath>$(BaseOutputPath)\engine</OutputPath>
+        <TargetFramework>net8.0</TargetFramework>
+        <AssemblyName>Azure.DataApiBuilder.Service</AssemblyName>
+        <RootNamespace>Azure.DataApiBuilder.Service</RootNamespace>
+   </PropertyGroup>
+
     <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
       <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>

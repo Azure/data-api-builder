@@ -214,9 +214,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             "InvalidArguments",
                             "No record found with the given key.",
                             logger);
-                    }
+                    } 
                     else
                     {
+                        
                         // Unexpected error, rethrow to be handled by outer catch
                         throw;
                     }

@@ -6,10 +6,12 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -24,6 +26,9 @@ using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Core;
 using Serilog.Extensions.Logging;
+using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Mcp.Model;
+using Microsoft.Extensions.Logging.Console;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -33,6 +38,25 @@ namespace Azure.DataApiBuilder.Service
 
         public static void Main(string[] args)
         {
+            Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);         
+            // Detect stdio mode as early as possible and route any Console.WriteLine to STDERR
+            bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
+            if (runMcpStdio)
+            {
+                // MCP requires STDOUT to contain only protocol JSON; send all other text to STDERR
+                try
+                {
+                    Console.SetOut(Console.Error);
+                }
+                catch
+                {
+                     /* ignore */
+                }
+                // Hint to logging pipeline (used below) to log to STDERR only
+                Environment.SetEnvironmentVariable("DAB_MCP_STDIO", "1");
+            }
+
             if (!ValidateAspNetCoreUrls())
             {
                 Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
@@ -40,31 +64,53 @@ namespace Azure.DataApiBuilder.Service
                 return;
             }
 
-            if (!StartEngine(args))
+            if (!StartEngine(args, runMcpStdio))
             {
                 Environment.ExitCode = -1;
             }
         }
 
-        public static bool StartEngine(string[] args)
+        public static bool StartEngine(string[] args, bool runMcpStdio)
         {
-            // Unable to use ILogger because this code is invoked before LoggerFactory
-            // is instantiated.
             Console.WriteLine("Starting the runtime engine...");
             try
             {
-                CreateHostBuilder(args).Build().Run();
+                var host = CreateHostBuilder(args).Build();
+
+                if (runMcpStdio)
+                {
+                    // Start DI/telemetry/metadata etc., but don't block on Kestrel
+                    host.Start();
+
+                    var registry = host.Services.GetRequiredService<Azure.DataApiBuilder.Mcp.Core.McpToolRegistry>();
+                    foreach (var tool in host.Services.GetServices<Azure.DataApiBuilder.Mcp.Model.IMcpTool>())
+                    {
+                        var metadata = tool.GetToolMetadata();
+                        Console.Error.WriteLine($"[MCP DEBUG] Registering tool: {metadata.Name}");
+                        registry.RegisterTool(tool);
+                    }
+
+                    // Resolve and run the MCP stdio server from DI
+                    var scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
+                    using var scope = scopeFactory.CreateScope();
+                    var lifetime = scope.ServiceProvider.GetRequiredService<IHostApplicationLifetime>();
+                    var stdio = scope.ServiceProvider.GetRequiredService<Azure.DataApiBuilder.Mcp.Core.IMcpStdioServer>();
+                    // Run the stdio loop until cancellation (Ctrl+C / process end)
+                    stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
+
+                    host.StopAsync().GetAwaiter().GetResult();
+                    return true;
+                }
+
+                // Normal web mode
+                host.Run();
                 return true;
             }
-            // Catch exception raised by explicit call to IHostApplicationLifetime.StopApplication()
             catch (TaskCanceledException)
             {
-                // Do not log the exception here because exceptions raised during startup
-                // are already automatically written to the console.
                 Console.Error.WriteLine("Unable to launch the Data API builder engine.");
                 return false;
             }
-            // Catch all remaining unhandled exceptions which may be due to server host operation.
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
@@ -145,6 +191,8 @@ namespace Azure.DataApiBuilder.Service
             return LoggerFactory
                 .Create(builder =>
                 {
+                    bool stdio = string.Equals(Environment.GetEnvironmentVariable("DAB_MCP_STDIO"), "1", StringComparison.OrdinalIgnoreCase);
+
                     // Category defines the namespace we will log from,
                     // including all subdomains. ie: "Azure" includes
                     // "Azure.DataApiBuilder.Service"
@@ -229,7 +277,22 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    builder.AddConsole();
+                    // In stdio mode, route console logs to STDERR to keep STDOUT clean for MCP JSON
+                    if (stdio)
+                    {
+                       if (stdio)
+                        {
+                            builder.ClearProviders();
+                            builder.AddConsole(options =>
+                            {
+                                options.LogToStandardErrorThreshold = LogLevel.Trace;
+                            });
+                        }
+                    }
+                    else
+                    {
+                        builder.AddConsole();
+                    }
                 });
         }
 

@@ -519,15 +519,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                if (!GetHttpContext().Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues headerValues) && headerValues.Count != 1)
+                string roleName;
+                HttpContext? httpContext = GetHttpContext();
+                if (httpContext != null)
                 {
-                    throw new DataApiBuilderException(
+                    if (!httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues headerValues) || headerValues.Count != 1)
+                    {
+                        throw new DataApiBuilderException(
                             message: $"No role found.",
                             statusCode: HttpStatusCode.Forbidden,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                    }
+                    
+                    roleName = headerValues.ToString();
+                }
+                else
+                {
+                    // MCP stdio mode: use the role passed in context or fallback to Anonymous
+                    roleName = "Anonymous";
                 }
 
-                string roleName = headerValues.ToString();
+                //string roleName = headerValues.ToString();
                 bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);
                 bool isDatabasePolicyDefinedForReadAction = false;
                 JsonDocument? selectOperationResponse = null;

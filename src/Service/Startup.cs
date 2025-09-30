@@ -66,6 +66,8 @@ using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
+using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.BuiltInTools;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -455,6 +457,12 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<DabCacheService>();
 
             services.AddDabMcpServer(configProvider);
+
+            services.AddSingleton<McpToolRegistry>();
+
+            services.AddSingleton<IMcpTool, UpdateRecordTool>();
+
+            services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 
             services.AddControllers();
         }

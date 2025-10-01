@@ -2,26 +2,23 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
-
-using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Mcp.Model;
 
 namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
@@ -113,7 +110,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 3) Resolve metadata for entity existence check
                 string dataSourceName;
                 ISqlMetadataProvider sqlMetadataProvider;
-                
+
                 try
                 {
                     dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
@@ -192,7 +189,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             "InvalidArguments",
                             "No entity found with the given key.",
                             logger);
-                    } 
+                    }
                     else
                     {
                         // Unexpected error, rethrow to be handled by outer catch
@@ -201,7 +198,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
-                
+
                 // 7) Normalize response (success or engine error payload)
                 string rawPayloadJson = ExtractResultJson(mutationResult);
                 using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
@@ -216,7 +213,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 return BuildErrorResult("OperationCanceled", "The update operation was canceled.", logger: null);
             }
-            catch(ArgumentException argEx)
+            catch (ArgumentException argEx)
             {
                 return BuildErrorResult("InvalidArguments", argEx.Message, logger);
             }
@@ -450,7 +447,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         return jd.RootElement.GetRawText();
                     }
-                    
+
                     return JsonSerializer.Serialize(obj.Value ?? new object());
 
                 case ContentResult content:

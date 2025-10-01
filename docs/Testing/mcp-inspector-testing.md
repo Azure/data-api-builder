@@ -6,7 +6,7 @@ Steps to run and test MCP tools using the https://www.npmjs.com/package/@modelco
 ### 1. **Install MCP Inspector** 
 npx @modelcontextprotocol/inspector
 
-### 2. ** Bypass TLS Verification (For Local Testing)**
+### 2. **Bypass TLS Verification (For Local Testing)**
 set NODE_TLS_REJECT_UNAUTHORIZED=0
 
 ### 3. ** Open the inspector with pre-filled token.**

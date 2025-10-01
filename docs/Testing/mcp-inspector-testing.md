@@ -12,7 +12,7 @@ set NODE_TLS_REJECT_UNAUTHORIZED=0
 ### 3. ** Open the inspector with pre-filled token.**
 http://localhost:6274/?MCP_PROXY_AUTH_TOKEN=<token>
 
-### 4. ** How to use the tool..**
+### 4. **How to use the tool**
 - Set the transport type "Streamable HTTP".
 - Set the URL "http://localhost:5000/mcp" and hit connect.
 - Select a Tool from the dropdown list.

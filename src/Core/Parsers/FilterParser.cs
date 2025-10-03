@@ -44,7 +44,6 @@ namespace Azure.DataApiBuilder.Core.Parsers
         {
             if (_model is null)
             {
-
                 throw new DataApiBuilderException(
                     message: "The runtime has not been initialized with an Edm model.",
                     statusCode: HttpStatusCode.InternalServerError,

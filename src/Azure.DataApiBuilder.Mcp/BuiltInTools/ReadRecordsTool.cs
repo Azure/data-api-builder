@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!root.TryGetProperty("entity", out JsonElement entityElement) || string.IsNullOrWhiteSpace(entityElement.GetString()))
                 {
-                    return BuildErrorResult("InvalidArguments", "Missing requirement argument 'entity'.", logger);
+                    return BuildErrorResult("InvalidArguments", "Missing required argument 'entity'.", logger);
                 }
 
                 entityName = entityElement.GetString()!;
@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (Exception ex)
             {
                 ILogger<ReadRecordsTool>? innerLogger = serviceProvider.GetService<ILogger<ReadRecordsTool>>();
-                innerLogger?.LogError(ex, "Unexpected error in ReadRecordTool.");
+                innerLogger?.LogError(ex, "Unexpected error in ReadRecordsTool.");
 
                 return BuildErrorResult(
                     "UnexpectedError",
@@ -308,7 +308,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             string output = JsonSerializer.Serialize(normalized, new JsonSerializerOptions { WriteIndented = true });
 
-            logger?.LogInformation("UpdateRecordTool success for entity {Entity}.", entityName);
+            logger?.LogInformation("ReadRecordsTool success for entity {Entity}.", entityName);
 
             return new CallToolResult
             {
@@ -336,7 +336,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             string output = JsonSerializer.Serialize(errorObj);
 
-            logger?.LogWarning("UpdateRecordTool error {ErrorType}: {Message}", errorType, message);
+            logger?.LogWarning("ReadRecordsTool error {ErrorType}: {Message}", errorType, message);
 
             return new CallToolResult
             {

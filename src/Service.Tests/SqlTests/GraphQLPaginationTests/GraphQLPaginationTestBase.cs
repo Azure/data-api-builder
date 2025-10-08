@@ -167,6 +167,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 20,
                   ""title"": ""C:\\\\LIFE""
+                },
+                {
+                  ""id"": 21,
+                  ""title"": """"
                 }
               ],
               ""endCursor"": null,
@@ -277,6 +281,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 {
                   ""id"": 20,
                   ""title"": ""C:\\\\LIFE""
+                },
+                {
+                  ""id"": 21,
+                  ""title"": """"
                 }
               ],
               ""endCursor"": null,

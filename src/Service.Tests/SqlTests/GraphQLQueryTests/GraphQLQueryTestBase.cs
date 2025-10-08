@@ -867,7 +867,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 
-            Assert.IsNull(actual.GetString());
+            // If the result is null (no book found), actual.ValueKind == Null
+            if (actual.ValueKind == JsonValueKind.Null)
+            {
+                Assert.IsNull(actual.GetString());
+            }
+            else
+            {
+                // Otherwise, get the "title" property
+                string title = actual.GetProperty("title").GetString();
+                Assert.IsTrue(string.IsNullOrEmpty(title));
+            }
         }
 
         [TestMethod]

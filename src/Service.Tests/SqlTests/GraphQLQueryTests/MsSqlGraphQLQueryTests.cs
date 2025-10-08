@@ -269,6 +269,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
+        public async Task QueryWithEmptyStringCell()
+        {
+            await QueryWithEmptyStringResult();
+        }
+
+        [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKeyAndMappings()
         {
             string msSqlQuery = @"

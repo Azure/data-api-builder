@@ -772,6 +772,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // else we throw exception.
             ValidateSize(availableSize, resultFieldSize);
 
+            // If the cell is empty, set resultBytes to an empty array and return 0.
+            if (resultFieldSize == 0)
+            {
+                resultBytes = Array.Empty<byte>();
+                return 0;
+            }
+
             resultBytes = new byte[resultFieldSize];
 
             dbDataReader.GetBytes(ordinal: ordinal, dataOffset: 0, buffer: resultBytes, bufferOffset: 0, length: resultBytes.Length);

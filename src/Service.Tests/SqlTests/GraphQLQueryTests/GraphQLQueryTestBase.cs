@@ -867,7 +867,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 
-            Assert.IsNull(actual.GetString());
+            Assert.AreEqual(actual.GetString(), "");
         }
 
         [TestMethod]

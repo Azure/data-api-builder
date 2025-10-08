@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
                 JsonElement root = resultDoc.RootElement;
 
-                var extractedData = McpJsonHelper.ExtractValuesFromEngineResult(root);
+                Dictionary<string, object?> extractedData = McpJsonHelper.ExtractValuesFromEngineResult(root);
                 if (extractedData.Count > 0)
                 {
                     responseData["result"] = extractedData;

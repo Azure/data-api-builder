@@ -2,12 +2,22 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
@@ -15,271 +25,233 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     /// <summary>
     /// Tool to delete records from a table/view entity configured in DAB.
+    /// Supports both simple and composite primary keys.
     /// </summary>
     public class DeleteRecordTool : IMcpTool
     {
+        /// <summary>
+        /// Gets the type of the tool, which is BuiltIn for this implementation.
+        /// </summary>
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
+        /// <summary>
+        /// Gets the metadata for the delete-record tool, including its name, description, and input schema.
+        /// </summary>
         public Tool GetToolMetadata()
         {
             return new Tool
             {
                 Name = "delete-record",
-                Description = "Deletes records from a table or view based on specified conditions",
-                InputSchema = JsonSerializer.SerializeToElement(new
-                {
-                    type = "object",
-                    properties = new
-                    {
-                        entityName = new
-                        {
-                            type = "string",
-                            description = "Name of the entity (table/view) as configured in dab-config"
+                Description = "Deletes a record from a table based on primary key or composite key",
+                InputSchema = JsonSerializer.Deserialize<JsonElement>(
+                    @"{
+                        ""type"": ""object"",
+                        ""properties"": {
+                            ""entity"": {
+                                ""type"": ""string"",
+                                ""description"": ""The name of the entity (table) as configured in dab-config""
+                            },
+                            ""keys"": {
+                                ""type"": ""object"",
+                                ""description"": ""Primary key values to identify the record to delete. For composite keys, provide all key columns as properties""
+                            }
                         },
-                        primaryKey = new
-                        {
-                            type = "object",
-                            description = "Primary key values to identify the record(s) to delete",
-                            additionalProperties = true
-                        },
-                        filter = new
-                        {
-                            type = "string",
-                            description = "Optional WHERE clause conditions (e.g., 'age > 18 AND status = \"active\"')"
-                        }
-                    },
-                    required = new[] { "entityName" },
-                    oneOf = new[]
-                    {
-                        new { required = new[] { "primaryKey" } },
-                        new { required = new[] { "filter" } }
-                    }
-                })
+                        ""required"": [""entity"", ""keys""]
+                    }"
+                )
             };
         }
 
+        /// <summary>
+        /// Executes the delete-record tool, deleting an existing record in the specified entity using provided keys.
+        /// </summary>
         public async Task<CallToolResult> ExecuteAsync(
             JsonDocument? arguments,
             IServiceProvider serviceProvider,
             CancellationToken cancellationToken = default)
         {
+            ILogger<DeleteRecordTool>? logger = serviceProvider.GetService<ILogger<DeleteRecordTool>>();
+
             try
             {
-                if (arguments?.RootElement.ValueKind != JsonValueKind.Object)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // 1) Parsing & basic argument validation
+                if (arguments is null)
                 {
-                    return CreateErrorResult("Invalid arguments: expected object");
+                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
                 }
 
-                // Extract entity name
-                if (!arguments.RootElement.TryGetProperty("entityName", out JsonElement entityNameElement) ||
-                    entityNameElement.ValueKind != JsonValueKind.String)
+                if (!McpArgumentParser.TryParseEntityAndKeys(arguments.RootElement, out string entityName, out Dictionary<string, object?> keys, out string parseError))
                 {
-                    return CreateErrorResult("Missing or invalid 'entityName' parameter");
+                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                string entityName = entityNameElement.GetString()!;
-
-                // Get runtime configuration
+                // 2) Resolve required services & configuration
                 RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+                RuntimeConfig config = runtimeConfigProvider.GetConfig();
 
-                // Validate entity exists
-                if (!runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
+                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
+
+                // 3) Resolve metadata for entity existence check
+                string dataSourceName;
+                ISqlMetadataProvider sqlMetadataProvider;
+
+                try
                 {
-                    return CreateErrorResult($"Entity '{entityName}' not found in configuration");
+                    dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
+                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
+                }
+                catch (Exception)
+                {
+                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                }
+
+                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
+                {
+                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
                 // Validate it's a table or view
-                if (entity.Source.Type != EntitySourceType.Table && entity.Source.Type != EntitySourceType.View)
+                if (dbObject.SourceType != EntitySourceType.Table && dbObject.SourceType != EntitySourceType.View)
                 {
-                    return CreateErrorResult($"Entity '{entityName}' is not a table or view. Use 'execute-entity' for stored procedures.");
+                    return McpResponseBuilder.BuildErrorResult("InvalidEntity", $"Entity '{entityName}' is not a table or view. Use 'execute-entity' for stored procedures.", logger);
                 }
 
-                // Check permissions for delete action
-                bool hasDeletePermission = entity.Permissions?.Any(p =>
-                    p.Actions?.Any(a => a.Action == EntityActionOperation.Delete) == true) == true;
+                // 4) Authorization
+                IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
+                IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                HttpContext? httpContext = httpContextAccessor.HttpContext;
 
-                if (!hasDeletePermission)
+                if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return CreateErrorResult($"Delete operation is not permitted for entity '{entityName}'");
+                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {roleError}", logger);
                 }
 
-                // Get table/view name from entity configuration
-                string tableName = entity.Source.Object!;
-
-                // Build WHERE clause
-                string whereClause;
-                Dictionary<string, object?> parameters = new();
-
-                bool hasPrimaryKey = arguments.RootElement.TryGetProperty("primaryKey", out JsonElement primaryKeyElement) &&
-                                     primaryKeyElement.ValueKind == JsonValueKind.Object;
-                bool hasFilter = arguments.RootElement.TryGetProperty("filter", out JsonElement filterElement) &&
-                                filterElement.ValueKind == JsonValueKind.String;
-
-                if (!hasPrimaryKey && !hasFilter)
+                if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
+                    httpContext!, 
+                    authResolver, 
+                    entityName, 
+                    EntityActionOperation.Delete, 
+                    out string? effectiveRole, 
+                    out string authError))
                 {
-                    return CreateErrorResult("Either 'primaryKey' or 'filter' must be provided");
+                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
                 }
 
-                if (hasPrimaryKey && hasFilter)
-                {
-                    return CreateErrorResult("Cannot specify both 'primaryKey' and 'filter'. Use one or the other.");
-                }
+                // 5) Build and validate Delete context
+                RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
 
-                if (hasPrimaryKey)
+                DeleteRequestContext context = new(
+                    entityName: entityName,
+                    dbo: dbObject,
+                    isList: false);
+
+                foreach (KeyValuePair<string, object?> kvp in keys)
                 {
-                    // Build WHERE clause from primary key
-                    List<string> conditions = new();
-                    foreach (JsonProperty prop in primaryKeyElement.EnumerateObject())
+                    if (kvp.Value is null)
                     {
-                        string paramName = $"pk_{prop.Name}";
-                        conditions.Add($"[{prop.Name}] = @{paramName}");
-                        parameters[paramName] = GetParameterValue(prop.Value);
+                        return McpResponseBuilder.BuildErrorResult("InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
                     }
 
-                    whereClause = string.Join(" AND ", conditions);
-                }
-                else
-                {
-                    // Use the provided filter
-                    whereClause = filterElement.GetString()!;
-
-                    // Basic SQL injection prevention - check for dangerous patterns
-                    string[] dangerousPatterns = { "--", "/*", "*/", "xp_", "sp_", "exec", "execute", "drop", "create", "alter" };
-                    string filterLower = whereClause.ToLower();
-                    foreach (string pattern in dangerousPatterns)
-                    {
-                        if (filterLower.Contains(pattern))
-                        {
-                            return CreateErrorResult($"Filter contains potentially dangerous SQL pattern: '{pattern}'");
-                        }
-                    }
+                    context.PrimaryKeyValuePairs[kvp.Key] = kvp.Value;
                 }
 
-                // Get the database connection string
-                string dataSourceName = runtimeConfig.DefaultDataSourceName;
-                DataSource? dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
-                string connectionString = dataSource.ConnectionString;
+                requestValidator.ValidatePrimaryKey(context);
 
-                // Execute delete operation
-                int rowsAffected = 0;
-                List<Dictionary<string, object?>> deletedRecords = new();
+                // 6) Execute
+                DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+                IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(dbType);
 
-                using (SqlConnection connection = new(connectionString))
+                IActionResult? mutationResult = null;
+                try
                 {
-                    await connection.OpenAsync(cancellationToken);
+                    mutationResult = await mutationEngine.ExecuteAsync(context).ConfigureAwait(false);
+                }
+                catch (DataApiBuilderException dabEx) when (dabEx.Message.Contains("Could not find item with", StringComparison.OrdinalIgnoreCase))
+                {
+                    string keyDetails = McpJsonHelper.FormatKeyDetails(keys);
+                    return McpResponseBuilder.BuildErrorResult(
+                        "RecordNotFound",
+                        $"No record found with the specified primary key: {keyDetails}",
+                        logger);
+                }
+                catch (Exception ex)
+                {
+                    string errorMsg = ex.Message ?? string.Empty;
 
-                    // First, get a preview of what will be deleted (for response)
-                    string selectQuery = $"SELECT * FROM [{tableName}] WHERE {whereClause}";
-
-                    using (SqlCommand selectCommand = new(selectQuery, connection))
+                    if (errorMsg.Contains("Could not find", StringComparison.OrdinalIgnoreCase) || 
+                        errorMsg.Contains("record not found", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Add parameters if using primary key
-                        foreach (KeyValuePair<string, object?> param in parameters)
-                        {
-                            selectCommand.Parameters.AddWithValue($"@{param.Key}", param.Value ?? DBNull.Value);
-                        }
-
-                        using (SqlDataReader reader = await selectCommand.ExecuteReaderAsync(cancellationToken))
-                        {
-                            while (await reader.ReadAsync(cancellationToken))
-                            {
-                                Dictionary<string, object?> row = new();
-
-                                for (int i = 0; i < reader.FieldCount; i++)
-                                {
-                                    string columnName = reader.GetName(i);
-                                    object? value = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                                    row[columnName] = value;
-                                }
-
-                                deletedRecords.Add(row);
-                            }
-                        }
+                        return McpResponseBuilder.BuildErrorResult(
+                            "RecordNotFound",
+                            "No entity found with the given key.",
+                            logger);
                     }
-
-                    // Now execute the delete
-                    string deleteQuery = $"DELETE FROM [{tableName}] WHERE {whereClause}";
-
-                    using (SqlCommand deleteCommand = new(deleteQuery, connection))
+                    else
                     {
-                        // Add parameters if using primary key
-                        foreach (KeyValuePair<string, object?> param in parameters)
-                        {
-                            deleteCommand.Parameters.AddWithValue($"@{param.Key}", param.Value ?? DBNull.Value);
-                        }
-
-                        rowsAffected = await deleteCommand.ExecuteNonQueryAsync(cancellationToken);
+                        throw;
                     }
                 }
 
-                // Format the response
-                var response = new
-                {
-                    success = true,
-                    entity = entityName,
-                    table = tableName,
-                    rowsDeleted = rowsAffected,
-                    deletedRecords = deletedRecords
-                };
+                cancellationToken.ThrowIfCancellationRequested();
 
-                return new CallToolResult
-                {
-                    Content = new List<ContentBlock>
-                    {
-                        new TextContentBlock
-                        {
-                            Type = "text",
-                            Text = JsonSerializer.Serialize(response, new JsonSerializerOptions
-                            {
-                                WriteIndented = true,
-                                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                            })
-                        }
-                    }
-                };
+                // 7) Build response
+                return BuildDeleteSuccessResponse(entityName, keys, mutationResult, logger);
             }
-            catch (SqlException ex)
+            catch (OperationCanceledException)
             {
-                return CreateErrorResult($"Database error: {ex.Message}");
+                return McpResponseBuilder.BuildErrorResult("OperationCanceled", "The delete operation was canceled.", logger: null);
             }
-            catch (DataApiBuilderException ex)
+            catch (ArgumentException argEx)
             {
-                return CreateErrorResult($"DAB Error: {ex.Message}");
+                return McpResponseBuilder.BuildErrorResult("InvalidArguments", argEx.Message, logger);
             }
             catch (Exception ex)
             {
-                return CreateErrorResult($"Unexpected error: {ex.Message}");
+                ILogger<DeleteRecordTool>? innerLogger = serviceProvider.GetService<ILogger<DeleteRecordTool>>();
+                innerLogger?.LogError(ex, "Unexpected error in DeleteRecordTool.");
+
+                return McpResponseBuilder.BuildErrorResult(
+                    "UnexpectedError",
+                    ex.Message ?? "An unexpected error occurred during the delete operation.",
+                    logger: null);
             }
         }
 
-        private static object? GetParameterValue(JsonElement element)
+        private static CallToolResult BuildDeleteSuccessResponse(
+            string entityName,
+            Dictionary<string, object?> keys,
+            IActionResult? mutationResult,
+            ILogger? logger)
         {
-            return element.ValueKind switch
+            Dictionary<string, object?> responseData = new()
             {
-                JsonValueKind.String => element.GetString(),
-                JsonValueKind.Number => element.TryGetInt32(out int intValue) ? intValue : element.GetDouble(),
-                JsonValueKind.True => true,
-                JsonValueKind.False => false,
-                JsonValueKind.Null => null,
-                _ => element.ToString()
+                ["entity"] = entityName,
+                ["keyDetails"] = McpJsonHelper.FormatKeyDetails(keys),
+                ["message"] = "Record deleted successfully"
             };
-        }
 
-        private static CallToolResult CreateErrorResult(string errorMessage)
-        {
-            return new CallToolResult
+            // Handle different result types
+            if (mutationResult is OkObjectResult okObjectResult)
             {
-                Content = new List<ContentBlock>
+                string rawPayloadJson = McpResponseBuilder.ExtractResultJson(okObjectResult);
+                using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
+                JsonElement root = resultDoc.RootElement;
+
+                var extractedData = McpJsonHelper.ExtractValuesFromEngineResult(root);
+                if (extractedData.Count > 0)
                 {
-                    new TextContentBlock
-                    {
-                        Type = "text",
-                        Text = JsonSerializer.Serialize(new { error = errorMessage })
-                    }
-                },
-                IsError = true
-            };
+                    responseData["result"] = extractedData;
+                }
+            }
+
+            return McpResponseBuilder.BuildSuccessResult(
+                responseData,
+                logger,
+                $"DeleteRecordTool success for entity {entityName}."
+            );
         }
     }
 }

@@ -130,11 +130,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
-                    httpContext!, 
-                    authResolver, 
-                    entityName, 
-                    EntityActionOperation.Delete, 
-                    out string? effectiveRole, 
+                    httpContext!,
+                    authResolver,
+                    entityName,
+                    EntityActionOperation.Delete,
+                    out string? effectiveRole,
                     out string authError))
                 {
                     return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
@@ -181,7 +181,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     string errorMsg = ex.Message ?? string.Empty;
 
-                    if (errorMsg.Contains("Could not find", StringComparison.OrdinalIgnoreCase) || 
+                    if (errorMsg.Contains("Could not find", StringComparison.OrdinalIgnoreCase) ||
                         errorMsg.Contains("record not found", StringComparison.OrdinalIgnoreCase))
                     {
                         return McpResponseBuilder.BuildErrorResult(

@@ -18,7 +18,11 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             return element.ValueKind switch
             {
                 JsonValueKind.String => element.GetString(),
-                JsonValueKind.Number => element.TryGetInt64(out long l) ? l : element.GetDouble(),
+                JsonValueKind.Number =>
+                    // Try to get as decimal first for maximum precision
+                    element.TryGetDecimal(out decimal d) ? d :
+                    element.TryGetInt64(out long l) ? l :
+                    element.GetDouble(),
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 JsonValueKind.Null => null,

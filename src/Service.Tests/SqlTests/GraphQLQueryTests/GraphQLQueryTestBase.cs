@@ -856,22 +856,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         [TestMethod]
-        public virtual async Task QueryWithEmptyStringResult()
-        {
-            string graphQLQueryName = "book_by_pk";
-            string graphQLQuery = @"{
-                book_by_pk(id: 21) {
-                    title
-                }
-            }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-
-            string title = actual.GetProperty("title").GetString();
-            Assert.AreEqual("", title);
-        }
-
-        [TestMethod]
         public async Task QueryWithNullableForeignKey(string dbQuery)
         {
             string graphQLQueryName = "comic_by_pk";

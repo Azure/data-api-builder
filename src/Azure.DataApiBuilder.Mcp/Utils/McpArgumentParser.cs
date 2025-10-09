@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
 
             try
             {
-                fields = JsonSerializer.Deserialize<Dictionary<string, object?>>(fieldsEl.GetRawText()) ?? new Dictionary<string, object?>();
+                fields = JsonSerializer.Deserialize<Dictionary<string, object?>>(fieldsEl) ?? new Dictionary<string, object?>();
             }
             catch (Exception ex)
             {

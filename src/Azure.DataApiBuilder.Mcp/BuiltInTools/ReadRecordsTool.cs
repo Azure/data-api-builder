@@ -15,6 +15,8 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -152,6 +154,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // Authorization check in the existing entity
                 IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
+                IAuthorizationService _authorizationService = serviceProvider.GetRequiredService<IAuthorizationService>();
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
@@ -168,6 +171,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Build and validate Find context
                 RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
                 FindRequestContext context = new(entityName, dbObject, true);
+                httpContext.Request.Method = "GET";
 
                 requestValidator.ValidateEntity(entityName);
 
@@ -210,6 +214,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 context.First = first;
                 context.After = after;
 
+                // The final authorization check on columns occurs after the request is fully parsed and validated.
+                requestValidator.ValidateRequestContext(context);
+
+                AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+                    user: httpContext.User,
+                    resource: context,
+                    requirements: new[] { new ColumnsPermissionsRequirement() });
+                if (!authorizationResult.Succeeded)
+                {
+                    return BuildErrorResult("PermissionDenied", DataApiBuilderException.AUTHORIZATION_FAILURE, logger);
+                }
+
                 // Execute
                 IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
@@ -239,6 +255,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (ArgumentException argEx)
             {
                 return BuildErrorResult("InvalidArguments", argEx.Message, logger);
+            }
+            catch (DataApiBuilderException argEx)
+            {
+                return BuildErrorResult(argEx.StatusCode.ToString(), argEx.Message, logger);
             }
             catch (Exception)
             {

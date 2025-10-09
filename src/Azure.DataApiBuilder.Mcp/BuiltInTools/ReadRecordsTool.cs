@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // Authorization check in the existing entity
                 IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
-                IAuthorizationService _authorizationService = serviceProvider.GetRequiredService<IAuthorizationService>();
+                IAuthorizationService authorizationService = serviceProvider.GetRequiredService<IAuthorizationService>();
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
@@ -217,7 +217,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // The final authorization check on columns occurs after the request is fully parsed and validated.
                 requestValidator.ValidateRequestContext(context);
 
-                AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(
+                AuthorizationResult authorizationResult = await authorizationService.AuthorizeAsync(
                     user: httpContext.User,
                     resource: context,
                     requirements: new[] { new ColumnsPermissionsRequirement() });

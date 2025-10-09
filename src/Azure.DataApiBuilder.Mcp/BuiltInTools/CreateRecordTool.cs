@@ -17,13 +17,14 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
 namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     public class CreateRecordTool : IMcpTool
+
     {
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
@@ -31,7 +32,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             return new Tool
             {
-                Name = "create-record",
+                Name = "create_record",
                 Description = "Creates a new record in the specified entity.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
@@ -57,43 +58,33 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             IServiceProvider serviceProvider,
             CancellationToken cancellationToken = default)
         {
+            ILogger<CreateRecordTool>? logger = serviceProvider.GetService<ILogger<CreateRecordTool>>();
             if (arguments == null)
             {
-                return new CallToolResult
-                {
-                    Content = [new TextContentBlock { Type = "text", Text = "Error: No arguments provided" }]
-                };
+                return BuildErrorResult("Invalid Arguments", "No arguments provided", logger);
             }
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 JsonElement root = arguments.RootElement;
 
                 if (!root.TryGetProperty("entity", out JsonElement entityElement) ||
                     !root.TryGetProperty("data", out JsonElement dataElement))
                 {
-                    return new CallToolResult
-                    {
-                        Content = [new TextContentBlock { Type = "text", Text = "Error: Missing required arguments 'entity' or 'data'" }]
-                    };
+                    return BuildErrorResult("Invalid Arguments", "Missing required arguments 'entity' or 'data'", logger);
                 }
 
                 string entityName = entityElement.GetString() ?? string.Empty;
                 if (string.IsNullOrEmpty(entityName))
                 {
-                    return new CallToolResult
-                    {
-                        Content = [new TextContentBlock { Type = "text", Text = "Error: Entity name cannot be empty" }]
-                    };
+                    return BuildErrorResult("Invalid Arguments", "Entity name cannot be empty", logger);
                 }
 
                 RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
-                    return new CallToolResult
-                    {
-                        Content = [new TextContentBlock { Type = "text", Text = "Error: Runtime configuration not available" }]
-                    };
+                    return BuildErrorResult("Invalid Configuration", "Runtime configuration not available", logger);
                 }
 
                 string dataSourceName;
@@ -103,10 +94,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (DataApiBuilderException)
                 {
-                    return new CallToolResult
-                    {
-                        Content = [new TextContentBlock { Type = "text", Text = $"Error: Entity '{entityName}' not found in configuration" }]
-                    };
+                    return BuildErrorResult("Invalid Configuration", $"Entity '{entityName}' not found in configuration", logger);
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
@@ -119,39 +107,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (Exception)
                 {
-                    return new CallToolResult
-                    {
-                        Content = [new TextContentBlock { Type = "text", Text = $"Error: Database object for entity '{entityName}' not found" }]
-                    };
+                    return BuildErrorResult("Invalid Configuration", $"Database object for entity '{entityName}' not found", logger);
                 }
+                
 
                 // Create an HTTP context for authorization
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext httpContext = httpContextAccessor.HttpContext ?? new DefaultHttpContext();
-                
-                // Resolve client role(s) from the AuthorizationResolver.CLIENT_ROLE_HEADER
-                string clientRole;
-                if (httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeader) && 
-                    !string.IsNullOrEmpty(roleHeader.ToString()))
+                IAuthorizationResolver authorizationResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
+
+                if (httpContext is null || !authorizationResolver.IsValidRoleContext(httpContext))
                 {
-                    clientRole = roleHeader.ToString();
-                }
-                else
-                {
-                    // Default to anonymous role if no client role header is provided
-                    clientRole = AuthorizationResolver.ROLE_ANONYMOUS;
-                    httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = new StringValues(clientRole);
+                    return BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
                 }
 
-                IAuthorizationResolver authorizationResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
-                
                 // Validate that we have at least one role authorized for create
-                if (!authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, clientRole, EntityActionOperation.Create))
+                if (!TryResolveAuthorizedRole(httpContext, authorizationResolver, entityName, out string authError))
                 {
-                    return new CallToolResult
-                    {
-                        Content = [new TextContentBlock { Type = "text", Text = $"Error: Role '{clientRole}' is not authorized to create records in entity '{entityName}'" }]
-                    };
+                    return BuildErrorResult("PermissionDenied", authError, logger);
                 }
 
                 JsonElement insertPayloadRoot = dataElement.Clone();
@@ -222,6 +195,76 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     Content = [new TextContentBlock { Type = "text", Text = $"Error: {ex.Message}" }]
                 };
             }
+        }
+
+        private static bool TryResolveAuthorizedRole(
+        HttpContext httpContext,
+        IAuthorizationResolver authorizationResolver,
+        string entityName,
+        out string error)
+        {
+            error = string.Empty;
+
+            string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+
+            if (string.IsNullOrWhiteSpace(roleHeader))
+            {
+                error = "Client role header is missing or empty.";
+                return false;
+            }
+
+            string[] roles = roleHeader
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (roles.Length == 0)
+            {
+                error = "Client role header is missing or empty.";
+                return false;
+            }
+
+            foreach (string role in roles)
+            {
+                bool allowed = authorizationResolver.AreRoleAndOperationDefinedForEntity(
+                    entityName, role, EntityActionOperation.Insert);
+
+                if (allowed)
+                {
+                    return true;
+                }
+            }
+
+            error = "You do not have permission to create records for this entity.";
+            return false;
+        }
+
+        private static CallToolResult BuildErrorResult(
+        string errorType,
+        string message,
+        ILogger? logger)
+        {
+            Dictionary<string, object?> errorObj = new()
+            {
+                ["status"] = "error",
+                ["error"] = new Dictionary<string, object?>
+                {
+                    ["type"] = errorType,
+                    ["message"] = message
+                }
+            };
+
+            string output = JsonSerializer.Serialize(errorObj);
+
+            logger?.LogWarning("UpdateRecordTool error {ErrorType}: {Message}", errorType, message);
+
+            return new CallToolResult
+            {
+                Content =
+                [
+                    new TextContentBlock { Type = "text", Text = output }
+                ]
+            };
         }
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -25,9 +26,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     public class ReadRecordsTool : IMcpTool
     {
-        // private readonly IMetadataProviderFactory _metadataProviderFactory;
-        // private readonly IQueryEngineFactory _queryEngineFactory;
-
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         public Tool GetToolMetadata()
@@ -35,35 +33,35 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "read_records",
-                Description = "Reads the records from the specified entity.",
+                Description = "Retrieves records from a given entity.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
                                 ""type"": ""string"",
-                                ""description"": ""The entity name to read from. Required.""
+                                ""description"": ""The name of the entity to read, as provided by the describe_entities tool. Required.""
                             },
                             ""select"": {
                                 ""type"": ""string"",
-                                ""description"": ""A CSV of field names to include in the response. If not provided, all fields are returned. Optional.""
+                                ""description"": ""A comma-separated list of field names to include in the response. If omitted, all fields are returned. Optional.""
                             },
                             ""filter"": {
                                 ""type"": ""string"",
-                                ""description"": ""A filter expression string to restrict results. Optional.""
+                                ""description"": ""A case-insensitive OData-like expression that defines a query predicate. Supports logical grouping with parentheses and the operators eq, ne, gt, ge, lt, le, and, or, not. Examples: year ge 1990, date lt 2025-01-01T00:00:00Z, (title eq 'Foundation') and (available ne false). Optional.""
                             },
                             ""first"": {
                                 ""type"": ""integer"",
-                                ""description"": ""The maximum number of records to return in this page. Optional.""
+                                ""description"": ""The maximum number of records to return in the current page. Optional.""
                             },
                             ""orderby"": {
                                 ""type"": ""array"",
                                 ""items"": { ""type"": ""string"" },
-                                ""description"": ""A list of field names and directions for sorting (e.g., \""name asc\""). Optional.""
+                                ""description"": ""A list of field names and directions for sorting, for example 'name asc' or 'year desc'. Optional.""
                             },
                             ""after"": {
                                 ""type"": ""string"",
-                                ""description"": ""A cursor token for retrieving the next page of results. Optional.""
+                                ""description"": ""A cursor token for retrieving the next page of results. Returned as 'after' in the previous response. Optional.""
                             }
                         }
                     }"
@@ -78,11 +76,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             ILogger<ReadRecordsTool>? logger = serviceProvider.GetService<ILogger<ReadRecordsTool>>();
 
-            if (arguments == null)
-            {
-                return BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
-            }
-
             try
             {
                 string entityName;
@@ -93,6 +86,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 string? after = null;
 
                 // Extract arguments
+                if (arguments == null)
+                {
+                    return BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
+                }
+
                 JsonElement root = arguments.RootElement;
 
                 if (!root.TryGetProperty("entity", out JsonElement entityElement) || string.IsNullOrWhiteSpace(entityElement.GetString()))
@@ -159,7 +157,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
-                    return BuildErrorResult("PermissionDenied", "You do not have permission to read records for this entity.", logger);
+                    return BuildErrorResult("PermissionDenied", $"You do not have permission to read records for entity '{entityName}'.", logger);
                 }
 
                 if (!TryResolveAuthorizedRole(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
@@ -183,6 +181,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     fieldsReturnedForFind = authResolver.GetAllowedExposedColumns(context.EntityName, effectiveRole!, context.OperationType);
                 }
 
+                // Update the context to specify which fields will be returned from the entity.
                 context.UpdateReturnFields(fieldsReturnedForFind);
 
                 if (!string.IsNullOrWhiteSpace(filter))
@@ -221,7 +220,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 // Normalize response
                 string rawPayloadJson = ExtractResultJson(actionResult);
-                using JsonDocument result = JsonDocument.Parse(rawPayloadJson);
+                JsonDocument result = JsonDocument.Parse(rawPayloadJson);
                 JsonElement queryRoot = result.RootElement;
 
                 return BuildSuccessResult(
@@ -231,24 +230,31 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (OperationCanceledException)
             {
-                return BuildErrorResult("OperationCanceled", "The read operation was canceled.", logger: null);
+                return BuildErrorResult("OperationCanceled", "The read operation was canceled.", logger);
+            }
+            catch (DbException argEx)
+            {
+                return BuildErrorResult("DatabaseOperationFailed", argEx.Message, logger);
             }
             catch (ArgumentException argEx)
             {
                 return BuildErrorResult("InvalidArguments", argEx.Message, logger);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                ILogger<ReadRecordsTool>? innerLogger = serviceProvider.GetService<ILogger<ReadRecordsTool>>();
-                innerLogger?.LogError(ex, "Unexpected error in ReadRecordsTool.");
-
-                return BuildErrorResult(
-                    "UnexpectedError",
-                    "An unexpected error occurred while reading the record.",
-                    logger: null);
+                return BuildErrorResult("UnexpectedError", "Unexpected error occurred in ReadRecordsTool.", logger);
             }
         }
 
+        /// <summary>
+        /// Ensures that the role used on the request has the necessary authorizations.
+        /// </summary>
+        /// <param name="httpContext">Contains request headers and metadata of the user.</param>
+        /// <param name="authorizationResolver">Resolver used to check if role has necessary authorizations.</param>
+        /// <param name="entityName">Name of the entity used in the request.</param>
+        /// <param name="effectiveRole">Role defined in client role header.</param>
+        /// <param name="error">Error message given to the user.</param>
+        /// <returns>True if the user role is authorized, along with the role.</returns>
         private static bool TryResolveAuthorizedRole(
             HttpContext httpContext,
             IAuthorizationResolver authorizationResolver,
@@ -263,7 +269,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (string.IsNullOrWhiteSpace(roleHeader))
             {
-                error = "Client role header is missing or empty.";
+                error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
                 return false;
             }
 
@@ -274,7 +280,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (roles.Length == 0)
             {
-                error = "Client role header is missing or empty.";
+                error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
                 return false;
             }
 
@@ -290,10 +296,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
             }
 
-            error = "You do not have permission to read records for this entity.";
+            error = $"You do not have permission to read records for entity '{entityName}'.";
             return false;
         }
 
+        /// <summary>
+        /// Returns a result from the query in the case that it was successfully ran.
+        /// </summary>
+        /// <param name="entityName">Name of the entity used in the request.</param>
+        /// <param name="engineRootElement">Query result from engine.</param>
+        /// <param name="logger">MCP logger that returns all logged events.</param>
         private static CallToolResult BuildSuccessResult(
             string entityName,
             JsonElement engineRootElement,
@@ -319,6 +331,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             };
         }
 
+        /// <summary>
+        /// Returns an error if the query failed to run at any point.
+        /// </summary>
+        /// <param name="errorType">Type of error that is encountered.</param>
+        /// <param name="message">Error message given to the user.</param>
+        /// <param name="logger">MCP logger that returns all logged events.</param>
         private static CallToolResult BuildErrorResult(
             string errorType,
             string message,
@@ -336,14 +354,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             string output = JsonSerializer.Serialize(errorObj);
 
-            logger?.LogWarning("ReadRecordsTool error {ErrorType}: {Message}", errorType, message);
+            logger?.LogError("ReadRecordsTool error {ErrorType}: {Message}", errorType, message);
 
             return new CallToolResult
             {
                 Content =
                 [
                     new TextContentBlock { Type = "text", Text = output }
-                ]
+                ],
+                IsError = true
             };
         }
 

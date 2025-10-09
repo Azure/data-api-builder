@@ -85,8 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string expected = "";
-
+            string expected;
             if (_sqlMetadataProvider.GetDatabaseType() == DatabaseType.MSSQL)
             {
                 expected = @"{
@@ -297,96 +296,189 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = @"{
-              ""items"": [
-                {
-                  ""id"": 1,
-                  ""title"": ""Awesome book""
-                },
-                {
-                  ""id"": 2,
-                  ""title"": ""Also Awesome book""
-                },
-                {
-                  ""id"": 3,
-                  ""title"": ""Great wall of china explained""
-                },
-                {
-                  ""id"": 4,
-                  ""title"": ""US history in a nutshell""
-                },
-                {
-                  ""id"": 5,
-                  ""title"": ""Chernobyl Diaries""
-                },
-                {
-                  ""id"": 6,
-                  ""title"": ""The Palace Door""
-                },
-                {
-                  ""id"": 7,
-                  ""title"": ""The Groovy Bar""
-                },
-                {
-                  ""id"": 8,
-                  ""title"": ""Time to Eat""
-                },
-                {
-                  ""id"": 9,
-                  ""title"": ""Policy-Test-01""
-                },
-                {
-                  ""id"": 10,
-                  ""title"": ""Policy-Test-02""
-                },
-                {
-                  ""id"": 11,
-                  ""title"": ""Policy-Test-04""
-                },
-                {
-                  ""id"": 12,
-                  ""title"": ""Time to Eat 2""
-                },
-                {
-                  ""id"": 13,
-                  ""title"": ""Before Sunrise""
-                },
-                {
-                  ""id"": 14,
-                  ""title"": ""Before Sunset""
-                },
-                {
-                  ""id"": 15,
-                  ""title"": ""SQL_CONN""
-                },
-                {
-                  ""id"": 16,
-                  ""title"": ""SOME%CONN""
-                },
-                {
-                  ""id"": 17,
-                  ""title"": ""CONN%_CONN""
-                },
-                {
-                  ""id"": 18,
-                  ""title"": ""[Special Book]""
-                },
-                {
-                  ""id"": 19,
-                  ""title"": ""ME\\YOU""
-                },
-                {
-                  ""id"": 20,
-                  ""title"": ""C:\\\\LIFE""
-                },
-                {
-                  ""id"": 21,
-                  ""title"": """"
-                }
-              ],
-              ""endCursor"": null,
-              ""hasNextPage"": false
-            }";
+            string expected;
+            if (_sqlMetadataProvider.GetDatabaseType() == DatabaseType.MSSQL)
+            {
+                expected = @"{
+                  ""items"": [
+                    {
+                      ""id"": 1,
+                      ""title"": ""Awesome book""
+                    },
+                    {
+                      ""id"": 2,
+                      ""title"": ""Also Awesome book""
+                    },
+                    {
+                      ""id"": 3,
+                      ""title"": ""Great wall of china explained""
+                    },
+                    {
+                      ""id"": 4,
+                      ""title"": ""US history in a nutshell""
+                    },
+                    {
+                      ""id"": 5,
+                      ""title"": ""Chernobyl Diaries""
+                    },
+                    {
+                      ""id"": 6,
+                      ""title"": ""The Palace Door""
+                    },
+                    {
+                      ""id"": 7,
+                      ""title"": ""The Groovy Bar""
+                    },
+                    {
+                      ""id"": 8,
+                      ""title"": ""Time to Eat""
+                    },
+                    {
+                      ""id"": 9,
+                      ""title"": ""Policy-Test-01""
+                    },
+                    {
+                      ""id"": 10,
+                      ""title"": ""Policy-Test-02""
+                    },
+                    {
+                      ""id"": 11,
+                      ""title"": ""Policy-Test-04""
+                    },
+                    {
+                      ""id"": 12,
+                      ""title"": ""Time to Eat 2""
+                    },
+                    {
+                      ""id"": 13,
+                      ""title"": ""Before Sunrise""
+                    },
+                    {
+                      ""id"": 14,
+                      ""title"": ""Before Sunset""
+                    },
+                    {
+                      ""id"": 15,
+                      ""title"": ""SQL_CONN""
+                    },
+                    {
+                      ""id"": 16,
+                      ""title"": ""SOME%CONN""
+                    },
+                    {
+                      ""id"": 17,
+                      ""title"": ""CONN%_CONN""
+                    },
+                    {
+                      ""id"": 18,
+                      ""title"": ""[Special Book]""
+                    },
+                    {
+                      ""id"": 19,
+                      ""title"": ""ME\\YOU""
+                    },
+                    {
+                      ""id"": 20,
+                      ""title"": ""C:\\\\LIFE""
+                    },
+                    {
+                      ""id"": 21,
+                      ""title"": """"
+                    }
+                  ],
+                  ""endCursor"": null,
+                  ""hasNextPage"": false
+                }";
+            }
+            else
+            {
+                expected = @"{
+                  ""items"": [
+                    {
+                      ""id"": 1,
+                      ""title"": ""Awesome book""
+                    },
+                    {
+                      ""id"": 2,
+                      ""title"": ""Also Awesome book""
+                    },
+                    {
+                      ""id"": 3,
+                      ""title"": ""Great wall of china explained""
+                    },
+                    {
+                      ""id"": 4,
+                      ""title"": ""US history in a nutshell""
+                    },
+                    {
+                      ""id"": 5,
+                      ""title"": ""Chernobyl Diaries""
+                    },
+                    {
+                      ""id"": 6,
+                      ""title"": ""The Palace Door""
+                    },
+                    {
+                      ""id"": 7,
+                      ""title"": ""The Groovy Bar""
+                    },
+                    {
+                      ""id"": 8,
+                      ""title"": ""Time to Eat""
+                    },
+                    {
+                      ""id"": 9,
+                      ""title"": ""Policy-Test-01""
+                    },
+                    {
+                      ""id"": 10,
+                      ""title"": ""Policy-Test-02""
+                    },
+                    {
+                      ""id"": 11,
+                      ""title"": ""Policy-Test-04""
+                    },
+                    {
+                      ""id"": 12,
+                      ""title"": ""Time to Eat 2""
+                    },
+                    {
+                      ""id"": 13,
+                      ""title"": ""Before Sunrise""
+                    },
+                    {
+                      ""id"": 14,
+                      ""title"": ""Before Sunset""
+                    },
+                    {
+                      ""id"": 15,
+                      ""title"": ""SQL_CONN""
+                    },
+                    {
+                      ""id"": 16,
+                      ""title"": ""SOME%CONN""
+                    },
+                    {
+                      ""id"": 17,
+                      ""title"": ""CONN%_CONN""
+                    },
+                    {
+                      ""id"": 18,
+                      ""title"": ""[Special Book]""
+                    },
+                    {
+                      ""id"": 19,
+                      ""title"": ""ME\\YOU""
+                    },
+                    {
+                      ""id"": 20,
+                      ""title"": ""C:\\\\LIFE""
+                    }
+                  ],
+                  ""endCursor"": null,
+                  ""hasNextPage"": false
+                }";
+            }
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }

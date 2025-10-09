@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
 
             try
             {
-                keys = JsonSerializer.Deserialize<Dictionary<string, object?>>(keysEl.GetRawText()) ?? new Dictionary<string, object?>();
+                keys = JsonSerializer.Deserialize<Dictionary<string, object?>>(keysEl) ?? new Dictionary<string, object?>();
             }
             catch (Exception ex)
             {

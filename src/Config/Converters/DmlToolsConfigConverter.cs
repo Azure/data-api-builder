@@ -64,7 +64,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
 
                         switch (property?.ToLowerInvariant())
                         {
-                            case "describe-entities":
+                            case "describe_entities":
                                 describeEntities = value;
                                 break;
                             case "create-record":
@@ -90,7 +90,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                     else
                     {
                         // Error on non-boolean values for known properties
-                        if (property?.ToLowerInvariant() is "describe-entities" or "create-record"
+                        if (property?.ToLowerInvariant() is "describe_entities" or "create-record"
                             or "read-records" or "update-record" or "delete-record" or "execute-entity")
                         {
                             throw new JsonException($"Property '{property}' must be a boolean value.");
@@ -154,7 +154,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
 
             if (value.UserProvidedDescribeEntities && value.DescribeEntities.HasValue)
             {
-                writer.WriteBoolean("describe-entities", value.DescribeEntities.Value);
+                writer.WriteBoolean("describe_entities", value.DescribeEntities.Value);
             }
 
             if (value.UserProvidedCreateRecord && value.CreateRecord.HasValue)

@@ -1042,7 +1042,7 @@ namespace Cli
                 {
                     describeEntities = (bool)updatedValue;
                     hasToolUpdates = true;
-                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.describe_entities as '{updatedValue}'", updatedValue);
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.describe-entities as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeMcpDmlToolsCreateRecordEnabled;

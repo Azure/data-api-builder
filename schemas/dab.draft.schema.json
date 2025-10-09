@@ -264,9 +264,9 @@
                   "description": "Individual DML tools configuration",
                   "additionalProperties": false,
                   "properties": {
-                    "describe_entities": {
+                    "describe-entities": {
                       "type": "boolean",
-                      "description": "Enable/disable the describe_entities tool.",
+                      "description": "Enable/disable the describe-entities tool.",
                       "default": false
                     },
                     "create-record": {

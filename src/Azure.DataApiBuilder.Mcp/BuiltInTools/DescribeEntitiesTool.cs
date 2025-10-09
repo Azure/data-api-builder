@@ -23,19 +23,19 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         /// <summary>
-        /// Gets the metadata for the describe_entities tool.
+        /// Gets the metadata for the describe-entities tool.
         /// </summary>
         public Tool GetToolMetadata()
         {
             return new Tool
             {
-                Name = "describe_entities",
+                Name = "describe-entities",
                 Description = "Lists and describes all entities in the database, including their types and available operations."
             };
         }
 
         /// <summary>
-        /// Executes the describe_entities tool, returning metadata about all configured entities.
+        /// Executes the describe-entities tool, returning metadata about all configured entities.
         /// </summary>
         public Task<CallToolResult> ExecuteAsync(
             JsonDocument? arguments,

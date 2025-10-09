@@ -183,7 +183,7 @@ namespace Cli.Commands
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsEnabled { get; }
 
-        [Option("runtime.mcp.dml-tools.describe_entities.enabled", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
+        [Option("runtime.mcp.dml-tools.describe-entities.enabled", Required = false, HelpText = "Enable DAB's MCP describe entities tool. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsDescribeEntitiesEnabled { get; }
 
         [Option("runtime.mcp.dml-tools.create-record.enabled", Required = false, HelpText = "Enable DAB's MCP create record tool. Default: true (boolean).")]

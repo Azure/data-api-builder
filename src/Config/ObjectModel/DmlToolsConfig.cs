@@ -22,7 +22,7 @@ public record DmlToolsConfig
     public bool AllToolsEnabled { get; init; }
 
     /// <summary>
-    /// Whether describe_entities tool is enabled
+    /// Whether describe-entities tool is enabled
     /// </summary>
     public bool? DescribeEntities { get; init; }
 
@@ -139,7 +139,7 @@ public record DmlToolsConfig
     public bool UserProvidedAllToolsEnabled { get; init; } = false;
 
     /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write describe_entities
+    /// Flag which informs CLI and JSON serializer whether to write describe-entities
     /// property/value to the runtime config file.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]

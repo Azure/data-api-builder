@@ -1,13 +1,9 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Azure.DataApiBuilder.Mcp.Model;
+using ModelContextProtocol.Protocol;
 
 namespace Azure.DataApiBuilder.Mcp.Core
 {
@@ -22,7 +18,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
         
-        private const string ProtocolVersion = "2025-06-18";
+        private const string PROTOCOL_VERSION = "2025-06-18";
 
         public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
         {
@@ -33,14 +29,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             Console.Error.WriteLine("[MCP DEBUG] MCP stdio server started.");
-            
+
             // Use UTF-8 WITHOUT BOM
-            var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
             
-            using var stdin = Console.OpenStandardInput();
-            using var stdout = Console.OpenStandardOutput();
-            using var reader = new StreamReader(stdin, utf8NoBom);
-            using var writer = new StreamWriter(stdout, utf8NoBom) { AutoFlush = true };
+            using Stream stdin = Console.OpenStandardInput();
+            using Stream stdout = Console.OpenStandardOutput();
+            using StreamReader reader = new(stdin, utf8NoBom);
+            using StreamWriter writer = new(stdout, utf8NoBom) { AutoFlush = true };
             
             // Redirect Console.Out to use our writer
             Console.SetOut(writer);
@@ -72,19 +68,19 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     JsonElement root = doc.RootElement;
 
                     JsonElement? id = null;
-                    if (root.TryGetProperty("id", out var idEl))
+                    if (root.TryGetProperty("id", out JsonElement idEl))
                     {
                         id = idEl; // preserve original type (string or number)
                     }
 
-                    if (!root.TryGetProperty("method", out var methodEl))
+                    if (!root.TryGetProperty("method", out JsonElement methodEl))
                     {
                         Console.Error.WriteLine("[MCP DEBUG] Invalid Request (no method).");
                         WriteError(id, -32600, "Invalid Request");
                         continue;
                     }
 
-                    var method = methodEl.GetString() ?? string.Empty;
+                    string method = methodEl.GetString() ?? string.Empty;
                     //Console.Error.WriteLine($"[MCP DEBUG] Method: {method}, Id: {FormatIdForLog(id)}");
 
                     try
@@ -161,7 +157,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 id = requestId,  // Use the id from the request, not hardcoded 0
                 result = new
                 {
-                    protocolVersion = ProtocolVersion,  // Should be "2025-06-18"
+                    protocolVersion = PROTOCOL_VERSION,  // Should be "2025-06-18"
                     capabilities = new
                     {
                         tools = new { listChanged = true },
@@ -187,10 +183,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         private void HandleListTools(JsonElement? id)
         {
-            var toolsWire = new List<object>();
+            List<object> toolsWire = new();
             int count = 0;
 
-            foreach (var tool in _toolRegistry.GetAllTools())
+            foreach (Tool tool in _toolRegistry.GetAllTools())
             {
                 count++;
                 toolsWire.Add(new
@@ -208,7 +204,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         private async Task HandleCallToolAsync(JsonElement? id, JsonElement root, CancellationToken ct)
         {
-            if (!root.TryGetProperty("params", out var @params) || @params.ValueKind != JsonValueKind.Object)
+            if (!root.TryGetProperty("params", out JsonElement @params) || @params.ValueKind != JsonValueKind.Object)
             {
                 Console.Error.WriteLine("[MCP DEBUG] callTool → missing params.");
                 WriteError(id, -32602, "Missing params");
@@ -218,10 +214,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             // MCP standard: params.name; allow params.tool for compatibility.
             string? toolName = null;
-            if (@params.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String)
+            if (@params.TryGetProperty("name", out JsonElement nameEl) && nameEl.ValueKind == JsonValueKind.String)
+            {
                 toolName = nameEl.GetString();
-            else if (@params.TryGetProperty("tool", out var toolEl) && toolEl.ValueKind == JsonValueKind.String)
+            }
+            else if (@params.TryGetProperty("tool", out JsonElement toolEl) && toolEl.ValueKind == JsonValueKind.String)
+            {
                 toolName = toolEl.GetString();
+            }
 
             if (string.IsNullOrWhiteSpace(toolName))
             {
@@ -242,9 +242,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
             JsonDocument? argsDoc = null;
             try
             {
-                if (@params.TryGetProperty("arguments", out var argsEl) && argsEl.ValueKind == JsonValueKind.Object)
+                if (@params.TryGetProperty("arguments", out JsonElement argsEl) && argsEl.ValueKind == JsonValueKind.Object)
                 {
-                    var rawArgs = argsEl.GetRawText();
+                    string rawArgs = argsEl.GetRawText();
                     Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: {rawArgs}");
                     argsDoc = JsonDocument.Parse(rawArgs);
                 }
@@ -254,11 +254,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
 
                 // Execute the tool
-                var callResult = await tool.ExecuteAsync(argsDoc, _serviceProvider, ct);
+                CallToolResult callResult = await tool.ExecuteAsync(argsDoc, _serviceProvider, ct);
 
                 // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
                 // otherwise we wrap into a single text block.
-                var content = CoerceToMcpContentBlocks(callResult);
+                object[] content = CoerceToMcpContentBlocks(callResult);
 
                 WriteResult(id, new { content });
                 Console.Out.Flush();
@@ -278,38 +278,53 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return Array.Empty<object>();
             }
 
-            // Try to find a property named "Content" by reflection and pass it through if it's an enumerable
-            var prop = callResult.GetType().GetProperty("Content", BindingFlags.Instance | BindingFlags.Public);
+            PropertyInfo? prop = callResult != null
+                ? callResult.GetType().GetProperty("Content", BindingFlags.Instance | BindingFlags.Public)
+                : null;
             if (prop is not null)
             {
-                var value = prop.GetValue(callResult);
+                object? value = prop.GetValue(callResult);
                 if (value is IEnumerable enumerable && value is not string)
                 {
-                    var list = new List<object>();
-                    foreach (var item in enumerable)
+                    List<object> list = new();
+                    foreach (object item in enumerable)
                     {
-                        // If items are primitive strings, wrap into text blocks; otherwise assume they are already block-shaped objects
                         if (item is string s)
                         {
                             list.Add(new { type = "text", text = s });
                         }
+                        else if (item is JsonElement jsonEl)
+                        {
+                            list.Add(new { type = "application/json", data = jsonEl });
+                        }
                         else
                         {
-                            list.Add(item!);
+                            list.Add(item);
                         }
                     }
+
                     return list.ToArray();
                 }
 
-                // If Content is a string → make a single text block
                 if (value is string sContent)
                 {
                     return new object[] { new { type = "text", text = sContent } };
                 }
+
+                if (value is JsonElement jsonContent)
+                {
+                    return new object[] { new { type = "application/json", data = jsonContent } };
+                }
             }
 
-            // Fall back: serialize the result itself into a text block so Claude can show something useful
-            string text = SafeToString(callResult);
+            // If callResult is a JsonElement, return as application/json
+            if (callResult is JsonElement jsonResult)
+            {
+                return new object[] { new { type = "application/json", data = jsonResult } };
+            }
+
+            // Fall back: serialize as text
+            string text = callResult is not null ? SafeToString(callResult) : string.Empty;
             return new object[] { new { type = "text", text } };
         }
 
@@ -337,7 +352,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 result = resultObject
             };
 
-            var json = JsonSerializer.Serialize(response);
+            string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);
             Console.Out.Flush();
             Console.Error.WriteLine($"[MCP DEBUG] Sent result for Id={FormatIdForLog(id)}: {Truncate(json, 2000)}");
@@ -352,7 +367,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 error = new { code, message }
             };
 
-            var json = JsonSerializer.Serialize(errorObj);
+            string json = JsonSerializer.Serialize(errorObj);
             Console.Out.WriteLine(json);
             Console.Out.Flush();
             Console.Error.WriteLine($"[MCP DEBUG] Sent error for Id={FormatIdForLog(id)}: code={code}, message={message}");
@@ -363,26 +378,34 @@ namespace Azure.DataApiBuilder.Mcp.Core
             return id.ValueKind switch
             {
                 JsonValueKind.String => id.GetString(),
-                JsonValueKind.Number => id.TryGetInt64(out var l) ? l :
-                                        id.TryGetDouble(out var d) ? d : null,
+                JsonValueKind.Number => id.TryGetInt64(out long l) ? l :
+                                        id.TryGetDouble(out double d) ? d : null,
                 _ => null
             };
         }
 
         private static string FormatIdForLog(JsonElement? id)
         {
-            if (!id.HasValue) return "null";
+            if (!id.HasValue)
+            {
+                return "null";
+            }
+
             return id.Value.ValueKind switch
             {
                 JsonValueKind.String => $"\"{id.Value.GetString()}\"",
-                JsonValueKind.Number => id.Value.TryGetInt64(out var l) ? l.ToString() : "<num>",
+                JsonValueKind.Number => id.Value.TryGetInt64(out long l) ? l.ToString() : "<num>",
                 _ => "<non-primitive>"
             };
         }
 
         private static string Truncate(string s, int max)
         {
-            if (string.IsNullOrEmpty(s) || s.Length <= max) return s;
+            if (string.IsNullOrEmpty(s) || s.Length <= max)
+            {
+                return s;
+            }
+
             return s.Substring(0, max) + "…";
         }
     }

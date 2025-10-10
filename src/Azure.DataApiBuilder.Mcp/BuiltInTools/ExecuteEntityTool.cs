@@ -395,11 +395,25 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 if (okResult.Value is JsonDocument jsonDoc)
                 {
                     JsonElement root = jsonDoc.RootElement;
-                    response["value"] = root.ValueKind == JsonValueKind.Array ? root : JsonSerializer.SerializeToElement(new[] { root });
+                    if (root.ValueKind == JsonValueKind.Array)
+                    {
+                        response["value"] = root;
+                    }
+                    else
+                    {
+                        response["value"] = JsonSerializer.SerializeToElement(new[] { root });
+                    }
                 }
                 else if (okResult.Value is JsonElement jsonElement)
                 {
-                    response["value"] = jsonElement.ValueKind == JsonValueKind.Array ? jsonElement : JsonSerializer.SerializeToElement(new[] { jsonElement });
+                    if (jsonElement.ValueKind == JsonValueKind.Array)
+                    {
+                        response["value"] = jsonElement;
+                    }
+                    else
+                    {
+                        response["value"] = JsonSerializer.SerializeToElement(new[] { jsonElement });
+                    }
                 }
                 else
                 {

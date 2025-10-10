@@ -332,7 +332,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return element.ValueKind switch
             {
                 JsonValueKind.String => element.GetString(),
-                JsonValueKind.Number => element.TryGetInt32(out int intValue) ? intValue : element.GetDouble(),
+                JsonValueKind.Number =>
+                    element.TryGetInt64(out long longValue) ? longValue :
+                    element.TryGetDecimal(out decimal decimalValue) ? decimalValue :
+                    element.GetDouble(),
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 JsonValueKind.Null => null,

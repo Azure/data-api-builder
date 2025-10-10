@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Executes a stored procedure or function returns the results (if any).
+        /// Executes a stored procedure or function, returns the results (if any).
         /// </summary>
         public async Task<CallToolResult> ExecuteAsync(
             JsonDocument? arguments,
@@ -183,7 +183,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     requestPayloadRoot: requestPayloadRoot,
                     operationType: EntityActionOperation.Execute);
 
-                // Add default parameters from configuration
+                // First, add user-provided parameters to the context
+                if (requestPayloadRoot != null)
+                {
+                    foreach (JsonProperty property in requestPayloadRoot.Value.EnumerateObject())
+                    {
+                        context.FieldValuePairsInBody[property.Name] = GetParameterValue(property.Value);
+                    }
+                }
+
+                // Then, add default parameters from configuration (only if not already provided by user)
                 if (entityConfig.Source.Parameters != null)
                 {
                     foreach (KeyValuePair<string, object> param in entityConfig.Source.Parameters)

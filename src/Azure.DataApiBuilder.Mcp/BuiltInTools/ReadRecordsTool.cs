@@ -175,18 +175,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 requestValidator.ValidateEntity(entityName);
 
-                IEnumerable<string> fieldsReturnedForFind;
                 if (!string.IsNullOrWhiteSpace(select))
                 {
-                    fieldsReturnedForFind = select.Split(",").ToList();
+                    // Update the context to specify which fields will be returned from the entity.
+                    IEnumerable<string> fieldsReturnedForFind = select.Split(",").ToList();
+                    context.UpdateReturnFields(fieldsReturnedForFind);
                 }
-                else
-                {
-                    fieldsReturnedForFind = authResolver.GetAllowedExposedColumns(context.EntityName, effectiveRole!, context.OperationType);
-                }
-
-                // Update the context to specify which fields will be returned from the entity.
-                context.UpdateReturnFields(fieldsReturnedForFind);
 
                 if (!string.IsNullOrWhiteSpace(filter))
                 {
@@ -194,7 +188,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                 }
 
-                if (orderby is not null)
+                if (orderby is not null && orderby.Count() != 0)
                 {
                     string sortQueryString = $"?{RequestParser.SORT_URL}=";
                     foreach (string param in orderby)

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -16,6 +17,7 @@ using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -211,10 +213,44 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     // Allow the database to fail and return the resulting error
                     return BuildDabResponse(false, null, dabEx.Message, logger);
                 }
+                catch (SqlException sqlEx)
+                {
+                    // Handle SQL Server specific errors
+                    logger?.LogError(sqlEx, "SQL Server error executing stored procedure {StoredProcedure}", entity);
+                    string errorMessage = sqlEx.Number switch
+                    {
+                        2812 => $"Stored procedure '{entityConfig.Source.Object}' not found in the database.",
+                        8144 => $"Stored procedure '{entityConfig.Source.Object}' has too many parameters specified.",
+                        201 => $"Stored procedure '{entityConfig.Source.Object}' expects parameter(s) that were not supplied.",
+                        245 => "Type conversion failed when processing parameters.",
+                        229 or 262 => $"Permission denied to execute stored procedure '{entityConfig.Source.Object}'.",
+                        _ => $"Database error: {sqlEx.Message}"
+                    };
+                    return BuildDabResponse(false, null, errorMessage, logger);
+                }
+                catch (DbException dbEx)
+                {
+                    // Handle generic database exceptions (works for PostgreSQL, MySQL, etc.)
+                    logger?.LogError(dbEx, "Database error executing stored procedure {StoredProcedure}", entity);
+                    return BuildDabResponse(false, null, $"Database error: {dbEx.Message}", logger);
+                }
+                catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Handle connection-related issues
+                    logger?.LogError(ioEx, "Database connection error");
+                    return BuildDabResponse(false, null, "Failed to connect to the database.", logger);
+                }
+                catch (TimeoutException timeoutEx)
+                {
+                    // Handle query timeout
+                    logger?.LogError(timeoutEx, "Stored procedure execution timeout for {StoredProcedure}", entity);
+                    return BuildDabResponse(false, null, "The stored procedure execution timed out.", logger);
+                }
                 catch (Exception ex)
                 {
-                    // Database constraint violations or other DB errors
-                    return BuildDabResponse(false, null, ex.Message, logger);
+                    // Generic database/execution errors
+                    logger?.LogError(ex, "Unexpected error executing stored procedure {StoredProcedure}", entity);
+                    return BuildDabResponse(false, null, "An error occurred while executing the stored procedure.", logger);
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -352,7 +388,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             ILogger? logger)
         {
             Dictionary<string, object?> response = new();
-
 
             if (result is OkObjectResult okResult && okResult.Value != null)
             {

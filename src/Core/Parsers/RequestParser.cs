@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// associated with the sort param.</param>
         /// <returns>A List<OrderByColumns></returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        private static (List<OrderByColumn>?, List<OrderByColumn>?) GenerateOrderByLists(RestRequestContext context,
+        public static (List<OrderByColumn>?, List<OrderByColumn>?) GenerateOrderByLists(RestRequestContext context,
                                                                                          ISqlMetadataProvider sqlMetadataProvider,
                                                                                          string sortQueryString)
         {

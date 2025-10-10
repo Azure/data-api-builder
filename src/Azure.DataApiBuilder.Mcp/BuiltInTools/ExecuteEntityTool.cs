@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entity, out DatabaseObject? dbObject) || dbObject is null)
                 {
-                    return BuildDabResponse(false, null, $"Entity '{entity}' is not defined in the configuration.", logger);
+                    return BuildDabResponse(false, null, $"Failed to resolve database object for entity '{entity}'.", logger);
                 }
 
                 // 5) Authorization - Never bypass permissions

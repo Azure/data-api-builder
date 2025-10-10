@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data.Common;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -16,6 +17,7 @@ using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -49,11 +51,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         ""properties"": {
                             ""entity"": {
                                 ""type"": ""string"",
-                                ""description"": ""The name of the entity (table) as configured in dab-config""
+                                ""description"": ""The name of the entity (table) as configured in dab-config. Required.""
                             },
                             ""keys"": {
                                 ""type"": ""object"",
-                                ""description"": ""Primary key values to identify the record to delete. For composite keys, provide all key columns as properties""
+                                ""description"": ""Primary key values to identify the record to delete. For composite keys, provide all key columns as properties. Required.""
                             }
                         },
                         ""required"": [""entity"", ""keys""]
@@ -169,13 +171,102 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     mutationResult = await mutationEngine.ExecuteAsync(context).ConfigureAwait(false);
                 }
-                catch (DataApiBuilderException dabEx) when (dabEx.Message.Contains("Could not find item with", StringComparison.OrdinalIgnoreCase))
+                catch (DataApiBuilderException dabEx)
                 {
-                    string keyDetails = McpJsonHelper.FormatKeyDetails(keys);
+                    // Handle specific DAB exceptions
+                    logger?.LogError(dabEx, "Data API Builder error deleting record from {Entity}", entityName);
+
+                    string message = dabEx.Message;
+
+                    // Check for specific error patterns
+                    if (message.Contains("Could not find item with", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string keyDetails = McpJsonHelper.FormatKeyDetails(keys);
+                        return McpResponseBuilder.BuildErrorResult(
+                            "RecordNotFound",
+                            $"No record found with the specified primary key: {keyDetails}",
+                            logger);
+                    }
+                    else if (message.Contains("violates foreign key constraint", StringComparison.OrdinalIgnoreCase) ||
+                             message.Contains("REFERENCE constraint", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            "ConstraintViolation",
+                            "Cannot delete record due to foreign key constraint. Other records depend on this record.",
+                            logger);
+                    }
+                    else if (message.Contains("permission", StringComparison.OrdinalIgnoreCase) ||
+                             message.Contains("authorization", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            "PermissionDenied",
+                            "You do not have permission to delete this record.",
+                            logger);
+                    }
+                    else if (message.Contains("invalid", StringComparison.OrdinalIgnoreCase) &&
+                             message.Contains("type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            "InvalidArguments",
+                            "Invalid data type for one or more key values.",
+                            logger);
+                    }
+
+                    // For any other DAB exceptions, return the message as-is
                     return McpResponseBuilder.BuildErrorResult(
-                        "RecordNotFound",
-                        $"No record found with the specified primary key: {keyDetails}",
+                        "DataApiBuilderError",
+                        dabEx.Message,
                         logger);
+                }
+                catch (SqlException sqlEx)
+                {
+                    // Handle SQL Server specific errors
+                    logger?.LogError(sqlEx, "SQL Server error deleting record from {Entity}", entityName);
+                    string errorMessage = sqlEx.Number switch
+                    {
+                        547 => "Cannot delete record due to foreign key constraint. Other records depend on this record.",
+                        2627 or 2601 => "Cannot delete record due to unique constraint violation.",
+                        229 or 262 => $"Permission denied to delete from table '{dbObject.FullName}'.",
+                        208 => $"Table '{dbObject.FullName}' not found in the database.",
+                        _ => $"Database error: {sqlEx.Message}"
+                    };
+                    return McpResponseBuilder.BuildErrorResult("DatabaseError", errorMessage, logger);
+                }
+                catch (DbException dbEx)
+                {
+                    // Handle generic database exceptions (works for PostgreSQL, MySQL, etc.)
+                    logger?.LogError(dbEx, "Database error deleting record from {Entity}", entityName);
+
+                    // Check for common patterns in error messages
+                    string errorMsg = dbEx.Message.ToLowerInvariant();
+                    if (errorMsg.Contains("foreign key") || errorMsg.Contains("constraint"))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            "ConstraintViolation",
+                            "Cannot delete record due to foreign key constraint. Other records depend on this record.",
+                            logger);
+                    }
+                    else if (errorMsg.Contains("not found") || errorMsg.Contains("does not exist"))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            "RecordNotFound",
+                            "No record found with the specified primary key.",
+                            logger);
+                    }
+
+                    return McpResponseBuilder.BuildErrorResult("DatabaseError", $"Database error: {dbEx.Message}", logger);
+                }
+                catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Handle connection-related issues
+                    logger?.LogError(ioEx, "Database connection error");
+                    return McpResponseBuilder.BuildErrorResult("ConnectionError", "Failed to connect to the database.", logger);
+                }
+                catch (TimeoutException timeoutEx)
+                {
+                    // Handle query timeout
+                    logger?.LogError(timeoutEx, "Delete operation timeout for {Entity}", entityName);
+                    return McpResponseBuilder.BuildErrorResult("TimeoutError", "The delete operation timed out.", logger);
                 }
                 catch (Exception ex)
                 {
@@ -184,13 +275,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     if (errorMsg.Contains("Could not find", StringComparison.OrdinalIgnoreCase) ||
                         errorMsg.Contains("record not found", StringComparison.OrdinalIgnoreCase))
                     {
+                        string keyDetails = McpJsonHelper.FormatKeyDetails(keys);
                         return McpResponseBuilder.BuildErrorResult(
                             "RecordNotFound",
-                            "No entity found with the given key.",
+                            $"No entity found with the given key {keyDetails}.",
                             logger);
                     }
                     else
                     {
+                        // Re-throw unexpected exceptions
                         throw;
                     }
                 }
@@ -202,7 +295,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (OperationCanceledException)
             {
-                return McpResponseBuilder.BuildErrorResult("OperationCanceled", "The delete operation was canceled.", logger: null);
+                return McpResponseBuilder.BuildErrorResult("OperationCanceled", "The delete operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
@@ -215,8 +308,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 return McpResponseBuilder.BuildErrorResult(
                     "UnexpectedError",
-                    ex.Message ?? "An unexpected error occurred during the delete operation.",
-                    logger: null);
+                    "An unexpected error occurred during the delete operation.",
+                    logger);
             }
         }
 

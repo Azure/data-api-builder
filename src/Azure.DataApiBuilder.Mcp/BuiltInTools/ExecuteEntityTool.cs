@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (Exception)
                 {
-                    return BuildDabResponse(false, null, $"Entity '{entity}' is not defined in the configuration.", logger);
+                    return BuildDabResponse(false, null, $"Failed to resolve entity metadata for '{entity}'.", logger);
                 }
 
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entity, out DatabaseObject? dbObject) || dbObject is null)

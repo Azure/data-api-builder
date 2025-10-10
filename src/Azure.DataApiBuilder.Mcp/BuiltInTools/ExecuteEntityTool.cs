@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "execute-entity",
-                Description = "Executes a stored procedure or function returns the results (if any)",
+                Description = "Executes a stored procedure or function, returns the results (if any)",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",

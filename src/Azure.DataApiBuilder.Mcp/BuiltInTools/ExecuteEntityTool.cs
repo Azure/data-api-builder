@@ -357,16 +357,31 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             effectiveRole = null;
             error = string.Empty;
 
-            string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-
-            if (string.IsNullOrWhiteSpace(roleHeader))
+            // Get the role header value(s) - handles both single and multiple header values
+            if (!httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out Microsoft.Extensions.Primitives.StringValues roleHeaderValues) 
+                || roleHeaderValues.Count == 0)
             {
                 error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
                 return false;
             }
 
-            string[] roles = roleHeader
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            // Collect all roles from potentially multiple header values
+            List<string> allRoles = new();
+            
+            foreach (string? headerValue in roleHeaderValues)
+            {
+                if (!string.IsNullOrWhiteSpace(headerValue))
+                {
+                    // Split by comma to handle comma-separated roles within a single header value
+                    string[] rolesInHeader = headerValue
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    
+                    allRoles.AddRange(rolesInHeader);
+                }
+            }
+
+            // Remove duplicates
+            string[] roles = allRoles
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 

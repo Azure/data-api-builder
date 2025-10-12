@@ -2,6 +2,9 @@
 # MCP Inspector Testing Guide
 
 Steps to run and test MCP tools using the https://www.npmjs.com/package/@modelcontextprotocol/inspector.
+### Pre-requisite:
+- Node.js must be installed on your system to run this code.
+- Ensure that the DAB MCP server is running before attempting to connect with the inspector tool.
 
 ### 1. **Install MCP Inspector** 
 npx @modelcontextprotocol/inspector

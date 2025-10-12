@@ -5,6 +5,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -84,12 +85,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             ILogger<UpdateRecordTool>? logger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
 
+            // 1) Resolve required services & configuration
+            
+            RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            RuntimeConfig config = runtimeConfigProvider.GetConfig();
+
+            // 2)Check if the tool is enabled in configuration before proceeding.
+            if (config.McpDmlTools?.UpdateRecord != true)
+            {
+                return BuildErrorResult(
+                    "ToolDisabled",
+                    "The update_record tool is disabled in the configuration.",
+                    logger);
+            }
+
             try
             {
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 1) Parsing & basic argument validation (entity, keys, fields)
+                // 3) Parsing & basic argument validation (entity, keys, fields)
                 if (arguments is null)
                 {
                     return BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
@@ -100,14 +115,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                // 2) Resolve required services & configuration
-                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig config = runtimeConfigProvider.GetConfig();
-
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
 
-                // 3) Resolve metadata for entity existence check
+                // 4) Resolve metadata for entity existence check
                 string dataSourceName;
                 ISqlMetadataProvider sqlMetadataProvider;
 
@@ -126,22 +137,32 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
-                // 4) Authorization after we have a known entity
-                IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
+                // 5) Authorization after we have a known entity
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
+
+                if (httpContext is not null)
+                {
+                    ClientRoleHeaderAuthenticationMiddleware? clientRoleHeaderMiddleware = serviceProvider.GetService<ClientRoleHeaderAuthenticationMiddleware>();
+                    if (clientRoleHeaderMiddleware is not null && !httpContext.Items.ContainsKey("ClientRoleHeaderProcessed"))
+                    {
+                        await clientRoleHeaderMiddleware.InvokeAsync(httpContext);
+                    }
+                }
+
+                IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
                     return BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
                 }
 
-                if (!TryResolveAuthorizedRole(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
+                if (!TryResolveAuthorizedRoleHasPermission(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
                 {
                     return BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
                 }
 
-                // 5) Build and validate Upsert (UpdateIncremental) context
+                // 6) Build and validate Upsert (UpdateIncremental) context
                 JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(JsonSerializer.Serialize(fields));
                 RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
 
@@ -150,8 +171,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     dbo: dbObject,
                     insertPayloadRoot: upsertPayloadRoot,
                     operationType: EntityActionOperation.UpdateIncremental);
-
-                context.UpdateReturnFields(keys.Keys.Concat(fields.Keys).Distinct().ToList());
 
                 foreach (KeyValuePair<string, object?> kvp in keys)
                 {
@@ -170,7 +189,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 requestValidator.ValidatePrimaryKey(context);
 
-                // 6) Execute
+                // 7) Execute
                 DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(dbType);
 
@@ -187,7 +206,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         return BuildErrorResult(
                             "InvalidArguments",
-                            "No entity found with the given key.",
+                            "No record found with the given key.",
                             logger);
                     }
                     else
@@ -199,7 +218,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 7) Normalize response (success or engine error payload)
+                // 8) Normalize response (success or engine error payload)
                 string rawPayloadJson = ExtractResultJson(mutationResult);
                 using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
                 JsonElement root = resultDoc.RootElement;
@@ -211,7 +230,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (OperationCanceledException)
             {
-                return BuildErrorResult("OperationCanceled", "The update operation was canceled.", logger: null);
+                return BuildErrorResult("OperationCanceled", "The update operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
@@ -225,7 +244,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return BuildErrorResult(
                     "UnexpectedError",
                     ex.Message ?? "An unexpected error occurred during the update operation.",
-                    logger: null);
+                    logger);
             }
         }
 
@@ -287,14 +306,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 if (kv.Value is null || (kv.Value is string str && string.IsNullOrWhiteSpace(str)))
                 {
-                    throw new ArgumentException("Keys are required to update an entity");
+                    throw new ArgumentException($"Key value for '{kv.Key}' cannot be null or empty.");
                 }
             }
 
             return true;
         }
 
-        private static bool TryResolveAuthorizedRole(
+        private static bool TryResolveAuthorizedRoleHasPermission(
             HttpContext httpContext,
             IAuthorizationResolver authorizationResolver,
             string entityName,
@@ -369,7 +388,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             Dictionary<string, object?> normalized = new()
             {
                 ["status"] = "success",
-                ["result"] = filteredResult // only requested values
+                ["result"] = filteredResult
             };
 
             string output = JsonSerializer.Serialize(normalized, new JsonSerializerOptions { WriteIndented = true });

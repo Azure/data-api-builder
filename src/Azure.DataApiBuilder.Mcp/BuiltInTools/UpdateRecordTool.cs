@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             ILogger<UpdateRecordTool>? logger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
 
             // 1) Resolve required services & configuration
-            
+
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             RuntimeConfig config = runtimeConfigProvider.GetConfig();
 

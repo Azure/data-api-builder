@@ -5,7 +5,6 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -140,16 +139,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 5) Authorization after we have a known entity
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
-
-                if (httpContext is not null)
-                {
-                    ClientRoleHeaderAuthenticationMiddleware? clientRoleHeaderMiddleware = serviceProvider.GetService<ClientRoleHeaderAuthenticationMiddleware>();
-                    if (clientRoleHeaderMiddleware is not null && !httpContext.Items.ContainsKey("ClientRoleHeaderProcessed"))
-                    {
-                        await clientRoleHeaderMiddleware.InvokeAsync(httpContext);
-                    }
-                }
-
                 IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))

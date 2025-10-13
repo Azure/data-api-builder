@@ -915,37 +915,5 @@ namespace Cli
             loggerFactory.AddProvider(new CustomLoggerProvider());
             return loggerFactory;
         }
-
-        // public static List<ParameterMetadata> ParseParameters(JToken parametersToken)
-        // {
-        //     List<ParameterMetadata> result = new();
-
-        //     if (parametersToken.Type == JTokenType.Array)
-        //     {
-        //         // New format
-        //         foreach (JToken paramObj in parametersToken)
-        //         {
-        //             ParameterMetadata? metadata = paramObj.ToObject<ParameterMetadata>();
-        //             if (metadata is not null)
-        //             {
-        //                 result.Add(metadata);
-        //             }
-        //         }
-        //     }
-        //     else if (parametersToken.Type == JTokenType.Object)
-        //     {
-        //         // Old format
-        //         foreach (JProperty prop in ((JObject)parametersToken).Properties())
-        //         {
-        //             result.Add(new ParameterMetadata
-        //             {
-        //                 Name = prop.Name,
-        //                 Default = prop.Value.ToString()
-        //             });
-        //         }
-        //     }
-
-        //     return result;
-        // }
     }
 }

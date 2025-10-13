@@ -78,8 +78,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             ILogger<ReadRecordsTool>? logger = serviceProvider.GetService<ILogger<ReadRecordsTool>>();
 
+            // Get runtime config
+            RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+
+            if (runtimeConfig.McpDmlTools?.ReadRecords is not true)
+            {
+                return BuildErrorResult(
+                    "ToolDisabled",
+                    "The read_records tool is disabled in the configuration.",
+                    logger);
+            }
+
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 string entityName;
                 string? select = null;
                 string? filter = null;
@@ -130,8 +144,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Get required services & configuration
                 IQueryEngineFactory queryEngineFactory = serviceProvider.GetRequiredService<IQueryEngineFactory>();
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
                 // Check metadata for entity exists
                 string dataSourceName;
@@ -225,8 +237,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
                 IActionResult actionResult = queryResult is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, metadataProviderFactory.GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true)
                                                : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, metadataProviderFactory.GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
-
-                cancellationToken.ThrowIfCancellationRequested();
 
                 // Normalize response
                 string rawPayloadJson = ExtractResultJson(actionResult);

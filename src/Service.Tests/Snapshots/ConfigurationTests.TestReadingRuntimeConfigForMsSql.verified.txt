@@ -23,7 +23,17 @@
     },
     Mcp: {
       Enabled: true,
-      Path: /mcp
+      Path: /mcp,
+      DmlTools: {
+        AllToolsEnabled: true,
+        UserProvidedAllToolsEnabled: false,
+        UserProvidedDescribeEntities: false,
+        UserProvidedCreateRecord: false,
+        UserProvidedReadRecords: false,
+        UserProvidedUpdateRecord: false,
+        UserProvidedDeleteRecord: false,
+        UserProvidedExecuteEntity: false
+      }
     },
     Host: {
       Cors: {
@@ -2838,10 +2848,18 @@
         Source: {
           Object: insert_book,
           Type: stored-procedure,
-          Parameters: {
-            publisher_id: 1234,
-            title: randomX
-          }
+          Parameters: [
+            {
+              Name: title,
+              Required: false,
+              Default: randomX
+            },
+            {
+              Name: publisher_id,
+              Required: false,
+              Default: 1234
+            }
+          ]
         },
         GraphQL: {
           Singular: InsertBook,
@@ -2956,10 +2974,18 @@
         Source: {
           Object: update_book_title,
           Type: stored-procedure,
-          Parameters: {
-            id: 1,
-            title: Testing Tonight
-          }
+          Parameters: [
+            {
+              Name: id,
+              Required: false,
+              Default: 1
+            },
+            {
+              Name: title,
+              Required: false,
+              Default: Testing Tonight
+            }
+          ]
         },
         GraphQL: {
           Singular: UpdateBookTitle,
@@ -2998,9 +3024,13 @@
         Source: {
           Object: get_authors_history_by_first_name,
           Type: stored-procedure,
-          Parameters: {
-            firstName: Aaron
-          }
+          Parameters: [
+            {
+              Name: firstName,
+              Required: false,
+              Default: Aaron
+            }
+          ]
         },
         GraphQL: {
           Singular: SearchAuthorByFirstName,
@@ -3039,10 +3069,18 @@
         Source: {
           Object: insert_and_display_all_books_for_given_publisher,
           Type: stored-procedure,
-          Parameters: {
-            publisher_name: MyPublisher,
-            title: MyTitle
-          }
+          Parameters: [
+            {
+              Name: title,
+              Required: false,
+              Default: MyTitle
+            },
+            {
+              Name: publisher_name,
+              Required: false,
+              Default: MyPublisher
+            }
+          ]
         },
         GraphQL: {
           Singular: InsertAndDisplayAllBooksUnderGivenPublisher,

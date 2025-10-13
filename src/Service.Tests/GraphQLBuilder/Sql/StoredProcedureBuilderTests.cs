@@ -92,7 +92,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 .Select(kvp => new ParameterMetadata
                 {
                     Name = kvp.Key,
-                    Default = (string)kvp.Value
+                    Default = kvp.Value is JsonElement je
+                        ? je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString()
+                        : kvp.Value?.ToString()
                 })
                 .ToList();
 

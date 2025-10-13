@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             return new Tool
             {
-                Name = "delete-record",
+                Name = "delete_record",
                 Description = "Deletes a record from a table based on primary key or composite key",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{

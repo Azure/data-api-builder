@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         {
             return new Tool
             {
-                Name = "execute-entity",
+                Name = "execute_entity",
                 Description = "Executes a stored procedure or function, returns the results (if any)",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (entityConfig.Source.Type != EntitySourceType.StoredProcedure)
                 {
-                    return BuildDabResponse(false, null, $"Entity {entity} cannot be executed.", logger);
+                    return BuildDabResponse(false, null, $"Entity {entity} cannot be executed since it is not a stored procedure.", logger);
                 }
 
                 // 4) Resolve metadata
@@ -192,18 +192,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // Then, add default parameters from configuration (only if not already provided by user)
-                if (entityConfig.Source.Parameters != null)
-                {
-                    foreach (KeyValuePair<string, object> param in entityConfig.Source.Parameters)
-                    {
-                        if (!context.FieldValuePairsInBody.ContainsKey(param.Key))
-                        {
-                            context.FieldValuePairsInBody[param.Key] = param.Value;
-                        }
-                    }
-                }
-
                 // Populate resolved parameters for stored procedure execution
                 context.PopulateResolvedParameters();
 
@@ -242,12 +230,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     // Handle generic database exceptions (works for PostgreSQL, MySQL, etc.)
                     logger?.LogError(dbEx, "Database error executing stored procedure {StoredProcedure}", entity);
                     return BuildDabResponse(false, null, $"Database error: {dbEx.Message}", logger);
-                }
-                catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Handle connection-related issues
-                    logger?.LogError(ioEx, "Database connection error");
-                    return BuildDabResponse(false, null, "Failed to connect to the database.", logger);
                 }
                 catch (TimeoutException timeoutEx)
                 {
@@ -358,7 +340,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             error = string.Empty;
 
             // Get the role header value(s) - handles both single and multiple header values
-            if (!httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out Microsoft.Extensions.Primitives.StringValues roleHeaderValues) 
+            if (!httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out Microsoft.Extensions.Primitives.StringValues roleHeaderValues)
                 || roleHeaderValues.Count == 0)
             {
                 error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
@@ -367,7 +349,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             // Collect all roles from potentially multiple header values
             List<string> allRoles = new();
-            
+
             foreach (string? headerValue in roleHeaderValues)
             {
                 if (!string.IsNullOrWhiteSpace(headerValue))
@@ -375,7 +357,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     // Split by comma to handle comma-separated roles within a single header value
                     string[] rolesInHeader = headerValue
                         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                    
+
                     allRoles.AddRange(rolesInHeader);
                 }
             }

@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return BuildDabResponse(false, null, "You do not have permission to execute this entity", logger);
+                    return BuildDabResponse(false, null, authError, logger);
                 }
 
                 // 6) Validate parameters against metadata
@@ -385,7 +385,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
             }
 
-            error = $"You do not have permission to execute entity '{entityName}'.";
+            error = $"Failed in TryResolveAuthorizedRole. You do not have permission to execute entity '{entityName}'.";
             return false;
         }
 

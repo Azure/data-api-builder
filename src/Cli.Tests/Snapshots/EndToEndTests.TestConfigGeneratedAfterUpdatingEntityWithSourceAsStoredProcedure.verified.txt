@@ -2,11 +2,23 @@
   Source: {
     Object: dbo.books,
     Type: stored-procedure,
-    Parameters: {
-      param1: 123,
-      param2: hello,
-      param3: true
-    }
+    Parameters: [
+      {
+        Name: param1,
+        Required: false,
+        Default: 123
+      },
+      {
+        Name: param2,
+        Required: false,
+        Default: hello
+      },
+      {
+        Name: param3,
+        Required: false,
+        Default: True
+      }
+    ]
   },
   GraphQL: {
     Singular: MyEntity,

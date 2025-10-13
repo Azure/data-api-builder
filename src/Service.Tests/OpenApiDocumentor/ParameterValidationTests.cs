@@ -144,10 +144,23 @@ public class ParameterValidationTests
         string entityName = "UpdateBookTitle";
         string objectName = "update_book_title";
 
-        // Adding a parameter default value.
-        Dictionary<string, object> parameterDefaults = new() { { "title", "Test Title" } };
+        // Adding parameter metadata with a default value.
+        List<ParameterMetadata> parameterMetadata = new()
+        {
+            new ParameterMetadata
+            {
+                Name = "id",
+                Required = false
+            },
+            new ParameterMetadata
+            {
+                Name = "title",
+                Required = false,
+                Default = "Test Title"
+            }
+        };
 
-        EntitySource entitySource = new(Object: objectName, EntitySourceType.StoredProcedure, parameterDefaults, null);
+        EntitySource entitySource = new(Object: objectName, Type: EntitySourceType.StoredProcedure, Parameters: parameterMetadata, KeyFields: null);
         OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(
                                                 entityName,
                                                 entitySource,

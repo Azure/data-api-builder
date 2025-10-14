@@ -76,9 +76,23 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             try
             {
+                // Cancellation check at the start
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 1) Parsing & basic argument validation
+                // 1) Resolve required services & configuration
+                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig config = runtimeConfigProvider.GetConfig();
+
+                // 2) Check if the tool is enabled in configuration before proceeding
+                if (config.McpDmlTools?.UpdateRecord != true)
+                {
+                    return McpResponseBuilder.BuildErrorResult(
+                        "ToolDisabled",
+                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
+                        logger);
+                }
+
+                // 3) Parsing & basic argument validation
                 if (arguments is null)
                 {
                     return McpResponseBuilder.BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
@@ -89,14 +103,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                // 2) Resolve required services & configuration
-                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig config = runtimeConfigProvider.GetConfig();
-
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
 
-                // 3) Resolve metadata for entity existence check
+                // 4) Resolve metadata for entity existence check
                 string dataSourceName;
                 ISqlMetadataProvider sqlMetadataProvider;
 
@@ -121,7 +131,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("InvalidEntity", $"Entity '{entityName}' is not a table or view. Use 'execute-entity' for stored procedures.", logger);
                 }
 
-                // 4) Authorization
+                // 5) Authorization
                 IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
@@ -142,7 +152,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
                 }
 
-                // 5) Build and validate Delete context
+                // 6) Build and validate Delete context
                 RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
 
                 DeleteRequestContext context = new(
@@ -162,13 +172,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 requestValidator.ValidatePrimaryKey(context);
 
-                // 6) Execute
+                // 7) Execute
                 DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(dbType);
 
                 IActionResult? mutationResult = null;
                 try
                 {
+                    // Cancellation check before executing
+                    cancellationToken.ThrowIfCancellationRequested();
                     mutationResult = await mutationEngine.ExecuteAsync(context).ConfigureAwait(false);
                 }
                 catch (DataApiBuilderException dabEx)
@@ -288,9 +300,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
+                // Cancellation check before finalizing
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 7) Build response
+                // 8) Build response
                 return BuildDeleteSuccessResponse(entityName, keys, mutationResult, logger);
             }
             catch (OperationCanceledException)

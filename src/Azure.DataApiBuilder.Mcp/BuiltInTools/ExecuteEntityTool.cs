@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             },
                             ""parameters"": {
                                 ""type"": ""object"",
-                                ""description"": ""A dictionary of parameter names and values to pass to the procedure. Parameters must match those defined in dab-config. Optional if no parameters.""
+                                ""description"": ""A list of objects names and values to pass to the procedure. Parameters must match those defined in dab-config. Optional if no parameters.""
                             }
                         },
                         ""required"": [""entity""]
@@ -99,10 +99,19 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig config = runtimeConfigProvider.GetConfig();
 
+                // 3) Check if ExecuteEntity tool is enabled
+                if (config.McpDmlTools?.ExecuteEntity != true)
+                {
+                    return BuildDabResponse(false,
+                        null,
+                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
+                        logger);
+                }
+
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IQueryEngineFactory queryEngineFactory = serviceProvider.GetRequiredService<IQueryEngineFactory>();
 
-                // 3) Validate entity exists and is a stored procedure
+                // 4) Validate entity exists and is a stored procedure
                 if (!config.Entities.TryGetValue(entity, out Entity? entityConfig))
                 {
                     return BuildDabResponse(false, null, $"Entity '{entity}' not found in configuration.", logger);
@@ -113,7 +122,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildDabResponse(false, null, $"Entity {entity} cannot be executed since it is not a stored procedure.", logger);
                 }
 
-                // 4) Resolve metadata
+                // 5) Resolve metadata
                 string dataSourceName;
                 ISqlMetadataProvider sqlMetadataProvider;
 
@@ -132,7 +141,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildDabResponse(false, null, $"Failed to resolve database object for entity '{entity}'.", logger);
                 }
 
-                // 5) Authorization - Never bypass permissions
+                // 6) Authorization - Never bypass permissions
                 IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
@@ -153,7 +162,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildDabResponse(false, null, authError, logger);
                 }
 
-                // 6) Validate parameters against metadata
+                // 7) Validate parameters against metadata
                 if (parameters != null && entityConfig.Source.Parameters != null)
                 {
                     // Validate all provided parameters exist in metadata
@@ -166,7 +175,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // 7) Build request payload
+                // 8) Build request payload
                 JsonElement? requestPayloadRoot = null;
 
                 if (parameters?.Count > 0)
@@ -176,7 +185,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     requestPayloadRoot = doc.RootElement.Clone();
                 }
 
-                // 8) Build stored procedure execution context
+                // 9) Build stored procedure execution context
                 StoredProcedureRequestContext context = new(
                     entityName: entity,
                     dbo: dbObject,
@@ -195,7 +204,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Populate resolved parameters for stored procedure execution
                 context.PopulateResolvedParameters();
 
-                // 9) Execute stored procedure
+                // 10) Execute stored procedure
                 DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
                 IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(dbType);
 
@@ -203,6 +212,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 try
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     queryResult = await queryEngine.ExecuteAsync(context, dataSourceName).ConfigureAwait(false);
                 }
                 catch (DataApiBuilderException dabEx)
@@ -246,7 +256,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 10) Build response with execution result
+                // 11) Build response with execution result
                 return BuildDabResponseFromActionResult(queryResult, logger);
             }
             catch (OperationCanceledException)

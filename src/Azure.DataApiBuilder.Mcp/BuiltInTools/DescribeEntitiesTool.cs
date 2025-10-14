@@ -49,12 +49,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // Get the runtime config provider
-                RuntimeConfigProvider? runtimeConfigProvider = serviceProvider.GetService<RuntimeConfigProvider>();
-                if (runtimeConfigProvider == null || !runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+
+                // Check if the tool is enabled in configuration
+                if (runtimeConfig.McpDmlTools?.DescribeEntities != true)
                 {
                     return Task.FromResult(new CallToolResult
                     {
-                        Content = [new TextContentBlock { Type = "text", Text = "Error: Runtime configuration not available." }]
+                        Content = [new TextContentBlock { Type = "text", Text = $"The {this.GetToolMetadata().Name} tool is disabled in the configuration." }]
                     });
                 }
 
@@ -128,8 +131,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }]
                 });
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ocex)
             {
+                logger?.LogWarning(ocex, "DescribeEntitiesTool operation was canceled.");
+
                 return Task.FromResult(new CallToolResult
                 {
                     Content = [new TextContentBlock { Type = "text", Text = "Error: The describe operation was canceled." }]

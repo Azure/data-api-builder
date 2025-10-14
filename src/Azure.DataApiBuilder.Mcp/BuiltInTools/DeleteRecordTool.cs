@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 RuntimeConfig config = runtimeConfigProvider.GetConfig();
 
                 // 2) Check if the tool is enabled in configuration before proceeding
-                if (config.McpDmlTools?.UpdateRecord != true)
+                if (config.McpDmlTools?.DeleteRecord != true)
                 {
                     return McpResponseBuilder.BuildErrorResult(
                         "ToolDisabled",

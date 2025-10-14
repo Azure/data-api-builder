@@ -300,11 +300,28 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // Cancellation check before finalizing
-                cancellationToken.ThrowIfCancellationRequested();
-
                 // 8) Build response
-                return BuildDeleteSuccessResponse(entityName, keys, mutationResult, logger);
+                // Based on SqlMutationEngine, delete operations typically return NoContentResult
+                // We build a success response with just the operation details
+                Dictionary<string, object?> responseData = new()
+                {
+                    ["entity"] = entityName,
+                    ["keyDetails"] = McpJsonHelper.FormatKeyDetails(keys),
+                    ["message"] = "Record deleted successfully"
+                };
+
+                // If the mutation result is OkObjectResult (which would be unusual for delete),
+                // include the result value directly without re-serialization
+                if (mutationResult is OkObjectResult okObjectResult && okObjectResult.Value is not null)
+                {
+                    responseData["result"] = okObjectResult.Value;
+                }
+
+                return McpResponseBuilder.BuildSuccessResult(
+                    responseData,
+                    logger,
+                    $"DeleteRecordTool success for entity {entityName}."
+                );
             }
             catch (OperationCanceledException)
             {
@@ -324,40 +341,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     "An unexpected error occurred during the delete operation.",
                     logger);
             }
-        }
-
-        private static CallToolResult BuildDeleteSuccessResponse(
-            string entityName,
-            Dictionary<string, object?> keys,
-            IActionResult? mutationResult,
-            ILogger? logger)
-        {
-            Dictionary<string, object?> responseData = new()
-            {
-                ["entity"] = entityName,
-                ["keyDetails"] = McpJsonHelper.FormatKeyDetails(keys),
-                ["message"] = "Record deleted successfully"
-            };
-
-            // Handle different result types
-            if (mutationResult is OkObjectResult okObjectResult)
-            {
-                string rawPayloadJson = McpResponseBuilder.ExtractResultJson(okObjectResult);
-                using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
-                JsonElement root = resultDoc.RootElement;
-
-                Dictionary<string, object?> extractedData = McpJsonHelper.ExtractValuesFromEngineResult(root);
-                if (extractedData.Count > 0)
-                {
-                    responseData["result"] = extractedData;
-                }
-            }
-
-            return McpResponseBuilder.BuildSuccessResult(
-                responseData,
-                logger,
-                $"DeleteRecordTool success for entity {entityName}."
-            );
         }
     }
 }

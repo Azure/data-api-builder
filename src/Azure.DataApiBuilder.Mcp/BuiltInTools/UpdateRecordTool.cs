@@ -433,7 +433,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 Content =
                 [
                     new TextContentBlock { Type = "text", Text = output }
-                ]
+                ],
+                IsError = true
             };
         }
 

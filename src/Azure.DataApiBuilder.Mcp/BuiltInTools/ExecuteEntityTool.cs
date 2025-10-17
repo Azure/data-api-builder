@@ -6,7 +6,6 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -14,6 +13,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             },
                             ""parameters"": {
                                 ""type"": ""object"",
-                                ""description"": ""A list of objects names and values to pass to the procedure. Parameters must match those defined in dab-config. Optional if no parameters.""
+                                ""description"": ""A dictionary of parameter names and values to pass to the procedure. Parameters must match those defined in dab-config. Optional if no parameters.""
                             }
                         },
                         ""required"": [""entity""]
@@ -76,36 +76,37 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             try
             {
+                // Cancellation check at the start
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 1) Parsing & basic argument validation
+                // 1) Resolve required services & configuration
+                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig config = runtimeConfigProvider.GetConfig();
+
+                // 2) Check if the tool is enabled in configuration before proceeding
+                if (config.McpDmlTools?.ExecuteEntity != true)
+                {
+                    return McpResponseBuilder.BuildErrorResult(
+                        "ToolDisabled",
+                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
+                        logger);
+                }
+
+                // 3) Parsing & basic argument validation
                 if (arguments is null)
                 {
-                    return BuildDabResponse(false, null, "No arguments provided.", logger);
+                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
                 }
 
                 if (!TryParseExecuteArguments(arguments.RootElement, out string entity, out Dictionary<string, object?> parameters, out string parseError))
                 {
-                    return BuildDabResponse(false, null, parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
                 // Entity is required
                 if (string.IsNullOrWhiteSpace(entity))
                 {
-                    return BuildDabResponse(false, null, "Entity is required", logger);
-                }
-
-                // 2) Resolve required services & configuration
-                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig config = runtimeConfigProvider.GetConfig();
-
-                // 3) Check if ExecuteEntity tool is enabled
-                if (config.McpDmlTools?.ExecuteEntity != true)
-                {
-                    return BuildDabResponse(false,
-                        null,
-                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
-                        logger);
+                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", "Entity is required", logger);
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
@@ -114,12 +115,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 4) Validate entity exists and is a stored procedure
                 if (!config.Entities.TryGetValue(entity, out Entity? entityConfig))
                 {
-                    return BuildDabResponse(false, null, $"Entity '{entity}' not found in configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entity}' not found in configuration.", logger);
                 }
 
                 if (entityConfig.Source.Type != EntitySourceType.StoredProcedure)
                 {
-                    return BuildDabResponse(false, null, $"Entity {entity} cannot be executed since it is not a stored procedure.", logger);
+                    return McpResponseBuilder.BuildErrorResult("InvalidEntity", $"Entity {entity} cannot be executed.", logger);
                 }
 
                 // 5) Resolve metadata
@@ -133,12 +134,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (Exception)
                 {
-                    return BuildDabResponse(false, null, $"Failed to resolve entity metadata for '{entity}'.", logger);
+                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Failed to resolve entity metadata for '{entity}'.", logger);
                 }
 
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entity, out DatabaseObject? dbObject) || dbObject is null)
                 {
-                    return BuildDabResponse(false, null, $"Failed to resolve database object for entity '{entity}'.", logger);
+                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Failed to resolve database object for entity '{entity}'.", logger);
                 }
 
                 // 6) Authorization - Never bypass permissions
@@ -146,20 +147,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
-                if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
+                if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return BuildDabResponse(false, null, "You do not have permission to execute this entity", logger);
+                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", roleError, logger);
                 }
 
-                if (!TryResolveAuthorizedRole(
-                    httpContext,
+                if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
+                    httpContext!,
                     authResolver,
                     entity,
                     EntityActionOperation.Execute,
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return BuildDabResponse(false, null, authError, logger);
+                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", authError, logger);
                 }
 
                 // 7) Validate parameters against metadata
@@ -170,7 +171,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         if (!entityConfig.Source.Parameters.ContainsKey(param.Key))
                         {
-                            return BuildDabResponse(false, null, $"Invalid parameter: {param.Key}", logger);
+                            return McpResponseBuilder.BuildErrorResult("InvalidArguments", $"Invalid parameter: {param.Key}", logger);
                         }
                     }
                 }
@@ -201,6 +202,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
+                // Then, add default parameters from configuration (only if not already provided by user)
+                if (entityConfig.Source.Parameters != null)
+                {
+                    foreach (KeyValuePair<string, object> param in entityConfig.Source.Parameters)
+                    {
+                        if (!context.FieldValuePairsInBody.ContainsKey(param.Key))
+                        {
+                            context.FieldValuePairsInBody[param.Key] = param.Value;
+                        }
+                    }
+                }
+
                 // Populate resolved parameters for stored procedure execution
                 context.PopulateResolvedParameters();
 
@@ -212,13 +225,40 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 try
                 {
+                    // Cancellation check before executing
                     cancellationToken.ThrowIfCancellationRequested();
                     queryResult = await queryEngine.ExecuteAsync(context, dataSourceName).ConfigureAwait(false);
                 }
                 catch (DataApiBuilderException dabEx)
                 {
-                    // Allow the database to fail and return the resulting error
-                    return BuildDabResponse(false, null, dabEx.Message, logger);
+                    // Handle specific DAB exceptions
+                    logger?.LogError(dabEx, "Data API Builder error executing stored procedure {StoredProcedure}", entity);
+
+                    string message = dabEx.Message;
+
+                    // Check for specific error patterns
+                    if (message.Contains("permission", StringComparison.OrdinalIgnoreCase) ||
+                        message.Contains("authorization", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            "PermissionDenied",
+                            "You do not have permission to execute this stored procedure.",
+                            logger);
+                    }
+                    else if (message.Contains("invalid", StringComparison.OrdinalIgnoreCase) &&
+                             message.Contains("type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return McpResponseBuilder.BuildErrorResult(
+                            "InvalidArguments",
+                            "Invalid data type for one or more parameters.",
+                            logger);
+                    }
+
+                    // For any other DAB exceptions, return the message as-is
+                    return McpResponseBuilder.BuildErrorResult(
+                        "DataApiBuilderError",
+                        dabEx.Message,
+                        logger);
                 }
                 catch (SqlException sqlEx)
                 {
@@ -233,44 +273,51 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         229 or 262 => $"Permission denied to execute stored procedure '{entityConfig.Source.Object}'.",
                         _ => $"Database error: {sqlEx.Message}"
                     };
-                    return BuildDabResponse(false, null, errorMessage, logger);
+                    return McpResponseBuilder.BuildErrorResult("DatabaseError", errorMessage, logger);
                 }
                 catch (DbException dbEx)
                 {
                     // Handle generic database exceptions (works for PostgreSQL, MySQL, etc.)
                     logger?.LogError(dbEx, "Database error executing stored procedure {StoredProcedure}", entity);
-                    return BuildDabResponse(false, null, $"Database error: {dbEx.Message}", logger);
+                    return McpResponseBuilder.BuildErrorResult("DatabaseError", $"Database error: {dbEx.Message}", logger);
+                }
+                catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Handle connection-related issues
+                    logger?.LogError(ioEx, "Database connection error");
+                    return McpResponseBuilder.BuildErrorResult("ConnectionError", "Failed to connect to the database.", logger);
                 }
                 catch (TimeoutException timeoutEx)
                 {
                     // Handle query timeout
                     logger?.LogError(timeoutEx, "Stored procedure execution timeout for {StoredProcedure}", entity);
-                    return BuildDabResponse(false, null, "The stored procedure execution timed out.", logger);
+                    return McpResponseBuilder.BuildErrorResult("TimeoutError", "The stored procedure execution timed out.", logger);
                 }
                 catch (Exception ex)
                 {
                     // Generic database/execution errors
                     logger?.LogError(ex, "Unexpected error executing stored procedure {StoredProcedure}", entity);
-                    return BuildDabResponse(false, null, "An error occurred while executing the stored procedure.", logger);
+                    return McpResponseBuilder.BuildErrorResult("DatabaseError", "An error occurred while executing the stored procedure.", logger);
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
-
                 // 11) Build response with execution result
-                return BuildDabResponseFromActionResult(queryResult, logger);
+                return BuildExecuteSuccessResponse(entity, parameters, queryResult, logger);
             }
             catch (OperationCanceledException)
             {
-                return BuildDabResponse(false, null, "The execute operation was canceled.", logger);
+                return McpResponseBuilder.BuildErrorResult("OperationCanceled", "The execute operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
-                return BuildDabResponse(false, null, argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult("InvalidArguments", argEx.Message, logger);
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Unexpected error in ExecuteEntityTool.");
-                return BuildDabResponse(false, null, "An unexpected error occurred during the execute operation.", logger);
+                return McpResponseBuilder.BuildErrorResult(
+                    "UnexpectedError",
+                    "An unexpected error occurred during the execute operation.",
+                    logger);
             }
         }
 
@@ -336,211 +383,71 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Ensures that the role used on the request has the necessary authorizations.
+        /// Builds a successful response for the execute operation.
         /// </summary>
-        private static bool TryResolveAuthorizedRole(
-            HttpContext httpContext,
-            IAuthorizationResolver authorizationResolver,
+        private static CallToolResult BuildExecuteSuccessResponse(
             string entityName,
-            EntityActionOperation operation,
-            out string? effectiveRole,
-            out string error)
-        {
-            effectiveRole = null;
-            error = string.Empty;
-
-            // Get the role header value(s) - handles both single and multiple header values
-            if (!httpContext.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out Microsoft.Extensions.Primitives.StringValues roleHeaderValues)
-                || roleHeaderValues.Count == 0)
-            {
-                error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
-                return false;
-            }
-
-            // Collect all roles from potentially multiple header values
-            List<string> allRoles = new();
-
-            foreach (string? headerValue in roleHeaderValues)
-            {
-                if (!string.IsNullOrWhiteSpace(headerValue))
-                {
-                    // Split by comma to handle comma-separated roles within a single header value
-                    string[] rolesInHeader = headerValue
-                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                    allRoles.AddRange(rolesInHeader);
-                }
-            }
-
-            // Remove duplicates
-            string[] roles = allRoles
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (roles.Length == 0)
-            {
-                error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
-                return false;
-            }
-
-            foreach (string role in roles)
-            {
-                bool allowed = authorizationResolver.AreRoleAndOperationDefinedForEntity(
-                    entityName, role, operation);
-
-                if (allowed)
-                {
-                    effectiveRole = role;
-                    return true;
-                }
-            }
-
-            error = $"Failed in TryResolveAuthorizedRole. You do not have permission to execute entity '{entityName}'.";
-            return false;
-        }
-
-        /// <summary>
-        /// Builds a standard DAB response from an IActionResult.
-        /// </summary>
-        private static CallToolResult BuildDabResponseFromActionResult(
-            IActionResult? result,
+            Dictionary<string, object?>? parameters,
+            IActionResult? queryResult,
             ILogger? logger)
         {
-            Dictionary<string, object?> response = new();
+            Dictionary<string, object?> responseData = new()
+            {
+                ["entity"] = entityName,
+                ["message"] = "Stored procedure executed successfully"
+            };
 
-            if (result is OkObjectResult okResult && okResult.Value != null)
+            // Include parameters if any were provided
+            if (parameters?.Count > 0)
+            {
+                responseData["parameters"] = parameters;
+            }
+
+            // Handle different result types
+            if (queryResult is OkObjectResult okResult && okResult.Value != null)
             {
                 // Extract the actual data from the action result
                 if (okResult.Value is JsonDocument jsonDoc)
                 {
                     JsonElement root = jsonDoc.RootElement;
-                    if (root.ValueKind == JsonValueKind.Array)
-                    {
-                        response["value"] = root;
-                    }
-                    else
-                    {
-                        response["value"] = JsonSerializer.SerializeToElement(new[] { root });
-                    }
+                    responseData["value"] = root.ValueKind == JsonValueKind.Array ? root : JsonSerializer.SerializeToElement(new[] { root });
                 }
                 else if (okResult.Value is JsonElement jsonElement)
                 {
-                    if (jsonElement.ValueKind == JsonValueKind.Array)
-                    {
-                        response["value"] = jsonElement;
-                    }
-                    else
-                    {
-                        response["value"] = JsonSerializer.SerializeToElement(new[] { jsonElement });
-                    }
+                    responseData["value"] = jsonElement.ValueKind == JsonValueKind.Array ? jsonElement : JsonSerializer.SerializeToElement(new[] { jsonElement });
                 }
                 else
                 {
                     // Serialize the value directly
                     JsonElement serialized = JsonSerializer.SerializeToElement(okResult.Value);
-                    response["value"] = serialized;
+                    responseData["value"] = serialized;
                 }
-
-                logger?.LogInformation("ExecuteEntityTool completed successfully.");
             }
-            else if (result is BadRequestObjectResult badRequest)
+            else if (queryResult is BadRequestObjectResult badRequest)
             {
-                response["error"] = new Dictionary<string, object?>
-                {
-                    ["message"] = badRequest.Value?.ToString() ?? "Bad request"
-                };
+                return McpResponseBuilder.BuildErrorResult(
+                    "BadRequest",
+                    badRequest.Value?.ToString() ?? "Bad request",
+                    logger);
             }
-            else if (result is UnauthorizedObjectResult)
+            else if (queryResult is UnauthorizedObjectResult)
             {
-                response["error"] = new Dictionary<string, object?>
-                {
-                    ["message"] = "You do not have permission to execute this entity"
-                };
+                return McpResponseBuilder.BuildErrorResult(
+                    "PermissionDenied",
+                    "You do not have permission to execute this entity",
+                    logger);
             }
             else
             {
                 // Empty or unknown result
-                response["value"] = JsonSerializer.SerializeToElement(Array.Empty<object>());
-                logger?.LogInformation("ExecuteEntityTool completed with empty result.");
+                responseData["value"] = JsonSerializer.SerializeToElement(Array.Empty<object>());
             }
 
-            string output = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
-
-            return new CallToolResult
-            {
-                Content = new List<ContentBlock>
-                {
-                    new TextContentBlock { Type = "text", Text = output }
-                },
-                IsError = response.ContainsKey("error")
-            };
-        }
-
-        /// <summary>
-        /// Builds a standard DAB response payload.
-        /// </summary>
-        private static CallToolResult BuildDabResponse(
-            bool success,
-            JsonDocument? queryResult,
-            string? errorMessage,
-            ILogger? logger)
-        {
-            Dictionary<string, object?> response = new();
-
-            if (success && queryResult != null)
-            {
-                // Extract the first result set (DAB standard for multiple result sets)
-                JsonElement root = queryResult.RootElement;
-
-                if (root.ValueKind == JsonValueKind.Array)
-                {
-                    response["value"] = root;
-                }
-                else if (root.ValueKind == JsonValueKind.Object)
-                {
-                    // Check if already wrapped in value property
-                    if (root.TryGetProperty("value", out JsonElement valueElement))
-                    {
-                        response["value"] = valueElement;
-                    }
-                    else
-                    {
-                        // Single result, wrap in array for consistency
-                        response["value"] = JsonSerializer.SerializeToElement(new[] { root });
-                    }
-                }
-                else
-                {
-                    // Empty result
-                    response["value"] = JsonSerializer.SerializeToElement(Array.Empty<object>());
-                }
-
-                logger?.LogInformation("ExecuteEntityTool completed successfully.");
-            }
-            else
-            {
-                // Standard DAB error response
-                response["error"] = new Dictionary<string, object?>
-                {
-                    ["message"] = errorMessage ?? "An error occurred"
-                };
-
-                if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    logger?.LogError("ExecuteEntityTool error: {Message}", errorMessage);
-                }
-            }
-
-            string output = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
-
-            return new CallToolResult
-            {
-                Content = new List<ContentBlock>
-                {
-                    new TextContentBlock { Type = "text", Text = output }
-                },
-                IsError = !success
-            };
+            return McpResponseBuilder.BuildSuccessResult(
+                responseData,
+                logger,
+                $"ExecuteEntityTool success for entity {entityName}."
+            );
         }
     }
 }

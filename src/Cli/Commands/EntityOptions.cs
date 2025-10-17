@@ -25,8 +25,13 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string? config,
-            string? description)
+            string? description,
+            IEnumerable<string>? parametersName,
+            IEnumerable<string>? parametersDescription,
+            IEnumerable<string>? parametersRequired,
+            IEnumerable<string>? parametersDefault,
+            string? config
+        )
             : base(config)
         {
             Entity = entity;
@@ -44,6 +49,10 @@ namespace Cli.Commands
             CacheEnabled = cacheEnabled;
             CacheTtl = cacheTtl;
             Description = description;
+            ParametersName = parametersName;
+            ParametersDescription = parametersDescription;
+            ParametersRequired = parametersRequired;
+            ParametersDefault = parametersDefault;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -91,5 +100,17 @@ namespace Cli.Commands
 
         [Option("description", Required = false, HelpText = "Description of the entity.")]
         public string? Description { get; }
+
+        [Option("parameters.name", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter names for stored procedure.")]
+        public IEnumerable<string>? ParametersName { get; }
+
+        [Option("parameters.description", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter descriptions for stored procedure.")]
+        public IEnumerable<string>? ParametersDescription { get; }
+
+        [Option("parameters.required", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter required flags (true/false) for stored procedure.")]
+        public IEnumerable<string>? ParametersRequired { get; }
+
+        [Option("parameters.default", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter default values for stored procedure.")]
+        public IEnumerable<string>? ParametersDefault { get; }
     }
 }

@@ -1187,7 +1187,11 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethodsForStoredProcedure,
                 graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure,
-                description: description
+                description: description,
+                parametersName: null,
+                parametersDescription: null,
+                parametersRequired: null,
+                parametersDefault: null
             );
         }
 

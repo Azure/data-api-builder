@@ -241,7 +241,7 @@ public class ValidateConfigTests
     ///     "object": "s001.book",
     ///     "parameters": {
     ///         "param1": "@env('sp_param1_int')", // INT
-    ///         "param2": "@env('sp_param2_bool')" // BOOL
+    ///         "param2": "@env('sp_param3_bool')" // BOOL
     ///     }
     ///   }
     /// </summary>
@@ -252,7 +252,7 @@ public class ValidateConfigTests
         Environment.SetEnvironmentVariable($"connection-string", SAMPLE_TEST_CONN_STRING);
         Environment.SetEnvironmentVariable($"database-type", "mssql");
         Environment.SetEnvironmentVariable($"sp_param1_int", "123");
-        Environment.SetEnvironmentVariable($"sp_param2_bool", "true");
+        Environment.SetEnvironmentVariable($"sp_param3_bool", "true");
 
         // Capture console output to get error messaging.
         StringWriter writer = new();

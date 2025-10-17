@@ -130,6 +130,10 @@ public class StoredProcedureDefinition : SourceDefinition
 
 public class ParameterDefinition
 {
+    public string Name { get; set; } = null!;
+    public bool? Required { get; set; } = false;
+    public string? Default { get; set; }
+    public string? Description { get; set; }
     public Type SystemType { get; set; } = null!;
     public DbType? DbType { get; set; }
     public SqlDbType? SqlDbType { get; set; }

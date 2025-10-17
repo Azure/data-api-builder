@@ -1,6 +1,5 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
@@ -13,4 +12,4 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Parameters"> If Type is SourceType.StoredProcedure,
 /// Parameters to be passed as defaults to the procedure call </param>
 /// <param name="KeyFields"> The field(s) to be used as primary keys.
-public record EntitySource(string Object, EntitySourceType? Type, Dictionary<string, object>? Parameters, string[]? KeyFields);
+public record EntitySource(string Object, EntitySourceType? Type, List<ParameterMetadata>? Parameters, string[]? KeyFields);

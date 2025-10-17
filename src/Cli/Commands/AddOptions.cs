@@ -34,24 +34,35 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string? config,
-            string? description)
-            : base(entity,
-                  sourceType,
-                  sourceParameters,
-                  sourceKeyFields,
-                  restRoute,
-                  restMethodsForStoredProcedure,
-                  graphQLType,
-                  graphQLOperationForStoredProcedure,
-                  fieldsToInclude,
-                  fieldsToExclude,
-                  policyRequest,
-                  policyDatabase,
-                  cacheEnabled,
-                  cacheTtl,
-                  config,
-                  description)
+            string? description,
+            IEnumerable<string>? parametersName,
+            IEnumerable<string>? parametersDescription,
+            IEnumerable<string>? parametersRequired,
+            IEnumerable<string>? parametersDefault,
+            string? config
+        )
+        : base(
+            entity,
+            sourceType,
+            sourceParameters,
+            sourceKeyFields,
+            restRoute,
+            restMethodsForStoredProcedure,
+            graphQLType,
+            graphQLOperationForStoredProcedure,
+            fieldsToInclude,
+            fieldsToExclude,
+            policyRequest,
+            policyDatabase,
+            cacheEnabled,
+            cacheTtl,
+            description,
+            parametersName,
+            parametersDescription,
+            parametersRequired,
+            parametersDefault,
+            config
+        )
         {
             Source = source;
             Permissions = permissions;
@@ -74,12 +85,14 @@ namespace Cli.Commands
             bool isSuccess = ConfigGenerator.TryAddEntityToConfigWithOptions(this, loader, fileSystem);
             if (isSuccess)
             {
-                logger.LogInformation("Added new entity: {Entity} with source: {Source} and permissions: {permissions}.", Entity, Source, string.Join(SEPARATOR, Permissions));
+                logger.LogInformation("Added new entity: {Entity} with source: {Source} and permissions: {permissions}.",
+                    Entity, Source, string.Join(SEPARATOR, Permissions));
                 logger.LogInformation("SUGGESTION: Use 'dab update [entity-name] [options]' to update any entities in your config.");
             }
             else
             {
-                logger.LogError("Could not add entity: {Entity} with source: {Source} and permissions: {permissions}.", Entity, Source, string.Join(SEPARATOR, Permissions));
+                logger.LogError("Could not add entity: {Entity} with source: {Source} and permissions: {permissions}.",
+                    Entity, Source, string.Join(SEPARATOR, Permissions));
             }
 
             return isSuccess ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;

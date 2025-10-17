@@ -24,7 +24,6 @@ using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 {
     public class CreateRecordTool : IMcpTool
-
     {
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
@@ -64,6 +63,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 return BuildErrorResult("Invalid Arguments", "No arguments provided", logger);
             }
 
+            RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+            if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
+            {
+                return BuildErrorResult("Invalid Configuration", "Runtime configuration not available", logger);
+            }
+
+            if (runtimeConfig.McpDmlTools?.CreateRecord != true)
+            {
+                return BuildErrorResult(
+                    "ToolDisabled",
+                    "The create_record tool is disabled in the configuration.",
+                    logger);
+            }
+
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -79,12 +92,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 if (string.IsNullOrEmpty(entityName))
                 {
                     return BuildErrorResult("Invalid Arguments", "Entity name cannot be empty", logger);
-                }
-
-                RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
-                {
-                    return BuildErrorResult("Invalid Configuration", "Runtime configuration not available", logger);
                 }
 
                 string dataSourceName;
@@ -147,12 +154,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         return new CallToolResult
                         {
-                            Content = [new TextContentBlock { Type = "text", Text = $"Error: Request validation failed: {ex.Message}" }]
+                            Content = [new TextContentBlock { Type = "text", Text = $"Error: Request validation failed: {ex.Message}" }],
+                            IsError = true
                         };
                     }
                 }
+                else
+                {
+                    return BuildErrorResult(
+                        "InvalidCreateTarget",
+                        "The create_record tool is only available for tables.",
+                        logger);
+                }
 
-                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
+                    IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
                 DatabaseType databaseType = sqlMetadataProvider.GetDatabaseType();
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(databaseType);
 
@@ -227,7 +242,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             foreach (string role in roles)
             {
                 bool allowed = authorizationResolver.AreRoleAndOperationDefinedForEntity(
-                    entityName, role, EntityActionOperation.Insert);
+                    entityName, role, EntityActionOperation.Create);
 
                 if (allowed)
                 {
@@ -256,14 +271,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             string output = JsonSerializer.Serialize(errorObj);
 
-            logger?.LogWarning("UpdateRecordTool error {ErrorType}: {Message}", errorType, message);
+            logger?.LogWarning("CreateRecord error {ErrorType}: {Message}", errorType, message);
 
             return new CallToolResult
             {
                 Content =
                 [
                     new TextContentBlock { Type = "text", Text = output }
-                ]
+                ],
+                IsError = true
             };
         }
     }

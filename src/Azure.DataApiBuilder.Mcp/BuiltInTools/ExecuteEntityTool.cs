@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 // Then, add default parameters from configuration (only if not already provided by user)
-                if (entityConfig.Source.Parameters != null)
+                if ((parameters == null || parameters.Count == 0) && entityConfig.Source.Parameters != null)
                 {
                     foreach (KeyValuePair<string, object> param in entityConfig.Source.Parameters)
                     {

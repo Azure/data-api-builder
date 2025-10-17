@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 catch (DataApiBuilderException dabEx)
                 {
                     // Handle specific DAB exceptions
-                    logger?.LogError(dabEx, "Data API Builder error executing stored procedure {StoredProcedure}", entity);
+                    logger?.LogError(dabEx, "Data API builder error executing stored procedure {StoredProcedure}", entity);
 
                     string message = dabEx.Message;
 

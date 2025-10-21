@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,18 +59,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             ILogger<CreateRecordTool>? logger = serviceProvider.GetService<ILogger<CreateRecordTool>>();
             if (arguments == null)
             {
-                return BuildErrorResult("Invalid Arguments", "No arguments provided", logger);
+                return Utils.McpResponseBuilder.BuildErrorResult("Invalid Arguments", "No arguments provided", logger);
             }
 
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                return BuildErrorResult("Invalid Configuration", "Runtime configuration not available", logger);
+                return Utils.McpResponseBuilder.BuildErrorResult("Invalid Configuration", "Runtime configuration not available", logger);
             }
 
             if (runtimeConfig.McpDmlTools?.CreateRecord != true)
             {
-                return BuildErrorResult(
+                return Utils.McpResponseBuilder.BuildErrorResult(
                     "ToolDisabled",
                     "The create_record tool is disabled in the configuration.",
                     logger);
@@ -85,13 +84,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 if (!root.TryGetProperty("entity", out JsonElement entityElement) ||
                     !root.TryGetProperty("data", out JsonElement dataElement))
                 {
-                    return BuildErrorResult("Invalid Arguments", "Missing required arguments 'entity' or 'data'", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidArguments", "Missing required arguments 'entity' or 'data'", logger);
                 }
 
                 string entityName = entityElement.GetString() ?? string.Empty;
-                if (string.IsNullOrEmpty(entityName))
+                if (string.IsNullOrWhiteSpace(entityName))
                 {
-                    return BuildErrorResult("Invalid Arguments", "Entity name cannot be empty", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidArguments", "Entity name cannot be empty", logger);
                 }
 
                 string dataSourceName;
@@ -99,9 +98,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
                 }
-                catch (DataApiBuilderException)
+                catch (Exception)
                 {
-                    return BuildErrorResult("Invalid Configuration", $"Entity '{entityName}' not found in configuration", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidConfiguration", $"Entity '{entityName}' not found in configuration", logger);
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
@@ -114,7 +113,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (Exception)
                 {
-                    return BuildErrorResult("Invalid Configuration", $"Database object for entity '{entityName}' not found", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidConfiguration", $"Database object for entity '{entityName}' not found", logger);
                 }
                 
 
@@ -125,13 +124,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authorizationResolver.IsValidRoleContext(httpContext))
                 {
-                    return BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", "Permission denied: Unable to resolve a valid role context for update operation.", logger);
                 }
 
                 // Validate that we have at least one role authorized for create
                 if (!TryResolveAuthorizedRole(httpContext, authorizationResolver, entityName, out string authError))
                 {
-                    return BuildErrorResult("PermissionDenied", authError, logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", authError, logger);
                 }
 
                 JsonElement insertPayloadRoot = dataElement.Clone();
@@ -150,18 +149,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         requestValidator.ValidateInsertRequestContext(insertRequestContext);
                     }
-                    catch (DataApiBuilderException ex)
+                    catch (Exception ex)
                     {
-                        return new CallToolResult
-                        {
-                            Content = [new TextContentBlock { Type = "text", Text = $"Error: Request validation failed: {ex.Message}" }],
-                            IsError = true
-                        };
+                        return Utils.McpResponseBuilder.BuildErrorResult("ValidationFailed", $"Request validation failed: {ex.Message}", logger);
                     }
                 }
                 else
                 {
-                    return BuildErrorResult(
+                    return Utils.McpResponseBuilder.BuildErrorResult(
                         "InvalidCreateTarget",
                         "The create_record tool is only available for tables.",
                         logger);
@@ -186,13 +181,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 else if (result is ObjectResult objectResult)
                 {
+                    // Check if this is an error status code (400+ range)
+                    bool isError = objectResult.StatusCode.HasValue && objectResult.StatusCode.Value >= 400;
                     return new CallToolResult
                     {
-                        Content = [new TextContentBlock 
-                        { 
-                            Type = "text", 
-                            Text = $"Record creation completed with status {objectResult.StatusCode}. Result: {JsonSerializer.Serialize(objectResult.Value)}"
-                        }]
+                        Content = [new TextContentBlock
+                        {
+                            Type = "text",
+                            Text = $"Create request returned with status {objectResult.StatusCode}. Result: {JsonSerializer.Serialize(objectResult.Value)}"
+                        }],
+                        IsError = isError
                     };
                 }
                 else
@@ -205,18 +203,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (Exception ex)
             {
-                return new CallToolResult
-                {
-                    Content = [new TextContentBlock { Type = "text", Text = $"Error: {ex.Message}" }]
-                };
+                return Utils.McpResponseBuilder.BuildErrorResult("Error", $"Error: {ex.Message}", logger);
             }
         }
 
         private static bool TryResolveAuthorizedRole(
-        HttpContext httpContext,
-        IAuthorizationResolver authorizationResolver,
-        string entityName,
-        out string error)
+            HttpContext httpContext,
+            IAuthorizationResolver authorizationResolver,
+            string entityName,
+            out string error)
         {
             error = string.Empty;
 
@@ -252,35 +247,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             error = "You do not have permission to create records for this entity.";
             return false;
-        }
-
-        private static CallToolResult BuildErrorResult(
-        string errorType,
-        string message,
-        ILogger? logger)
-        {
-            Dictionary<string, object?> errorObj = new()
-            {
-                ["status"] = "error",
-                ["error"] = new Dictionary<string, object?>
-                {
-                    ["type"] = errorType,
-                    ["message"] = message
-                }
-            };
-
-            string output = JsonSerializer.Serialize(errorObj);
-
-            logger?.LogWarning("CreateRecord error {ErrorType}: {Message}", errorType, message);
-
-            return new CallToolResult
-            {
-                Content =
-                [
-                    new TextContentBlock { Type = "text", Text = output }
-                ],
-                IsError = true
-            };
         }
     }
 }

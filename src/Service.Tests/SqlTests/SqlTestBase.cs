@@ -123,6 +123,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     keyfields: ["upc"])
             };
 
+            if (DatabaseEngine == TestCategory.DWSQL)
+            {
+                runtimeConfig = TestHelper.AddMissingEntitiesToConfig(
+                    config: runtimeConfig,
+                    entityKey: "books",
+                    entityName: "dbo.books",
+                    keyfields: ["id"]
+                );
+            }
+
             // Add custom entities for the test, if any.
             runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);
 

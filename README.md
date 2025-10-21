@@ -198,46 +198,29 @@ DAB dynamically creates endpoints and translates requests to SQL, returning JSON
 
 ```mermaid
 sequenceDiagram
-    actor Client
+  actor Client as Client
+  participant Endpoint as Endpoint
+  participant QueryBuilder as QueryBuilder
+  participant DB as Database
 
-    box Data API builder (DAB)
-        participant Endpoint
-        participant QueryBuilder
-    end
+  %% Initialization / Warming up section
+  rect rgb(235, 250, 255)
+    Endpoint ->>+ Endpoint: Start
+    Endpoint ->> DB: Query Metadata
+    DB -->> Endpoint: Metadata Response
+    Endpoint -->>- Endpoint: Configure
+  end
 
-    participant Configuration as Configuration File
-
-    box Data Source
-        participant DB
-    end
-
-    Endpoint->>Endpoint: Start
-    activate Endpoint
-        Endpoint->>Configuration: Request
-        Configuration-->>Endpoint: Configuration
-        Endpoint->>DB: Request
-        DB-->>Endpoint: Metadata
-            Note over Endpoint, DB: Some configuration is validated against metadata
-        Endpoint-->>Endpoint: Configure
-    deactivate Endpoint
-    Client-->>Endpoint: HTTP Request
-    activate Endpoint
-        critical
-        Endpoint-->>Endpoint: Authenticate
-        Endpoint-->>Endpoint: Authorize
-        end
-        Endpoint->>QueryBuilder: Request
-        QueryBuilder-->>Endpoint: SQL
-        alt Cache
-            Endpoint-->>Endpoint: Use cache
-        else Query
-            Endpoint-->>DB: Request
-            Note over Endpoint, DB: Query is automatically throttled and results paginated
-            DB->>Endpoint: Results
-            Note over Endpoint, DB: Results are automatically cached for the next request
-        end
-        Endpoint->>Client: HTTP 200
-    deactivate Endpoint
+  %% Request/Response section
+  rect rgb(250, 250, 220)
+    Client -->>+ Endpoint: HTTP Request
+      Endpoint -->> Endpoint: Authorize
+    Endpoint ->> QueryBuilder: Request
+    QueryBuilder -->> Endpoint: SQL Response
+      Endpoint -->> DB: Query SQL
+      DB ->> Endpoint: Data Response
+    Endpoint -->>- Client: HTTP Response
+  end
 ```
 
 ## Additional resources

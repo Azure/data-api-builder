@@ -17,9 +17,7 @@ Want to be part of our priorities and roadmap? Sign up [here](https://forms.offi
 
 Data API builder (DAB) is an open-source, no-code tool that creates secure, full-featured REST and GraphQL endpoints for your database. It’s a CRUD data API engine that runs in a container—on Azure, any other cloud, or on-premises. DAB is built for developers with integrated tooling, telemetry, and other productivity features.
 
-### What databases?
-
-Which backend data sources are supported by Data API builder?
+### What databases does Data API builder support?
 
 |               | Azure SQL | SQL Server | SQLDW | Cosmos DB | PostgreSQL | MySQL |
 | :-----------: | :-------: | :--------: | :---: | :-------: | :--------: | :---: |
@@ -29,9 +27,7 @@ Which backend data sources are supported by Data API builder?
 > [!IMPORTANT]
 > Data API builder (DAB) is open source and always free.
 
-### What environments?
-
-Which hosting environments are supported by Data API builder?
+### What environments does Data API builder support?
 
 |               | On-Prem | Azure |  AWS |  GCP | Other |
 | :-----------: | :-----: | :---: | :--: | :--: | :---: |
@@ -41,9 +37,7 @@ Which hosting environments are supported by Data API builder?
 > [!IMPORTANT]
 > Data API builder (DAB) is open source and always free.
 
-### What protocols?
-
-Which types of endpoints are supported by Data API builder?
+### What endpoints does Data API builder support?
 
 |               | REST | GraphQL |     MCP     |
 | :-----------: | :--: | :-----: | :---------: |

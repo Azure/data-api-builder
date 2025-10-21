@@ -182,15 +182,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 else if (result is ObjectResult objectResult)
                 {
                     // Check if this is an error status code (400+ range)
-                    bool isError = objectResult.StatusCode.HasValue && objectResult.StatusCode.Value >= 400;
                     return new CallToolResult
                     {
                         Content = [new TextContentBlock
                         {
                             Type = "text",
-                            Text = $"Create request returned with status {objectResult.StatusCode}. Result: {JsonSerializer.Serialize(objectResult.Value)}"
-                        }],
-                        IsError = isError
+                            Text = $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(objectResult.Value)}"
+                        }]
                     };
                 }
                 else

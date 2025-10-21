@@ -53,6 +53,11 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
         /// </summary>
         public override AzureKeyVaultOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            if (reader.TokenType is JsonTokenType.Null)
+            {
+                return null;
+            }
+
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 string? endpoint = null;
@@ -92,14 +97,9 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
                             break;
 
                         default:
-                            reader.Skip();
-                            break;
+                            throw new JsonException($"Unexpected property {property}");
                     }
                 }
-            }
-            else if (reader.TokenType is JsonTokenType.Null)
-            {
-                return null;
             }
 
             throw new JsonException("Invalid AzureKeyVaultOptions format");

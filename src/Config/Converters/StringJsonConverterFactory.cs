@@ -44,7 +44,7 @@ public class StringJsonConverterFactory : JsonConverterFactory
             if (reader.TokenType == JsonTokenType.String)
             {
                 string? value = reader.GetString();
-                if (string.IsNullOrEmpty(value))
+                if (string.IsNullOrWhiteSpace(value))
                 {
                     return value;
                 }

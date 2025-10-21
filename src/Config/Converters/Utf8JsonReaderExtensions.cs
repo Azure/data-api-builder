@@ -13,8 +13,7 @@ static internal class Utf8JsonReaderExtensions
     /// substitution is applied.
     /// </summary>
     /// <param name="reader">The reader that we want to pull the string from.</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
+    /// <param name="replacementSettings">The replacement settings to use while deserializing.</param>
     /// <param name="replacementFailureMode">The failure mode to use when replacing environment variables.</param>
     /// <returns>The result of deserialization.</returns>
     /// <exception cref="JsonException">Thrown if the <see cref="JsonTokenType"/> is not String.</exception>

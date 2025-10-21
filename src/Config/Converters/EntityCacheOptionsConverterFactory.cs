@@ -28,8 +28,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         return new EntityCacheOptionsConverter(_replacementSettings);
     }
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
+    /// <param name="replacementSettings">The replacement settings to use while deserializing.</param>
     internal EntityCacheOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings)
     {
         _replacementSettings = replacementSettings;
@@ -41,8 +40,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         // value or not while deserializing.
         private DeserializationVariableReplacementSettings? _replacementSettings;
 
-        /// <param name="replaceEnvVar">Whether to replace environment variable with its
-        /// value or not while deserializing.</param>
+        /// <param name="replacementSettings">The replacement settings to use while deserializing.</param>
         public EntityCacheOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
             _replacementSettings = replacementSettings;

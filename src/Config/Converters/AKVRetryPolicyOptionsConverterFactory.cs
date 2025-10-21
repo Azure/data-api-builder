@@ -13,6 +13,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
 {
     // Settings for variable replacement during deserialization.
+    // Currently allows for Azure Key Vault and Environment Variable replacement.
     private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
@@ -37,6 +38,7 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
     private class AKVRetryPolicyOptionsConverter : JsonConverter<AKVRetryPolicyOptions>
     {
         // Settings for variable replacement during deserialization.
+        // Currently allows for Azure Key Vault and Environment Variable replacement.
         private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replacementSettings">Settings for variable replacement during deserialization.

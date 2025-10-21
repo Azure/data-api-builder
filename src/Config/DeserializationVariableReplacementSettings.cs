@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Config
     public class DeserializationVariableReplacementSettings
     {
         public bool DoReplaceEnvVar { get; set; } = true;
-        public bool DoReplaceAKVVar { get; set; } = true;
+        public bool DoReplaceAkvVar { get; set; } = true;
         public EnvironmentVariableReplacementFailureMode EnvFailureMode { get; set; } = EnvironmentVariableReplacementFailureMode.Throw;
 
         // @env\('  : match @env('
@@ -53,12 +53,12 @@ namespace Azure.DataApiBuilder.Config
         public DeserializationVariableReplacementSettings(
             AzureKeyVaultOptions? azureKeyVaultOptions = null,
             bool doReplaceEnvVar = true,
-            bool doReplaceAKVVar = true,
+            bool doReplaceAkvVar = true,
             EnvironmentVariableReplacementFailureMode envFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
         {
             _azureKeyVaultOptions = azureKeyVaultOptions;
             DoReplaceEnvVar = doReplaceEnvVar;
-            DoReplaceAKVVar = doReplaceAKVVar;
+            DoReplaceAkvVar = doReplaceAkvVar;
             EnvFailureMode = envFailureMode;
 
             if (DoReplaceEnvVar)
@@ -68,12 +68,12 @@ namespace Azure.DataApiBuilder.Config
                     ReplaceEnvVariable);
             }
 
-            if (DoReplaceAKVVar && _azureKeyVaultOptions is not null)
+            if (DoReplaceAkvVar && _azureKeyVaultOptions is not null)
             {
                 _akvClient = CreateSecretClient(_azureKeyVaultOptions);
                 ReplacementStrategies.Add(
                     new Regex(INNER_AKV_PATTERN, RegexOptions.Compiled),
-                    ReplaceAKVVariable);
+                    ReplaceAkvVariable);
             }
         }
 
@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Config
             }
         }
 
-        private string ReplaceAKVVariable(Match match)
+        private string ReplaceAkvVariable(Match match)
         {
             // strips first and last characters, ie: '''hello'' --> ''hello'
             string name = Regex.Match(match.Value, INNER_AKV_PATTERN).Value[1..^1];

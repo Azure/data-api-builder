@@ -205,10 +205,10 @@ sequenceDiagram
 
   %% Initialization / Warming up section (light grey)
   rect rgba(120,120,120,0.10)
-    Endpoint ->>+ Endpoint: Read Config
+    Endpoint -->>+ Endpoint: Read Config
     Endpoint ->> DB: Query Metadata
     DB -->> Endpoint: Metadata Response
-    Endpoint ->>- Endpoint: Start
+    Endpoint ->>- Endpoint: Start Engine
   end
 
   %% Request/Response section (very light purple)

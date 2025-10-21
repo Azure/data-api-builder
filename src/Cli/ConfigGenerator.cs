@@ -1704,7 +1704,6 @@ namespace Cli
 
                 // Remove legacy props if fields present
                 updatedMappings = null;
-                updatedSource = updatedSource with { KeyFields = null };
             }
             else if (hasMappings || hasKeyFields)
             {
@@ -1753,7 +1752,6 @@ namespace Cli
 
                 // Remove legacy props
                 updatedMappings = null;
-                updatedSource = updatedSource with { KeyFields = null };
             }
             else
             {

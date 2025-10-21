@@ -22,7 +22,7 @@ Data API builder (DAB) is an open-source, no-code tool that creates secure, full
 |               | Azure SQL | SQL Server | SQLDW | Cosmos DB | PostgreSQL | MySQL |
 | :-----------: | :-------: | :--------: | :---: | :-------: | :--------: | :---: |
 | **Supported** |    Yes    |     Yes    |  Yes  |    Yes    |     Yes    |  Yes  |
-|  **Pricing**  |    Free   |    Free    |  Free |    Free   |    Free    |  Free |
+|  **DAB Pricing**  |    Free   |    Free    |  Free |    Free   |    Free    |  Free |
 
 > [!IMPORTANT]
 > Data API builder (DAB) is open source and always free.
@@ -32,7 +32,7 @@ Data API builder (DAB) is an open-source, no-code tool that creates secure, full
 |               | On-Prem | Azure |  AWS |  GCP | Other |
 | :-----------: | :-----: | :---: | :--: | :--: | :---: |
 | **Supported** |   Yes   |  Yes  |  Yes |  Yes |  Yes  |
-|  **Pricing**  |   Free  |  Free | Free | Free |  Free |
+|  **DAB Pricing**  |   Free  |  Free | Free | Free |  Free |
 
 > [!IMPORTANT]
 > Data API builder (DAB) is open source and always free.
@@ -42,7 +42,7 @@ Data API builder (DAB) is an open-source, no-code tool that creates secure, full
 |               | REST | GraphQL |     MCP     |
 | :-----------: | :--: | :-----: | :---------: |
 | **Supported** |  Yes |   Yes   | Coming soon |
-|  **Pricing**  | Free |   Free  |     Free    |
+|  **DAB Pricing**  | Free |   Free  |     Free    |
 
 > [!IMPORTANT]
 > Data API builder (DAB) is open source and always free.

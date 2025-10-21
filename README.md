@@ -55,7 +55,7 @@ Use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get
 
 You may already have .NET installed!
 
-> [NOTE]
+> [!NOTE]
 > The Data API builder (DAB) command line requires the .NET runtime version 8 or later.
 
 #### winget (Windows)

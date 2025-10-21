@@ -203,16 +203,16 @@ sequenceDiagram
   participant QueryBuilder as QueryBuilder
   participant DB as Database
 
-  %% Initialization / Warming up section
-  rect rgb(235, 250, 255)
+  %% Initialization / Warming up section (light grey)
+  rect rgba(120,120,120,0.10)
     Endpoint ->>+ Endpoint: Start
     Endpoint ->> DB: Query Metadata
     DB -->> Endpoint: Metadata Response
     Endpoint -->>- Endpoint: Configure
   end
 
-  %% Request/Response section
-  rect rgb(250, 250, 220)
+  %% Request/Response section (very light purple)
+  rect rgba(180,150,255,0.11)
     Client -->>+ Endpoint: HTTP Request
       Endpoint -->> Endpoint: Authorize
     Endpoint ->> QueryBuilder: Request

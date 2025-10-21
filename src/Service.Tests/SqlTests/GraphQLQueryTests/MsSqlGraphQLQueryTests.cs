@@ -855,6 +855,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             return new(
                 source,
                 gqlOptions,
+                null,
                 restOptions,
                 [],
                 null,

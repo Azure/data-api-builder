@@ -116,6 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity testEntity = new(
                 Source: entitySource,
+                Fields: null,
                 Rest: new(EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP),
                 GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY + "s"),
                 Permissions: permissionSettings.ToArray(),
@@ -1000,6 +1001,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new(AuthorizationHelpers.TEST_ENTITY, EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new[] { permissionForEntity },
@@ -1537,6 +1539,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new(source, EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: restDetails ?? new(Enabled: false),
                 GraphQL: graphQLDetails,
                 Permissions: new[] { permissionForEntity },
@@ -2012,6 +2015,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string entityName = "EntityA";
             // Sets REST method for the entity
             Entity entity = new(Source: new("TEST_SOURCE", sourceType, null, null),
+                                 Fields: null,
                                  Rest: new(Methods: methods),
                                  GraphQL: new(entityName, ""),
                                  Permissions: Array.Empty<EntityPermission>(),
@@ -2337,6 +2341,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity1 = new(
                 Source: entitySource,
+                Fields: null,
                 GraphQL: null,
                 Rest: null,
                 Permissions: null,

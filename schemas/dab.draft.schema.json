@@ -785,6 +785,21 @@
                 }
               ]
             },
+            "fields": {
+              "type": "array",
+              "description": "Defines the fields (columns) exposed for this entity, with metadata.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "description": "Database column name." },
+                  "alias": { "type": "string", "description": "Exposed name for the field." },
+                  "description": { "type": "string", "description": "Field description." },
+                  "primary-key": { "type": "boolean", "description": "Is this field a primary key?" }
+                },
+                "required": ["name"]
+              },
+              "uniqueItems": true
+            },
             "rest": {
               "oneOf": [
                 {
@@ -1104,7 +1119,22 @@
               }
             }
           },
-          "required": ["source", "permissions"]
+          "required": ["source", "permissions"],
+          "allOf": [
+            {
+              "if": {
+                "required": ["fields"]
+              },
+              "then": {
+                "not": {
+                  "anyOf": [
+                    { "required": ["mappings"] },
+                    { "properties": { "source": { "properties": { "key-fields": { } }, "required": ["key-fields"] } } }
+                  ]
+                }
+              }
+            }
+          ]
         }
       }
     }

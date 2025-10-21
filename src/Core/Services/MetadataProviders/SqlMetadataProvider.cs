@@ -1170,25 +1170,6 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to create params for the query.
-        /// </summary>
-        /// <param name="paramName">Common prefix of param names.</param>
-        /// <param name="paramValues">Values of the param.</param>
-        /// <returns></returns>
-        private static Dictionary<string, object> GetQueryParams(
-            string paramName,
-            object[] paramValues)
-        {
-            Dictionary<string, object> parameters = new();
-            for (int paramNumber = 0; paramNumber < paramValues.Length; paramNumber++)
-            {
-                parameters.Add($"{paramName}{paramNumber}", paramValues[paramNumber]);
-            }
-
-            return parameters;
-        }
-
-        /// <summary>
         /// Generate the mappings of exposed names to
         /// backing columns, and of backing columns to
         /// exposed names. Used to generate EDM Model using
@@ -1417,11 +1398,13 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 if (entity.GraphQL is null || (entity.GraphQL.Enabled))
                 {
-                    if (entity.Mappings is not null
-                        && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
-                        && !string.IsNullOrWhiteSpace(fieldAlias))
+                    if (entity.Fields is not null)
                     {
-                        databaseColumnName = fieldAlias;
+                        FieldMetadata? fieldMeta = entity.Fields.FirstOrDefault(f => f.Name == databaseColumnName);
+                        if (fieldMeta != null && !string.IsNullOrWhiteSpace(fieldMeta.Alias))
+                        {
+                            databaseColumnName = fieldMeta.Alias;
+                        }
                     }
 
                     return IsIntrospectionField(databaseColumnName);

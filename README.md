@@ -208,7 +208,7 @@ sequenceDiagram
     Endpoint ->>+ Endpoint: Read Config
     Endpoint ->> DB: Query Metadata
     DB -->> Endpoint: Metadata Response
-    Endpoint -->>- Endpoint: Start
+    Endpoint ->>- Endpoint: Start
   end
 
   %% Request/Response section (very light purple)

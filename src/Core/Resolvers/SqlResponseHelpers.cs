@@ -23,21 +23,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Format the results from a Find operation. Check if there is a requirement
-        /// for a nextLink, and if so, add this value to the array of JsonElements to
+        /// for a nextLink/after, and if so, add this value to the array of JsonElements to
         /// be used as part of the response.
         /// </summary>
         /// <param name="jsonDoc">The JsonDocument from the query.</param>
         /// <param name="context">The RequestContext.</param>
-        /// <param name="sqlMetadataProvider">the metadataprovider.</param>
+        /// <param name="sqlMetadataProvider">The metadataprovider.</param>
         /// <param name="runtimeConfig">Runtimeconfig object</param>
         /// <param name="httpContext">HTTP context associated with the API request</param>
+        /// <param name="isMcpRequest">True if request is done through MCP endpoint</param>
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
         public static OkObjectResult FormatFindResult(
             JsonElement findOperationResponse,
             FindRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider,
             RuntimeConfig runtimeConfig,
-            HttpContext httpContext)
+            HttpContext httpContext,
+            bool? isMcpRequest = null)
         {
 
             // When there are no rows returned from the database, the jsonElement will be an empty array.
@@ -55,7 +57,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             uint maxPageSize = runtimeConfig.MaxPageSize();
 
             // If the results are not a collection or if the query does not have a next page
-            // no nextLink is needed. So, the response is returned after removing the extra fields.
+            // no nextLink/after is needed. So, the response is returned after removing the extra fields.
             if (findOperationResponse.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(findOperationResponse, context.First, defaultPageSize, maxPageSize))
             {
                 // If there are no additional fields present, the response is returned directly. When there
@@ -89,27 +91,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                tableName: context.DatabaseObject.Name,
                                sqlMetadataProvider: sqlMetadataProvider);
 
-            string basePaginationUri = SqlPaginationUtil.ConstructBaseUriForPagination(httpContext, runtimeConfig.Runtime?.BaseRoute);
-
-            // Build the query string with the $after token.
-            string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
-                      queryStringParameters: context!.ParsedQueryString,
-                      newAfterPayload: after);
-
-            // Get the final consolidated nextLink for the pagination.
-            JsonElement nextLink = SqlPaginationUtil.GetConsolidatedNextLinkForPagination(
-                baseUri: basePaginationUri,
-                queryString: queryString,
-                isNextLinkRelative: runtimeConfig.NextLinkRelative());
-
             // When there are extra fields present, they are removed before returning the response.
             if (extraFieldsInResponse.Count > 0)
             {
                 rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated, extraFieldsInResponse);
             }
 
-            rootEnumerated.Add(nextLink);
-            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
+            // Create an 'after' object if the request comes from MCP endpoint.
+            if (isMcpRequest is true)
+            {
+                string jsonString = JsonSerializer.Serialize(new[]
+                {
+                    new { after = after }
+                });
+                JsonElement afterElement = JsonSerializer.Deserialize<JsonElement>(jsonString);
+
+                rootEnumerated.Add(afterElement);
+            }
+            // Create a 'nextLink' object if the request comes from REST endpoint.
+            else
+            {
+                string basePaginationUri = SqlPaginationUtil.ConstructBaseUriForPagination(httpContext, runtimeConfig.Runtime?.BaseRoute);
+
+                // Build the query string with the $after token.
+                string queryString = SqlPaginationUtil.BuildQueryStringWithAfterToken(
+                          queryStringParameters: context!.ParsedQueryString,
+                          newAfterPayload: after);
+
+                // Get the final consolidated nextLink for the pagination.
+                JsonElement nextLink = SqlPaginationUtil.GetConsolidatedNextLinkForPagination(
+                    baseUri: basePaginationUri,
+                    queryString: queryString,
+                    isNextLinkRelative: runtimeConfig.NextLinkRelative());
+
+                rootEnumerated.Add(nextLink);
+            }
+
+            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated), isMcpRequest);
         }
 
         /// <summary>
@@ -186,8 +204,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// form that complies with vNext Api guidelines.
         /// </summary>
         /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        /// <param name="isMcpRequest">True if request is done through MCP endpoint.</param>
         /// <returns>Correctly formatted OkObjectResult.</returns>
-        public static OkObjectResult OkResponse(JsonElement jsonResult)
+        public static OkObjectResult OkResponse(JsonElement jsonResult, bool? isMcpRequest = null)
         {
             // For consistency we return all values as type Array
             if (jsonResult.ValueKind != JsonValueKind.Array)
@@ -200,20 +219,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // More than 0 records, and the last element is of type array, then we have pagination
             if (resultEnumerated.Count > 0 && resultEnumerated[resultEnumerated.Count - 1].ValueKind == JsonValueKind.Array)
             {
-                // Get the nextLink
+                // Get the 'nextLink' or 'after'
                 // resultEnumerated will be an array of the form
-                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject}]]
-                // if the last element is of type array, we know it is nextLink
-                // we strip the "[" and "]" and then save the nextLink element
-                // into a dictionary with a key of "nextLink" and a value that
-                // represents the nextLink data we require.
-                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated[resultEnumerated.Count - 1]);
-                Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
+                // [{object1}, {object2},...{objectlimit}, [{nextLinkObject/afterObject}]]
+                // if the last element is of type array, we know it is 'nextLink'
+                // if the request is done through the REST endpoint and it is
+                // 'after' if the request is done through the MCP endpoint,
+                // we strip the "[" and "]" and then save the element
+                // into a dictionary with a key of "nextLinkAfter" and a value that
+                // represents the nextLink/after data we require.
+                string nextLinkAfterJsonString = JsonSerializer.Serialize(resultEnumerated[resultEnumerated.Count - 1]);
+                Dictionary<string, object> nextLinkAfter = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkAfterJsonString[1..^1])!;
                 IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count - 1);
+
+                // Check 'after' object if request is done through MCP endpoint.
+                if (isMcpRequest is true)
+                {
+                    return new OkObjectResult(new
+                    {
+                        value = value,
+                        after = nextLinkAfter["after"]
+                    });
+                }
+
+                // Check 'nextLink' object if request is done through REST endpoint.
                 return new OkObjectResult(new
                 {
                     value = value,
-                    @nextLink = nextLink["nextLink"]
+                    @nextLink = nextLinkAfter["nextLink"]
                 });
             }
 

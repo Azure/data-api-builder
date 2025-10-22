@@ -276,9 +276,9 @@ sequenceDiagram
   rect rgba(180,150,255,0.11)
     Client ->>+ Endpoint: HTTP Request
       Endpoint ->> Endpoint: Authorize
-    Endpoint ->> QueryBuilder: Request
-    QueryBuilder -->> Endpoint: SQL Response
-      Endpoint ->> DB: Query SQL
+    Endpoint ->> QueryBuilder: Invoke
+    QueryBuilder -->> Endpoint: SQL Query
+      Endpoint ->> DB: Submit Query
       DB -->> Endpoint: Data Response
     Endpoint -->>- Client: HTTP Response
   end

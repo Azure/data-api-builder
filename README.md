@@ -44,34 +44,12 @@ Use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get
 
 ### 1. Install the `dotnet` [command line](https://get.dot.net)
 
-You may already have .NET installed!
+https://get.dot.net
 
 > [!NOTE]
-> The Data API builder (DAB) command line requires the .NET runtime version 8 or later.
+> You may already have .NET installed!
 
-#### winget (Windows)
-
-```sh
-winget install Microsoft.DotNet.Runtime.8
-```
-
-#### Chocolatey (Windows)
-
-```sh
-choco install dotnet-runtime --version=8.0.0
-```
-
-#### brew (macOS)
-
-```sh
-brew install dotnet@8
-```
-
-#### PowerShell (macOS/Linux)
-
-```ps
-dotnet-install.ps1 -Runtime dotnet -Channel 8.0
-```
+The Data API builder (DAB) command line requires the .NET runtime version 8 or later.
 
 #### Validate your installation
 
@@ -133,6 +111,19 @@ echo my-connection-string=%database_connection_string% > .env
 echo "my-connection-string=$database_connection_string" > .env
 ```
 
+#### Resulting .env file
+
+The file `.env` is automatically created through this process. These are the resulting contents:
+
+```
+"my-connection-string=$env:database_connection_string" 
+```
+> [!NOTE]
+> Be sure and replace `database_connection_string` with your actual database connection string.
+
+> [!IMPORTANT]
+> Adding `.env` to your `.gitignore` file will help ensure your secrets are not added to source control. 
+
 ### 5. Create your initial configuration file
 
 Data API builder (DAB) requires a JSON configuration file. Use `dab --help` for syntax options.
@@ -156,7 +147,74 @@ dab add Todo
 ```
 
 > [!NOTE]
-> DAB supports tables, views, and stored procedures.
+> DAB supports tables, views, and stored procedures. When the type is not specified, the detault is `table`.
+
+#### Resulting configuration
+
+The file `dab-config.json` is automatically created through this process. These are the resulting contents:
+
+```json
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v1.5.56/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('my-connection-string')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api",
+      "request-body-strict": true
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": {
+    "Todo": {
+      "source": {
+        "object": "dbo.Todo",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Todo",
+          "plural": "Todos"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
 
 ### 6. Run Data API builder
 

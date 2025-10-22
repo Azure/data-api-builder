@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     EntityActionOperation.Insert);
 
                 RequestValidator requestValidator = serviceProvider.GetRequiredService<RequestValidator>();
-                
+
                 // Only validate tables
                 if (dbObject.SourceType is EntitySourceType.Table)
                 {
@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     return new CallToolResult
                     {
-                        Content = [new TextContentBlock 
+                        Content = [new TextContentBlock
                         {
                             Type = "text",
                             Text = $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(createdResult.Value)}"

@@ -115,7 +115,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     return Utils.McpResponseBuilder.BuildErrorResult("InvalidConfiguration", $"Database object for entity '{entityName}' not found", logger);
                 }
-                
 
                 // Create an HTTP context for authorization
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
@@ -162,7 +161,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         logger);
                 }
 
-                    IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
+                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
                 DatabaseType databaseType = sqlMetadataProvider.GetDatabaseType();
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(databaseType);
 
@@ -173,8 +172,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return new CallToolResult
                     {
                         Content = [new TextContentBlock 
-                        { 
-                            Type = "text", 
+                        {
+                            Type = "text",
                             Text = $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(createdResult.Value)}"
                         }]
                     };

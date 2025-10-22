@@ -1703,6 +1703,7 @@ namespace Cli
                 fields = mergedFields;
 
                 // Remove legacy props if fields present
+                updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
             }
             else if (hasMappings || hasKeyFields)
@@ -1751,6 +1752,7 @@ namespace Cli
                 }
 
                 // Remove legacy props
+                updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
             }
             else

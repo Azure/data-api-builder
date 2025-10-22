@@ -1404,7 +1404,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         databaseColumnName = fieldAlias;
                     }
-                    
+
                     if (entity.Fields is not null)
                     {
                         FieldMetadata? fieldMeta = entity.Fields.FirstOrDefault(f => f.Name == databaseColumnName);

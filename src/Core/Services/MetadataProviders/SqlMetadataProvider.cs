@@ -1398,6 +1398,13 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 if (entity.GraphQL is null || (entity.GraphQL.Enabled))
                 {
+                    if (entity.Mappings is not null
+                       && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
+                       && !string.IsNullOrWhiteSpace(fieldAlias))
+                    {
+                        databaseColumnName = fieldAlias;
+                    }
+                    
                     if (entity.Fields is not null)
                     {
                         FieldMetadata? fieldMeta = entity.Fields.FirstOrDefault(f => f.Name == databaseColumnName);

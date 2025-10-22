@@ -278,8 +278,8 @@ sequenceDiagram
       Endpoint ->> Endpoint: Authorize
     Endpoint ->> QueryBuilder: Request
     QueryBuilder -->> Endpoint: SQL Response
-      Endpoint -->> DB: Query SQL
-      DB ->> Endpoint: Data Response
+      Endpoint ->> DB: Query SQL
+      DB -->> Endpoint: Data Response
     Endpoint -->>- Client: HTTP Response
   end
 ```

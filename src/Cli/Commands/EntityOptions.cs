@@ -25,8 +25,13 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string? config,
-            string? description)
+            string? description,
+            IEnumerable<string>? fieldsNameCollection,
+            IEnumerable<string>? fieldsAliasCollection,
+            IEnumerable<string>? fieldsDescriptionCollection,
+            IEnumerable<bool>? fieldsPrimaryKeyCollection,
+            string? config
+            )
             : base(config)
         {
             Entity = entity;
@@ -44,6 +49,10 @@ namespace Cli.Commands
             CacheEnabled = cacheEnabled;
             CacheTtl = cacheTtl;
             Description = description;
+            FieldsNameCollection = fieldsNameCollection;
+            FieldsAliasCollection = fieldsAliasCollection;
+            FieldsDescriptionCollection = fieldsDescriptionCollection;
+            FieldsPrimaryKeyCollection = fieldsPrimaryKeyCollection;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -91,5 +100,17 @@ namespace Cli.Commands
 
         [Option("description", Required = false, HelpText = "Description of the entity.")]
         public string? Description { get; }
+
+        [Option("fields.name", Required = false, Separator = ',', HelpText = "Name of the database column to expose as a field.")]
+        public IEnumerable<string>? FieldsNameCollection { get; }
+
+        [Option("fields.alias", Required = false, Separator = ',', HelpText = "Alias for the field.")]
+        public IEnumerable<string>? FieldsAliasCollection { get; }
+
+        [Option("fields.description", Required = false, Separator = ',', HelpText = "Description for the field.")]
+        public IEnumerable<string>? FieldsDescriptionCollection { get; }
+
+        [Option("fields.primary-key", Required = false, Separator = ',', HelpText = "Set this field as a primary key.")]
+        public IEnumerable<bool>? FieldsPrimaryKeyCollection { get; }
     }
 }

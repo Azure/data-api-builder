@@ -30,13 +30,13 @@ public record Entity
     public const string PROPERTY_METHODS = "methods";
     public string? Description { get; init; }
     public EntitySource Source { get; init; }
+    public List<FieldMetadata>? Fields { get; init; }
     public EntityGraphQLOptions GraphQL { get; init; }
     public EntityRestOptions Rest { get; init; }
     public EntityPermission[] Permissions { get; init; }
     public Dictionary<string, string>? Mappings { get; init; }
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
-
     public EntityHealthCheckConfig? Health { get; init; }
 
     [JsonIgnore]
@@ -46,6 +46,7 @@ public record Entity
     public Entity(
         EntitySource Source,
         EntityGraphQLOptions GraphQL,
+        List<FieldMetadata>? Fields,
         EntityRestOptions Rest,
         EntityPermission[] Permissions,
         Dictionary<string, string>? Mappings,
@@ -57,6 +58,7 @@ public record Entity
     {
         this.Health = Health;
         this.Source = Source;
+        this.Fields = Fields;
         this.GraphQL = GraphQL;
         this.Rest = Rest;
         this.Permissions = Permissions;

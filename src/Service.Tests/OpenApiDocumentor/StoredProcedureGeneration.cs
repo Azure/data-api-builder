@@ -55,6 +55,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         {
             Entity entity1 = new(
                 Source: new(Object: "insert_and_display_all_books_for_given_publisher", EntitySourceType.StoredProcedure, null, null),
+                Fields: null,
                 GraphQL: new(Singular: null, Plural: null, Enabled: false),
                 Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),

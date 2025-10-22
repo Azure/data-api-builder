@@ -221,6 +221,7 @@ public class ParameterValidationTests
     {
         Entity entity = new(
             Source: entitySource,
+            Fields: null,
             GraphQL: new(Singular: null, Plural: null, Enabled: false),
             Rest: new(Methods: supportedHttpMethods ?? EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
             Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),

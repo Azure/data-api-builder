@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -87,11 +88,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
 
+            Console.WriteLine("===== INITIAL CONFIG LOADED FROM DISK =====");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            }));
+
+            // Log Book PK info immediately after load
+            Console.WriteLine($"[DEBUG] Book KeyFields after config load: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
+
             // Setting the rest.request-body-strict flag as per the test fixtures.
             if (!isRestBodyStrict)
             {
                 runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime with { Rest = runtimeConfig.Runtime?.Rest with { RequestBodyStrict = isRestBodyStrict } } };
+
+                Console.WriteLine("[DEBUG] Updated runtimeConfig after REST strictness override:");
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig.Runtime, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                }));
+
             }
+
+            // Log before adding custom entities
+            Console.WriteLine("===== BEFORE ADDING CUSTOM ENTITIES =====");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig.Entities, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            }));
 
             // Add magazines entity to the config
             runtimeConfig = DatabaseEngine switch
@@ -130,6 +154,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 entityKey: "Book",
                 entityName: "dbo.books",
                 keyfields: new[] { "id" });
+
+                Console.WriteLine("[DEBUG] Book entity updated with KeyFields: id");
             }
 
             if (DatabaseEngine == TestCategory.DWSQL && !runtimeConfig.Entities.ContainsKey("books_view_with_mapping"))
@@ -140,10 +166,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     entityKey: "books_view_with_mapping",
                     entityName: "dbo.books_view_with_mapping",
                     keyfields: new[] { "id" });
+
+                Console.WriteLine("[DEBUG] Added books_view_with_mapping entity with KeyFields: id");
             }
+
+            // Log final runtimeConfig before tests start
+            Console.WriteLine("===== FINAL RUNTIMECONFIG BEFORE CUSTOM ENTITIES ADDED =====");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            }));
 
             // Add custom entities for the test, if any.
             runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);
+
+            // Log final runtimeConfig after custom entities added
+            Console.WriteLine("===== FINAL RUNTIMECONFIG AFTER CUSTOM ENTITIES ADDED =====");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            }));
 
             // Generate in memory runtime config provider that uses the config that we have modified
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);

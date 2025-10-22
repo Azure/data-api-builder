@@ -138,17 +138,6 @@ dab init
 > [!NOTE]
 > Including `--host-mode development` enables Swagger for REST and Nitro for GraphQL.
 
-#### Add your table to the configuration
-
-```sh
-dab add Todo
-  --source "dbo.Todo"
-  --permissions "anonymous:*"
-```
-
-> [!NOTE]
-> DAB supports tables, views, and stored procedures. When the type is not specified, the detault is `table`.
-
 #### Resulting configuration
 
 The file `dab-config.json` is automatically created through this process. These are the resulting contents:
@@ -185,6 +174,26 @@ The file `dab-config.json` is automatically created through this process. These 
       "mode": "development"
     }
   },
+  "entities": { }
+}
+```
+### 6. Add your table to the configuration
+
+```sh
+dab add Todo
+  --source "dbo.Todo"
+  --permissions "anonymous:*"
+```
+
+> [!NOTE]
+> DAB supports tables, views, and stored procedures. When the type is not specified, the detault is `table`.
+
+#### Resulting configuration
+
+The `entities` section of the configuration is no longer empty:
+
+```json
+{
   "entities": {
     "Todo": {
       "source": {
@@ -216,7 +225,7 @@ The file `dab-config.json` is automatically created through this process. These 
 }
 ```
 
-### 6. Run Data API builder
+### 7. Run Data API builder
 
 In `production`, DAB runs in a container. In `development`, it’s locally self-hosted.
 
@@ -227,13 +236,16 @@ dab start
 > [!IMPORTANT]
 > The DAB CLI assumes your configuration file is called `dab-config.json` and is in the local folder.
 
-### 7. Access your data
+### 8. Access your data!
 
 By default, DAB enables both REST and GraphQL.
 
 ```sh
 GET http://localhost:5000/api/Todo
 ```
+
+> [!NOTE]
+> Change the URL to match your port if it is different.
 
 #### Other things you should try
 

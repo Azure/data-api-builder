@@ -275,7 +275,7 @@ sequenceDiagram
   %% Request/Response section (very light purple)
   rect rgba(180,150,255,0.11)
     Client -->>+ Endpoint: HTTP Request
-      Endpoint -->> Endpoint: Authorize
+      Endpoint ->> Endpoint: Authorize
     Endpoint ->> QueryBuilder: Request
     QueryBuilder -->> Endpoint: SQL Response
       Endpoint -->> DB: Query SQL

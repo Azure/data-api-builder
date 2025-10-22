@@ -123,26 +123,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     keyfields: ["upc"])
             };
 
-            // Add Book entity to the config for DWSQL tests
-            runtimeConfig = DatabaseEngine switch
+            if (!runtimeConfig.Entities.ContainsKey("Book"))
             {
-                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(
-                    config: runtimeConfig,
-                    entityKey: "Book",
-                    entityName: "dbo.books",
-                    keyfields: new[] { "id" }),
-                _ => runtimeConfig
-            };
+                // Add Book entity to the config for non-DWSQL tests
+                runtimeConfig = DatabaseEngine switch
+                {
+                    TestCategory.DWSQL => runtimeConfig,
+                    _ => TestHelper.AddMissingEntitiesToConfig(
+                        config: runtimeConfig,
+                        entityKey: "Book",
+                        entityName: "dbo.books",
+                        keyfields: new[] { "id" }),
+                };
+            }
 
-            runtimeConfig = DatabaseEngine switch
+            if (DatabaseEngine == TestCategory.DWSQL && !runtimeConfig.Entities.ContainsKey("books_view_with_mapping"))
             {
-                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(
+                // Add books_view_with_mapping entity to the config for DWSQL tests
+                runtimeConfig = TestHelper.AddMissingEntitiesToConfig(
                     config: runtimeConfig,
                     entityKey: "books_view_with_mapping",
                     entityName: "dbo.books_view_with_mapping",
-                    keyfields: new[] { "id" }),
-                _ => runtimeConfig
-            };
+                    keyfields: new[] { "id" });
+            }
 
             // Add custom entities for the test, if any.
             runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);

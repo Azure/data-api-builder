@@ -125,16 +125,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             if (!runtimeConfig.Entities.ContainsKey("Book"))
             {
-                // Add Book entity to the config for non-DWSQL tests
-                runtimeConfig = DatabaseEngine switch
-                {
-                    TestCategory.DWSQL => runtimeConfig,
-                    _ => TestHelper.AddMissingEntitiesToConfig(
-                        config: runtimeConfig,
-                        entityKey: "Book",
-                        entityName: "dbo.books",
-                        keyfields: new[] { "id" }),
-                };
+                runtimeConfig = TestHelper.AddMissingEntitiesToConfig(
+                config: runtimeConfig,
+                entityKey: "Book",
+                entityName: "dbo.books",
+                keyfields: new[] { "id" });
             }
 
             if (DatabaseEngine == TestCategory.DWSQL && !runtimeConfig.Entities.ContainsKey("books_view_with_mapping"))

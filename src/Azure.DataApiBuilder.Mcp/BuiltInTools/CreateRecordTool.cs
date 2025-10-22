@@ -181,22 +181,40 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 else if (result is ObjectResult objectResult)
                 {
-                    // Check if this is an error status code (400+ range)
+                    bool isError = objectResult.StatusCode.HasValue && objectResult.StatusCode.Value >= 400 && objectResult.StatusCode.Value != 403;
+                    string text = isError
+                        ? $"Failed to create record in entity '{entityName}'. Error: {JsonSerializer.Serialize(objectResult.Value)}"
+                        : $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(objectResult.Value)}. Unable to perform " +
+                        $"read-back of inserted records";
                     return new CallToolResult
                     {
                         Content = [new TextContentBlock
                         {
                             Type = "text",
-                            Text = $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(objectResult.Value)}"
+                            Text = text
                         }]
                     };
                 }
                 else
                 {
-                    return new CallToolResult
+                    if (result is null)
                     {
-                        Content = [new TextContentBlock { Type = "text", Text = $"Successfully created record in entity '{entityName}'" }]
-                    };
+                        return Utils.McpResponseBuilder.BuildErrorResult(
+                            "UnexpectedError",
+                            $"Mutation engine returned null result for entity '{entityName}'",
+                            logger);
+                    }
+                    else
+                    {
+                        return new CallToolResult
+                        {
+                            Content = [new TextContentBlock
+                            {
+                                Type = "text",
+                                Text = $"Create operation completed for entity '{entityName}' with unexpected result type: {result.GetType().Name}"
+                            }]
+                        };
+                    }
                 }
             }
             catch (Exception ex)

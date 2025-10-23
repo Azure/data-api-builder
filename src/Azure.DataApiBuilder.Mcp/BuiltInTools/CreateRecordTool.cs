@@ -169,30 +169,39 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (result is CreatedResult createdResult)
                 {
-                    return new CallToolResult
-                    {
-                        Content = [new TextContentBlock
+                    return Utils.McpResponseBuilder.BuildSuccessResult(
+                        new Dictionary<string, object?>
                         {
-                            Type = "text",
-                            Text = $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(createdResult.Value)}"
-                        }]
-                    };
+                            ["entity"] = entityName,
+                            ["operation"] = "create",
+                            ["result"] = createdResult.Value
+                        },
+                        logger,
+                        $"Successfully created record in entity '{entityName}'");
                 }
                 else if (result is ObjectResult objectResult)
                 {
                     bool isError = objectResult.StatusCode.HasValue && objectResult.StatusCode.Value >= 400 && objectResult.StatusCode.Value != 403;
-                    string text = isError
-                        ? $"Failed to create record in entity '{entityName}'. Error: {JsonSerializer.Serialize(objectResult.Value)}"
-                        : $"Successfully created record in entity '{entityName}'. Result: {JsonSerializer.Serialize(objectResult.Value)}. Unable to perform " +
-                        $"read-back of inserted records";
-                    return new CallToolResult
+                    if (isError)
                     {
-                        Content = [new TextContentBlock
-                        {
-                            Type = "text",
-                            Text = text
-                        }]
-                    };
+                        return Utils.McpResponseBuilder.BuildErrorResult(
+                            "CreateFailed",
+                            $"Failed to create record in entity '{entityName}'. Error: {JsonSerializer.Serialize(objectResult.Value)}",
+                            logger);
+                    }
+                    else
+                    {
+                        return Utils.McpResponseBuilder.BuildSuccessResult(
+                            new Dictionary<string, object?>
+                            {
+                                ["entity"] = entityName,
+                                ["operation"] = "create",
+                                ["result"] = objectResult.Value,
+                                ["note"] = "Unable to perform read-back of inserted records"
+                            },
+                            logger,
+                            $"Successfully created record in entity '{entityName}' (read-back unavailable)");
+                    }
                 }
                 else
                 {
@@ -205,14 +214,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                     else
                     {
-                        return new CallToolResult
-                        {
-                            Content = [new TextContentBlock
+                        return Utils.McpResponseBuilder.BuildSuccessResult(
+                            new Dictionary<string, object?>
                             {
-                                Type = "text",
-                                Text = $"Create operation completed for entity '{entityName}' with unexpected result type: {result.GetType().Name}"
-                            }]
-                        };
+                                ["entity"] = entityName,
+                                ["operation"] = "create",
+                                ["result_type"] = result.GetType().Name,
+                                ["note"] = "Create operation completed with unexpected result type"
+                            },
+                            logger,
+                            $"Create operation completed for entity '{entityName}' with unexpected result type: {result.GetType().Name}");
                     }
                 }
             }

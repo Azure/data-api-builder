@@ -186,7 +186,7 @@ dab add Todo
 ```
 
 > [!NOTE]
-> DAB supports tables, views, and stored procedures. When the type is not specified, the detault is `table`.
+> DAB supports tables, views, and stored procedures. When the type is not specified, the default is `table`.
 
 #### Resulting configuration
 

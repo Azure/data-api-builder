@@ -1142,7 +1142,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                             Console.WriteLine($"DataTable Primary Keys Count for Entity: {entityName} is {dataTable.PrimaryKey.Length}");
                             Console.WriteLine($"DataTable Columns for Entity: {entityName} are {string.Join(", ", dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName))}");
-                        
+
                         }
                         catch (Exception ex)
                         {

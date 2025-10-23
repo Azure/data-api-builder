@@ -1730,31 +1730,29 @@ namespace Cli
                     }
                 }
 
-                if (hasKeyFields)
+                // Always carry over existing PKs on the entity/update, not only when the user re-supplies --source.key-fields.
+                string[]? existingKeys = updatedSource.KeyFields;
+                if (existingKeys is not null && existingKeys.Length > 0)
                 {
-                    foreach (string key in updatedSource.KeyFields!)
+                    foreach (string key in existingKeys)
                     {
-                        FieldMetadata? field = fields.FirstOrDefault(f => f.Name == key);
-                        if (field != null)
+                        FieldMetadata? field = fields.FirstOrDefault(f => string.Equals(f.Name, key, StringComparison.OrdinalIgnoreCase));
+                        if (field is not null)
                         {
                             field.PrimaryKey = true;
                         }
                         else
                         {
-                            // If mapping doesn't exist, add a new field for the key
-                            fields.Add(new FieldMetadata
-                            {
-                                Name = key,
-                                PrimaryKey = true
-                            });
+                            fields.Add(new FieldMetadata { Name = key, PrimaryKey = true });
                         }
                     }
                 }
 
-                // Remove legacy props
+                // Remove legacy props only after we have safely embedded PKs into fields.
                 updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
             }
+
             else
             {
                 fields = [];

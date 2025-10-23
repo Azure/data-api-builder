@@ -88,6 +88,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
 
+            try
+            {
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] Failed to serialize runtimeConfig: {ex.Message}");
+            }
+
             Console.WriteLine($"Book KeyFields after config load: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
 
             // Setting the rest.request-body-strict flag as per the test fixtures.
@@ -166,6 +175,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             SetUpSQLMetadataProvider(runtimeConfigProvider);
 
             Console.WriteLine($"Book KeyFields 5: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
+
+            try
+            {
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DEBUG] Failed to serialize runtimeConfig: {ex.Message}");
+            }
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();

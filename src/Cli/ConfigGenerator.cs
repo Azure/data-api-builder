@@ -1687,7 +1687,7 @@ namespace Cli
                             Name = updatedField.Name,
                             Alias = updatedField.Alias ?? field.Alias,
                             Description = updatedField.Description ?? field.Description,
-                            PrimaryKey = updatedField.PrimaryKey || field.PrimaryKey
+                            PrimaryKey = updatedField.PrimaryKey
                         });
                         updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
                     }

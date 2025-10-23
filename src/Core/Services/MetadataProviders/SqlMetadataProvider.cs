@@ -235,6 +235,23 @@ namespace Azure.DataApiBuilder.Core.Services
                 throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
             }
 
+            if (exposedNamesToBackingColumnsMap.TryGetValue(field, out name))
+            {
+                return true;
+            }
+
+            if (_entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
+            {
+                FieldMetadata? matchedField = entityDefinition.Fields.FirstOrDefault(f =>
+                        f.Alias != null && f.Alias.Equals(field, StringComparison.OrdinalIgnoreCase));
+
+                if (matchedField is not null)
+                {
+                    name = matchedField.Name;
+                    return true;
+                }
+            }
+
             return exposedNamesToBackingColumnsMap.TryGetValue(field, out name);
         }
 

@@ -1765,14 +1765,6 @@ namespace Cli
                     }
                 }
 
-                if (fields.Count > 0 && !fields.Any(f => f.PrimaryKey))
-                {
-                    _logger.LogError(
-                        $"Primary key not configured in 'fields'. " +
-                        $"Mark at least one field with 'primary-key': true, or keep 'source.key-fields'.");
-                    return false;
-                }
-
                 // Remove legacy props only after we have safely embedded PKs into fields.
                 updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
@@ -1781,7 +1773,10 @@ namespace Cli
             else
             {
                 fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
-                _logger.LogWarning("Using legacy 'mappings' and 'key-fields' properties. Consider using 'fields' for new entities.");
+                if (entity.Mappings is not null || entity.Source?.KeyFields is not null)
+                {
+                    _logger.LogWarning("Using legacy 'mappings' and 'key-fields' properties. Consider using 'fields' for new entities.");
+                }
             }
 
             if (!ValidateFields(fields, out string errorMessage))

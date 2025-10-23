@@ -1439,7 +1439,7 @@
               }
             ]
           }
-        ]
+        ],
         Relationships: {
           fungus: {
             TargetEntity: Fungus,
@@ -1525,7 +1525,7 @@
               }
             ]
           }
-        ]
+        ],
         Relationships: {
           Shrub: {
             TargetEntity: Shrub,
@@ -2521,7 +2521,7 @@
               }
             ]
           }
-        ]
+        ],
         Relationships: {
           authors: {
             Cardinality: Many,
@@ -2672,7 +2672,7 @@
               }
             ]
           }
-        ]
+        ],
         Relationships: {
           child_accounts: {
             Cardinality: Many,

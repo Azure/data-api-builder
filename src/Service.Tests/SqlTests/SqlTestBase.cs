@@ -88,15 +88,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
 
-            try
-            {
-                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DEBUG] Failed to serialize runtimeConfig: {ex.Message}");
-            }
-
             Console.WriteLine($"Book KeyFields after config load: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
 
             // Setting the rest.request-body-strict flag as per the test fixtures.
@@ -123,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     entityName: "foo.magazines"),
             };
 
-            Console.WriteLine($"Book KeyFields 1: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
+            Console.WriteLine($"Book 1: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
 
             // Add table name collision testing entity to the config
             runtimeConfig = DatabaseEngine switch
@@ -137,33 +128,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     keyfields: ["upc"])
             };
 
-            if (!runtimeConfig.Entities.ContainsKey("Book"))
-            {
-                runtimeConfig = TestHelper.AddMissingEntitiesToConfig(
-                config: runtimeConfig,
-                entityKey: "Book",
-                entityName: "dbo.books",
-                keyfields: new[] { "id" });
-            }
-
-            Console.WriteLine($"Book KeyFields 2: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
-
-            if (DatabaseEngine == TestCategory.DWSQL && !runtimeConfig.Entities.ContainsKey("books_view_with_mapping"))
-            {
-                // Add books_view_with_mapping entity to the config for DWSQL tests
-                runtimeConfig = TestHelper.AddMissingEntitiesToConfig(
-                    config: runtimeConfig,
-                    entityKey: "books_view_with_mapping",
-                    entityName: "dbo.books_view_with_mapping",
-                    keyfields: new[] { "id" });
-            }
-
-            Console.WriteLine($"Book KeyFields 3: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
+            Console.WriteLine($"Book 2: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
 
             // Add custom entities for the test, if any.
             runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);
 
-            Console.WriteLine($"Book KeyFields 4: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
+            Console.WriteLine($"Book 3: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
 
             // Generate in memory runtime config provider that uses the config that we have modified
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
@@ -174,7 +144,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             SetUpSQLMetadataProvider(runtimeConfigProvider);
 
-            Console.WriteLine($"Book KeyFields 5: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
+            Console.WriteLine($"Book 4: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
 
             try
             {

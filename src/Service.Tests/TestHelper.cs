@@ -80,6 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         {
             Entity entity = new(
                 Source: new(entityName, EntitySourceType.Table, null, keyfields),
+                Fields: new List<FieldMetadata> { new() { Name = keyfields?[0], PrimaryKey = true } },
                 GraphQL: new(entityKey, entityKey.Pluralize()),
                 Rest: new(Enabled: true),
                 Permissions: new[]

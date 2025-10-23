@@ -771,9 +771,11 @@ public class EndToEndTests
         CollectionAssert.AreEqual(new string[] { "todo_id" }, relationship.LinkingSourceFields);
         CollectionAssert.AreEqual(new string[] { "id" }, relationship.LinkingTargetFields);
 
-        Assert.IsNotNull(entity.Mappings);
-        Assert.AreEqual("identity", entity.Mappings["id"]);
-        Assert.AreEqual("Company Name", entity.Mappings["name"]);
+        Assert.IsNotNull(entity.Fields);
+        Assert.AreEqual(2, entity.Fields.Count);
+        Assert.AreEqual(entity.Fields[0].Alias, "identity");
+        Assert.AreEqual(entity.Fields[1].Alias, "Company Name");
+        Assert.IsNull(entity.Mappings);
     }
 
     /// <summary>

@@ -542,6 +542,7 @@ type Planet @model(name:""Planet"") {
                        new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { readAction, createAction, deleteAction })};
 
             Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Fields: null,
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,
@@ -672,6 +673,7 @@ type Planet @model(name:""Planet"") {
                        new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { createAction })};
 
             Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Fields: null,
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,

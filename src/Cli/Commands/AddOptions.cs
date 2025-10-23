@@ -34,8 +34,13 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string? config,
-            string? description)
+            string? description,
+            IEnumerable<string>? fieldsNameCollection,
+            IEnumerable<string>? fieldsAliasCollection,
+            IEnumerable<string>? fieldsDescriptionCollection,
+            IEnumerable<bool>? fieldsPrimaryKeyCollection,
+            string? config
+        )
             : base(entity,
                   sourceType,
                   sourceParameters,
@@ -50,8 +55,12 @@ namespace Cli.Commands
                   policyDatabase,
                   cacheEnabled,
                   cacheTtl,
-                  config,
-                  description)
+                  description,
+                  fieldsNameCollection,
+                  fieldsAliasCollection,
+                  fieldsDescriptionCollection,
+                  fieldsPrimaryKeyCollection,
+                  config)
         {
             Source = source;
             Permissions = permissions;

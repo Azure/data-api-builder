@@ -80,6 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         public static Entity GenerateEmptyEntity(EntitySourceType sourceType = EntitySourceType.Table)
         {
             return new Entity(Source: new EntitySource(Type: sourceType, Object: "foo", Parameters: null, KeyFields: null),
+                              Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new("", ""),
                               Permissions: Array.Empty<EntityPermission>(),
@@ -106,6 +107,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         {
             IEnumerable<EntityAction> actions = (permissionOperations ?? new string[] { }).Select(a => new EntityAction(EnumExtensions.Deserialize<EntityActionOperation>(a), null, new(null, null)));
             Entity entity = new(Source: new EntitySource(Type: EntitySourceType.StoredProcedure, Object: "foo", Parameters: parameters, KeyFields: null),
+                              Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(Singular: graphQLTypeName, Plural: "", Enabled: true, Operation: graphQLOperation),
                               Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: actions.ToArray()) },
@@ -123,6 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         public static Entity GenerateEntityWithSingularPlural(string singularNameForEntity, string pluralNameForEntity, EntitySourceType sourceType = EntitySourceType.Table)
         {
             return new Entity(Source: new EntitySource(Type: sourceType, Object: "foo", Parameters: null, KeyFields: null),
+                              Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(singularNameForEntity, pluralNameForEntity),
                               Permissions: Array.Empty<EntityPermission>(),
@@ -139,6 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         public static Entity GenerateEntityWithStringType(string singularGraphQLName, EntitySourceType sourceType = EntitySourceType.Table)
         {
             return new Entity(Source: new EntitySource(Type: sourceType, Object: "foo", Parameters: null, KeyFields: null),
+                              Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(singularGraphQLName, ""),
                               Permissions: Array.Empty<EntityPermission>(),

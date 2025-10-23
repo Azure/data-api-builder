@@ -2295,6 +2295,7 @@ query {
 
             Entity clubEntity = new(
                 Source: new("clubs", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("club", "clubs"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -2304,6 +2305,7 @@ query {
 
             Entity playerEntity = new(
                 Source: new("players", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("player", "players"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },

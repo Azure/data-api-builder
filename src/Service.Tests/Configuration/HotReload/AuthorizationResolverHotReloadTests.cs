@@ -65,6 +65,7 @@ public class AuthorizationResolverHotReloadTests
 
         Entity requiredEntityHR = new(
             Source: new("publishers", EntitySourceType.Table, null, null),
+            Fields: null,
             Rest: new(Enabled: true),
             GraphQL: new(Singular: "", Plural: "", Enabled: false),
             Permissions: new[] { permissionsHR },
@@ -178,6 +179,7 @@ public class AuthorizationResolverHotReloadTests
         // file creation function.
         Entity requiredEntity = new(
             Source: new("books", EntitySourceType.Table, null, null),
+            Fields: null,
             Rest: new(Enabled: true),
             GraphQL: new(Singular: "", Plural: "", Enabled: false),
             Permissions: new[] { permissions },

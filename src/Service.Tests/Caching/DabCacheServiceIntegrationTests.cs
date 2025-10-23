@@ -740,6 +740,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         {
             Entity entity = new(
                 Source: new EntitySource(string.Empty, null, null, null),
+                Fields: null,
                 GraphQL: new EntityGraphQLOptions(string.Empty, string.Empty),
                 Rest: new EntityRestOptions(),
                 Permissions: Array.Empty<EntityPermission>(),

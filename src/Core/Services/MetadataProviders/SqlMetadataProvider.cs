@@ -1094,22 +1094,72 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else if (entitySourceType is EntitySourceType.Table)
                 {
+                    // Resolve PKs from fields first
+                    List<string>? pkFields = entity.Fields?
+                        .Where(f => f.PrimaryKey)
+                        .Select(f => f.Name)
+                        .ToList();
+
+                    // Fallback to key-fields from config
+                    if (pkFields == null || pkFields.Count == 0)
+                    {
+                        pkFields = entity.Source.KeyFields?.ToList();
+                    }
+
+                    // If still empty, fallback to DB schema PKs
+                    if (pkFields == null || pkFields.Count == 0)
+                    {
+                        DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
+                            entityName,
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName));
+
+                        pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
+                    }
+
+                    pkFields ??= new List<string>();
+
                     await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetSourceDefinition(entityName),
-                        entity.Source.KeyFields);
+                        pkFields);
                 }
                 else
                 {
+                    // Resolve PKs from fields first
+                    List<string>? pkFields = entity.Fields?
+                        .Where(f => f.PrimaryKey)
+                        .Select(f => f.Name)
+                        .ToList();
+
+                    // Fallback to key-fields from config
+                    if (pkFields == null || pkFields.Count == 0)
+                    {
+                        pkFields = entity.Source.KeyFields?.ToList();
+                    }
+
+                    // If still empty, fallback to DB schema PKs
+                    if (pkFields == null || pkFields.Count == 0)
+                    {
+                        DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
+                            entityName,
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName));
+
+                        pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
+                    }
+
+                    pkFields ??= [];
+
                     ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
                     await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         viewDefinition,
-                        entity.Source.KeyFields);
+                        pkFields);
                 }
             }
             catch (Exception e)
@@ -1167,25 +1217,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Store the dictionary containing result set field with its type as Columns
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
-        }
-
-        /// <summary>
-        /// Helper method to create params for the query.
-        /// </summary>
-        /// <param name="paramName">Common prefix of param names.</param>
-        /// <param name="paramValues">Values of the param.</param>
-        /// <returns></returns>
-        private static Dictionary<string, object> GetQueryParams(
-            string paramName,
-            object[] paramValues)
-        {
-            Dictionary<string, object> parameters = new();
-            for (int paramNumber = 0; paramNumber < paramValues.Length; paramNumber++)
-            {
-                parameters.Add($"{paramName}{paramNumber}", paramValues[paramNumber]);
-            }
-
-            return parameters;
         }
 
         /// <summary>
@@ -1283,19 +1314,9 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName,
             SourceDefinition sourceDefinition,
-            string[]? runtimeConfigKeyFields)
+            List<string> pkFields)
         {
-            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
-
-            List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
-            if (runtimeConfigKeyFields is null || runtimeConfigKeyFields.Length == 0)
-            {
-                sourceDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
-            }
-            else
-            {
-                sourceDefinition.PrimaryKey = new(runtimeConfigKeyFields);
-            }
+            sourceDefinition.PrimaryKey = [.. pkFields];
 
             if (sourceDefinition.PrimaryKey.Count == 0)
             {
@@ -1311,6 +1332,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);
             }
 
+            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
@@ -1418,10 +1440,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (entity.GraphQL is null || (entity.GraphQL.Enabled))
                 {
                     if (entity.Mappings is not null
-                        && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
-                        && !string.IsNullOrWhiteSpace(fieldAlias))
+                       && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
+                       && !string.IsNullOrWhiteSpace(fieldAlias))
                     {
                         databaseColumnName = fieldAlias;
+                    }
+
+                    if (entity.Fields is not null)
+                    {
+                        FieldMetadata? fieldMeta = entity.Fields.FirstOrDefault(f => f.Name == databaseColumnName);
+                        if (fieldMeta != null && !string.IsNullOrWhiteSpace(fieldMeta.Alias))
+                        {
+                            databaseColumnName = fieldMeta.Alias;
+                        }
                     }
 
                     return IsIntrospectionField(databaseColumnName);

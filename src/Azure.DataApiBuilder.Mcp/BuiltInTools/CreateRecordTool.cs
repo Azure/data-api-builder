@@ -173,8 +173,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         new Dictionary<string, object?>
                         {
                             ["entity"] = entityName,
-                            ["operation"] = "create",
-                            ["result"] = createdResult.Value
+                            ["result"] = createdResult.Value,
+                            ["message"] = $"Successfully created record in entity '{entityName}'"
                         },
                         logger,
                         $"Successfully created record in entity '{entityName}'");
@@ -195,12 +195,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             new Dictionary<string, object?>
                             {
                                 ["entity"] = entityName,
-                                ["operation"] = "create",
                                 ["result"] = objectResult.Value,
-                                ["note"] = "Unable to perform read-back of inserted records"
+                                ["message"] = $"Successfully created record in entity '{entityName}'. Unable to perform read-back of inserted records."
                             },
                             logger,
-                            $"Successfully created record in entity '{entityName}' (read-back unavailable)");
+                            $"Successfully created record in entity '{entityName}'. Unable to perform read-back of inserted records.");
                     }
                 }
                 else
@@ -218,9 +217,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             new Dictionary<string, object?>
                             {
                                 ["entity"] = entityName,
-                                ["operation"] = "create",
-                                ["result_type"] = result.GetType().Name,
-                                ["note"] = "Create operation completed with unexpected result type"
+                                ["message"] = $"Create operation completed with unexpected result type: {result.GetType().Name}"
                             },
                             logger,
                             $"Create operation completed for entity '{entityName}' with unexpected result type: {result.GetType().Name}");

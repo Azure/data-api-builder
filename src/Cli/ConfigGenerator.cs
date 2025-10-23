@@ -1702,6 +1702,23 @@ namespace Cli
 
                 fields = mergedFields;
 
+                // If user didn't mark any PK in fields, carry over existing source key-fields
+                if (!fields.Any(f => f.PrimaryKey) && updatedSource.KeyFields is { Length: > 0 })
+                {
+                    foreach (string k in updatedSource.KeyFields)
+                    {
+                        FieldMetadata? f = fields.FirstOrDefault(f => string.Equals(f.Name, k, StringComparison.OrdinalIgnoreCase));
+                        if (f is not null)
+                        {
+                            f.PrimaryKey = true;
+                        }
+                        else
+                        {
+                            fields.Add(new FieldMetadata { Name = k, PrimaryKey = true });
+                        }
+                    }
+                }
+
                 // Remove legacy props if fields present
                 updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
@@ -1748,6 +1765,14 @@ namespace Cli
                     }
                 }
 
+                if (fields.Count > 0 && !fields.Any(f => f.PrimaryKey))
+                {
+                    _logger.LogError(
+                        $"Primary key not configured in 'fields'. " +
+                        $"Mark at least one field with 'primary-key': true, or keep 'source.key-fields'.");
+                    return false;
+                }
+
                 // Remove legacy props only after we have safely embedded PKs into fields.
                 updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
@@ -1755,7 +1780,7 @@ namespace Cli
 
             else
             {
-                fields = [];
+                fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
                 _logger.LogWarning("Using legacy 'mappings' and 'key-fields' properties. Consider using 'fields' for new entities.");
             }
 

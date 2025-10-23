@@ -1769,7 +1769,18 @@ namespace Cli
                 updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
             }
+            else if (!hasFields && !hasMappings && !hasKeyFields && entity.Source.KeyFields?.Length > 0)
+            {
+                // If no fields, mappings, or key-fields are provided with update command, use the entity's key-fields added using add command.
+                fields = entity.Source.KeyFields.Select(k => new FieldMetadata
+                {
+                    Name = k,
+                    PrimaryKey = true
+                }).ToList();
 
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
             else
             {
                 fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();

@@ -372,13 +372,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     _logger.LogDebug("Logging primary key information for entity: {entityName}.", entityName);
                     foreach (string pK in sourceDefinition.PrimaryKey)
                     {
-                        // Validate PK name before accessing dictionary
-                        if (string.IsNullOrWhiteSpace(pK) || !sourceDefinition.Columns.ContainsKey(pK))
-                        {
-                            _logger.LogWarning($"Skipping PK logging for entity {entityName}: invalid or missing PK '{pK}'.");
-                            continue;
-                        }
-
                         column = sourceDefinition.Columns[pK];
                         if (TryGetExposedColumnName(entityName, pK, out string? exposedPKeyName))
                         {

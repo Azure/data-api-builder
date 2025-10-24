@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     // Validate all provided parameters exist in metadata
                     foreach (KeyValuePair<string, object?> param in parameters)
                     {
-                        if (!entityConfig.Source.Parameters.ContainsKey(param.Key))
+                        if (!entityConfig.Source.Parameters.Any(p => p.Name == param.Key))
                         {
                             return McpResponseBuilder.BuildErrorResult("InvalidArguments", $"Invalid parameter: {param.Key}", logger);
                         }
@@ -205,11 +205,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Then, add default parameters from configuration (only if not already provided by user)
                 if ((parameters == null || parameters.Count == 0) && entityConfig.Source.Parameters != null)
                 {
-                    foreach (KeyValuePair<string, object> param in entityConfig.Source.Parameters)
+                    foreach (ParameterMetadata param in entityConfig.Source.Parameters)
                     {
-                        if (!context.FieldValuePairsInBody.ContainsKey(param.Key))
+                        if (!context.FieldValuePairsInBody.ContainsKey(param.Name))
                         {
-                            context.FieldValuePairsInBody[param.Key] = param.Value;
+                            context.FieldValuePairsInBody[param.Name] = param.Default;
                         }
                     }
                 }

@@ -35,10 +35,10 @@ namespace Cli.Commands
             string? cacheEnabled,
             string? cacheTtl,
             string? description,
-            IEnumerable<string>? parametersName,
-            IEnumerable<string>? parametersDescription,
-            IEnumerable<string>? parametersRequired,
-            IEnumerable<string>? parametersDefault,
+            IEnumerable<string>? parametersNameCollection,
+            IEnumerable<string>? parametersDescriptionCollection,
+            IEnumerable<string>? parametersRequiredCollection,
+            IEnumerable<string>? parametersDefaultCollection,
             string? config
         )
         : base(
@@ -57,10 +57,10 @@ namespace Cli.Commands
             cacheEnabled,
             cacheTtl,
             description,
-            parametersName,
-            parametersDescription,
-            parametersRequired,
-            parametersDefault,
+            parametersNameCollection,
+            parametersDescriptionCollection,
+            parametersRequiredCollection,
+            parametersDefaultCollection,
             config
         )
         {

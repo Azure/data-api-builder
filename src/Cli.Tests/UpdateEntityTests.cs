@@ -1188,10 +1188,10 @@ namespace Cli.Tests
                 restMethodsForStoredProcedure: restMethodsForStoredProcedure,
                 graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure,
                 description: description,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
         }
 

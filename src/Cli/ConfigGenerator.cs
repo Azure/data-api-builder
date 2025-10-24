@@ -502,7 +502,7 @@ namespace Cli
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     objectType,
                     options.SourceParameters,
-                    options.ParametersName,
+                    options.ParametersNameCollection,
                     options.SourceKeyFields))
             {
                 return false;
@@ -510,7 +510,7 @@ namespace Cli
 
             // Check for both old and new parameter formats
             bool hasOldParams = options.SourceParameters != null && options.SourceParameters.Any();
-            bool hasNewParams = options.ParametersName != null && options.ParametersName.Any();
+            bool hasNewParams = options.ParametersNameCollection != null && options.ParametersNameCollection.Any();
 
             if (hasOldParams && hasNewParams)
             {
@@ -522,10 +522,10 @@ namespace Cli
             if (hasNewParams)
             {
                 // Parse new format
-                List<string> names = options.ParametersName != null ? options.ParametersName.ToList() : new List<string>();
-                List<string> descriptions = options.ParametersDescription?.ToList() ?? new List<string>();
-                List<string> requiredFlags = options.ParametersRequired?.ToList() ?? new List<string>();
-                List<string> defaults = options.ParametersDefault?.ToList() ?? new List<string>();
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
 
                 parameters = [];
                 for (int i = 0; i < names.Count; i++)
@@ -1859,7 +1859,7 @@ namespace Cli
 
             // Support for new parameter format
             bool hasOldParams = options.SourceParameters is not null && options.SourceParameters.Any();
-            bool hasNewParams = options.ParametersName is not null && options.ParametersName.Any();
+            bool hasNewParams = options.ParametersNameCollection is not null && options.ParametersNameCollection.Any();
 
             // If SourceType provided by user is not null, update type
             if (options.SourceType is not null)
@@ -1887,7 +1887,7 @@ namespace Cli
                 && !VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     updatedSourceType,
                     options.SourceParameters,
-                    options.ParametersName,
+                    options.ParametersNameCollection,
                     options.SourceKeyFields))
             {
                 return false;
@@ -1918,10 +1918,10 @@ namespace Cli
             if (hasNewParams)
             {
                 // Parse new format
-                List<string> names = options.ParametersName != null ? options.ParametersName.ToList() : new List<string>();
-                List<string> descriptions = options.ParametersDescription?.ToList() ?? new List<string>();
-                List<string> requiredFlags = options.ParametersRequired?.ToList() ?? new List<string>();
-                List<string> defaults = options.ParametersDefault?.ToList() ?? new List<string>();
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
 
                 parameters = [];
                 for (int i = 0; i < names.Count; i++)

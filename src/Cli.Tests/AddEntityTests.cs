@@ -46,10 +46,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
             return ExecuteVerifyTest(options);
         }
@@ -79,10 +79,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -115,10 +115,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -155,10 +155,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -190,10 +190,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
 
             return ExecuteVerifyTest(options);
@@ -231,10 +231,10 @@ namespace Cli.Tests
                 cacheTtl: null,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
 
             // Create VerifySettings and add all arguments to the method as parameters
@@ -268,10 +268,10 @@ namespace Cli.Tests
                 cacheTtl: null,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: ["This is a test parameter description."],
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: ["This is a test parameter description."],
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
                 );
 
             return ExecuteVerifyTest(options);
@@ -304,10 +304,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: new string[] { "Post", "Put", "Patch" },
                 graphQLOperationForStoredProcedure: "Query",
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
                 );
 
             return ExecuteVerifyTest(options);
@@ -336,10 +336,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
 
             string config = INITIAL_CONFIG;
@@ -395,10 +395,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
                 );
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
@@ -459,10 +459,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
                 );
 
             VerifySettings settings = new();
@@ -499,10 +499,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
             );
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
@@ -542,10 +542,10 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: null,
                 graphQLOperationForStoredProcedure: null,
-                parametersName: null,
-                parametersDescription: null,
-                parametersRequired: null,
-                parametersDefault: null
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null
                 );
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);

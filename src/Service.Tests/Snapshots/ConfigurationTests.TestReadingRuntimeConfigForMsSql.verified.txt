@@ -1996,11 +1996,14 @@
       books_view_all: {
         Source: {
           Object: books_view_all,
-          Type: View,
-          KeyFields: [
-            id
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_view_all,
           Plural: books_view_alls,
@@ -2075,12 +2078,18 @@
       stocks_view_selected: {
         Source: {
           Object: stocks_view_selected,
-          Type: View,
-          KeyFields: [
-            categoryid,
-            pieceid
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: categoryid,
+            PrimaryKey: true
+          },
+          {
+            Name: pieceid,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: stocks_view_selected,
           Plural: stocks_view_selecteds,
@@ -2122,12 +2131,18 @@
       books_publishers_view_composite: {
         Source: {
           Object: books_publishers_view_composite,
-          Type: View,
-          KeyFields: [
-            id,
-            pub_id
-          ]
+          Type: View
         },
+        Fields: [
+        {
+          Name: id,
+          PrimaryKey: true
+        },
+        {
+          Name: pub_id,
+          PrimaryKey: true
+        }
+      ],
         GraphQL: {
           Singular: books_publishers_view_composite,
           Plural: books_publishers_view_composites,

@@ -25,8 +25,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         /// <summary>
-        /// Gets the metadata for the describe_entities tool.
+        /// Gets the metadata for the delete-record tool, including its name, description, and input schema.
         /// </summary>
+        /// <returns></returns>
         public Tool GetToolMetadata()
         {
             return new Tool
@@ -39,7 +40,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         ""properties"": {
                             ""nameOnly"": {
                                 ""type"": ""boolean"",
-                                ""description"": ""If true, only entity names and descriptions will be returned. If false, full metadata including fields, permissions, etc. will be included. Default is false.""
+                                ""description"": ""If true, only entity names and descriptions will be returned. If false, full metadata including fields, parameters etc. will be included. Default is false.""
                             },
                             ""entities"": {
                                 ""type"": ""array"",
@@ -55,7 +56,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Executes the describe_entities tool, returning metadata about all configured entities.
+        /// Executes the DescribeEntities tool, returning metadata about configured entities.
         /// </summary>
         public Task<CallToolResult> ExecuteAsync(
             JsonDocument? arguments,
@@ -66,14 +67,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             try
             {
-                // Cancellation check at the start
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // 1) Resolve required services & configuration
                 RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
-                // 2) Check if the tool is enabled in configuration before proceeding
                 if (!IsToolEnabled(runtimeConfig))
                 {
                     return Task.FromResult(McpResponseBuilder.BuildErrorResult(
@@ -82,12 +80,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         logger));
                 }
 
-                // 3) Parse arguments
                 (bool nameOnly, HashSet<string>? entityFilter) = ParseArguments(arguments, logger);
 
-                // 4) Build entity list
                 List<Dictionary<string, object?>> entityList = new();
-                int skippedEntities = 0;
 
                 if (runtimeConfig.Entities != null)
                 {
@@ -98,40 +93,26 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         string entityName = entityEntry.Key;
                         Entity entity = entityEntry.Value;
 
-                        // Apply entity filter if specified
                         if (!ShouldIncludeEntity(entityName, entityFilter))
                         {
                             continue;
                         }
 
-                        // Skip if entity MCP DML tools are disabled (when property is available)
-                        if (!IsEntityMcpEnabled(entityEntry, logger))
-                        {
-                            skippedEntities++;
-                            continue;
-                        }
-
-                        // TODO: Apply role-based filtering when available
-                        // Skip entities where the current role has no permissions
-
-                        // Build entity information based on nameOnly flag
                         try
                         {
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity);
+                                : BuildSlimEntityInfo(entityName, entity);
 
                             entityList.Add(entityInfo);
                         }
                         catch (Exception ex)
                         {
                             logger?.LogWarning(ex, "Failed to build info for entity {EntityName}", entityName);
-                            // Continue with other entities
                         }
                     }
                 }
 
-                // Check if any entities were found
                 if (entityList.Count == 0)
                 {
                     if (entityFilter != null && entityFilter.Count > 0)
@@ -139,13 +120,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
                             "EntitiesNotFound",
                             $"No entities found matching the filter: {string.Join(", ", entityFilter)}",
-                            logger));
-                    }
-                    else if (skippedEntities > 0)
-                    {
-                        return Task.FromResult(McpResponseBuilder.BuildErrorResult(
-                            "NoAccessibleEntities",
-                            "No entities are accessible with current permissions or MCP configuration.",
                             logger));
                     }
                     else
@@ -159,10 +133,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Sort entities by name for consistent output
                 entityList = entityList.OrderBy(e => e["name"]?.ToString() ?? string.Empty).ToList();
 
-                // 5) Build response - convert back to List<object> for serialization
                 List<object> finalEntityList = entityList.Cast<object>().ToList();
 
                 Dictionary<string, object?> responseData = new()
@@ -228,16 +200,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Checks if the tool is enabled in the configuration.
+        /// Determines whether the tool is enabled based on the specified runtime configuration.
         /// </summary>
+        /// <param name="runtimeConfig">The runtime configuration to evaluate. Must not be null.</param>
+        /// <returns><see langword="true"/> if the tool is enabled and the <c>DescribeEntities</c> property of <c>McpDmlTools</c>
+        /// is set to <see langword="true"/>; otherwise, <see langword="false"/>.</returns>
         private static bool IsToolEnabled(RuntimeConfig runtimeConfig)
         {
             return runtimeConfig.McpDmlTools?.DescribeEntities == true;
         }
 
         /// <summary>
-        /// Parses the tool arguments to extract nameOnly flag and entity filter.
+        /// Parses the input arguments to extract the 'nameOnly' flag and the optional entity filter list.
         /// </summary>
+        /// <param name="arguments">The arguments to parse</param>
+        /// <param name="logger">The logger</param>
+        /// <returns>A tuple containing the parsed 'nameOnly' flag and the optional entity filter list.</returns>
         private static (bool nameOnly, HashSet<string>? entityFilter) ParseArguments(JsonDocument? arguments, ILogger? logger)
         {
             bool nameOnly = false;
@@ -245,7 +223,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (arguments?.RootElement.ValueKind == JsonValueKind.Object)
             {
-                // Parse nameOnly flag
                 if (arguments.RootElement.TryGetProperty("nameOnly", out JsonElement nameOnlyElement))
                 {
                     if (nameOnlyElement.ValueKind == JsonValueKind.True || nameOnlyElement.ValueKind == JsonValueKind.False)
@@ -254,7 +231,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // Parse entities filter
                 if (arguments.RootElement.TryGetProperty("entities", out JsonElement entitiesElement) &&
                     entitiesElement.ValueKind == JsonValueKind.Array)
                 {
@@ -285,33 +261,23 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Determines if an entity should be included based on the filter.
+        /// Determines whether the specified entity should be included based on the provided entity filter.
         /// </summary>
+        /// <param name="entityName">The name of the entity to evaluate.</param>
+        /// <param name="entityFilter">A set of entity names to include. If <see langword="null"/> or empty, all entities are included.</param>
+        /// <returns><see langword="true"/> if the entity should be included; otherwise, <see langword="false"/>.</returns>
         private static bool ShouldIncludeEntity(string entityName, HashSet<string>? entityFilter)
         {
-            if (entityFilter == null || entityFilter.Count == 0)
-            {
-                return true;
-            }
-
-            return entityFilter.Contains(entityName);
+            return entityFilter == null || entityFilter.Count == 0 || entityFilter.Contains(entityName);
         }
 
         /// <summary>
-        /// Checks if MCP DML tools are enabled for a specific entity.
+        /// Creates a dictionary containing basic information about an entity.
         /// </summary>
-        private static bool IsEntityMcpEnabled(KeyValuePair<string, Entity> entityEntry, ILogger? logger)
-        {
-            // TODO: Implement when entity.Mcp.DmlTools property is available
-            logger?.LogInformation($"Entity {entityEntry.Key} not enabled for MCP.");
-
-            // For now, include all entities
-            return true;
-        }
-
-        /// <summary>
-        /// Builds basic entity information (name and description only).
-        /// </summary>
+        /// <param name="entityName">The name of the entity to include in the dictionary.</param>
+        /// <param name="entity">The entity object from which to extract additional information.</param>
+        /// <returns>A dictionary with two keys: "name", containing the entity name, and "description", containing the entity's
+        /// description or an empty string if the description is null.</returns>
         private static Dictionary<string, object?> BuildBasicEntityInfo(string entityName, Entity entity)
         {
             return new Dictionary<string, object?>
@@ -322,119 +288,75 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Builds full entity information including fields, permissions, etc.
+        /// Builds slim entity info: name, description, fields, parameters (for stored procs), permissions.
         /// </summary>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity)
+        private static Dictionary<string, object?> BuildSlimEntityInfo(string entityName, Entity entity)
         {
-            Dictionary<string, object?> entityInfo = BuildBasicEntityInfo(entityName, entity);
-
-            // Add entity type
-            entityInfo["type"] = entity.Source.Type.ToString();
-
-            // Add fields/parameters based on entity type
-            entityInfo["fields"] = BuildFieldsInfo(entity);
-
-            // Add permissions
-            entityInfo["permissions"] = BuildPermissionsInfo(entity);
-
-            // Add primary key information if available
-            if (entity.Source.KeyFields?.Length > 0)
+            Dictionary<string, object?> info = new()
             {
-                entityInfo["primaryKey"] = entity.Source.KeyFields;
+                ["name"] = entityName,
+                ["description"] = entity.Description ?? string.Empty,
+                ["fields"] = BuildFieldMetadataInfo(entity.Fields),
+            };
+
+            if (entity.Source.Type == EntitySourceType.StoredProcedure)
+            {
+                info["parameters"] = BuildParameterMetadataInfo(entity.Source.Parameters);
             }
 
-            // Add relationships if available
-            if (entity.Relationships?.Count > 0)
-            {
-                entityInfo["relationships"] = BuildRelationshipsInfo(entity.Relationships);
-            }
-
-            // Add mappings if available
-            if (entity.Mappings?.Count > 0)
-            {
-                entityInfo["mappings"] = entity.Mappings;
-            }
-
-            return entityInfo;
+            return info;
         }
 
         /// <summary>
-        /// Builds field information for the entity.
+        /// Builds a list of metadata information objects from the provided collection of fields.
         /// </summary>
-        private static List<object> BuildFieldsInfo(Entity entity)
+        /// <param name="fields">A list of <see cref="FieldMetadata"/> objects representing the fields to process. Can be null.</param>
+        /// <returns>A list of objects, each containing the name and description of a field. If <paramref name="fields"/> is
+        /// null, an empty list is returned.</returns>
+        private static List<object> BuildFieldMetadataInfo(List<FieldMetadata>? fields)
         {
-            List<object> fields = new();
+            List<object> result = new();
 
-            // For stored procedures, return parameters
-            if (entity.Source.Type == EntitySourceType.StoredProcedure && entity.Source.Parameters != null)
+            if (fields != null)
             {
-                foreach (KeyValuePair<string, object> parameter in entity.Source.Parameters)
+                foreach (FieldMetadata field in fields)
                 {
-                    fields.Add(new
+                    result.Add(new
                     {
-                        name = parameter.Key,
-                        parameterType = "stored_procedure_parameter",
-                        // TODO: Add type and description when available from metadata
-                        type = "unknown",
-                        value = parameter.Value?.ToString()
+                        name = field.Name,
+                        description = field.Description ?? string.Empty
                     });
                 }
             }
-            else if (entity.Source.Type == EntitySourceType.Table || entity.Source.Type == EntitySourceType.View)
-            {
-                // TODO: Add actual field information when metadata query is available
-                // For now, add a placeholder
-                fields.Add(new
-                {
-                    name = "_placeholder",
-                    description = "Field information will be available when metadata query is implemented"
-                });
-            }
 
-            return fields;
+            return result;
         }
 
         /// <summary>
-        /// Builds permissions information for the entity.
+        /// Builds a list of parameter metadata objects containing information about each parameter.
         /// </summary>
-        private static string[] BuildPermissionsInfo(Entity entity)
+        /// <param name="parameters">A list of <see cref="ParameterMetadata"/> objects representing the parameters to process. Can be null.</param>
+        /// <returns>A list of anonymous objects, each containing the parameter's name, whether it is required, its default
+        /// value, and its description. Returns an empty list if <paramref name="parameters"/> is null.</returns>
+        private static List<object> BuildParameterMetadataInfo(List<ParameterMetadata>? parameters)
         {
-            HashSet<string> permissions = new(StringComparer.OrdinalIgnoreCase);
+            List<object> result = new();
 
-            if (entity.Permissions != null)
+            if (parameters != null)
             {
-                foreach (EntityPermission permission in entity.Permissions)
+                foreach (ParameterMetadata param in parameters)
                 {
-                    foreach (EntityAction action in permission.Actions)
+                    result.Add(new
                     {
-                        permissions.Add(action.Action.ToString().ToUpperInvariant());
-                    }
+                        name = param.Name,
+                        required = param.Default == null, // required if no default
+                        @default = param.Default,
+                        description = param.Description ?? string.Empty
+                    });
                 }
             }
 
-            return permissions.OrderBy(p => p).ToArray();
-        }
-
-        /// <summary>
-        /// Builds relationships information for the entity.
-        /// </summary>
-        private static List<object> BuildRelationshipsInfo(IDictionary<string, EntityRelationship> relationships)
-        {
-            List<object> relationshipList = new();
-
-            foreach (KeyValuePair<string, EntityRelationship> rel in relationships)
-            {
-                relationshipList.Add(new
-                {
-                    name = rel.Key,
-                    targetEntity = rel.Value.TargetEntity,
-                    cardinality = rel.Value.Cardinality.ToString() ?? "unknown",
-                    sourceFields = rel.Value.SourceFields ?? Array.Empty<string>(),
-                    targetFields = rel.Value.TargetFields ?? Array.Empty<string>()
-                });
-            }
-
-            return relationshipList;
+            return result;
         }
     }
 }

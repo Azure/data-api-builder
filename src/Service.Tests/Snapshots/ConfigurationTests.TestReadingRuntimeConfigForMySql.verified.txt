@@ -1474,17 +1474,17 @@
           Object: books_view_all,
           Type: View
         },
-        GraphQL: {
-          Singular: books_view_all,
-          Plural: books_view_alls,
-          Enabled: true
-        },
         Fields: [
           {
             Name: id,
             PrimaryKey: true
           }
         ],
+        GraphQL: {
+          Singular: books_view_all,
+          Plural: books_view_alls,
+          Enabled: true
+        },
         Rest: {
           Enabled: true
         },
@@ -1556,11 +1556,6 @@
           Object: stocks_view_selected,
           Type: View
         },
-        GraphQL: {
-          Singular: stocks_view_selected,
-          Plural: stocks_view_selecteds,
-          Enabled: true
-        },
         Fields: [
           {
             Name: categoryid,
@@ -1571,6 +1566,11 @@
             PrimaryKey: true
           }
         ],
+        GraphQL: {
+          Singular: stocks_view_selected,
+          Plural: stocks_view_selecteds,
+          Enabled: true
+        },
         Rest: {
           Enabled: true
         },

@@ -3755,14 +3755,11 @@
       DateOnlyTable: {
         Source: {
           Object: date_only_table,
-          Type: Table
+          Type: Table,
+          KeyFields: [
+            event_date
+          ]
         },
-        Fields: [
-          {
-            Name: event_date,
-            PrimaryKey: true
-          }
-        ],
         GraphQL: {
           Singular: DateOnlyTable,
           Plural: DateOnlyTables,

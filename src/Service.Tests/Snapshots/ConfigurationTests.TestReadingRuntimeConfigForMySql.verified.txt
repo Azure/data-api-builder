@@ -1661,7 +1661,7 @@
         Source: {
           Object: books_publishers_view_composite_insertable,
           Type: View,
-           KeyFields: [
+          KeyFields: [
             id,
             publisher_id
           ]

@@ -33,6 +33,18 @@
           Object: MyTable,
           Type: Table
         },
+        Fields: [
+          {
+            Name: id,
+            Alias: Identity,
+            PrimaryKey: false
+          },
+          {
+            Name: name,
+            Alias: Company Name,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: MyEntity,
           Plural: MyEntities,
@@ -53,11 +65,7 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          id: Identity,
-          name: Company Name
-        }
+        ]
       }
     }
   ]

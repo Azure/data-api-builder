@@ -67,7 +67,6 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
                 List<ParameterMetadata> paramList = [];
                 foreach (JsonProperty prop in parametersElement.EnumerateObject())
                 {
-                    object? value = prop.Value.Deserialize<object>(innerOptions);
                     string? defaultValue = GetClrValue(prop.Value)?.ToString();
                     paramList.Add(new ParameterMetadata
                     {

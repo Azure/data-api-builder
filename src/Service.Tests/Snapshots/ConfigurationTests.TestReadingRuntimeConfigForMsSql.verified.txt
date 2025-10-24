@@ -521,18 +521,6 @@
             PrimaryKey: false
           }
         ],
-        Fields: [
-          {
-            Name: id,
-            Alias: id,
-            PrimaryKey: false
-          },
-          {
-            Name: title,
-            Alias: title,
-            PrimaryKey: false
-          }
-        ],
         GraphQL: {
           Singular: book,
           Plural: books,

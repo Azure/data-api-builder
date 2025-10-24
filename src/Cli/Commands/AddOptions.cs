@@ -65,6 +65,10 @@ namespace Cli.Commands
             parametersDescriptionCollection,
             parametersRequiredCollection,
             parametersDefaultCollection,
+            fieldsNameCollection,
+            fieldsAliasCollection,
+            fieldsDescriptionCollection,
+            fieldsPrimaryKeyCollection,
             config
         )
         {

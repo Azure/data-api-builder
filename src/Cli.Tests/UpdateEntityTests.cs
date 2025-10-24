@@ -1194,7 +1194,6 @@ namespace Cli.Tests
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
                 parametersDefaultCollection: null,
-                description: description,
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,

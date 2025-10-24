@@ -5463,6 +5463,46 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Test that command timeout is properly read from data source options and applied to connection string.
+        /// </summary>
+        [TestMethod]
+        public void TestCommandTimeoutFromDataSourceOptions()
+        {
+            // Test SQL Server
+            Dictionary<string, object> mssqlOptions = new()
+            {
+                { "command-timeout", 60 },
+                { "set-session-context", true }
+            };
+            DataSource mssqlDataSource = new(DatabaseType.MSSQL, "Server=localhost;Database=test;", mssqlOptions);
+            Assert.AreEqual(60, mssqlDataSource.GetCommandTimeout());
+
+            // Test PostgreSQL
+            Dictionary<string, object> pgOptions = new()
+            {
+                { "command-timeout", 120 }
+            };
+            DataSource pgDataSource = new(DatabaseType.PostgreSQL, "Host=localhost;Database=test;", pgOptions);
+            Assert.AreEqual(120, pgDataSource.GetCommandTimeout());
+
+            // Test MySQL
+            Dictionary<string, object> mysqlOptions = new()
+            {
+                { "command-timeout", 45 }
+            };
+            DataSource mysqlDataSource = new(DatabaseType.MySQL, "Server=localhost;Database=test;", mysqlOptions);
+            Assert.AreEqual(45, mysqlDataSource.GetCommandTimeout());
+
+            // Test default value when not specified
+            DataSource defaultDataSource = new(DatabaseType.MSSQL, "Server=localhost;Database=test;", new());
+            Assert.AreEqual(30, defaultDataSource.GetCommandTimeout());
+
+            // Test null options
+            DataSource nullOptionsDataSource = new(DatabaseType.MSSQL, "Server=localhost;Database=test;", null);
+            Assert.AreEqual(30, nullOptionsDataSource.GetCommandTimeout());
+        }
+
+        /// <summary>
         /// Reads configuration file for defined environment to acquire the connection string.
         /// CI/CD Pipelines and local environments may not have connection string set as environment variable.
         /// </summary>

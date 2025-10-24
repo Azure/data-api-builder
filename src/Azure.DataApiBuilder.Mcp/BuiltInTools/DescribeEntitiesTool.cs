@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         {
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildSlimEntityInfo(entityName, entity);
+                                : BuildFullEntityInfo(entityName, entity);
 
                             entityList.Add(entityInfo);
                         }
@@ -288,9 +288,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Builds slim entity info: name, description, fields, parameters (for stored procs), permissions.
+        /// Builds full entity info: name, description, fields, parameters (for stored procs), permissions.
         /// </summary>
-        private static Dictionary<string, object?> BuildSlimEntityInfo(string entityName, Entity entity)
+        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity)
         {
             Dictionary<string, object?> info = new()
             {
@@ -303,6 +303,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 info["parameters"] = BuildParameterMetadataInfo(entity.Source.Parameters);
             }
+
+            info["permissions"] = BuildPermissionsInfo(entity);
 
             return info;
         }
@@ -357,6 +359,29 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Build a list of permission metadata info
+        /// </summary>
+        /// <param name="entity">The entity object</param>
+        /// <returns>A list of permissions available to the entity</returns>
+        private static string[] BuildPermissionsInfo(Entity entity)
+        {
+            HashSet<string> permissions = new();
+
+            if (entity.Permissions != null)
+            {
+                foreach (EntityPermission permission in entity.Permissions)
+                {
+                    foreach (EntityAction action in permission.Actions)
+                    {
+                        permissions.Add(action.Action.ToString().ToUpperInvariant());
+                    }
+                }
+            }
+
+            return permissions.OrderBy(p => p).ToArray();
         }
     }
 }

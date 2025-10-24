@@ -2696,7 +2696,6 @@ namespace Cli
 
             foreach (FieldMetadata field in fields)
             {
-
                 if (!string.IsNullOrEmpty(field.Alias))
                 {
                     if (!aliases.Add(field.Alias))

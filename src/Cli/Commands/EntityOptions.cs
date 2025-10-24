@@ -25,8 +25,13 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string? config,
-            string? description)
+            string? description,
+            IEnumerable<string>? parametersNameCollection,
+            IEnumerable<string>? parametersDescriptionCollection,
+            IEnumerable<string>? parametersRequiredCollection,
+            IEnumerable<string>? parametersDefaultCollection,
+            string? config
+        )
             : base(config)
         {
             Entity = entity;
@@ -44,6 +49,10 @@ namespace Cli.Commands
             CacheEnabled = cacheEnabled;
             CacheTtl = cacheTtl;
             Description = description;
+            ParametersNameCollection = parametersNameCollection;
+            ParametersDescriptionCollection = parametersDescriptionCollection;
+            ParametersRequiredCollection = parametersRequiredCollection;
+            ParametersDefaultCollection = parametersDefaultCollection;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -91,5 +100,17 @@ namespace Cli.Commands
 
         [Option("description", Required = false, HelpText = "Description of the entity.")]
         public string? Description { get; }
+
+        [Option("parameters.name", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter names for stored procedure.")]
+        public IEnumerable<string>? ParametersNameCollection { get; }
+
+        [Option("parameters.description", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter descriptions for stored procedure.")]
+        public IEnumerable<string>? ParametersDescriptionCollection { get; }
+
+        [Option("parameters.required", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter required flags (true/false) for stored procedure.")]
+        public IEnumerable<string>? ParametersRequiredCollection { get; }
+
+        [Option("parameters.default", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter default values for stored procedure.")]
+        public IEnumerable<string>? ParametersDefaultCollection { get; }
     }
 }

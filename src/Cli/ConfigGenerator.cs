@@ -473,6 +473,7 @@ namespace Cli
         /// <summary>
         /// This method creates the source object for a new entity
         /// if the given source fields specified by the user are valid.
+        /// Supports both old (dictionary) and new (ParameterMetadata list) parameter formats.
         /// </summary>
         public static bool TryCreateSourceObjectForNewEntity(
             AddOptions options,
@@ -501,17 +502,53 @@ namespace Cli
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     objectType,
                     options.SourceParameters,
+                    options.ParametersNameCollection,
                     options.SourceKeyFields))
             {
                 return false;
             }
 
-            // Parses the string array to parameter Dictionary
-            if (!TryParseSourceParameterDictionary(
-                    options.SourceParameters,
-                    out Dictionary<string, object>? parametersDictionary))
+            // Check for both old and new parameter formats
+            bool hasOldParams = options.SourceParameters != null && options.SourceParameters.Any();
+            bool hasNewParams = options.ParametersNameCollection != null && options.ParametersNameCollection.Any();
+
+            if (hasOldParams && hasNewParams)
             {
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
                 return false;
+            }
+
+            List<ParameterMetadata>? parameters = null;
+            if (hasNewParams)
+            {
+                // Parse new format
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+
+                parameters = [];
+                for (int i = 0; i < names.Count; i++)
+                {
+                    parameters.Add(new ParameterMetadata
+                    {
+                        Name = names[i],
+                        Description = descriptions.ElementAtOrDefault(i),
+                        Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
+                        Default = defaults.ElementAtOrDefault(i)
+                    });
+                }
+            }
+            else if (hasOldParams)
+            {
+                // Parse old format and convert to new type
+                if (!TryParseSourceParameterDictionary(options.SourceParameters, out parameters))
+                {
+                    return false;
+                }
+
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+
             }
 
             string[]? sourceKeyFields = null;
@@ -524,7 +561,7 @@ namespace Cli
             if (!TryCreateSourceObject(
                     options.Source,
                     objectType,
-                    parametersDictionary,
+                    parameters,
                     sourceKeyFields,
                     out sourceObject))
             {
@@ -534,7 +571,6 @@ namespace Cli
 
             return true;
         }
-
         /// <summary>
         /// Tries to update the runtime settings based on the provided runtime options.
         /// </summary>
@@ -1820,10 +1856,12 @@ namespace Cli
             string updatedSourceName = options.Source ?? entity.Source.Object;
             string[]? updatedKeyFields = entity.Source.KeyFields;
             EntitySourceType? updatedSourceType = entity.Source.Type;
-            Dictionary<string, object>? updatedSourceParameters = entity.Source.Parameters;
 
-            // If SourceType provided by user is null,
-            // no update is required.
+            // Support for new parameter format
+            bool hasOldParams = options.SourceParameters is not null && options.SourceParameters.Any();
+            bool hasNewParams = options.ParametersNameCollection is not null && options.ParametersNameCollection.Any();
+
+            // If SourceType provided by user is not null, update type
             if (options.SourceType is not null)
             {
                 if (!EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? deserializedEntityType))
@@ -1833,7 +1871,6 @@ namespace Cli
                 }
 
                 updatedSourceType = (EntitySourceType)deserializedEntityType;
-
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
                     _logger.LogWarning(
@@ -1842,13 +1879,15 @@ namespace Cli
                 }
             }
 
-            // No need to validate parameter and key field usage when there are no changes to the source object defined in 'options'
+            // Validate correct pairing of parameters and key fields
             if ((options.SourceType is not null
-                || (options.SourceParameters is not null && options.SourceParameters.Any())
-                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any()))
+                || hasOldParams
+                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+                || hasNewParams)
                 && !VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     updatedSourceType,
                     options.SourceParameters,
+                    options.ParametersNameCollection,
                     options.SourceKeyFields))
             {
                 return false;
@@ -1856,23 +1895,61 @@ namespace Cli
 
             // Changing source object from stored-procedure to table/view
             // should automatically update the parameters to be null.
-            // Similarly from table/view to stored-procedure, key-fields
-            // should be marked null.
+            // Similarly from table/view to stored-procedure, key-fields should be marked null.
             if (EntitySourceType.StoredProcedure.Equals(updatedSourceType))
             {
                 updatedKeyFields = null;
             }
             else
             {
-                updatedSourceParameters = null;
+                hasOldParams = false;
+                hasNewParams = false;
             }
 
-            // If given SourceParameter is null or is Empty, no update is required.
-            // Else updatedSourceParameters will contain the parsed dictionary of parameters.
-            if (options.SourceParameters is not null && options.SourceParameters.Any() &&
-                !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
+            // Warn and error if both formats are provided
+            if (hasOldParams && hasNewParams)
             {
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
                 return false;
+            }
+
+            List<ParameterMetadata>? parameters = null;
+
+            if (hasNewParams)
+            {
+                // Parse new format
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+
+                parameters = [];
+                for (int i = 0; i < names.Count; i++)
+                {
+                    parameters.Add(new ParameterMetadata
+                    {
+                        Name = names[i],
+                        Description = descriptions.ElementAtOrDefault(i),
+                        Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
+                        Default = defaults.ElementAtOrDefault(i)
+                    });
+                }
+            }
+            else if (hasOldParams)
+            {
+                // Parse old format and convert to new type
+                if (!TryParseSourceParameterDictionary(options.SourceParameters, out parameters))
+                {
+                    return false;
+                }
+
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+            }
+
+            // In TryGetUpdatedSourceObjectWithOptions, before TryCreateSourceObject:
+            if (parameters == null && EntitySourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                parameters = entity.Source.Parameters?.ToList();
             }
 
             if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
@@ -1880,11 +1957,77 @@ namespace Cli
                 updatedKeyFields = options.SourceKeyFields.ToArray();
             }
 
+            if (hasNewParams && EntitySourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                List<ParameterMetadata> existingParams;
+                if (entity.Source.Parameters != null)
+                {
+                    existingParams = entity.Source.Parameters.ToList();
+                }
+                else
+                {
+                    existingParams = new List<ParameterMetadata>();
+                }
+
+                List<ParameterMetadata> mergedParams = new();
+
+                if (parameters != null)
+                {
+                    foreach (ParameterMetadata newParam in parameters)
+                    {
+                        ParameterMetadata? match = null;
+                        foreach (ParameterMetadata p in existingParams)
+                        {
+                            if (p.Name == newParam.Name)
+                            {
+                                match = p;
+                                break;
+                            }
+                        }
+
+                        if (match != null)
+                        {
+                            mergedParams.Add(new ParameterMetadata
+                            {
+                                Name = newParam.Name,
+                                Description = newParam.Description != null ? newParam.Description : match.Description,
+                                Required = newParam.Required,
+                                Default = newParam.Default != null ? newParam.Default : match.Default
+                            });
+                        }
+                        else
+                        {
+                            mergedParams.Add(newParam);
+                        }
+                    }
+                }
+
+                foreach (ParameterMetadata param in existingParams)
+                {
+                    bool found = false;
+                    foreach (ParameterMetadata p in mergedParams)
+                    {
+                        if (p.Name == param.Name)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        mergedParams.Add(param);
+                    }
+                }
+
+                parameters = mergedParams;
+            }
+
             // Try Creating Source Object with the updated values.
             if (!TryCreateSourceObject(
                     updatedSourceName,
                     updatedSourceType,
-                    updatedSourceParameters,
+                    parameters,
                     updatedKeyFields,
                     out updatedSourceObject))
             {

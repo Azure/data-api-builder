@@ -1872,7 +1872,7 @@
           Object: aow,
           Type: Table
         },
-         Fields: [
+        Fields: [
           {
             Name: DetailAssessmentAndPlanning,
             Alias: 始計,
@@ -1883,7 +1883,7 @@
             Alias: 作戰,
             PrimaryKey: false
           },
-        {
+          {
             Name: StrategicAttack,
             Alias: 謀攻,
             PrimaryKey: false

@@ -1662,7 +1662,8 @@
           Object: books_publishers_view_composite_insertable,
           Type: View,
            KeyFields: [
-            id
+            id,
+            publisher_id
           ]
         },
         GraphQL: {

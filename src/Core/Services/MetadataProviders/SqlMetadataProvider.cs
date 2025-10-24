@@ -455,11 +455,12 @@ namespace Azure.DataApiBuilder.Core.Services
             // Loop through parameters specified in config, throw error if not found in schema
             // else set runtime config defined default values.
             // Note: we defer type checking of parameters specified in config until request time
-            Dictionary<string, object>? configParameters = procedureEntity.Source.Parameters;
+            List<ParameterMetadata>? configParameters = procedureEntity.Source.Parameters;
             if (configParameters is not null)
             {
-                foreach ((string configParamKey, object configParamValue) in configParameters)
+                foreach (ParameterMetadata paramMeta in configParameters)
                 {
+                    string configParamKey = paramMeta.Name;
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         HandleOrRecordException(new DataApiBuilderException(
@@ -469,8 +470,12 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
                     else
                     {
-                        parameterDefinition.HasConfigDefault = true;
-                        parameterDefinition.ConfigDefaultValue = configParamValue?.ToString();
+                        // Map all metadata from config
+                        parameterDefinition.Description = paramMeta.Description;
+                        parameterDefinition.Required = paramMeta.Required;
+                        parameterDefinition.Default = paramMeta.Default;
+                        parameterDefinition.HasConfigDefault = paramMeta.Default is not null;
+                        parameterDefinition.ConfigDefaultValue = paramMeta.Default?.ToString();
                     }
                 }
             }
@@ -1167,25 +1172,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Store the dictionary containing result set field with its type as Columns
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
-        }
-
-        /// <summary>
-        /// Helper method to create params for the query.
-        /// </summary>
-        /// <param name="paramName">Common prefix of param names.</param>
-        /// <param name="paramValues">Values of the param.</param>
-        /// <returns></returns>
-        private static Dictionary<string, object> GetQueryParams(
-            string paramName,
-            object[] paramValues)
-        {
-            Dictionary<string, object> parameters = new();
-            for (int paramNumber = 0; paramNumber < paramValues.Length; paramNumber++)
-            {
-                parameters.Add($"{paramName}{paramNumber}", paramValues[paramNumber]);
-            }
-
-            return parameters;
         }
 
         /// <summary>

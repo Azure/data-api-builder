@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
@@ -1071,21 +1072,32 @@ namespace Azure.DataApiBuilder.Core.Services
         private static OpenApiSchema CreateSpRequestComponentSchema(Dictionary<string, ParameterDefinition> fields)
         {
             Dictionary<string, OpenApiSchema> properties = new();
+            HashSet<string> required = new();
 
-            foreach (string parameter in fields.Keys)
+            foreach (KeyValuePair<string, ParameterDefinition> kvp in fields)
             {
-                string typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(fields[parameter].SystemType).ToString().ToLower();
+                string parameter = kvp.Key;
+                ParameterDefinition def = kvp.Value;
+                string typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(def.SystemType).ToString().ToLower();
 
                 properties.Add(parameter, new OpenApiSchema()
                 {
-                    Type = typeMetadata
+                    Type = typeMetadata,
+                    Description = def.Description,
+                    Default = def.Default is not null ? new OpenApiString(def.Default) : null
                 });
+
+                if (def.Required == true)
+                {
+                    required.Add(parameter);
+                }
             }
 
             OpenApiSchema schema = new()
             {
                 Type = SCHEMA_OBJECT_TYPE,
-                Properties = properties
+                Properties = properties,
+                Required = required
             };
 
             return schema;

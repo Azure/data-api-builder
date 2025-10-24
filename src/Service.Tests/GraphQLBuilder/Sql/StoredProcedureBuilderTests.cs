@@ -87,17 +87,28 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             // Parameter collection used to create DatabaseObjectSource which is used to create a new entity object.
             Dictionary<string, object> configSourcedParameters = new() { { parameterName, JsonSerializer.SerializeToElement(configParamValue) } };
 
+            // Convert configSourcedParameters to List<ParameterMetadata>
+            List<ParameterMetadata> parameterMetadataList = configSourcedParameters
+                .Select(kvp => new ParameterMetadata
+                {
+                    Name = kvp.Key,
+                    Default = kvp.Value is JsonElement je
+                        ? je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString()
+                        : kvp.Value?.ToString()
+                })
+                .ToList();
+
             // Create a new entity where the GraphQL type is explicitly defined as Mutation in the runtime config.
             Entity spMutationEntity = GraphQLTestHelpers.GenerateStoredProcedureEntity(
                 graphQLTypeName: spMutationTypeName,
                 graphQLOperation: GraphQLOperation.Mutation,
-                parameters: configSourcedParameters);
+                parameters: parameterMetadataList);
 
             // Create a new entity where the GraphQL type is explicitly defined as Query in the runtime config.
             Entity spQueryEntity = GraphQLTestHelpers.GenerateStoredProcedureEntity(
                 graphQLTypeName: spQueryTypeName,
                 graphQLOperation: GraphQLOperation.Query,
-                parameters: configSourcedParameters);
+                parameters: parameterMetadataList);
 
             // Create the GraphQL type for the stored procedure entity.
             string spQueryEntityName = "spquery";

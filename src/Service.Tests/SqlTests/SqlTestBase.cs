@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -88,8 +87,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
 
-            Console.WriteLine($"Book KeyFields after config load: {string.Join(", ", runtimeConfig.Entities["Book"].Source.KeyFields ?? Array.Empty<string>())}");
-
             // Setting the rest.request-body-strict flag as per the test fixtures.
             if (!isRestBodyStrict)
             {
@@ -114,8 +111,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     entityName: "foo.magazines"),
             };
 
-            Console.WriteLine($"Book 1: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
-
             // Add table name collision testing entity to the config
             runtimeConfig = DatabaseEngine switch
             {
@@ -128,12 +123,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     keyfields: ["upc"])
             };
 
-            Console.WriteLine($"Book 2: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
-
             // Add custom entities for the test, if any.
             runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);
-
-            Console.WriteLine($"Book 3: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
 
             // Generate in memory runtime config provider that uses the config that we have modified
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
@@ -143,17 +134,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
             SetUpSQLMetadataProvider(runtimeConfigProvider);
-
-            Console.WriteLine($"Book 4: {(runtimeConfig.Entities["Book"] != null ? runtimeConfig.Entities["Book"].ToString() : string.Empty)}");
-
-            try
-            {
-                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(runtimeConfig, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DEBUG] Failed to serialize runtimeConfig: {ex.Message}");
-            }
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();

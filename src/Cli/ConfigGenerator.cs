@@ -1762,9 +1762,14 @@ namespace Cli
             else if (hasMappings || hasKeyFields)
             {
                 // If mappings or key-fields are provided, convert them to fields and remove legacy props
-                fields = [];
+                // Start with existing fields
+                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
 
-                // Legacy path: allow mappings and key-fields
+                // Build a dictionary for quick lookup and merging
+                Dictionary<string, FieldMetadata> fieldDict = existingFields
+                    .ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
+
+                // Parse mappings from options
                 if (hasMappings)
                 {
                     if (options.Map is null || !TryParseMappingDictionary(options.Map, out updatedMappings))
@@ -1775,11 +1780,20 @@ namespace Cli
 
                     foreach (KeyValuePair<string, string> mapping in updatedMappings)
                     {
-                        fields.Add(new FieldMetadata
+                        if (fieldDict.TryGetValue(mapping.Key, out FieldMetadata? existing) && existing != null)
                         {
-                            Name = mapping.Key,
-                            Alias = mapping.Value
-                        });
+                            // Update alias, preserve PK and description
+                            existing.Alias = mapping.Value ?? existing.Alias;
+                        }
+                        else
+                        {
+                            // New field from mapping
+                            fieldDict[mapping.Key] = new FieldMetadata
+                            {
+                                Name = mapping.Key,
+                                Alias = mapping.Value
+                            };
+                        }
                     }
                 }
 
@@ -1789,23 +1803,36 @@ namespace Cli
                 {
                     foreach (string key in existingKeys)
                     {
-                        FieldMetadata? field = fields.FirstOrDefault(f => string.Equals(f.Name, key, StringComparison.OrdinalIgnoreCase));
-                        if (field is not null)
+                        if (fieldDict.TryGetValue(key, out FieldMetadata? pkField) && pkField != null)
                         {
-                            field.PrimaryKey = true;
+                            pkField.PrimaryKey = true;
                         }
                         else
                         {
-                            fields.Add(new FieldMetadata { Name = key, PrimaryKey = true });
+                            fieldDict[key] = new FieldMetadata { Name = key, PrimaryKey = true };
                         }
                     }
                 }
+
+                // Final merged list, no duplicates
+                fields = fieldDict.Values.ToList();
 
                 // Remove legacy props only after we have safely embedded PKs into fields.
                 updatedSource = updatedSource with { KeyFields = null };
                 updatedMappings = null;
             }
+            else if (!hasFields && !hasMappings && !hasKeyFields && entity.Source.KeyFields?.Length > 0)
+            {
+                // If no fields, mappings, or key-fields are provided with update command, use the entity's key-fields added using add command.
+                fields = entity.Source.KeyFields.Select(k => new FieldMetadata
+                {
+                    Name = k,
+                    PrimaryKey = true
+                }).ToList();
 
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
             else
             {
                 fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
@@ -2812,7 +2839,6 @@ namespace Cli
 
             foreach (FieldMetadata field in fields)
             {
-
                 if (!string.IsNullOrEmpty(field.Alias))
                 {
                     if (!aliases.Add(field.Alias))

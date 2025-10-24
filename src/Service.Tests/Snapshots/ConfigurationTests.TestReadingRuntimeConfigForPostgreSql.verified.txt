@@ -1708,7 +1708,7 @@
       }
     },
     {
-      books_view_with_mapping: {        
+      books_view_with_mapping: {
         Source: {
           Object: books_view_with_mapping,
           Type: View

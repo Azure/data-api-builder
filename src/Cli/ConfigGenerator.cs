@@ -453,6 +453,7 @@ namespace Cli
             // Create new entity.
             Entity entity = new(
                 Source: source,
+                Fields: null,
                 Rest: restOptions,
                 GraphQL: graphqlOptions,
                 Permissions: permissionSettings,
@@ -1682,24 +1683,182 @@ namespace Cli
                 updatedRelationships[options.Relationship] = new_relationship;
             }
 
-            if (options.Map is not null && options.Map.Any())
+            bool hasFields = options.FieldsNameCollection != null && options.FieldsNameCollection.Count() > 0;
+            bool hasMappings = options.Map != null && options.Map.Any();
+            bool hasKeyFields = options.SourceKeyFields != null && options.SourceKeyFields.Any();
+
+            List<FieldMetadata>? fields;
+            if (hasFields)
             {
-                // Parsing mappings dictionary from Collection
-                if (!TryParseMappingDictionary(options.Map, out updatedMappings))
+                if (hasMappings && hasKeyFields)
                 {
+                    _logger.LogError("Entity cannot define 'fields', 'mappings', and 'key-fields' together. Please use only one.");
                     return false;
                 }
+
+                if (hasMappings)
+                {
+                    _logger.LogError("Entity cannot define both 'fields' and 'mappings'. Please use only one.");
+                    return false;
+                }
+
+                if (hasKeyFields)
+                {
+                    _logger.LogError("Entity cannot define both 'fields' and 'key-fields'. Please use only one.");
+                    return false;
+                }
+
+                // Merge updated fields with existing fields
+                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? [];
+                List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
+                Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
+                List<FieldMetadata> mergedFields = [];
+
+                foreach (FieldMetadata field in existingFields)
+                {
+                    if (updatedFieldsDict.TryGetValue(field.Name, out FieldMetadata? updatedField))
+                    {
+                        mergedFields.Add(new FieldMetadata
+                        {
+                            Name = updatedField.Name,
+                            Alias = updatedField.Alias ?? field.Alias,
+                            Description = updatedField.Description ?? field.Description,
+                            PrimaryKey = updatedField.PrimaryKey
+                        });
+                        updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
+                    }
+                    else
+                    {
+                        mergedFields.Add(field); // Keep existing field
+                    }
+                }
+
+                // Add any new fields that didn't exist before
+                mergedFields.AddRange(updatedFieldsDict.Values);
+
+                fields = mergedFields;
+
+                // If user didn't mark any PK in fields, carry over existing source key-fields
+                if (!fields.Any(f => f.PrimaryKey) && updatedSource.KeyFields is { Length: > 0 })
+                {
+                    foreach (string k in updatedSource.KeyFields)
+                    {
+                        FieldMetadata? f = fields.FirstOrDefault(f => string.Equals(f.Name, k, StringComparison.OrdinalIgnoreCase));
+                        if (f is not null)
+                        {
+                            f.PrimaryKey = true;
+                        }
+                        else
+                        {
+                            fields.Add(new FieldMetadata { Name = k, PrimaryKey = true });
+                        }
+                    }
+                }
+
+                // Remove legacy props if fields present
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else if (hasMappings || hasKeyFields)
+            {
+                // If mappings or key-fields are provided, convert them to fields and remove legacy props
+                // Start with existing fields
+                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
+
+                // Build a dictionary for quick lookup and merging
+                Dictionary<string, FieldMetadata> fieldDict = existingFields
+                    .ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
+
+                // Parse mappings from options
+                if (hasMappings)
+                {
+                    if (options.Map is null || !TryParseMappingDictionary(options.Map, out updatedMappings))
+                    {
+                        _logger.LogError("Failed to parse mappings from --map option.");
+                        return false;
+                    }
+
+                    foreach (KeyValuePair<string, string> mapping in updatedMappings)
+                    {
+                        if (fieldDict.TryGetValue(mapping.Key, out FieldMetadata? existing) && existing != null)
+                        {
+                            // Update alias, preserve PK and description
+                            existing.Alias = mapping.Value ?? existing.Alias;
+                        }
+                        else
+                        {
+                            // New field from mapping
+                            fieldDict[mapping.Key] = new FieldMetadata
+                            {
+                                Name = mapping.Key,
+                                Alias = mapping.Value
+                            };
+                        }
+                    }
+                }
+
+                // Always carry over existing PKs on the entity/update, not only when the user re-supplies --source.key-fields.
+                string[]? existingKeys = updatedSource.KeyFields;
+                if (existingKeys is not null && existingKeys.Length > 0)
+                {
+                    foreach (string key in existingKeys)
+                    {
+                        if (fieldDict.TryGetValue(key, out FieldMetadata? pkField) && pkField != null)
+                        {
+                            pkField.PrimaryKey = true;
+                        }
+                        else
+                        {
+                            fieldDict[key] = new FieldMetadata { Name = key, PrimaryKey = true };
+                        }
+                    }
+                }
+
+                // Final merged list, no duplicates
+                fields = fieldDict.Values.ToList();
+
+                // Remove legacy props only after we have safely embedded PKs into fields.
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else if (!hasFields && !hasMappings && !hasKeyFields && entity.Source.KeyFields?.Length > 0)
+            {
+                // If no fields, mappings, or key-fields are provided with update command, use the entity's key-fields added using add command.
+                fields = entity.Source.KeyFields.Select(k => new FieldMetadata
+                {
+                    Name = k,
+                    PrimaryKey = true
+                }).ToList();
+
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else
+            {
+                fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
+                if (entity.Mappings is not null || entity.Source?.KeyFields is not null)
+                {
+                    _logger.LogWarning("Using legacy 'mappings' and 'key-fields' properties. Consider using 'fields' for new entities.");
+                }
+            }
+
+            if (!ValidateFields(fields, out string errorMessage))
+            {
+                _logger.LogError(errorMessage);
+                return false;
             }
 
             Entity updatedEntity = new(
                 Source: updatedSource,
+                Fields: fields,
                 Rest: updatedRestDetails,
                 GraphQL: updatedGraphQLDetails,
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description);
+                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description
+                );
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
                 [options.Entity] = updatedEntity
@@ -2220,7 +2379,29 @@ namespace Cli
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
+            bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
+
+            // Additional validation: warn if fields are missing and MCP is enabled
+            if (isValid)
+            {
+                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+                {
+                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
+                    if (mcpEnabled)
+                    {
+                        foreach (KeyValuePair<string, Entity> entity in config.Entities)
+                        {
+                            if (entity.Value.Fields == null || !entity.Value.Fields.Any())
+                            {
+                                _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
+                                    "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                            }
+                        }
+                    }
+                }
+            }
+
+            return isValid;
         }
 
         /// <summary>
@@ -2615,6 +2796,69 @@ namespace Cli
                 _logger.LogError("Failed to update RuntimeConfig.AzureKeyVault with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Helper to build a list of FieldMetadata from UpdateOptions.
+        /// </summary>
+        private static List<FieldMetadata> ComposeFieldsFromOptions(UpdateOptions options)
+        {
+            List<FieldMetadata> fields = [];
+            if (options.FieldsNameCollection != null)
+            {
+                List<string> names = options.FieldsNameCollection.ToList();
+                List<string> aliases = options.FieldsAliasCollection?.ToList() ?? [];
+                List<string> descriptions = options.FieldsDescriptionCollection?.ToList() ?? [];
+                List<bool> keys = options.FieldsPrimaryKeyCollection?.ToList() ?? [];
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    fields.Add(new FieldMetadata
+                    {
+                        Name = names[i],
+                        Alias = aliases.Count > i ? aliases[i] : null,
+                        Description = descriptions.Count > i ? descriptions[i] : null,
+                        PrimaryKey = keys.Count > i && keys[i],
+                    });
+                }
+            }
+
+            return fields;
+        }
+
+        /// <summary>
+        /// Validates that the provided fields are valid against the database columns and constraints.
+        /// </summary>
+        private static bool ValidateFields(
+            List<FieldMetadata> fields,
+            out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            HashSet<string> aliases = [];
+            HashSet<string> keys = [];
+
+            foreach (FieldMetadata field in fields)
+            {
+                if (!string.IsNullOrEmpty(field.Alias))
+                {
+                    if (!aliases.Add(field.Alias))
+                    {
+                        errorMessage = $"Alias '{field.Alias}' is not unique within the entity.";
+                        return false;
+                    }
+                }
+
+                if (field.PrimaryKey)
+                {
+                    if (!keys.Add(field.Name))
+                    {
+                        errorMessage = $"Duplicate key field '{field.Name}' detected.";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
     }
 }

@@ -49,7 +49,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
             return ExecuteVerifyTest(options);
         }
@@ -82,7 +86,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -118,7 +126,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -158,7 +170,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
@@ -193,7 +209,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
 
             return ExecuteVerifyTest(options);
@@ -234,7 +254,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
 
             // Create VerifySettings and add all arguments to the method as parameters
@@ -271,7 +295,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: ["This is a test parameter description."],
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
                 );
 
             return ExecuteVerifyTest(options);
@@ -307,7 +335,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
                 );
 
             return ExecuteVerifyTest(options);
@@ -339,7 +371,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
 
             string config = INITIAL_CONFIG;
@@ -398,7 +434,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
                 );
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
@@ -462,7 +502,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
                 );
 
             VerifySettings settings = new();
@@ -502,7 +546,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
             );
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
@@ -545,7 +593,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: []
                 );
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);

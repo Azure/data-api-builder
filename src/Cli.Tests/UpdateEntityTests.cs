@@ -1030,6 +1030,7 @@ namespace Cli.Tests
 
             Entity sampleEntity1 = new(
                 Source: new("SOURCE1", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("SOURCE1", "SOURCE1s"),
                 Permissions: new[] { permissionForEntity },
@@ -1040,6 +1041,7 @@ namespace Cli.Tests
             // entity with graphQL disabled
             Entity sampleEntity2 = new(
                 Source: new("SOURCE2", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("SOURCE2", "SOURCE2s", false),
                 Permissions: new[] { permissionForEntity },
@@ -1191,7 +1193,11 @@ namespace Cli.Tests
                 parametersNameCollection: null,
                 parametersDescriptionCollection: null,
                 parametersRequiredCollection: null,
-                parametersDefaultCollection: null
+                parametersDefaultCollection: null,
+                fieldsNameCollection: null,
+                fieldsAliasCollection: null,
+                fieldsDescriptionCollection: null,
+                fieldsPrimaryKeyCollection: null
             );
         }
 

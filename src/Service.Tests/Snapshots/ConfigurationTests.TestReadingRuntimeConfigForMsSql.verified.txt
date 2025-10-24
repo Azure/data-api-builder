@@ -521,6 +521,18 @@
             PrimaryKey: false
           }
         ],
+        Fields: [
+          {
+            Name: id,
+            Alias: id,
+            PrimaryKey: false
+          },
+          {
+            Name: title,
+            Alias: title,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: book,
           Plural: books,
@@ -1644,6 +1656,13 @@
           Plural: SupportedTypes,
           Enabled: true
         },
+        Fields: [
+          {
+            Name: id,
+            Alias: typeid,
+            PrimaryKey: false
+          }
+        ],
         Rest: {
           Enabled: true
         },
@@ -2134,15 +2153,15 @@
           Type: View
         },
         Fields: [
-        {
-          Name: id,
-          PrimaryKey: true
-        },
-        {
-          Name: pub_id,
-          PrimaryKey: true
-        }
-      ],
+          {
+            Name: id,
+            PrimaryKey: true
+          },
+          {
+            Name: pub_id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_publishers_view_composite,
           Plural: books_publishers_view_composites,
@@ -2184,12 +2203,18 @@
       books_publishers_view_composite_insertable: {
         Source: {
           Object: books_publishers_view_composite_insertable,
-          Type: View,
-          KeyFields: [
-            id,
-            publisher_id
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: id,
+            PrimaryKey: true
+          },
+          {
+            Name: publisher_id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_publishers_view_composite_insertable,
           Plural: books_publishers_view_composite_insertables,
@@ -3743,11 +3768,14 @@
       DateOnlyTable: {
         Source: {
           Object: date_only_table,
-          Type: Table,
-          KeyFields: [
-            event_date
-          ]
+          Type: Table
         },
+        Fields: [
+          {
+            Name: event_date,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: DateOnlyTable,
           Plural: DateOnlyTables,

@@ -1660,12 +1660,18 @@
       books_publishers_view_composite_insertable: {
         Source: {
           Object: books_publishers_view_composite_insertable,
-          Type: View,
-          KeyFields: [
-            id,
-            publisher_id
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: id,
+            PrimaryKey: true
+          },
+          {
+            Name: publisher_id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_publishers_view_composite_insertable,
           Plural: books_publishers_view_composite_insertables,
@@ -2214,18 +2220,18 @@
           Type: Table
         },
         Fields: [
-        {
-          Name: id,
-          Alias: bkid,
-          PrimaryKey: false
-        },
-        {
-          Name: bkname,
-          Alias: name,
-          PrimaryKey: false
-        }
-       ],
-       GraphQL: {
+          {
+            Name: id,
+            Alias: bkid,
+            PrimaryKey: false
+          },
+          {
+            Name: bkname,
+            Alias: name,
+            PrimaryKey: false
+          }
+        ],
+        GraphQL: {
           Singular: MappedBookmarks,
           Plural: MappedBookmarks,
           Enabled: true

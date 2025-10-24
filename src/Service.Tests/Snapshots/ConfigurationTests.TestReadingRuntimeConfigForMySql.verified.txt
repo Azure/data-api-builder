@@ -1660,18 +1660,11 @@
       books_publishers_view_composite_insertable: {
         Source: {
           Object: books_publishers_view_composite_insertable,
-          Type: View
+          Type: View,
+           KeyFields: [
+            id
+          ]
         },
-        Fields: [
-          {
-            Name: id,
-            PrimaryKey: true
-          },
-          {
-            Name: publisher_id,
-            PrimaryKey: true
-          }
-        ],
         GraphQL: {
           Singular: books_publishers_view_composite_insertable,
           Plural: books_publishers_view_composite_insertables,

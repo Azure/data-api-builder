@@ -1133,60 +1133,35 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     List<string> pkFields = new();
 
-                    Console.WriteLine($"Entity: {entityName}, FieldsCount: {entity.Fields?.Count ?? 0}, KeyFieldsCount: {entity.Source.KeyFields?.Count() ?? 0}");
-
                     // Resolve PKs from fields first
                     if (entity.Fields is not null && entity.Fields.Any())
                     {
-                        Console.WriteLine($"Resolving PKs from entity fields for Entity: {entityName}");
                         pkFields = entity.Fields
                             .Where(f => f.PrimaryKey)
                             .Select(f => f.Name)
                             .ToList();
-                        Console.WriteLine($"Resolved PKs from entity fields for Entity: {entityName}, PKs: {string.Join(", ", pkFields)}");
                     }
 
                     // Fallback to key-fields from config
                     if (pkFields.Count == 0 && entity.Source.KeyFields is not null)
                     {
-                        Console.WriteLine($"Falling back to entity source key-fields for Entity: {entityName}");
                         pkFields = entity.Source.KeyFields.ToList();
-                        Console.WriteLine($"Resolved PKs from entity source key-fields for Entity: {entityName}, PKs: {string.Join(", ", pkFields)}");
                     }
 
                     // If still empty, fallback to DB schema PKs
                     if (pkFields.Count == 0)
                     {
-                        Console.WriteLine($"Falling back to DB schema PKs for Entity: {entityName}");
                         DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
                             entityName,
                             GetSchemaName(entityName),
                             GetDatabaseObjectName(entityName));
 
-                        try
-                        {
-                            if (dataTable.PrimaryKey.Length == 0)
-                            {
-                                Console.WriteLine($"Warning: No primary key defined in database schema for Entity: {entityName}. Consider defining primary key in entity fields or source key-fields in configuration.");
-                            }
-
-                            Console.WriteLine($"DataTable Primary Keys Count for Entity: {entityName} is {dataTable.PrimaryKey.Length}");
-                            Console.WriteLine($"DataTable Columns for Entity: {entityName} are {string.Join(", ", dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName))}");
-
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Error while accessing PrimaryKey for Entity: {entityName}. Exception: {ex.Message}");
-                        }
-
                         pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
-
-                        Console.WriteLine($"Inferred PKs from DB Schema for Entity: {entityName}, PKs: {string.Join(", ", pkFields)}");
                     }
 
                     // Final safeguard
                     pkFields ??= new List<string>();
-                    Console.WriteLine($"Final PKs for Entity: {entityName}, PKs: {string.Join(", ", pkFields)}, Count: {pkFields.Count} ");
+
                     await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
@@ -1198,8 +1173,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     List<string> pkFields = new();
 
-                    Console.WriteLine($"Entity: {entityName}, FieldsCount: {entity.Fields?.Count ?? 0}, KeyFieldsCount: {entity.Source.KeyFields?.Count() ?? 0}");
-
                     // Resolve PKs from fields first
                     if (entity.Fields is not null && entity.Fields.Any())
                     {
@@ -1224,12 +1197,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             GetDatabaseObjectName(entityName));
 
                         pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
-
-                        Console.WriteLine($"Inferred PKs from DB Schema for Entity: {entityName}, PKs: {string.Join(", ", pkFields)}");
                     }
-
-                    // Final safeguard
-                    pkFields ??= new List<string>();
 
                     ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
                     await PopulateSourceDefinitionAsync(

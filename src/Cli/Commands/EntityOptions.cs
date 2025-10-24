@@ -26,12 +26,16 @@ namespace Cli.Commands
             string? cacheEnabled,
             string? cacheTtl,
             string? description,
+            IEnumerable<string>? parametersNameCollection,
+            IEnumerable<string>? parametersDescriptionCollection,
+            IEnumerable<string>? parametersRequiredCollection,
+            IEnumerable<string>? parametersDefaultCollection,
             IEnumerable<string>? fieldsNameCollection,
             IEnumerable<string>? fieldsAliasCollection,
             IEnumerable<string>? fieldsDescriptionCollection,
             IEnumerable<bool>? fieldsPrimaryKeyCollection,
             string? config
-            )
+        )
             : base(config)
         {
             Entity = entity;
@@ -49,6 +53,10 @@ namespace Cli.Commands
             CacheEnabled = cacheEnabled;
             CacheTtl = cacheTtl;
             Description = description;
+            ParametersNameCollection = parametersNameCollection;
+            ParametersDescriptionCollection = parametersDescriptionCollection;
+            ParametersRequiredCollection = parametersRequiredCollection;
+            ParametersDefaultCollection = parametersDefaultCollection;
             FieldsNameCollection = fieldsNameCollection;
             FieldsAliasCollection = fieldsAliasCollection;
             FieldsDescriptionCollection = fieldsDescriptionCollection;
@@ -100,6 +108,18 @@ namespace Cli.Commands
 
         [Option("description", Required = false, HelpText = "Description of the entity.")]
         public string? Description { get; }
+
+        [Option("parameters.name", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter names for stored procedure.")]
+        public IEnumerable<string>? ParametersNameCollection { get; }
+
+        [Option("parameters.description", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter descriptions for stored procedure.")]
+        public IEnumerable<string>? ParametersDescriptionCollection { get; }
+
+        [Option("parameters.required", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter required flags (true/false) for stored procedure.")]
+        public IEnumerable<string>? ParametersRequiredCollection { get; }
+
+        [Option("parameters.default", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter default values for stored procedure.")]
+        public IEnumerable<string>? ParametersDefaultCollection { get; }
 
         [Option("fields.name", Required = false, Separator = ',', HelpText = "Name of the database column to expose as a field.")]
         public IEnumerable<string>? FieldsNameCollection { get; }

@@ -755,23 +755,35 @@
                       "description": "Database object name"
                     },
                     "parameters": {
-                      "type": "object",
-                      "description": "Dictionary of parameters and their values",
-                      "patternProperties": {
-                        "^.*$": {
-                          "oneOf": [
-                            {
-                              "type": "boolean"
-                            },
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "number"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "description": "Dictionary of parameters and their values (deprecated)",
+                          "patternProperties": {
+                            "^.*$": {
+                              "oneOf": [
+                                { "type": "boolean" },
+                                { "type": "string" },
+                                { "type": "number" }
+                              ]
                             }
-                          ]
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "description": "Array of parameter objects with metadata",
+                          "items": {
+                            "type": "object",
+                            "required": ["name"],
+                            "properties": {
+                              "name": { "type": "string", "description": "Parameter name" },
+                              "required": { "type": "boolean", "description": "Is parameter required" },
+                              "default": { "type": ["string", "number", "boolean", "null"], "description": "Default value" },
+                              "description": { "type": "string", "description": "Parameter description. Since descriptions for multiple parameters are provided as a comma-separated string, individual parameter descriptions must not contain a comma (',')." }
+                            }
+                          }
                         }
-                      }
+                      ]
                     },
                     "key-fields": {
                       "type": "array",

@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             GraphQLOperation? graphQLOperation,
             string[] permissionOperations = null,
             string dbObjectName = "foo",
-            Dictionary<string, object> parameters = null
+            List<ParameterMetadata> parameters = null
             )
         {
             IEnumerable<EntityAction> actions = (permissionOperations ?? new string[] { }).Select(a => new EntityAction(EnumExtensions.Deserialize<EntityActionOperation>(a), null, new(null, null)));

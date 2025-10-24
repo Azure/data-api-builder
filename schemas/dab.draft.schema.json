@@ -806,7 +806,7 @@
                   "name": { "type": "string", "description": "Database column name." },
                   "alias": { "type": "string", "description": "Exposed name for the field." },
                   "description": { "type": "string", "description": "Field description." },
-                  "primary-key": { "type": "boolean", "description": "Is this field a primary key?" }
+                  "primary-key": { "type": "boolean", "description": "Indicates whether this field is a primary key." }
                 },
                 "required": ["name"]
               },

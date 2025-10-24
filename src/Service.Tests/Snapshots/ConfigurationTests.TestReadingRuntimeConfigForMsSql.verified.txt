@@ -2134,15 +2134,15 @@
           Type: View
         },
         Fields: [
-        {
-          Name: id,
-          PrimaryKey: true
-        },
-        {
-          Name: pub_id,
-          PrimaryKey: true
-        }
-      ],
+          {
+            Name: id,
+            PrimaryKey: true
+          },
+          {
+            Name: pub_id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_publishers_view_composite,
           Plural: books_publishers_view_composites,

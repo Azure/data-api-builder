@@ -374,18 +374,18 @@
           Object: books,
           Type: Table
         },
-         Fields: [
-           {
-             Name: id,
-             Alias: id,
-             PrimaryKey: false
-           },
-           {
-             Name: title,
-             Alias: title,
-             PrimaryKey: false
-           }
-         ],
+        Fields: [
+          {
+            Name: id,
+            Alias: id,
+            PrimaryKey: false
+          },
+          {
+            Name: title,
+            Alias: title,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: book,
           Plural: books,
@@ -1872,7 +1872,7 @@
           Object: aow,
           Type: Table
         },
-         Fields: [
+        Fields: [
           {
             Name: DetailAssessmentAndPlanning,
             Alias: 始計,
@@ -1883,7 +1883,7 @@
             Alias: 作戰,
             PrimaryKey: false
           },
-        {
+          {
             Name: StrategicAttack,
             Alias: 謀攻,
             PrimaryKey: false
@@ -2214,18 +2214,18 @@
           Type: Table
         },
         Fields: [
-        {
-          Name: id,
-          Alias: bkid,
-          PrimaryKey: false
-        },
-        {
-          Name: bkname,
-          Alias: name,
-          PrimaryKey: false
-        }
-       ],
-       GraphQL: {
+          {
+            Name: id,
+            Alias: bkid,
+            PrimaryKey: false
+          },
+          {
+            Name: bkname,
+            Alias: name,
+            PrimaryKey: false
+          }
+        ],
+        GraphQL: {
           Singular: MappedBookmarks,
           Plural: MappedBookmarks,
           Enabled: true

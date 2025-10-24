@@ -335,17 +335,17 @@ namespace Cli
         /// </summary>
         /// <param name="sourceType">Type of the source object.</param>
         /// <param name="parameters">IEnumerable of strings containing parameters for stored procedures (old format).</param>
-        /// <param name="parametersName">IEnumerable of strings containing parameter names for stored procedures (new format).</param>
+        /// <param name="parametersNameCollection">IEnumerable of strings containing parameter names for stored procedures (new format).</param>
         /// <param name="keyFields">IEnumerable of strings containing key columns for tables/views.</param>
         /// <returns>True if the pairing is valid; otherwise, false.</returns>
         public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
             EntitySourceType? sourceType,
             IEnumerable<string>? parameters,           // old format
-            IEnumerable<string>? parametersName,       // new format
+            IEnumerable<string>? parametersNameCollection,       // new format
             IEnumerable<string>? keyFields)
         {
             bool hasOldParams = parameters is not null && parameters.Any();
-            bool hasNewParams = parametersName is not null && parametersName.Any();
+            bool hasNewParams = parametersNameCollection is not null && parametersNameCollection.Any();
 
             if (sourceType is EntitySourceType.StoredProcedure)
             {

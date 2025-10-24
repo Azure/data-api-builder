@@ -1656,13 +1656,6 @@
           Plural: SupportedTypes,
           Enabled: true
         },
-        Fields: [
-          {
-            Name: id,
-            Alias: typeid,
-            PrimaryKey: false
-          }
-        ],
         Rest: {
           Enabled: true
         },

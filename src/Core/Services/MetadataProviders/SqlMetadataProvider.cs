@@ -217,13 +217,33 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name)
         {
-            Dictionary<string, string>? backingColumnsToExposedNamesMap;
-            if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out backingColumnsToExposedNamesMap))
+            if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out Dictionary<string, string>? backingToExposed))
             {
                 throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
             }
 
-            return backingColumnsToExposedNamesMap.TryGetValue(backingFieldName, out name);
+            if (backingToExposed.TryGetValue(backingFieldName, out name))
+            {
+                return true;
+            }
+
+            if (_entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
+            {
+                // Find the field by backing name and use its Alias if present.
+                FieldMetadata? matched = entityDefinition
+                    .Fields
+                    .FirstOrDefault(f => f.Name.Equals(backingFieldName, StringComparison.OrdinalIgnoreCase)
+                                        && !string.IsNullOrEmpty(f.Alias));
+
+                if (matched is not null)
+                {
+                    name = matched.Alias!;
+                    return true;
+                }
+            }
+
+            name = null;
+            return false;
         }
 
         /// <inheritdoc />
@@ -1318,36 +1338,71 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             try
             {
-                // For StoredProcedures, result set definitions become the column definition.
-                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                // Build case-insensitive maps per entity.
+                Dictionary<string, string> backToExposed = new(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> exposedToBack = new(StringComparer.OrdinalIgnoreCase);
+
+                // Pull definitions.
+                _entities.TryGetValue(entityName, out Entity? entity);
                 SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                foreach (string columnName in sourceDefinition.Columns.Keys)
+
+                // 1) Prefer new-style fields (backing = f.Name, exposed = f.Alias ?? f.Name)
+                if (entity?.Fields is not null)
                 {
-                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
+                    foreach (FieldMetadata f in entity.Fields)
                     {
-                        EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
-                        EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
+                        string backing = f.Name;
+                        string exposed = string.IsNullOrWhiteSpace(f.Alias) ? backing : f.Alias!;
+                        backToExposed[backing] = exposed;
+                        exposedToBack[exposed] = backing;
                     }
                 }
+
+                // 2) Overlay legacy mappings (backing -> alias) only where we don't already have an alias from fields.
+                if (entity?.Mappings is not null)
+                {
+                    foreach (KeyValuePair<string, string> kvp in entity.Mappings)
+                    {
+                        string backing = kvp.Key;
+                        string exposed = kvp.Value;
+
+                        // If fields already provided an alias for this backing column, keep fields precedence.
+                        if (!backToExposed.ContainsKey(backing))
+                        {
+                            backToExposed[backing] = exposed;
+                        }
+
+                        // Always ensure reverse map is coherent (fields still take precedence if the same exposed already exists).
+                        if (!exposedToBack.ContainsKey(exposed))
+                        {
+                            exposedToBack[exposed] = backing;
+                        }
+                    }
+                }
+
+                // 3) Ensure all physical columns are mapped (identity default).
+                foreach (string backing in sourceDefinition.Columns.Keys)
+                {
+                    if (!backToExposed.ContainsKey(backing))
+                    {
+                        backToExposed[backing] = backing;
+                    }
+
+                    string exposed = backToExposed[backing];
+                    if (!exposedToBack.ContainsKey(exposed))
+                    {
+                        exposedToBack[exposed] = backing;
+                    }
+                }
+
+                // 4) Store maps for runtime
+                EntityBackingColumnsToExposedNames[entityName] = backToExposed;
+                EntityExposedNamesToBackingColumnNames[entityName] = exposedToBack;
             }
             catch (Exception e)
             {
                 HandleOrRecordException(e);
             }
-        }
-
-        /// <summary>
-        /// Obtains the underlying mapping that belongs
-        /// to a given entity.
-        /// </summary>
-        /// <param name="entityName">entity whose map we get.</param>
-        /// <returns>mapping belonging to entity.</returns>
-        private Dictionary<string, string>? GetMappingForEntity(string entityName)
-        {
-            _entities.TryGetValue(entityName, out Entity? entity);
-            return entity?.Mappings;
         }
 
         /// <summary>

@@ -519,6 +519,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Entity requiredEntity = new(
                 Health: new(enabled: enableEntityHealth),
                 Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: enableEntityRest),
                 GraphQL: new("book", "bookLists", enableEntityGraphQL),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },

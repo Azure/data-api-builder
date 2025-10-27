@@ -423,17 +423,29 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 directives.Add(authZDirective!);
             }
 
+            // Determine the exposed column name considering mappings and aliases
             string exposedColumnName = columnName;
             if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
             {
                 exposedColumnName = columnAlias;
             }
 
+            // Apply alias if present (alias overrides mapping)
+            FieldMetadata? fieldMetadata = null;
+            if (configEntity.Fields is not null)
+            {
+                fieldMetadata = configEntity.Fields.FirstOrDefault(f => f.Name == columnName);
+                if (fieldMetadata != null && !string.IsNullOrEmpty(fieldMetadata.Alias))
+                {
+                    exposedColumnName = fieldMetadata.Alias;
+                }
+            }
+
             NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
             FieldDefinitionNode field = new(
                 location: null,
                 new(exposedColumnName),
-                description: null,
+                description: fieldMetadata?.Description is null ? null : new StringValueNode(fieldMetadata.Description),
                 new List<InputValueDefinitionNode>(),
                 column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
                 directives);

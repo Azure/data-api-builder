@@ -2596,7 +2596,7 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
 
                 // MCP request
-                await Task.Delay(2000);	
+                await Task.Delay(2000);
                 object mcpPayload = new
                 {
                     jsonrpc = "2.0",

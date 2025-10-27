@@ -2596,17 +2596,17 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
 
                 // MCP request
-                await Task.Delay(2000);
                 object mcpPayload = new
                 {
                     jsonrpc = "2.0",
                     id = 1,
-                    method = "tools/call"
+                    method = "tools/list"
                 };
                 HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
                 {
                     Content = JsonContent.Create(mcpPayload)
                 };
+                mcpRequest.Headers.Add("Accept", "*/*");
                 HttpResponseMessage mcpResponse = await client.SendAsync(mcpRequest);
                 Assert.AreEqual(expectedStatusCodeForMcp, mcpResponse.StatusCode);
             }

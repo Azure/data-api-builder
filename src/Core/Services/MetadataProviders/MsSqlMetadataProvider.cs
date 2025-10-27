@@ -253,6 +253,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // GraphQL is enabled/disabled. The linking object definitions are not exposed in the schema to the user.
             Entity linkingEntity = new(
                 Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
+                Fields: null,
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
                 GraphQL: new(Singular: linkingEntityName, Plural: linkingEntityName, Enabled: false),
                 Permissions: Array.Empty<EntityPermission>(),

@@ -388,7 +388,7 @@ INSERT INTO books(id, title, publisher_id)
         (17, 'CONN%_CONN', 1234),
         (18, '[Special Book]', 1234),
         (19, 'ME\\YOU', 1234),
-        (20, 'C:\\LIFE', 1234),
+        (20, 'C:\\\\LIFE', 1234),
         (21, '', 1234);
 INSERT INTO book_website_placements(book_id, price) VALUES (1, 100), (2, 50), (3, 23), (5, 33);
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');

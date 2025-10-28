@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                     WITHOUT_ARRAY_WRAPPER
             ";
 
-            await TestStoredProcedureMutationForDeletion(dbQueryToVerifyDeletion, 21, 20);
+            await TestStoredProcedureMutationForDeletion(dbQueryToVerifyDeletion);
         }
 
         /// <summary>

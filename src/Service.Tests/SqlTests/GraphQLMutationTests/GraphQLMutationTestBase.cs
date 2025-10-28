@@ -244,7 +244,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> If the intended book is deleted from the DB and
         /// verifies the response.
         /// </summary>
-        public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion, int expectedOriginalMaxId, int expectedFinalMaxId)
+        public async Task TestStoredProcedureMutationForDeletion(string dbQueryToVerifyDeletion)
         {
             string graphQLMutationName = "executeDeleteLastInsertedBook";
             string graphQLMutation = @"
@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
-            Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), expectedOriginalMaxId);
+            Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), 21);
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
             // Stored Procedure didn't return anything
@@ -266,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             // check to verify new element is inserted
             string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
-            Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), expectedFinalMaxId);
+            Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 20);
         }
 
         public async Task InsertMutationOnTableWithTriggerWithNonAutoGenPK(string dbQuery)

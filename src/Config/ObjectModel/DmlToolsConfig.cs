@@ -116,12 +116,12 @@ public record DmlToolsConfig
         return new DmlToolsConfig
         {
             AllToolsEnabled = enabled,
-            DescribeEntities = null,
-            CreateRecord = null,
-            ReadRecords = null,
-            UpdateRecord = null,
-            DeleteRecord = null,
-            ExecuteEntity = null
+            DescribeEntities = enabled,
+            CreateRecord = enabled,
+            ReadRecords = enabled,
+            UpdateRecord = enabled,
+            DeleteRecord = enabled,
+            ExecuteEntity = enabled
         };
     }
 

@@ -4493,6 +4493,52 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         /// <summary>
+        /// Validates that a custom OpenAPI description configured in the runtime options
+        /// is surfaced in the generated OpenAPI document.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task OpenApi_UsesCustomDescriptionFromRuntimeOptions()
+        {
+            const string EXPECTED_DESCRIPTION = "This API provides access to the company database. Use these endpoints to query and manage data.";
+
+            Entity entity = new(
+                Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: new(Enabled: true),
+                GraphQL: new("", "", false),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", entity }
+            };
+
+            CreateCustomConfigFile(entityMap, enableGlobalRest: true, openApiDescription: EXPECTED_DESCRIPTION);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            HttpRequestMessage readOpenApiDocumentRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{OpenApiDocumentor.OPENAPI_ROUTE}");
+            HttpResponseMessage response = await client.SendAsync(readOpenApiDocumentRequest);
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+
+            ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
+            JsonElement infoElement = responseProperties[OpenApiDocumentorConstants.TOPLEVELPROPERTY_INFO];
+            Assert.IsTrue(infoElement.TryGetProperty("description", out JsonElement descriptionElement), "OpenAPI info section should include description.");
+            Assert.AreEqual(EXPECTED_DESCRIPTION, descriptionElement.GetString());
+        }
+
+        /// <summary>
         /// This test validates that DAB properly creates and returns a nextLink with a single $after
         /// query parameter when sending paging requests.
         /// The first request initiates a paging workload, meaning the response is expected to have a nextLink.
@@ -4997,7 +5043,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="entityMap">Collection of entityName -> Entity object.</param>
         /// <param name="enableGlobalRest">flag to enable or disabled REST globally.</param>
         /// <param name="paginationOptions">Optional pagination options to use in the runtime config.</param>
-        private static void CreateCustomConfigFile(Dictionary<string, Entity> entityMap, bool enableGlobalRest = true, PaginationOptions paginationOptions = null)
+        private static void CreateCustomConfigFile(
+            Dictionary<string, Entity> entityMap,
+            bool enableGlobalRest = true,
+            PaginationOptions paginationOptions = null,
+            string openApiDescription = null)
         {
             DataSource dataSource = new(
                 DatabaseType.MSSQL,
@@ -5012,12 +5062,14 @@ type Planet @model(name:""PlanetAlias"") {
                     GraphQL: new(Enabled: true),
                     Mcp: new(Enabled: true),
                     Host: hostOptions,
+                    OpenApiDescription: openApiDescription,
                     Pagination: paginationOptions)
                 : new(
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: true),
                     Mcp: new(Enabled: true),
-                    Host: hostOptions);
+                    Host: hostOptions,
+                    OpenApiDescription: openApiDescription);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,

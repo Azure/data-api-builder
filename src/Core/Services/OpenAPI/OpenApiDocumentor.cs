@@ -156,7 +156,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     Info = new OpenApiInfo
                     {
                         Version = ProductInfo.GetProductVersion(),
-                        Title = DOCUMENTOR_UI_TITLE
+                        Title = DOCUMENTOR_UI_TITLE,
+                        Description = string.IsNullOrWhiteSpace(runtimeConfig.OpenApiDescription)
+                            ? null
+                            : runtimeConfig.OpenApiDescription
                     },
                     Servers = new List<OpenApiServer>
                     {

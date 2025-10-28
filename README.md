@@ -163,6 +163,7 @@ The file `dab-config.json` is automatically created through this process. These 
       "path": "/graphql",
       "allow-introspection": true
     },
+    "openapi-description": "This API provides access to the company database. Use these endpoints to query and manage data.",
     "host": {
       "cors": {
         "origins": [],

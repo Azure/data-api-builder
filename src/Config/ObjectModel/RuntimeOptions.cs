@@ -18,6 +18,9 @@ public record RuntimeOptions
     public PaginationOptions? Pagination { get; init; }
     public RuntimeHealthCheckConfig? Health { get; init; }
 
+    [JsonPropertyName("openapi-description")]
+    public string? OpenApiDescription { get; init; }
+
     [JsonConstructor]
     public RuntimeOptions(
         RestRuntimeOptions? Rest,
@@ -25,6 +28,7 @@ public record RuntimeOptions
         McpRuntimeOptions? Mcp,
         HostOptions? Host,
         string? BaseRoute = null,
+        string? OpenApiDescription = null,
         TelemetryOptions? Telemetry = null,
         RuntimeCacheOptions? Cache = null,
         PaginationOptions? Pagination = null,
@@ -35,6 +39,7 @@ public record RuntimeOptions
         this.Mcp = Mcp;
         this.Host = Host;
         this.BaseRoute = BaseRoute;
+        this.OpenApiDescription = OpenApiDescription;
         this.Telemetry = Telemetry;
         this.Cache = Cache;
         this.Pagination = Pagination;

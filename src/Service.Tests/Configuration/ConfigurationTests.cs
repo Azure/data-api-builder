@@ -5372,7 +5372,8 @@ type Planet @model(name:""PlanetAlias"") {
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
             while (retryCount > 0)
             {
-                // Minimal MCP request (list tools) – valid JSON-RPC request	
+                // Minimal MCP request (list tools) – valid JSON-RPC request
+                await Task.Delay(2000);
                 object payload = new
                 {
                     jsonrpc = "2.0",

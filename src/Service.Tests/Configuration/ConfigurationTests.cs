@@ -2623,11 +2623,9 @@ type Moon {
                 Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode, "The hydration post-response is different from the expected result.");
 
                 HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
-
                 Assert.AreEqual(expected: expectedStatusCodeForREST, actual: restResponseCode, "The REST hydration post-response is different from the expected result.");
 
                 HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
-
                 Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode, "The GraphQL hydration post-response is different from the expected result.");
 
                 HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client);
@@ -5390,7 +5388,7 @@ type Planet @model(name:""PlanetAlias"") {
                 HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
                 responseCode = mcpResponse.StatusCode;
 
-                if (responseCode == HttpStatusCode.ServiceUnavailable)
+                if (responseCode == HttpStatusCode.ServiceUnavailable || responseCode == HttpStatusCode.NotFound)
                 {
                     retryCount--;
                     Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));

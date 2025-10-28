@@ -2588,15 +2588,14 @@ type Moon {
                 };
 
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
-                Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode, "The GraphQL response is different from the expected result.");
+                Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
 
                 // REST request
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
-                Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode, "The REST response is different from the expected result.");
+                Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode);
 
                 // MCP request
-                await Task.Delay(2000);
                 object mcpPayload = new
                 {
                     jsonrpc = "2.0",
@@ -2609,7 +2608,7 @@ type Moon {
                 };
                 mcpRequest.Headers.Add("Accept", "*/*");
                 HttpResponseMessage mcpResponse = await client.SendAsync(mcpRequest);
-                Assert.AreEqual(expectedStatusCodeForMcp, mcpResponse.StatusCode, "The MCP response is different from the expected result.");
+                Assert.AreEqual(expectedStatusCodeForMcp, mcpResponse.StatusCode);
             }
 
             // Hosted Scenario
@@ -2620,18 +2619,16 @@ type Moon {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
 
                 HttpResponseMessage postResult = await client.PostAsync(configurationEndpoint, content);
-                Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode, "The hydration post-response is different from the expected result.");
+                Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
                 HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
-
-                Assert.AreEqual(expected: expectedStatusCodeForREST, actual: restResponseCode, "The REST hydration post-response is different from the expected result.");
+                Assert.AreEqual(expected: expectedStatusCodeForREST, actual: restResponseCode);
 
                 HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
-
-                Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode, "The GraphQL hydration post-response is different from the expected result.");
+                Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode);
 
                 HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client);
-                Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode, "The MCP hydration post-response is different from the expected result.");
+                Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode);
             }
         }
 
@@ -5379,13 +5376,14 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     jsonrpc = "2.0",
                     id = 1,
-                    method = "tools/call"
+                    method = "tools/list"
                 };
 
                 HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
                 {
                     Content = JsonContent.Create(payload)
                 };
+                mcpRequest.Headers.Add("Accept", "*/*");
 
                 HttpResponseMessage mcpResponse = await httpClient.SendAsync(mcpRequest);
                 responseCode = mcpResponse.StatusCode;

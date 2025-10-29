@@ -707,6 +707,24 @@ namespace Cli.Tests
             Assert.AreEqual(updatedJwtIssuerValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer);
         }
 
+        [TestMethod]
+        public void TestUpdateOpenApiDescription()
+        {
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            string updatedDescription = "Custom description for generated OpenAPI document.";
+
+            ConfigureOptions options = new(
+                runtimeOpenApiDescription: updatedDescription,
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.AreEqual(updatedDescription, runtimeConfig.Runtime?.OpenApiDescription);
+        }
+
         /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
         /// When runtime.graphql.depth-limit has an initial value of 8.

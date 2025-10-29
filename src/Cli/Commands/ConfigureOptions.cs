@@ -70,6 +70,7 @@ namespace Cli.Commands
             RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
+            string? runtimeOpenApiDescription = null,
             string? config = null)
             : base(config)
         {
@@ -130,6 +131,7 @@ namespace Cli.Commands
             FileSinkRollingInterval = fileSinkRollingInterval;
             FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
             FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
+            RuntimeOpenApiDescription = runtimeOpenApiDescription;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -275,6 +277,9 @@ namespace Cli.Commands
 
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
         public long? FileSinkFileSizeLimitBytes { get; }
+
+        [Option("runtime.openapi-description", Required = false, HelpText = "Configure the description surfaced in the generated OpenAPI document.")]
+        public string? RuntimeOpenApiDescription { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

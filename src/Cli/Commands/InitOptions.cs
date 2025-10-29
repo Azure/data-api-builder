@@ -42,6 +42,7 @@ namespace Cli.Commands
             CliBool mcpEnabled = CliBool.None,
             CliBool restRequestBodyStrict = CliBool.None,
             CliBool multipleCreateOperationEnabled = CliBool.None,
+            string? openApiDescription = null,
             string? config = null)
             : base(config)
         {
@@ -68,6 +69,7 @@ namespace Cli.Commands
             McpEnabled = mcpEnabled;
             RestRequestBodyStrict = restRequestBodyStrict;
             MultipleCreateOperationEnabled = multipleCreateOperationEnabled;
+            OpenApiDescription = openApiDescription;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
@@ -140,6 +142,9 @@ namespace Cli.Commands
 
         [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
         public CliBool MultipleCreateOperationEnabled { get; }
+
+        [Option("runtime.openapi-description", Required = false, HelpText = "Sets the description surfaced in the generated OpenAPI document.")]
+        public string? OpenApiDescription { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

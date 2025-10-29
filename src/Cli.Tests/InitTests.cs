@@ -100,6 +100,28 @@ namespace Cli.Tests
             return ExecuteVerifyTest(options);
         }
 
+        [TestMethod]
+        public void InitConfigSetsOpenApiDescription()
+        {
+            string openApiDescription = "Initial OpenAPI description from init.";
+            InitOptions options = new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "Server=.;Database=dab;",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: false,
+                hostMode: HostMode.Development,
+                corsOrigin: Array.Empty<string>(),
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                openApiDescription: openApiDescription,
+                config: TEST_RUNTIME_CONFIG_FILE);
+
+            Assert.IsTrue(ConfigGenerator.TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig);
+            Assert.AreEqual(openApiDescription, runtimeConfig.Runtime?.OpenApiDescription);
+        }
+
         /// <summary>
         /// Test cosmosdb_nosql specifc settings like cosmosdb_nosql-database, cosmosdb_nosql-container, cosmos-schema file.
         /// </summary>

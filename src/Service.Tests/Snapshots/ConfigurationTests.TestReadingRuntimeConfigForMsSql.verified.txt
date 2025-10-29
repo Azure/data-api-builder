@@ -509,6 +509,18 @@
           Object: books,
           Type: Table
         },
+        Fields: [
+          {
+            Name: id,
+            Alias: id,
+            PrimaryKey: false
+          },
+          {
+            Name: title,
+            Alias: title,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: book,
           Plural: books,
@@ -893,10 +905,6 @@
             ]
           }
         ],
-        Mappings: {
-          id: id,
-          title: title
-        },
         Relationships: {
           authors: {
             Cardinality: Many,
@@ -1624,6 +1632,13 @@
           Object: type_table,
           Type: Table
         },
+        Fields: [
+          {
+            Name: id,
+            Alias: typeid,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: SupportedType,
           Plural: SupportedTypes,
@@ -1667,10 +1682,7 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          id: typeid
-        }
+        ]
       }
     },
     {
@@ -1765,6 +1777,18 @@
           Object: trees,
           Type: Table
         },
+        Fields: [
+          {
+            Name: species,
+            Alias: Scientific Name,
+            PrimaryKey: false
+          },
+          {
+            Name: region,
+            Alias: United State's Region,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: Tree,
           Plural: Trees,
@@ -1808,11 +1832,7 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          region: United State's Region,
-          species: Scientific Name
-        }
+        ]
       }
     },
     {
@@ -1821,6 +1841,13 @@
           Object: trees,
           Type: Table
         },
+        Fields: [
+          {
+            Name: species,
+            Alias: fancyName,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: Shrub,
           Plural: Shrubs,
@@ -1866,9 +1893,6 @@
             ]
           }
         ],
-        Mappings: {
-          species: fancyName
-        },
         Relationships: {
           fungus: {
             TargetEntity: Fungus,
@@ -1888,6 +1912,13 @@
           Object: fungi,
           Type: Table
         },
+        Fields: [
+          {
+            Name: spores,
+            Alias: hazards,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: fungus,
           Plural: fungi,
@@ -1948,9 +1979,6 @@
             ]
           }
         ],
-        Mappings: {
-          spores: hazards
-        },
         Relationships: {
           Shrub: {
             TargetEntity: Shrub,
@@ -1968,11 +1996,14 @@
       books_view_all: {
         Source: {
           Object: books_view_all,
-          Type: View,
-          KeyFields: [
-            id
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_view_all,
           Plural: books_view_alls,
@@ -2014,11 +2045,15 @@
       books_view_with_mapping: {
         Source: {
           Object: books_view_with_mapping,
-          Type: View,
-          KeyFields: [
-            id
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: id,
+            Alias: book_id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_view_with_mapping,
           Plural: books_view_with_mappings,
@@ -2036,22 +2071,25 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          id: book_id
-        }
+        ]
       }
     },
     {
       stocks_view_selected: {
         Source: {
           Object: stocks_view_selected,
-          Type: View,
-          KeyFields: [
-            categoryid,
-            pieceid
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: categoryid,
+            PrimaryKey: true
+          },
+          {
+            Name: pieceid,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: stocks_view_selected,
           Plural: stocks_view_selecteds,
@@ -2093,12 +2131,18 @@
       books_publishers_view_composite: {
         Source: {
           Object: books_publishers_view_composite,
-          Type: View,
-          KeyFields: [
-            id,
-            pub_id
-          ]
+          Type: View
         },
+        Fields: [
+          {
+            Name: id,
+            PrimaryKey: true
+          },
+          {
+            Name: pub_id,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: books_publishers_view_composite,
           Plural: books_publishers_view_composites,
@@ -2352,6 +2396,28 @@
           Object: aow,
           Type: Table
         },
+        Fields: [
+          {
+            Name: DetailAssessmentAndPlanning,
+            Alias: 始計,
+            PrimaryKey: false
+          },
+          {
+            Name: WagingWar,
+            Alias: 作戰,
+            PrimaryKey: false
+          },
+          {
+            Name: StrategicAttack,
+            Alias: 謀攻,
+            PrimaryKey: false
+          },
+          {
+            Name: NoteNum,
+            Alias: ┬─┬ノ( º _ ºノ),
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: ArtOfWar,
           Plural: ArtOfWars,
@@ -2377,13 +2443,7 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          DetailAssessmentAndPlanning: 始計,
-          NoteNum: ┬─┬ノ( º _ ºノ),
-          StrategicAttack: 謀攻,
-          WagingWar: 作戰
-        }
+        ]
       }
     },
     {
@@ -2838,10 +2898,18 @@
         Source: {
           Object: insert_book,
           Type: stored-procedure,
-          Parameters: {
-            publisher_id: 1234,
-            title: randomX
-          }
+          Parameters: [
+            {
+              Name: title,
+              Required: false,
+              Default: randomX
+            },
+            {
+              Name: publisher_id,
+              Required: false,
+              Default: 1234
+            }
+          ]
         },
         GraphQL: {
           Singular: InsertBook,
@@ -2956,10 +3024,18 @@
         Source: {
           Object: update_book_title,
           Type: stored-procedure,
-          Parameters: {
-            id: 1,
-            title: Testing Tonight
-          }
+          Parameters: [
+            {
+              Name: id,
+              Required: false,
+              Default: 1
+            },
+            {
+              Name: title,
+              Required: false,
+              Default: Testing Tonight
+            }
+          ]
         },
         GraphQL: {
           Singular: UpdateBookTitle,
@@ -2998,9 +3074,13 @@
         Source: {
           Object: get_authors_history_by_first_name,
           Type: stored-procedure,
-          Parameters: {
-            firstName: Aaron
-          }
+          Parameters: [
+            {
+              Name: firstName,
+              Required: false,
+              Default: Aaron
+            }
+          ]
         },
         GraphQL: {
           Singular: SearchAuthorByFirstName,
@@ -3039,10 +3119,18 @@
         Source: {
           Object: insert_and_display_all_books_for_given_publisher,
           Type: stored-procedure,
-          Parameters: {
-            publisher_name: MyPublisher,
-            title: MyTitle
-          }
+          Parameters: [
+            {
+              Name: title,
+              Required: false,
+              Default: MyTitle
+            },
+            {
+              Name: publisher_name,
+              Required: false,
+              Default: MyPublisher
+            }
+          ]
         },
         GraphQL: {
           Singular: InsertAndDisplayAllBooksUnderGivenPublisher,
@@ -3082,6 +3170,18 @@
           Object: GQLmappings,
           Type: Table
         },
+        Fields: [
+          {
+            Name: __column1,
+            Alias: column1,
+            PrimaryKey: false
+          },
+          {
+            Name: __column2,
+            Alias: column2,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: GQLmappings,
           Plural: GQLmappings,
@@ -3107,11 +3207,7 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          __column1: column1,
-          __column2: column2
-        }
+        ]
       }
     },
     {
@@ -3154,6 +3250,18 @@
           Object: mappedbookmarks,
           Type: Table
         },
+        Fields: [
+          {
+            Name: id,
+            Alias: bkid,
+            PrimaryKey: false
+          },
+          {
+            Name: bkname,
+            Alias: name,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: MappedBookmarks,
           Plural: MappedBookmarks,
@@ -3179,11 +3287,7 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          bkname: name,
-          id: bkid
-        }
+        ]
       }
     },
     {
@@ -3389,6 +3493,18 @@
           Object: books,
           Type: Table
         },
+        Fields: [
+          {
+            Name: id,
+            Alias: id,
+            PrimaryKey: false
+          },
+          {
+            Name: title,
+            Alias: title,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: bookNF,
           Plural: booksNF,
@@ -3461,10 +3577,6 @@
             ]
           }
         ],
-        Mappings: {
-          id: id,
-          title: title
-        },
         Relationships: {
           authors: {
             Cardinality: Many,

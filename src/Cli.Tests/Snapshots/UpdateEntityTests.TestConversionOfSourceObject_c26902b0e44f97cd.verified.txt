@@ -29,6 +29,16 @@
           Object: s001.book,
           Type: stored-procedure
         },
+        Fields: [
+          {
+            Name: id,
+            PrimaryKey: true
+          },
+          {
+            Name: name,
+            PrimaryKey: true
+          }
+        ],
         GraphQL: {
           Singular: MyEntity,
           Plural: MyEntities,

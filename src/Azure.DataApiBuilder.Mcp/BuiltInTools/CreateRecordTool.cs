@@ -31,18 +31,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "create_record",
-                Description = "Creates a new record in the specified entity.",
+                Description = "STEP 1: describe_entities -> find entities with CREATE permission and their fields. STEP 2: call this tool with matching field names and values.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
                                 ""type"": ""string"",
-                                ""description"": ""The name of the entity""
+                                ""description"": ""Entity name with CREATE permission.""
                             },
                             ""data"": {
                                 ""type"": ""object"",
-                                ""description"": ""The data for the new record""
+                                ""description"": ""Required fields and values for the new record.""
                             }
                         },
                         ""required"": [""entity"", ""data""]

@@ -33,21 +33,21 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "describe_entities",
-                Description = "Lists and describes all entities in the database, including their types and available operations.",
+                Description = "Lists all entities and metadata. ALWAYS CALL FIRST. Each entity includes: name, type, fields, parameters, and permissions. The permissions array defines which tools are allowed. 'ALL' expands by type: data->CREATE, READ, UPDATE, DELETE.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""nameOnly"": {
                                 ""type"": ""boolean"",
-                                ""description"": ""If true, only entity names and descriptions will be returned. If false, full metadata including fields, parameters etc. will be included. Default is false.""
+                                ""description"": ""True: names and summaries only. False (default): full metadata.""
                             },
                             ""entities"": {
                                 ""type"": ""array"",
                                 ""items"": {
                                     ""type"": ""string""
                                 },
-                                ""description"": ""Optional list of specific entity names to filter by. If empty, all entities will be described.""
+                                ""description"": ""Optional: specific entity names. Omit for all.""
                             }
                         }
                     }"

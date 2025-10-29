@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         /// <summary>
-        /// Gets the metadata for the delete-record tool, including its name, description, and input schema.
+        /// Gets the metadata for the describe-entities tool, including its name, description, and input schema.
         /// </summary>
         /// <returns></returns>
         public Tool GetToolMetadata()

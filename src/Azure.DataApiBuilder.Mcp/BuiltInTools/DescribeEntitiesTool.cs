@@ -40,14 +40,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         ""properties"": {
                             ""nameOnly"": {
                                 ""type"": ""boolean"",
-                                ""description"": ""True: names and summaries only. False (default): full metadata.""
+                                ""description"": ""If true, the response includes only entity names and short summaries, omitting detailed metadata such as fields, parameters, and permissions. Use this when the database contains many entities and the full payload would be too large. The usual strategy is: first call describe_entities with nameOnly=true to get a lightweight list, then call describe_entities again with nameOnly=false for specific entities that require full metadata. This flag is meant for discovery, not execution planning. The model must not assume that nameOnly=true provides enough detail for CRUD or EXECUTE operations.""
                             },
                             ""entities"": {
                                 ""type"": ""array"",
                                 ""items"": {
                                     ""type"": ""string""
                                 },
-                                ""description"": ""Optional: specific entity names. Omit for all.""
+                                ""description"": ""Optional list of entity names to describe in full detail. Use this to reduce payload size when only certain entities are relevant. Do NOT pass both entities[] and nameOnly=true together, as that combination is nonsensical: nameOnly=true ignores detailed metadata, while entities[] explicitly requests it. Choose one approach—broad discovery with nameOnly=true OR targeted metadata with entities[].""
                             }
                         }
                     }"

@@ -379,18 +379,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         // Expand "ALL" to specific operations based on entity type
                         if (action.Action == EntityActionOperation.All)
                         {
-                            if (entity.Source.Type == EntitySourceType.StoredProcedure)
+                            HashSet<EntityActionOperation> validOperations = entity.Source.Type == EntitySourceType.StoredProcedure
+                                ? EntityAction.ValidStoredProcedurePermissionOperations
+                                : EntityAction.ValidPermissionOperations;
+
+                            foreach (EntityActionOperation operation in validOperations)
                             {
-                                // For stored procedures, ALL means EXECUTE
-                                permissions.Add(EntityActionOperation.Execute.ToString().ToUpperInvariant());
-                            }
-                            else
-                            {
-                                // For tables and views, ALL means CREATE, READ, UPDATE, DELETE
-                                permissions.Add(EntityActionOperation.Create.ToString().ToUpperInvariant());
-                                permissions.Add(EntityActionOperation.Read.ToString().ToUpperInvariant());
-                                permissions.Add(EntityActionOperation.Update.ToString().ToUpperInvariant());
-                                permissions.Add(EntityActionOperation.Delete.ToString().ToUpperInvariant());
+                                permissions.Add(operation.ToString().ToUpperInvariant());
                             }
                         }
                         else

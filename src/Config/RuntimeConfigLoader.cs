@@ -149,7 +149,7 @@ public abstract class RuntimeConfigLoader
         DeserializationVariableReplacementSettings envOnlySettings = new(
             azureKeyVaultOptions: null,
             doReplaceEnvVar: enableEnvReplacement,
-            doReplaceAKVVar: false,
+            doReplaceAkvVar: false,
             envFailureMode: replacementFailureMode);
         options.Converters.Add(new StringJsonConverterFactory(envOnlySettings));
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
@@ -195,7 +195,7 @@ public abstract class RuntimeConfigLoader
         string? connectionString = null)
     {
         // First pass: extract AzureKeyVault options if AKV replacement is requested
-        if (replacementSettings?.DoReplaceAKVVar == true)
+        if (replacementSettings?.DoReplaceAkvVar == true)
         {
             AzureKeyVaultOptions? azureKeyVaultOptions = ExtractAzureKeyVaultOptions(
                 json, 
@@ -208,7 +208,7 @@ public abstract class RuntimeConfigLoader
                 replacementSettings = new DeserializationVariableReplacementSettings(
                     azureKeyVaultOptions: azureKeyVaultOptions,
                     doReplaceEnvVar: replacementSettings.DoReplaceEnvVar,
-                    doReplaceAKVVar: replacementSettings.DoReplaceAKVVar,
+                    doReplaceAkvVar: replacementSettings.DoReplaceAkvVar,
                     envFailureMode: replacementSettings.EnvFailureMode);
             }
         }

@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Config
             if (DoReplaceEnvVar)
             {
                 ReplacementStrategies.Add(
-                    new Regex(INNER_ENV_PATTERN, RegexOptions.Compiled),
+                    new Regex(OUTER_ENV_PATTERN, RegexOptions.Compiled),
                     ReplaceEnvVariable);
             }
 
@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Config
             {
                 _akvClient = CreateSecretClient(_azureKeyVaultOptions);
                 ReplacementStrategies.Add(
-                    new Regex(INNER_AKV_PATTERN, RegexOptions.Compiled),
+                    new Regex(OUTER_AKV_PATTERN, RegexOptions.Compiled),
                     ReplaceAkvVariable);
             }
         }

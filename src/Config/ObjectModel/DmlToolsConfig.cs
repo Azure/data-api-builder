@@ -113,16 +113,15 @@ public record DmlToolsConfig
     /// </summary>
     public static DmlToolsConfig FromBoolean(bool enabled)
     {
-        return new DmlToolsConfig
-        {
-            AllToolsEnabled = enabled,
-            DescribeEntities = enabled,
-            CreateRecord = enabled,
-            ReadRecords = enabled,
-            UpdateRecord = enabled,
-            DeleteRecord = enabled,
-            ExecuteEntity = enabled
-        };
+        return new DmlToolsConfig(
+            allToolsEnabled: enabled,
+            describeEntities: enabled,
+            createRecord: enabled,
+            readRecords: enabled,
+            updateRecord: enabled,
+            deleteRecord: enabled,
+            executeEntity: enabled
+        );
     }
 
     /// <summary>
@@ -185,4 +184,22 @@ public record DmlToolsConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(ExecuteEntity))]
     public bool UserProvidedExecuteEntity { get; init; } = false;
+
+    /// <summary>
+    /// Checks if a specific tool is enabled
+    /// </summary>
+    public bool IsToolEnabled(string toolName)
+    {
+        return toolName.ToLowerInvariant() switch
+        {
+            "all" => AllToolsEnabled,
+            "describe_entities" => DescribeEntities ?? AllToolsEnabled,
+            "create_record" => CreateRecord ?? AllToolsEnabled,
+            "read_records" => ReadRecords ?? AllToolsEnabled,
+            "update_record" => UpdateRecord ?? AllToolsEnabled,
+            "delete_record" => DeleteRecord ?? AllToolsEnabled,
+            "execute_entity" => ExecuteEntity ?? AllToolsEnabled,
+            _ => throw new ArgumentException($"Unknown tool name: {toolName}")
+        };
+    }
 }

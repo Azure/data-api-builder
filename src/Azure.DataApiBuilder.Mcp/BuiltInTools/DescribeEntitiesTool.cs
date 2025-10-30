@@ -376,7 +376,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     foreach (EntityAction action in permission.Actions)
                     {
-                        permissions.Add(action.Action.ToString().ToUpperInvariant());
+                        // Expand "ALL" to specific operations based on entity type
+                        if (action.Action == EntityActionOperation.All)
+                        {
+                            HashSet<EntityActionOperation> validOperations = entity.Source.Type == EntitySourceType.StoredProcedure
+                                ? EntityAction.ValidStoredProcedurePermissionOperations
+                                : EntityAction.ValidPermissionOperations;
+
+                            foreach (EntityActionOperation operation in validOperations)
+                            {
+                                permissions.Add(operation.ToString().ToUpperInvariant());
+                            }
+                        }
+                        else
+                        {
+                            permissions.Add(action.Action.ToString().ToUpperInvariant());
+                        }
                     }
                 }
             }

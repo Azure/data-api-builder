@@ -22,7 +22,7 @@ public class EnvironmentTests
         DeserializationVariableReplacementSettings replacementSettings = new(
             azureKeyVaultOptions: null,
             doReplaceEnvVar: true,
-            doReplaceAKVVar: false,
+            doReplaceAkvVar: false,
             envFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
         
         StringJsonConverterFactory converterFactory = new(replacementSettings);

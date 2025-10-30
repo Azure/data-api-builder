@@ -14,7 +14,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
 {
     // Determines whether to replace environment variable with its
     // value or not while deserializing.
-    private DeserializationVariableReplacementSettings _replacementSettings;
+    private DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -28,7 +28,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
         return new McpRuntimeOptionsConverter(_replacementSettings);
     }
 
-    internal McpRuntimeOptionsConverterFactory(DeserializationVariableReplacementSettings replacementSettings)
+    internal McpRuntimeOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings)
     {
         _replacementSettings = replacementSettings;
     }
@@ -37,11 +37,11 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
     {
         // Determines whether to replace environment variable with its
         // value or not while deserializing.
-        private DeserializationVariableReplacementSettings _replacementSettings;
+        private DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replaceEnvVar">Whether to replace environment variable with its
         /// value or not while deserializing.</param>
-        internal McpRuntimeOptionsConverter(DeserializationVariableReplacementSettings replacementSettings)
+        internal McpRuntimeOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
             _replacementSettings = replacementSettings;
         }

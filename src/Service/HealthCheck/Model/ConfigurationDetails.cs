@@ -18,6 +18,9 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         [JsonPropertyName("graphql")]
         public bool GraphQL { get; init; }
 
+        [JsonPropertyName("mcp")]
+        public bool Mcp { get; init; }
+
         [JsonPropertyName("caching")]
         public bool Caching { get; init; }
 

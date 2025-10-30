@@ -42,7 +42,16 @@ namespace Cli.Commands
             string? policyDatabase,
             string? cacheEnabled,
             string? cacheTtl,
-            string config)
+            string? description,
+            IEnumerable<string>? parametersNameCollection,
+            IEnumerable<string>? parametersDescriptionCollection,
+            IEnumerable<string>? parametersRequiredCollection,
+            IEnumerable<string>? parametersDefaultCollection,
+            IEnumerable<string>? fieldsNameCollection,
+            IEnumerable<string>? fieldsAliasCollection,
+            IEnumerable<string>? fieldsDescriptionCollection,
+            IEnumerable<bool>? fieldsPrimaryKeyCollection,
+            string? config)
             : base(entity,
                   sourceType,
                   sourceParameters,
@@ -57,6 +66,15 @@ namespace Cli.Commands
                   policyDatabase,
                   cacheEnabled,
                   cacheTtl,
+                  description,
+                  parametersNameCollection,
+                  parametersDescriptionCollection,
+                  parametersRequiredCollection,
+                  parametersDefaultCollection,
+                  fieldsNameCollection,
+                  fieldsAliasCollection,
+                  fieldsDescriptionCollection,
+                  fieldsPrimaryKeyCollection,
                   config)
         {
             Source = source;

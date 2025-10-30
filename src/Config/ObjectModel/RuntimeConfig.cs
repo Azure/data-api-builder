@@ -72,6 +72,15 @@ public record RuntimeConfig
          Runtime.Rest.Enabled) &&
          DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
 
+    /// <summary>
+    /// Retrieves the value of runtime.mcp.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsMcpEnabled =>
+        Runtime is null ||
+        Runtime.Mcp is null ||
+        Runtime.Mcp.Enabled;
+
     [JsonIgnore]
     public bool IsHealthEnabled =>
         Runtime is null ||
@@ -123,6 +132,25 @@ public record RuntimeConfig
             else
             {
                 return Runtime.GraphQL.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The path at which MCP API is available
+    /// </summary>
+    [JsonIgnore]
+    public string McpPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.Mcp is null || Runtime.Mcp.Path is null)
+            {
+                return McpRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.Mcp.Path;
             }
         }
     }
@@ -707,4 +735,10 @@ public record RuntimeConfig
 
         return LogLevel.Error;
     }
+
+    /// <summary>
+    /// Gets the MCP DML tools configuration
+    /// </summary>
+    [JsonIgnore]
+    public DmlToolsConfig? McpDmlTools => Runtime?.Mcp?.DmlTools;
 }

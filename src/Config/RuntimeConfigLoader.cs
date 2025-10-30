@@ -311,6 +311,12 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityHealthOptionsConvertorFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
         options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new McpRuntimeOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new DmlToolsConfigConverter());
+        options.Converters.Add(new EntitySourceConverterFactory(replacementSettings));
+        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new EntityRestOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new EntitySourceConverterFactory(replacementSettings));
         options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new EntityRestOptionsConverterFactory(replacementSettings));

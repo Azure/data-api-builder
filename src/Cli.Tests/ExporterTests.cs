@@ -21,7 +21,7 @@ public class ExporterTests
         RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(DatabaseType.MSSQL, "", new()),
-                Runtime: new(Rest: new(), GraphQL: new(), Host: new(null, null)),
+                Runtime: new(Rest: new(), GraphQL: new(), Mcp: new(), Host: new(null, null)),
                 Entities: new(new Dictionary<string, Entity>())
             );
 
@@ -59,7 +59,7 @@ public class ExporterTests
         RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(DatabaseType.MSSQL, "", new()),
-                Runtime: new(Rest: new(), GraphQL: new(), Host: new(null, null)),
+                Runtime: new(Rest: new(), GraphQL: new(), Mcp: new(), Host: new(null, null)),
                 Entities: new(new Dictionary<string, Entity>())
             );
 
@@ -105,7 +105,7 @@ public class ExporterTests
         RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(DatabaseType.MSSQL, "", new()),
-                Runtime: new(Rest: new(), GraphQL: new(), Host: new(null, null)),
+                Runtime: new(Rest: new(), GraphQL: new(), Mcp: new(), Host: new(null, null)),
                 Entities: new(new Dictionary<string, Entity>())
             );
 

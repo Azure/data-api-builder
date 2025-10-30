@@ -356,11 +356,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Runtime: new(
                         Rest: new(Path: "/api"),
                         GraphQL: new(),
+                        Mcp: new(),
                         Host: new(Cors: null, Authentication: null)
                         ),
                     Entities: new(new Dictionary<string, Entity>()
                     {
-                        { DEFAULT_NAME, new Entity(entitySource, new EntityGraphQLOptions(findRequestContext.EntityName, findRequestContext.EntityName), new EntityRestOptions(new SupportedHttpVerb[0]), null, null, null) }
+                        { DEFAULT_NAME, new Entity(entitySource, new EntityGraphQLOptions(findRequestContext.EntityName, findRequestContext.EntityName), null, new EntityRestOptions(new SupportedHttpVerb[0]), null, null, null) }
                     })
                     );
                 MockFileSystem fileSystem = new();

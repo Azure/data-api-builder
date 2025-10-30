@@ -55,17 +55,61 @@ internal class EntitySourceConverterFactory : JsonConverterFactory
             JsonSerializerOptions innerOptions = new(options);
             innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is EntitySourceConverterFactory));
 
-            EntitySource? source = JsonSerializer.Deserialize<EntitySource>(ref reader, innerOptions);
+            using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+            JsonElement root = doc.RootElement;
 
-            if (source?.Parameters is not null)
+            if (root.TryGetProperty("parameters", out JsonElement parametersElement) &&
+                parametersElement.ValueKind == JsonValueKind.Object)
             {
-                // If we get parameters back the value field will be JsonElement, since that's what System.Text.Json uses for the `object` type.
-                // But we want to convert that to a CLR type so we can use it in our code and avoid having to do our own type checking
-                // and casting elsewhere.
-                return source with { Parameters = source.Parameters.ToDictionary(p => p.Key, p => GetClrValue((JsonElement)p.Value)) };
-            }
+                // Old format detected
+                List<ParameterMetadata> paramList = [];
+                foreach (JsonProperty prop in parametersElement.EnumerateObject())
+                {
+                    string? defaultValue = GetClrValue(prop.Value)?.ToString();
+                    paramList.Add(new ParameterMetadata
+                    {
+                        Name = prop.Name,
+                        Default = defaultValue,
+                    });
+                }
 
-            return source;
+                // Remove "parameters" from the JSON before deserialization
+                Dictionary<string, object> modObj = [];
+                foreach (JsonProperty property in root.EnumerateObject())
+                {
+                    if (!property.NameEquals("parameters"))
+                    {
+                        modObj[property.Name] = property.Value.Deserialize<object>(innerOptions) ?? new object();
+                    }
+                }
+
+                modObj["parameters"] = paramList;
+
+                string modJson = JsonSerializer.Serialize(modObj, innerOptions);
+
+                // Deserialize to EntitySource without parameters
+                EntitySource? entitySource = JsonSerializer.Deserialize<EntitySource>(modJson, innerOptions)
+                    ?? throw new JsonException("Failed to deserialize EntitySource from modified JSON.");
+
+                // Use the with expression to set the correct Parameters
+                return entitySource with { Parameters = paramList };
+            }
+            else
+            {
+                string rawJson = root.GetRawText();
+                // If already in new format, deserialize as usual
+                EntitySource? source = JsonSerializer.Deserialize<EntitySource>(rawJson, innerOptions);
+
+                if (source?.Parameters is not null)
+                {
+                    if (source.Parameters is IEnumerable<ParameterMetadata> paramList)
+                    {
+                        return source with { Parameters = [.. paramList] };
+                    }
+                }
+
+                return source;
+            }
         }
 
         private static object GetClrValue(JsonElement element)

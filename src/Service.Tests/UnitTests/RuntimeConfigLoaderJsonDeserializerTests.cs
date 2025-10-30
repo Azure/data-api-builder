@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TryParseAndAssertOnDefaults("{" + emptyRuntime, out _);
 
             // Test with empty sub properties of runtime
-            minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
+            minJson.Append(@"{ ""rest"": { }, ""graphql"": { }, ""mcp"": { },
                             ""base-route"" : """",");
             StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
             StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
@@ -419,6 +419,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
       }
     },
+    ""mcp"": {
+      ""enabled"": true,
+      ""path"": """ + reps[++index % reps.Length] + @"""
+    },
     ""host"": {
       ""mode"": ""development"",
       ""cors"": {
@@ -501,6 +505,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                   ""allow-introspection"": true,
                   ""enabled"": true,
                   ""path"": ""/graphql""
+                },
+                ""mcp"": {
+                  ""enabled"": true,
+                  ""path"": ""/mcp""
                 },
                 ""host"": {
                   ""mode"": ""development"",
@@ -637,6 +645,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(RestRuntimeOptions.DEFAULT_PATH, parsedConfig.RestPath);
             Assert.IsTrue(parsedConfig.IsGraphQLEnabled);
             Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, parsedConfig.GraphQLPath);
+            Assert.IsTrue(parsedConfig.IsMcpEnabled);
+            Assert.AreEqual(McpRuntimeOptions.DEFAULT_PATH, parsedConfig.McpPath);
             Assert.IsTrue(parsedConfig.AllowIntrospection);
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
             Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);

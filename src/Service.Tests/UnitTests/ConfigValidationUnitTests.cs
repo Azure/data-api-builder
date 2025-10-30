@@ -116,6 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity testEntity = new(
                 Source: entitySource,
+                Fields: null,
                 Rest: new(EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP),
                 GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY + "s"),
                 Permissions: permissionSettings.ToArray(),
@@ -257,6 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap)
@@ -317,6 +319,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap)
@@ -373,6 +376,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap)
@@ -461,6 +465,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap));
@@ -553,6 +558,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap));
@@ -626,6 +632,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap));
@@ -755,6 +762,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap));
@@ -993,6 +1001,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new(AuthorizationHelpers.TEST_ENTITY, EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: null,
                 Permissions: new[] { permissionForEntity },
@@ -1011,6 +1020,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap));
@@ -1083,6 +1093,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap)
@@ -1440,21 +1451,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="graphQLConfiguredPath">GraphQL global path</param>
         /// <param name="restConfiguredPath">REST global path</param>
+        /// <param name="mcpConfiguredPath">MCP global path</param>
         /// <param name="expectError">Exception expected</param>
         [DataTestMethod]
-        [DataRow("/graphql", "/graphql", true)]
-        [DataRow("/api", "/api", true)]
-        [DataRow("/graphql", "/api", false)]
-        public void TestGlobalRouteValidation(string graphQLConfiguredPath, string restConfiguredPath, bool expectError)
+        [DataRow("/graphql", "/graphql", "/mcp", true, DisplayName = "GraphQL and REST conflict (same path).")]
+        [DataRow("/api", "/api", "/mcp", true, DisplayName = "REST and GraphQL conflict (same path).")]
+        [DataRow("/graphql", "/api", "/mcp", false, DisplayName = "GraphQL, REST, and MCP distinct.")]
+        // Extra case: conflict with MCP
+        [DataRow("/mcp", "/api", "/mcp", true, DisplayName = "MCP and GraphQL conflict (same path).")]
+        [DataRow("/graphql", "/mcp", "/mcp", true, DisplayName = "MCP and REST conflict (same path).")]
+        public void TestGlobalRouteValidation(string graphQLConfiguredPath, string restConfiguredPath, string mcpConfiguredPath, bool expectError)
         {
             GraphQLRuntimeOptions graphQL = new(Path: graphQLConfiguredPath);
             RestRuntimeOptions rest = new(Path: restConfiguredPath);
+            McpRuntimeOptions mcp = new(Path: mcpConfiguredPath);
 
             RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
                 new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
-                rest);
-            string expectedErrorMessage = "Conflicting GraphQL and REST path configuration.";
+                rest,
+                mcp);
+            string expectedErrorMessage = "Conflicting path configuration between GraphQL, REST, and MCP.";
 
             try
             {
@@ -1522,6 +1539,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new(source, EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: restDetails ?? new(Enabled: false),
                 GraphQL: graphQLDetails,
                 Permissions: new[] { permissionForEntity },
@@ -1671,10 +1689,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string graphQLPathPrefix = GraphQLRuntimeOptions.DEFAULT_PATH;
             string restPathPrefix = RestRuntimeOptions.DEFAULT_PATH;
+            string mcpPathPrefix = McpRuntimeOptions.DEFAULT_PATH;
 
             if (apiType is ApiType.REST)
             {
                 restPathPrefix = apiPathPrefix;
+            }
+            else if (apiType is ApiType.MCP)
+            {
+                mcpPathPrefix = apiPathPrefix;
             }
             else
             {
@@ -1683,11 +1706,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             GraphQLRuntimeOptions graphQL = new(Path: graphQLPathPrefix);
             RestRuntimeOptions rest = new(Path: restPathPrefix);
+            McpRuntimeOptions mcp = new(Enabled: false);
 
             RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
                 new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
-                rest);
+                rest,
+                mcp);
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
@@ -1710,25 +1735,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="restEnabled">Boolean flag to indicate if REST endpoints are enabled globally.</param>
         /// <param name="graphqlEnabled">Boolean flag to indicate if GraphQL endpoints are enabled globally.</param>
+        /// <param name="mcpEnabled">Boolean flag to indicate if MCP endpoints are enabled globally.</param>
         /// <param name="expectError">Boolean flag to indicate if exception is expected.</param>
-        [DataRow(true, true, false, DisplayName = "Both REST and GraphQL enabled.")]
-        [DataRow(true, false, false, DisplayName = "REST enabled, and GraphQL disabled.")]
-        [DataRow(false, true, false, DisplayName = "REST disabled, and GraphQL enabled.")]
-        [DataRow(false, false, true, DisplayName = "Both REST and GraphQL are disabled.")]
+        [DataRow(true, true, true, false, DisplayName = "REST, GraphQL, and MCP enabled.")]
+        [DataRow(true, true, false, false, DisplayName = "REST and GraphQL enabled, MCP disabled.")]
+        [DataRow(true, false, true, false, DisplayName = "REST enabled, GraphQL disabled, and MCP enabled.")]
+        [DataRow(true, false, false, false, DisplayName = "REST enabled, GraphQL and MCP disabled.")]
+        [DataRow(false, true, true, false, DisplayName = "REST disabled, GraphQL and MCP enabled.")]
+        [DataRow(false, true, false, false, DisplayName = "REST disabled, GraphQL enabled, and MCP disabled.")]
+        [DataRow(false, false, true, false, DisplayName = "REST and GraphQL disabled, MCP enabled.")]
+        [DataRow(false, false, false, true, DisplayName = "REST, GraphQL, and MCP disabled.")]
         [DataTestMethod]
-        public void EnsureFailureWhenBothRestAndGraphQLAreDisabled(
+        public void EnsureFailureWhenRestAndGraphQLAndMcpAreDisabled(
             bool restEnabled,
             bool graphqlEnabled,
+            bool mcpEnabled,
             bool expectError)
         {
             GraphQLRuntimeOptions graphQL = new(Enabled: graphqlEnabled);
             RestRuntimeOptions rest = new(Enabled: restEnabled);
+            McpRuntimeOptions mcp = new(Enabled: mcpEnabled);
 
             RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(
                 new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
-                rest);
-            string expectedErrorMessage = "Both GraphQL and REST endpoints are disabled.";
+                rest,
+                mcp);
+            string expectedErrorMessage = "GraphQL, REST, and MCP endpoints are disabled.";
 
             try
             {
@@ -1982,6 +2015,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string entityName = "EntityA";
             // Sets REST method for the entity
             Entity entity = new(Source: new("TEST_SOURCE", sourceType, null, null),
+                                 Fields: null,
                                  Rest: new(Methods: methods),
                                  GraphQL: new(entityName, ""),
                                  Permissions: Array.Empty<EntityPermission>(),
@@ -1995,6 +2029,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)),
                 Entities: new(entityMap));
 
@@ -2068,6 +2103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap)
@@ -2138,6 +2174,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(entityMap)
@@ -2198,6 +2235,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(Cors: null, Authentication: new(Provider: authenticationProvider, Jwt: null)),
                     BaseRoute: runtimeBaseRoute
                 ),
@@ -2303,6 +2341,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity1 = new(
                 Source: entitySource,
+                Fields: null,
                 GraphQL: null,
                 Rest: null,
                 Permissions: null,
@@ -2334,6 +2373,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new RuntimeEntities(entityMap),
@@ -2405,6 +2445,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Runtime: new(
                         Rest: new(),
                         GraphQL: new(),
+                        Mcp: new(),
                         Host: new(Cors: null, Authentication: null),
                         Pagination: new PaginationOptions(defaultPageSize, maxPageSize, nextLinkRelative)
                     ),
@@ -2456,6 +2497,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     Runtime: new(
                         Rest: new(),
                         GraphQL: new(),
+                        Mcp: new(),
                         Host: new(Cors: null, Authentication: null, MaxResponseSizeMB: providedMaxResponseSizeMB)
                     ),
                     Entities: new(new Dictionary<string, Entity>()));

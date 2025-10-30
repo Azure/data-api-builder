@@ -10,6 +10,7 @@ public record RuntimeOptions
 {
     public RestRuntimeOptions? Rest { get; init; }
     public GraphQLRuntimeOptions? GraphQL { get; init; }
+    public McpRuntimeOptions? Mcp { get; init; }
     public HostOptions? Host { get; set; }
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
@@ -21,6 +22,7 @@ public record RuntimeOptions
     public RuntimeOptions(
         RestRuntimeOptions? Rest,
         GraphQLRuntimeOptions? GraphQL,
+        McpRuntimeOptions? Mcp,
         HostOptions? Host,
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
@@ -30,6 +32,7 @@ public record RuntimeOptions
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
+        this.Mcp = Mcp;
         this.Host = Host;
         this.BaseRoute = BaseRoute;
         this.Telemetry = Telemetry;
@@ -59,6 +62,12 @@ public record RuntimeOptions
         GraphQL is null ||
         GraphQL?.Enabled is null ||
         GraphQL?.Enabled is true;
+
+    [JsonIgnore]
+    public bool IsMcpEnabled =>
+        Mcp is null ||
+        Mcp?.Enabled is null ||
+        Mcp?.Enabled is true;
 
     [JsonIgnore]
     public bool IsHealthCheckEnabled =>

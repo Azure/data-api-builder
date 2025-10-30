@@ -119,6 +119,7 @@ public class HealthEndpointCachingTests
     {
         Entity requiredEntity = new(
             Health: new(enabled: true),
+            Fields: null,
             Source: new("books", EntitySourceType.Table, null, null),
             Rest: new(Enabled: true),
             GraphQL: new("book", "books", true),
@@ -156,6 +157,7 @@ public class HealthEndpointCachingTests
                 Health: new(enabled: true, cacheTtlSeconds: cacheTtlSeconds),
                 Rest: new(Enabled: true),
                 GraphQL: new(Enabled: true),
+                Mcp: new(Enabled: true),
                 Host: hostOptions
             ),
             Entities: new(entityMap));

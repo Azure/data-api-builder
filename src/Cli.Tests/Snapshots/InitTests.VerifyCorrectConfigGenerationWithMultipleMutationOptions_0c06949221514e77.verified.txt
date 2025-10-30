@@ -21,6 +21,10 @@
         }
       }
     },
+    Mcp: {
+      Enabled: true,
+      Path: /mcp
+    },
     Host: {
       Cors: {
         Origins: [

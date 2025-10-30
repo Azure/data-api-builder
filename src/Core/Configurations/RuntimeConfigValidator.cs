@@ -702,11 +702,11 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig">The config that will be validated.</param>
     public void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
     {
-        // Both REST and GraphQL endpoints cannot be disabled at the same time.
-        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
+        // REST, GraphQL and MCP endpoints cannot be disabled at the same time.
+        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled && !runtimeConfig.IsMcpEnabled)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Both GraphQL and REST endpoints are disabled.",
+                message: $"GraphQL, REST, and MCP endpoints are disabled.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
@@ -735,19 +735,30 @@ public class RuntimeConfigValidator : IConfigValidator
 
         ValidateRestURI(runtimeConfig);
         ValidateGraphQLURI(runtimeConfig);
-        // Do not check for conflicts if GraphQL or REST endpoints are disabled.
-        if (!runtimeConfig.IsRestEnabled || !runtimeConfig.IsGraphQLEnabled)
+        ValidateMcpUri(runtimeConfig);
+        // Do not check for conflicts if two of the endpoints are disabled between GraphQL, REST, and MCP.
+        if ((!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled) ||
+            (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsMcpEnabled) ||
+            (!runtimeConfig.IsGraphQLEnabled && !runtimeConfig.IsMcpEnabled))
         {
             return;
         }
 
         if (string.Equals(
-            a: runtimeConfig.RestPath,
-            b: runtimeConfig.GraphQLPath,
-            comparisonType: StringComparison.OrdinalIgnoreCase))
+                a: runtimeConfig.RestPath,
+                b: runtimeConfig.GraphQLPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                a: runtimeConfig.RestPath,
+                b: runtimeConfig.McpPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                a: runtimeConfig.McpPath,
+                b: runtimeConfig.GraphQLPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase))
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Conflicting GraphQL and REST path configuration.",
+                message: $"Conflicting path configuration between GraphQL, REST, and MCP.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
@@ -789,6 +800,41 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+    }
+
+    /// <summary>
+    /// Method to validate that the MCP URI (MCP path prefix).
+    /// </summary>
+    /// <param name="runtimeConfig"></param>
+    public void ValidateMcpUri(RuntimeConfig runtimeConfig)
+    {
+        // Skip validation if MCP is not configured
+        if (runtimeConfig.Runtime?.Mcp is null)
+        {
+            return;
+        }
+
+        // Get the MCP path from the configuration
+        string? mcpPath = runtimeConfig.Runtime.Mcp.Path;
+
+        // Validate that the path is not null or empty when MCP is configured
+        if (string.IsNullOrWhiteSpace(mcpPath))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "MCP path cannot be null or empty when MCP is configured.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            return;
+        }
+
+        // Validate the MCP path using the same validation as REST and GraphQL
+        if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(mcpPath, out string exceptionMsgSuffix))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"MCP path {exceptionMsgSuffix}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }

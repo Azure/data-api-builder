@@ -116,21 +116,25 @@ public class EndToEndTests
         string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.enabled", "false", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
             TEST_RUNTIME_CONFIG_FILE,
             out RuntimeConfig? runtimeConfig,
-            replaceEnvVar: true));
+            replacementSettings: replacementSettings));
 
-        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
-        Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
+        if (runtimeConfig is not null)
+        {
+            SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
+            Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
 
-        Assert.IsNotNull(runtimeConfig);
-        Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
-        Assert.IsNotNull(runtimeConfig.Runtime);
-        Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest?.Path);
-        Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
-        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
-        Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
+            Assert.IsNotNull(runtimeConfig);
+            Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
+            Assert.IsNotNull(runtimeConfig.Runtime);
+            Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest?.Path);
+            Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
+            Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
+            Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
+        }
     }
 
     /// <summary>
@@ -195,10 +199,11 @@ public class EndToEndTests
 
         Program.Execute(args.ToArray(), _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
             TEST_RUNTIME_CONFIG_FILE,
             out RuntimeConfig? runtimeConfig,
-            replaceEnvVar: true));
+            replacementSettings: replacementSettings));
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(expectedDbType, runtimeConfig.DataSource.DatabaseType);

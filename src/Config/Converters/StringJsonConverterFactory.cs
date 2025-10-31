@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 public class StringJsonConverterFactory : JsonConverterFactory
 {
-    private DeserializationVariableReplacementSettings _replacementSettings;
+    private readonly DeserializationVariableReplacementSettings _replacementSettings;
 
     public StringJsonConverterFactory(DeserializationVariableReplacementSettings replacementSettings)
     {

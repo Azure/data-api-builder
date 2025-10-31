@@ -268,17 +268,31 @@ namespace Azure.DataApiBuilder.Core.Services
                         includePrimaryKeyPathComponent: true,
                         tags: tags);
 
-                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
-                    string pkPathComponents = pkComponents.Item1;
-                    string fullPathComponent = entityBasePathComponent + pkPathComponents;
-
-                    OpenApiPathItem openApiPkPathItem = new()
+                    // Filter operations based on configured REST methods
+                    Dictionary<OperationType, OpenApiOperation> filteredPkOperations = new();
+                    foreach (var operation in pkOperations)
                     {
-                        Operations = pkOperations,
-                        Parameters = pkComponents.Item2
-                    };
+                        if (configuredRestOperations.GetValueOrDefault(operation.Key, false))
+                        {
+                            filteredPkOperations.Add(operation.Key, operation.Value);
+                        }
+                    }
 
-                    pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                    // Only add primary key path if there are operations for it
+                    if (filteredPkOperations.Count > 0)
+                    {
+                        Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
+                        string pkPathComponents = pkComponents.Item1;
+                        string fullPathComponent = entityBasePathComponent + pkPathComponents;
+
+                        OpenApiPathItem openApiPkPathItem = new()
+                        {
+                            Operations = filteredPkOperations,
+                            Parameters = pkComponents.Item2
+                        };
+
+                        pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                    }
 
                     // Operations excluding primary key
                     Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
@@ -287,12 +301,26 @@ namespace Azure.DataApiBuilder.Core.Services
                         includePrimaryKeyPathComponent: false,
                         tags: tags);
 
-                    OpenApiPathItem openApiPathItem = new()
+                    // Filter operations based on configured REST methods
+                    Dictionary<OperationType, OpenApiOperation> filteredOperations = new();
+                    foreach (var operation in operations)
                     {
-                        Operations = operations
-                    };
+                        if (configuredRestOperations.GetValueOrDefault(operation.Key, false))
+                        {
+                            filteredOperations.Add(operation.Key, operation.Value);
+                        }
+                    }
 
-                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    // Only add collection path if there are operations for it
+                    if (filteredOperations.Count > 0)
+                    {
+                        OpenApiPathItem openApiPathItem = new()
+                        {
+                            Operations = filteredOperations
+                        };
+
+                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    }
                 }
             }
 

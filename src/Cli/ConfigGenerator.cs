@@ -271,6 +271,7 @@ namespace Cli
                             Provider: options.AuthenticationProvider,
                             Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
                         Mode: options.HostMode),
+                    OpenApiDescription: options.OpenApiDescription,
                     BaseRoute: runtimeBaseRoute
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
@@ -866,6 +867,18 @@ namespace Cli
                 {
                     return false;
                 }
+            }
+
+            if (options.RuntimeOpenApiDescription is not null)
+            {
+                RuntimeOptions updatedRuntimeOptions = runtimeConfig?.Runtime ?? new RuntimeOptions(
+                    Rest: null,
+                    GraphQL: null,
+                    Mcp: null,
+                    Host: null);
+                updatedRuntimeOptions = updatedRuntimeOptions with { OpenApiDescription = options.RuntimeOpenApiDescription };
+                runtimeConfig = runtimeConfig! with { Runtime = updatedRuntimeOptions };
+                _logger.LogInformation("Updated RuntimeConfig with Runtime.OpenApiDescription as '{description}'", options.RuntimeOpenApiDescription);
             }
 
             // Telemetry: File Sink

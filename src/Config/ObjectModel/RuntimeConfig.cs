@@ -87,6 +87,9 @@ public record RuntimeConfig
         Runtime.Health is null ||
         Runtime.Health.Enabled;
 
+    [JsonIgnore]
+    public string? OpenApiDescription => Runtime?.OpenApiDescription;
+
     /// <summary>
     /// A shorthand method to determine whether Static Web Apps is configured for the current authentication provider.
     /// </summary>

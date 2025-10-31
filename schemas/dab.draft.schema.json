@@ -300,6 +300,10 @@
             }
           }
         },
+        "openapi-description": {
+          "type": "string",
+          "description": "Optional description to surface in the generated OpenAPI info section."
+        },
         "host": {
           "type": "object",
           "description": "Global hosting configuration",

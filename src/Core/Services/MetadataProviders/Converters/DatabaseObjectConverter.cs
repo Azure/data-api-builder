@@ -56,7 +56,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
             writer.WriteStartObject();
 
-            // Add TypeName property in DatabaseObject object that we are serializing based on its type.
+            // Add TypeName property in DatabaseObject object that we are serializing based on its type. (DatabaseTable, DatabaseView)
+            // We add this property to differentiate between them in the dictionary. This extra property gets used in deserialization above.
+            // for example if object is DatabaseTable then we need to add
+            // "TypeName": "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config",
             writer.WriteString(TYPE_NAME, GetTypeNameFromType(value.GetType()));
 
             // Add other properties of DatabaseObject

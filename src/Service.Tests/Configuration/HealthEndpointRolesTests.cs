@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null,
                 Health: new(true));
-            HostOptions hostOptions = new(Mode: hostMode, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
+            HostOptions hostOptions = new(Mode: hostMode, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.AppService) });
 
             RuntimeConfig runtimeConfig = new(
                 Schema: string.Empty,

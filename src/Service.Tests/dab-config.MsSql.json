@@ -3847,6 +3847,85 @@
           ]
         }
       ]
+    },
+    "ReadOnlyBook": {
+      "source": {
+        "object": "books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": false
+      },
+      "rest": {
+        "methods": [
+          "Get"
+        ],
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ]
+    },
+    "WriteOnlyBook": {
+      "source": {
+        "object": "books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": false
+      },
+      "rest": {
+        "methods": [
+          "Post"
+        ],
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            }
+          ]
+        }
+      ]
+    },
+    "PartialCrudBook": {
+      "source": {
+        "object": "books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": false
+      },
+      "rest": {
+        "methods": [
+          "Get",
+          "Put"
+        ],
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            }
+          ]
+        }
+      ]
     }
   }
 }

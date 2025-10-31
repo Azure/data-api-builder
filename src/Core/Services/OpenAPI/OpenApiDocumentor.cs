@@ -268,17 +268,24 @@ namespace Azure.DataApiBuilder.Core.Services
                         includePrimaryKeyPathComponent: true,
                         tags: tags);
 
-                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
-                    string pkPathComponents = pkComponents.Item1;
-                    string fullPathComponent = entityBasePathComponent + pkPathComponents;
+                    // Filter operations based on configured REST methods
+                    Dictionary<OperationType, OpenApiOperation> filteredPkOperations = FilterOperationsByConfiguredMethods(pkOperations, configuredRestOperations);
 
-                    OpenApiPathItem openApiPkPathItem = new()
+                    // Only add primary key path if there are operations for it
+                    if (filteredPkOperations.Count > 0)
                     {
-                        Operations = pkOperations,
-                        Parameters = pkComponents.Item2
-                    };
+                        Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
+                        string pkPathComponents = pkComponents.Item1;
+                        string fullPathComponent = entityBasePathComponent + pkPathComponents;
 
-                    pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                        OpenApiPathItem openApiPkPathItem = new()
+                        {
+                            Operations = filteredPkOperations,
+                            Parameters = pkComponents.Item2
+                        };
+
+                        pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                    }
 
                     // Operations excluding primary key
                     Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
@@ -287,12 +294,19 @@ namespace Azure.DataApiBuilder.Core.Services
                         includePrimaryKeyPathComponent: false,
                         tags: tags);
 
-                    OpenApiPathItem openApiPathItem = new()
-                    {
-                        Operations = operations
-                    };
+                    // Filter operations based on configured REST methods
+                    Dictionary<OperationType, OpenApiOperation> filteredOperations = FilterOperationsByConfiguredMethods(operations, configuredRestOperations);
 
-                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    // Only add collection path if there are operations for it
+                    if (filteredOperations.Count > 0)
+                    {
+                        OpenApiPathItem openApiPathItem = new()
+                        {
+                            Operations = filteredOperations
+                        };
+
+                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    }
                 }
             }
 
@@ -656,38 +670,80 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 foreach (SupportedHttpVerb restMethod in spRestMethods)
                 {
-                    switch (restMethod)
-                    {
-                        case SupportedHttpVerb.Get:
-                            configuredOperations[OperationType.Get] = true;
-                            break;
-                        case SupportedHttpVerb.Post:
-                            configuredOperations[OperationType.Post] = true;
-                            break;
-                        case SupportedHttpVerb.Put:
-                            configuredOperations[OperationType.Put] = true;
-                            break;
-                        case SupportedHttpVerb.Patch:
-                            configuredOperations[OperationType.Patch] = true;
-                            break;
-                        case SupportedHttpVerb.Delete:
-                            configuredOperations[OperationType.Delete] = true;
-                            break;
-                        default:
-                            break;
-                    }
+                    MapHttpVerbToOperationType(restMethod, configuredOperations);
                 }
             }
-            else
+            else // Tables/Views
             {
-                configuredOperations[OperationType.Get] = true;
-                configuredOperations[OperationType.Post] = true;
-                configuredOperations[OperationType.Put] = true;
-                configuredOperations[OperationType.Patch] = true;
-                configuredOperations[OperationType.Delete] = true;
+                if (entity?.Rest?.Methods is not null && entity.Rest.Methods.Length > 0)
+                {
+                    // Methods explicitly configured - map them to operations
+                    foreach (SupportedHttpVerb verb in entity.Rest.Methods)
+                    {
+                        MapHttpVerbToOperationType(verb, configuredOperations);
+                    }
+                }
+                else
+                {
+                    // Default: all operations enabled (backward compatible)
+                    configuredOperations[OperationType.Get] = true;
+                    configuredOperations[OperationType.Post] = true;
+                    configuredOperations[OperationType.Put] = true;
+                    configuredOperations[OperationType.Patch] = true;
+                    configuredOperations[OperationType.Delete] = true;
+                }
             }
 
             return configuredOperations;
+        }
+
+        /// <summary>
+        /// Maps a SupportedHttpVerb to its corresponding OperationType in the operations dictionary.
+        /// </summary>
+        /// <param name="verb">The HTTP verb to map.</param>
+        /// <param name="operations">The dictionary to update with the mapped operation type.</param>
+        private static void MapHttpVerbToOperationType(SupportedHttpVerb verb, Dictionary<OperationType, bool> operations)
+        {
+            switch (verb)
+            {
+                case SupportedHttpVerb.Get:
+                    operations[OperationType.Get] = true;
+                    break;
+                case SupportedHttpVerb.Post:
+                    operations[OperationType.Post] = true;
+                    break;
+                case SupportedHttpVerb.Put:
+                    operations[OperationType.Put] = true;
+                    break;
+                case SupportedHttpVerb.Patch:
+                    operations[OperationType.Patch] = true;
+                    break;
+                case SupportedHttpVerb.Delete:
+                    operations[OperationType.Delete] = true;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Filters operations based on configured REST methods.
+        /// </summary>
+        /// <param name="operations">All possible operations for the entity.</param>
+        /// <param name="configuredRestOperations">Dictionary indicating which operations are enabled.</param>
+        /// <returns>Filtered dictionary containing only enabled operations.</returns>
+        private static Dictionary<OperationType, OpenApiOperation> FilterOperationsByConfiguredMethods(
+            Dictionary<OperationType, OpenApiOperation> operations,
+            Dictionary<OperationType, bool> configuredRestOperations)
+        {
+            Dictionary<OperationType, OpenApiOperation> filteredOperations = new();
+            foreach (KeyValuePair<OperationType, OpenApiOperation> operation in operations)
+            {
+                if (configuredRestOperations.GetValueOrDefault(operation.Key, false))
+                {
+                    filteredOperations.Add(operation.Key, operation.Value);
+                }
+            }
+
+            return filteredOperations;
         }
 
         /// <summary>
@@ -1019,41 +1075,72 @@ namespace Azure.DataApiBuilder.Core.Services
                     // which will typically represent the response body of a request or a stored procedure's request body.
                     schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
 
-                    // Create an entity's request body component schema excluding autogenerated primary keys.
-                    // A POST request requires any non-autogenerated primary key references to be in the request body.
-                    foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
+                    // Determine which operations are configured for this entity
+                    Dictionary<OperationType, bool> configuredOperations = GetConfiguredRestOperations(entity, dbObject);
+
+                    // Only create _NoAutoPK schema if POST operation is configured
+                    // POST requests require any non-autogenerated primary key references to be in the request body.
+                    if (configuredOperations.GetValueOrDefault(OperationType.Post, false))
                     {
-                        // Non-Autogenerated primary key(s) should appear in the request body.
-                        if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
+                        // Create an entity's request body component schema excluding autogenerated primary keys.
+                        foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
                         {
-                            nonAutoGeneratedPKColumnNames.Add(primaryKeyColumn);
-                            continue;
+                            // Non-Autogenerated primary key(s) should appear in the request body.
+                            if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
+                            {
+                                nonAutoGeneratedPKColumnNames.Add(primaryKeyColumn);
+                                continue;
+                            }
+
+                            if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                                && exposedColumnName is not null)
+                            {
+                                exposedColumnNames.Remove(exposedColumnName);
+                            }
                         }
 
-                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
-                            && exposedColumnName is not null)
-                        {
-                            exposedColumnNames.Remove(exposedColumnName);
-                        }
+                        schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
                     }
 
-                    schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
-
-                    // Create an entity's request body component schema excluding all primary keys
-                    // by removing the tracked non-autogenerated primary key column names and removing them from
-                    // the exposedColumnNames collection.
-                    // The schema component without primary keys is used for PUT and PATCH operation request bodies because
-                    // those operations require all primary key references to be in the URI path, not the request body.
-                    foreach (string primaryKeyColumn in nonAutoGeneratedPKColumnNames)
+                    // Only create _NoPK schema if PUT or PATCH operations are configured
+                    // PUT and PATCH operations require all primary key references to be in the URI path, not the request body.
+                    if (configuredOperations.GetValueOrDefault(OperationType.Put, false) ||
+                        configuredOperations.GetValueOrDefault(OperationType.Patch, false))
                     {
-                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
-                            && exposedColumnName is not null)
+                        // If _NoAutoPK schema was not created, we need to populate nonAutoGeneratedPKColumnNames
+                        // and remove auto-generated PKs from exposedColumnNames first
+                        if (!configuredOperations.GetValueOrDefault(OperationType.Post, false))
                         {
-                            exposedColumnNames.Remove(exposedColumnName);
-                        }
-                    }
+                            foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
+                            {
+                                if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
+                                {
+                                    nonAutoGeneratedPKColumnNames.Add(primaryKeyColumn);
+                                    continue;
+                                }
 
-                    schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
+                                if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                                    && exposedColumnName is not null)
+                                {
+                                    exposedColumnNames.Remove(exposedColumnName);
+                                }
+                            }
+                        }
+
+                        // Create an entity's request body component schema excluding all primary keys
+                        // by removing the tracked non-autogenerated primary key column names and removing them from
+                        // the exposedColumnNames collection.
+                        foreach (string primaryKeyColumn in nonAutoGeneratedPKColumnNames)
+                        {
+                            if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                                && exposedColumnName is not null)
+                            {
+                                exposedColumnNames.Remove(exposedColumnName);
+                            }
+                        }
+
+                        schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
+                    }
                 }
             }
 

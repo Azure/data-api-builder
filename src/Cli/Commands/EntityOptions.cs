@@ -79,7 +79,7 @@ namespace Cli.Commands
         [Option("rest", Required = false, HelpText = "Route for rest api.")]
         public string? RestRoute { get; }
 
-        [Option("rest.methods", Required = false, Separator = ',', HelpText = "HTTP actions to be supported for stored procedure. Specify the actions as a comma separated list. Valid HTTP actions are : [GET, POST, PUT, PATCH, DELETE]")]
+        [Option("rest.methods", Required = false, Separator = ',', HelpText = "HTTP actions to be supported for the entity. Specify the actions as a comma separated list. Valid HTTP actions are : [GET, POST, PUT, PATCH, DELETE]. Defaults to all methods if not specified.")]
         public IEnumerable<string>? RestMethodsForStoredProcedure { get; }
 
         [Option("graphql", Required = false, HelpText = "Type of graphQL.")]

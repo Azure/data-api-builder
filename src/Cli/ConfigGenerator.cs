@@ -412,15 +412,9 @@ namespace Cli
                 return false;
             }
 
-            if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
-                && !isStoredProcedure)
-            {
-                _logger.LogError("--rest.methods can be configured only for stored procedures.");
-                return false;
-            }
-
             GraphQLOperation? graphQLOperationsForStoredProcedures = null;
             SupportedHttpVerb[]? SupportedRestMethods = null;
+
             if (isStoredProcedure)
             {
                 if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
@@ -442,6 +436,16 @@ namespace Cli
 
                 if (!TryAddSupportedRestMethodsForStoredProcedure(options, out SupportedRestMethods))
                 {
+                    return false;
+                }
+            }
+            else if (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
+            {
+                // Support REST methods for tables and views
+                SupportedRestMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
+                if (SupportedRestMethods.Length == 0)
+                {
+                    _logger.LogError("Invalid REST method(s) specified. Valid methods are: GET, POST, PUT, PATCH, DELETE");
                     return false;
                 }
             }
@@ -1590,13 +1594,6 @@ namespace Cli
                 return false;
             }
 
-            if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
-                && !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
-            {
-                _logger.LogError("--rest.methods can be configured only for stored procedures.");
-                return false;
-            }
-
             if (isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure)
             {
                 if (CheckConflictingGraphQLConfigurationForStoredProcedures(options))
@@ -2488,19 +2485,19 @@ namespace Cli
         /// <param name="entity">Entity for which the REST settings are updated</param>
         /// <param name="options">Input from update command</param>
         /// <returns>Boolean -> when the entity's REST configuration is true/false.
-        /// RestEntitySettings -> when a non stored procedure entity is configured with granular REST settings (Path).
-        /// RestStoredProcedureEntitySettings -> when a stored procedure entity is configured with explicit SupportedRestMethods.
-        /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit SupportedRestMethods and Path settings.</returns>
+        /// RestEntitySettings -> when an entity is configured with granular REST settings (Path and/or Methods).
+        /// Supports explicit SupportedRestMethods for all entity types (tables, views, and stored procedures).</returns>
         private static EntityRestOptions ConstructUpdatedRestDetails(Entity entity, EntityOptions options, bool isCosmosDbNoSql)
         {
             // Updated REST Route details
             EntityRestOptions restPath = (options.RestRoute is not null) ? ConstructRestOptions(restRoute: options.RestRoute, supportedHttpVerbs: null, isCosmosDbNoSql: isCosmosDbNoSql) : entity.Rest;
 
-            // Updated REST Methods info for stored procedures
+            // Updated REST Methods info for all entity types
             SupportedHttpVerb[]? SupportedRestMethods;
             if (!IsStoredProcedureConvertedToOtherTypes(entity, options)
                 && (IsStoredProcedure(entity) || IsStoredProcedure(options)))
             {
+                // Stored procedure scenario
                 if (options.RestMethodsForStoredProcedure is null || !options.RestMethodsForStoredProcedure.Any())
                 {
                     SupportedRestMethods = entity.Rest.Methods;
@@ -2510,9 +2507,15 @@ namespace Cli
                     SupportedRestMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
                 }
             }
+            else if (options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
+            {
+                // Table/view scenario with explicit methods specified
+                SupportedRestMethods = CreateRestMethods(options.RestMethodsForStoredProcedure);
+            }
             else
             {
-                SupportedRestMethods = null;
+                // Preserve existing methods or null for default behavior
+                SupportedRestMethods = entity.Rest.Methods;
             }
 
             if (!restPath.Enabled)

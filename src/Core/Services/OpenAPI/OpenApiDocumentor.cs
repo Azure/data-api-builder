@@ -659,13 +659,25 @@ namespace Azure.DataApiBuilder.Core.Services
                     MapHttpVerbToOperationType(restMethod, configuredOperations);
                 }
             }
-            else
+            else // Tables/Views
             {
-                configuredOperations[OperationType.Get] = true;
-                configuredOperations[OperationType.Post] = true;
-                configuredOperations[OperationType.Put] = true;
-                configuredOperations[OperationType.Patch] = true;
-                configuredOperations[OperationType.Delete] = true;
+                if (entity?.Rest?.Methods is not null && entity.Rest.Methods.Length > 0)
+                {
+                    // Methods explicitly configured - map them to operations
+                    foreach (SupportedHttpVerb verb in entity.Rest.Methods)
+                    {
+                        MapHttpVerbToOperationType(verb, configuredOperations);
+                    }
+                }
+                else
+                {
+                    // Default: all operations enabled (backward compatible)
+                    configuredOperations[OperationType.Get] = true;
+                    configuredOperations[OperationType.Post] = true;
+                    configuredOperations[OperationType.Put] = true;
+                    configuredOperations[OperationType.Patch] = true;
+                    configuredOperations[OperationType.Delete] = true;
+                }
             }
 
             return configuredOperations;

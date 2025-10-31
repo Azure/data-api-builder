@@ -100,11 +100,11 @@ namespace Azure.DataApiBuilder.Config
         {
             // strips first and last characters, ie: '''hello'' --> ''hello'
             string name = Regex.Match(match.Value, INNER_AKV_PATTERN).Value[1..^1];
-            string? value = GetAKVVariable(name);
+            string? value = GetAkvVariable(name);
             if (EnvFailureMode == EnvironmentVariableReplacementFailureMode.Throw)
             {
                 return value is not null ? value :
-                    throw new DataApiBuilderException(message: $"Azure Key Vault Variable, {name}, not found.",
+                    throw new DataApiBuilderException(message: $"Azure Key Vault Variable, '{name}', not found.",
                                                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Config
             if (string.IsNullOrWhiteSpace(options.Endpoint))
             {
                 throw new DataApiBuilderException(
-                    "Azure Key Vault endpoint must be specified.",
+                    "Missing 'endpoint' property is required to connect to Azure Key Value.",
                     System.Net.HttpStatusCode.InternalServerError,
                     DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -138,16 +138,16 @@ namespace Azure.DataApiBuilder.Config
                 };
 
                 clientOptions.Retry.Mode = retryMode;
-                clientOptions.Retry.MaxRetries = options.RetryPolicy.MaxCount ?? 3;
-                clientOptions.Retry.Delay = TimeSpan.FromSeconds(options.RetryPolicy.DelaySeconds ?? 1);
-                clientOptions.Retry.MaxDelay = TimeSpan.FromSeconds(options.RetryPolicy.MaxDelaySeconds ?? 16);
-                clientOptions.Retry.NetworkTimeout = TimeSpan.FromSeconds(options.RetryPolicy.NetworkTimeoutSeconds ?? 30);
+                clientOptions.Retry.MaxRetries = options.RetryPolicy.MaxCount ?? AKVRetryPolicyOptions.DEFAULT_MAX_COUNT;
+                clientOptions.Retry.Delay = TimeSpan.FromSeconds(options.RetryPolicy.DelaySeconds ?? AKVRetryPolicyOptions.DEFAULT_DELAY_SECONDS);
+                clientOptions.Retry.MaxDelay = TimeSpan.FromSeconds(options.RetryPolicy.MaxDelaySeconds ?? AKVRetryPolicyOptions.DEFAULT_MAX_DELAY_SECONDS);
+                clientOptions.Retry.NetworkTimeout = TimeSpan.FromSeconds(options.RetryPolicy.NetworkTimeoutSeconds ?? AKVRetryPolicyOptions.DEFAULT_NETWORK_TIMEOUT_SECONDS);
             }
 
             return new SecretClient(new Uri(options.Endpoint), new DefaultAzureCredential(), clientOptions);
         }
 
-        private string? GetAKVVariable(string name)
+        private string? GetAkvVariable(string name)
         {
             if (_akvClient is null)
             {

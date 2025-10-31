@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN,
-                        new());
+                        replacementSettings: new());
                     msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }

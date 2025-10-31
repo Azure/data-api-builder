@@ -51,7 +51,7 @@ public abstract class RuntimeConfigLoader
     /// <returns>DabChangeToken</returns>
 #pragma warning disable CA1024 // Use properties where appropriate
     public IChangeToken GetChangeToken()
-#pragma warning restore CA1024 // Use properties where Appropriate
+#pragma warning restore CA1024 // Use properties where appropriate
     {
         return _changeToken;
     }
@@ -138,7 +138,7 @@ public abstract class RuntimeConfigLoader
     /// <returns>AzureKeyVaultOptions if present, null otherwise.</returns>
     private static AzureKeyVaultOptions? ExtractAzureKeyVaultOptions(string json, 
         bool enableEnvReplacement,
-        Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode replacementFailureMode = Azure.DataApiBuilder.Config.Converters.EnvironmentVariableReplacementFailureMode.Throw)
+        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
         JsonSerializerOptions options = new()
         {
@@ -155,12 +155,6 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings: envOnlySettings));
         options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings: envOnlySettings));
-
-        // Add environment variable replacement if enabled
-        if (enableEnvReplacement)
-        {
-
-        }
 
         try
         {
@@ -195,7 +189,7 @@ public abstract class RuntimeConfigLoader
         string? connectionString = null)
     {
         // First pass: extract AzureKeyVault options if AKV replacement is requested
-        if (replacementSettings?.DoReplaceAkvVar == true)
+        if (replacementSettings?.DoReplaceAkvVar is true)
         {
             AzureKeyVaultOptions? azureKeyVaultOptions = ExtractAzureKeyVaultOptions(
                 json, 

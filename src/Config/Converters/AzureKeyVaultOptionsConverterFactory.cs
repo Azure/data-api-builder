@@ -67,11 +67,7 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new AzureKeyVaultOptions
-                        {
-                            Endpoint = endpoint,
-                            RetryPolicy = retryPolicy
-                        };
+                        return new AzureKeyVaultOptions(endpoint, retryPolicy);
                     }
 
                     string? property = reader.GetString();
@@ -105,9 +101,29 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
             throw new JsonException("Invalid AzureKeyVaultOptions format");
         }
 
+        /// <summary>
+        /// When writing the AzureKeyVaultOptions back to a JSON file, only write the properties
+        /// if they are user provided. This avoids polluting the written JSON file with properties
+        /// the user most likely omitted when writing the original DAB runtime config file.
+        /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.
+        /// </summary>
         public override void Write(Utf8JsonWriter writer, AzureKeyVaultOptions value, JsonSerializerOptions options)
         {
-            JsonSerializer.Serialize(writer, value, options);
+            writer.WriteStartObject();
+
+            if (value?.UserProvidedEndpoint is true)
+            {
+                writer.WritePropertyName("endpoint");
+                JsonSerializer.Serialize(writer, value.Endpoint, options);
+            }
+
+            if (value?.UserProvidedRetryPolicy is true)
+            {
+                writer.WritePropertyName("retry-policy");
+                JsonSerializer.Serialize(writer, value.RetryPolicy, options);
+            }
+
+            writer.WriteEndObject();
         }
     }
 }

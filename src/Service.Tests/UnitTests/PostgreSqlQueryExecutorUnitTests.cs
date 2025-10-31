@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN,
-                        new());
+                        replacementSettings: new());
                     postgreSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }

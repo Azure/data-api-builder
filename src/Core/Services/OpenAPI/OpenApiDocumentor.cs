@@ -269,14 +269,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         tags: tags);
 
                     // Filter operations based on configured REST methods
-                    Dictionary<OperationType, OpenApiOperation> filteredPkOperations = new();
-                    foreach (var operation in pkOperations)
-                    {
-                        if (configuredRestOperations.GetValueOrDefault(operation.Key, false))
-                        {
-                            filteredPkOperations.Add(operation.Key, operation.Value);
-                        }
-                    }
+                    Dictionary<OperationType, OpenApiOperation> filteredPkOperations = FilterOperationsByConfiguredMethods(pkOperations, configuredRestOperations);
 
                     // Only add primary key path if there are operations for it
                     if (filteredPkOperations.Count > 0)
@@ -302,14 +295,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         tags: tags);
 
                     // Filter operations based on configured REST methods
-                    Dictionary<OperationType, OpenApiOperation> filteredOperations = new();
-                    foreach (var operation in operations)
-                    {
-                        if (configuredRestOperations.GetValueOrDefault(operation.Key, false))
-                        {
-                            filteredOperations.Add(operation.Key, operation.Value);
-                        }
-                    }
+                    Dictionary<OperationType, OpenApiOperation> filteredOperations = FilterOperationsByConfiguredMethods(operations, configuredRestOperations);
 
                     // Only add collection path if there are operations for it
                     if (filteredOperations.Count > 0)
@@ -736,6 +722,28 @@ namespace Azure.DataApiBuilder.Core.Services
                     operations[OperationType.Delete] = true;
                     break;
             }
+        }
+
+        /// <summary>
+        /// Filters operations based on configured REST methods.
+        /// </summary>
+        /// <param name="operations">All possible operations for the entity.</param>
+        /// <param name="configuredRestOperations">Dictionary indicating which operations are enabled.</param>
+        /// <returns>Filtered dictionary containing only enabled operations.</returns>
+        private static Dictionary<OperationType, OpenApiOperation> FilterOperationsByConfiguredMethods(
+            Dictionary<OperationType, OpenApiOperation> operations,
+            Dictionary<OperationType, bool> configuredRestOperations)
+        {
+            Dictionary<OperationType, OpenApiOperation> filteredOperations = new();
+            foreach (KeyValuePair<OperationType, OpenApiOperation> operation in operations)
+            {
+                if (configuredRestOperations.GetValueOrDefault(operation.Key, false))
+                {
+                    filteredOperations.Add(operation.Key, operation.Value);
+                }
+            }
+
+            return filteredOperations;
         }
 
         /// <summary>

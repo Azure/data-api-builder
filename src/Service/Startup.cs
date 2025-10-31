@@ -809,7 +809,14 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    string scheme = easyAuthType switch
+                    {
+                        EasyAuthType.AppService => EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                        EasyAuthType.StaticWebApps => EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+                        _ => EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME
+                    };
+
+                    services.AddAuthentication(scheme)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
                 else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())

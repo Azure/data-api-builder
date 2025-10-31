@@ -80,7 +80,7 @@ static class ModuleInitializer
         // Ignore the McpDmlTools as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpDmlTools);
         // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsAppServiceIdentityProvider);
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
         // Ignore the IsAppServiceIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsAppServiceIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.

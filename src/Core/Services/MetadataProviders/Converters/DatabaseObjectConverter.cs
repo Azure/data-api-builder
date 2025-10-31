@@ -65,6 +65,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
             // Add other properties of DatabaseObject
             foreach (PropertyInfo prop in value.GetType().GetProperties())
             {
+                // Skip the TypeName property, as it has been handled above
                 if (prop.Name == TYPE_NAME)
                 {
                     continue;

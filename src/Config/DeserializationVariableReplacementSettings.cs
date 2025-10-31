@@ -1,13 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.RegularExpressions;
 using Azure.Core;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using System.Text.RegularExpressions;
 
 namespace Azure.DataApiBuilder.Config
 {

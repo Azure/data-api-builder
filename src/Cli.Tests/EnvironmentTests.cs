@@ -24,7 +24,7 @@ public class EnvironmentTests
             doReplaceEnvVar: true,
             doReplaceAkvVar: false,
             envFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
-        
+
         StringJsonConverterFactory converterFactory = new(replacementSettings);
         _options = new()
         {

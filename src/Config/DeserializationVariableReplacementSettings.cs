@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Config
             if (string.IsNullOrWhiteSpace(options.Endpoint))
             {
                 throw new DataApiBuilderException(
-                    "Missing 'endpoint' property is required to connect to Azure Key Value.",
+                    "Missing 'endpoint' property is required to connect to Azure Key Vault.",
                     System.Net.HttpStatusCode.InternalServerError,
                     DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }

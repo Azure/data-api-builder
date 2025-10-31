@@ -44,7 +44,8 @@ namespace Cli
             }
 
             // Load the runtime configuration from the file
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
+            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
             {
                 logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
                 return false;
@@ -62,9 +63,12 @@ namespace Cli
                 {
                     try
                     {
-                        ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger).Wait();
-                        isSuccess = true;
-                        break;
+                        if (runtimeConfig is not null)
+                        {
+                            ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger).Wait();
+                            isSuccess = true;
+                            break;
+                        }
                     }
                     catch
                     {

@@ -339,7 +339,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-            Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
+            // Use null replacement settings for this test
+            Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _, replacementSettings: null));
         }
 
         /// <summary>

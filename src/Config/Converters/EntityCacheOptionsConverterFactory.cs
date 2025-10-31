@@ -14,7 +14,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
 {
     // Determines whether to replace environment variable with its
     // value or not while deserializing.
-    private DeserializationVariableReplacementSettings? _replacementSettings;
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)

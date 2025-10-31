@@ -656,26 +656,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 foreach (SupportedHttpVerb restMethod in spRestMethods)
                 {
-                    switch (restMethod)
-                    {
-                        case SupportedHttpVerb.Get:
-                            configuredOperations[OperationType.Get] = true;
-                            break;
-                        case SupportedHttpVerb.Post:
-                            configuredOperations[OperationType.Post] = true;
-                            break;
-                        case SupportedHttpVerb.Put:
-                            configuredOperations[OperationType.Put] = true;
-                            break;
-                        case SupportedHttpVerb.Patch:
-                            configuredOperations[OperationType.Patch] = true;
-                            break;
-                        case SupportedHttpVerb.Delete:
-                            configuredOperations[OperationType.Delete] = true;
-                            break;
-                        default:
-                            break;
-                    }
+                    MapHttpVerbToOperationType(restMethod, configuredOperations);
                 }
             }
             else
@@ -688,6 +669,33 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return configuredOperations;
+        }
+
+        /// <summary>
+        /// Maps a SupportedHttpVerb to its corresponding OperationType in the operations dictionary.
+        /// </summary>
+        /// <param name="verb">The HTTP verb to map.</param>
+        /// <param name="operations">The dictionary to update with the mapped operation type.</param>
+        private static void MapHttpVerbToOperationType(SupportedHttpVerb verb, Dictionary<OperationType, bool> operations)
+        {
+            switch (verb)
+            {
+                case SupportedHttpVerb.Get:
+                    operations[OperationType.Get] = true;
+                    break;
+                case SupportedHttpVerb.Post:
+                    operations[OperationType.Post] = true;
+                    break;
+                case SupportedHttpVerb.Put:
+                    operations[OperationType.Put] = true;
+                    break;
+                case SupportedHttpVerb.Patch:
+                    operations[OperationType.Patch] = true;
+                    break;
+                case SupportedHttpVerb.Delete:
+                    operations[OperationType.Delete] = true;
+                    break;
+            }
         }
 
         /// <summary>

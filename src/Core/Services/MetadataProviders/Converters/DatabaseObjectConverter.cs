@@ -31,15 +31,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
                 DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(document, concreteType, options)!;
 
-                foreach (PropertyInfo prop in objA.GetType().GetProperties())
+                foreach (PropertyInfo prop in objA.GetType().GetProperties().Where(IsSourceDefinitionProperty))
                 {
-                    if (IsSourceDefinitionProperty(prop))
+                    SourceDefinition? sourceDef = (SourceDefinition?)prop.GetValue(objA);
+                    if (sourceDef is not null)
                     {
-                        SourceDefinition? sourceDef = (SourceDefinition?)prop.GetValue(objA);
-                        if (sourceDef is not null)
-                        {
-                            UnescapeDollaredColumns(sourceDef);
-                        }
+                        UnescapeDollaredColumns(sourceDef);
                     }
                 }
 
@@ -75,7 +72,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 object? propVal = prop.GetValue(value);
                 Type propType = prop.PropertyType;
 
-                // enforcing that we only escape columns for properties whose type is exactly SourceDefinition(DatabaseTables)
+                // Only escape columns for properties whose type is exactly SourceDefinition (not subclasses).
+                // This is because, we do not want unnecessary mutation of subclasses of SourceDefinition unless needed.
                 if (IsSourceDefinitionProperty(prop) && propVal is SourceDefinition sourceDef && propVal.GetType() == typeof(SourceDefinition))
                 {
                     EscapeDollaredColumns(sourceDef);

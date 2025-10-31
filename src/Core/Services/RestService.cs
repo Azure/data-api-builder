@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is EntitySourceType.StoredProcedure)
             {
-                if (!IsHttpMethodAllowedForStoredProcedure(entityName))
+                if (!IsHttpMethodAllowedForEntity(entityName))
                 {
                     throw new DataApiBuilderException(
                         message: "This operation is not supported.",
@@ -315,15 +315,15 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Returns whether the stored procedure backed entity allows the
-        /// request's HTTP method. e.g. when an entity is only configured for "GET"
-        /// and the request method is "POST" this method will return false.
+        /// Returns whether the entity allows the request's HTTP method.
+        /// e.g. when an entity is only configured for "GET" and the request
+        /// method is "POST" this method will return false.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <returns>True if the operation is allowed. False, otherwise.</returns>
-        private bool IsHttpMethodAllowedForStoredProcedure(string entityName)
+        private bool IsHttpMethodAllowedForEntity(string entityName)
         {
-            if (TryGetStoredProcedureRESTVerbs(entityName, out List<SupportedHttpVerb>? httpVerbs))
+            if (TryGetEntityRESTVerbs(entityName, out List<SupportedHttpVerb>? httpVerbs))
             {
                 HttpContext? httpContext = _httpContextAccessor.HttpContext;
                 if (httpContext is not null
@@ -338,32 +338,43 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Gets the list of HTTP methods defined for entities representing stored procedures.
-        /// When no explicit REST method configuration is present for a stored procedure entity,
-        /// the default method "POST" is populated in httpVerbs.
+        /// Gets the list of HTTP methods defined for an entity.
+        /// When no explicit REST method configuration is present, returns default methods based on entity type:
+        /// - Stored procedures: POST only (or empty if disabled)
+        /// - Tables/Views: All 5 HTTP verbs (GET, POST, PUT, PATCH, DELETE)
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
-        /// <param name="httpVerbs">Out Param: List of http verbs configured for stored procedure backed entity.</param>
-        /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config
-        /// or entity is not a stored procedure, and httpVerbs will be null.</returns>
-        private bool TryGetStoredProcedureRESTVerbs(string entityName, [NotNullWhen(true)] out List<SupportedHttpVerb>? httpVerbs)
+        /// <param name="httpVerbs">Out Param: List of http verbs configured for the entity.</param>
+        /// <returns>True, with a list of HTTP verbs. False, when entity is not found in config.</returns>
+        private bool TryGetEntityRESTVerbs(string entityName, [NotNullWhen(true)] out List<SupportedHttpVerb>? httpVerbs)
         {
             if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
                 if (runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity))
                 {
-                    SupportedHttpVerb[] methods;
-                    if (entity.Rest.Methods is not null)
+                    // If Methods explicitly configured, use them regardless of entity type
+                    if (entity.Rest?.Methods is not null && entity.Rest.Methods.Length > 0)
                     {
-                        methods = entity.Rest.Methods;
+                        httpVerbs = entity.Rest.Methods.ToList();
+                        return true;
+                    }
+
+                    // No Methods configured - apply type-specific defaults
+                    if (entity.Source.Type is EntitySourceType.StoredProcedure)
+                    {
+                        // Stored procedure default: POST only (or empty if disabled)
+                        SupportedHttpVerb[] methods = (entity.Rest?.Enabled ?? false)
+                            ? new SupportedHttpVerb[] { SupportedHttpVerb.Post }
+                            : Array.Empty<SupportedHttpVerb>();
+                        httpVerbs = new(methods);
+                        return true;
                     }
                     else
                     {
-                        methods = (entity.Rest.Enabled) ? new SupportedHttpVerb[] { SupportedHttpVerb.Post } : Array.Empty<SupportedHttpVerb>();
+                        // Tables/Views default: all 5 verbs
+                        httpVerbs = EntityRestOptions.DEFAULT_SUPPORTED_VERBS.ToList();
+                        return true;
                     }
-
-                    httpVerbs = new(methods);
-                    return true;
                 }
             }
 

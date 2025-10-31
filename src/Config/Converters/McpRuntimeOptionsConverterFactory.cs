@@ -37,7 +37,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
     {
         // Determines whether to replace environment variable with its
         // value or not while deserializing.
-        private DeserializationVariableReplacementSettings? _replacementSettings;
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replaceEnvVar">Whether to replace environment variable with its
         /// value or not while deserializing.</param>

@@ -393,7 +393,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     ""allow-credentials"": false
                 },
                 ""authentication"": {
-                    ""provider"": ""StaticWebApps""
+                    ""provider"": ""AppService""
                 },
                 ""mode"": ""development""
                 }
@@ -656,7 +656,7 @@ type Moon {
                                         },
                                         ""host"": {
                                             ""authentication"": {
-                                                ""provider"": ""StaticWebApps""
+                                                ""provider"": ""AppService""
                                             }
                                         }
                                     },
@@ -5541,7 +5541,7 @@ type Planet @model(name:""PlanetAlias"") {
                 );
             entityMap.Add("Publisher", anotherEntity);
 
-            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.AppService), null);
 
             return new(
                 Schema: "IntegrationTestMinimalSchema",

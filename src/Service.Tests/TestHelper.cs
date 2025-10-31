@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                   ""allow-credentials"": false
                 },
                 ""authentication"": {
-                  ""provider"": ""StaticWebApps""
+                  ""provider"": ""AppService""
                 }
               }
             },
@@ -217,7 +217,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                   ""allow-credentials"": false
                 },
                 ""authentication"": {
-                  ""provider"": ""StaticWebApps""
+                  ""provider"": ""AppService""
                 }
               }
             },
@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                   ""allow-credentials"": false
                 },
                 ""authentication"": {
-                  ""provider"": ""StaticWebApps""
+                  ""provider"": ""AppService""
                 }
               }
             }" + "," +

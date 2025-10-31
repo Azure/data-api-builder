@@ -54,7 +54,7 @@ public class ConfigFileWatcherUnitTests
         ""allow-credentials"": false
       },
       ""authentication"": {
-        ""provider"": ""StaticWebApps""
+        ""provider"": ""AppService""
       },
       ""mode"": """ + mode + @"""
     }

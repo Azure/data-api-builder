@@ -136,7 +136,8 @@ public abstract class RuntimeConfigLoader
     /// <param name="enableEnvReplacement">Whether to enable environment variable replacement during extraction.</param>
     /// <param name="replacementFailureMode">Failure mode for environment variable replacement if enabled.</param>
     /// <returns>AzureKeyVaultOptions if present, null otherwise.</returns>
-    private static AzureKeyVaultOptions? ExtractAzureKeyVaultOptions(string json, 
+    private static AzureKeyVaultOptions? ExtractAzureKeyVaultOptions(
+        string json,
         bool enableEnvReplacement,
         EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
@@ -192,10 +193,10 @@ public abstract class RuntimeConfigLoader
         if (replacementSettings?.DoReplaceAkvVar is true)
         {
             AzureKeyVaultOptions? azureKeyVaultOptions = ExtractAzureKeyVaultOptions(
-                json, 
+                json: json, 
                 enableEnvReplacement: replacementSettings.DoReplaceEnvVar,
                 replacementFailureMode: replacementSettings.EnvFailureMode);
-            
+
             // Update replacement settings with the extracted AKV options
             if (azureKeyVaultOptions is not null)
             {
@@ -323,7 +324,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replacementSettings));
         options.Converters.Add(new FileSinkConverter(replacementSettings));
-        
+
         // Add AzureKeyVaultOptionsConverterFactory to ensure AKV config is deserialized properly
         options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings));
 

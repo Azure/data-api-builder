@@ -310,10 +310,6 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntitySourceConverterFactory(replacementSettings));
         options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new EntityRestOptionsConverterFactory(replacementSettings));
-        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replacementSettings));
-        options.Converters.Add(new EntitySourceConverterFactory(replacementSettings));
-        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replacementSettings));
-        options.Converters.Add(new EntityRestOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
         options.Converters.Add(new EntityCacheOptionsConverterFactory(replacementSettings));

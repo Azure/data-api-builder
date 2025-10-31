@@ -70,6 +70,15 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
+            // Check method allowance BEFORE authorization for all entity types
+            if (!IsHttpMethodAllowedForEntity(entityName))
+            {
+                throw new DataApiBuilderException(
+                    message: "This operation is not supported.",
+                    statusCode: HttpStatusCode.MethodNotAllowed,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());
@@ -93,14 +102,6 @@ namespace Azure.DataApiBuilder.Core.Services
             // If request has resolved to a stored procedure entity, initialize and validate appropriate request context
             if (dbObject.SourceType is EntitySourceType.StoredProcedure)
             {
-                if (!IsHttpMethodAllowedForEntity(entityName))
-                {
-                    throw new DataApiBuilderException(
-                        message: "This operation is not supported.",
-                        statusCode: HttpStatusCode.MethodNotAllowed,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
-
                 PopulateStoredProcedureContext(
                     operationType,
                     dbObject,

@@ -193,7 +193,7 @@ public abstract class RuntimeConfigLoader
         if (replacementSettings?.DoReplaceAkvVar is true)
         {
             AzureKeyVaultOptions? azureKeyVaultOptions = ExtractAzureKeyVaultOptions(
-                json: json, 
+                json: json,
                 enableEnvReplacement: replacementSettings.DoReplaceEnvVar,
                 replacementFailureMode: replacementSettings.EnvFailureMode);
 

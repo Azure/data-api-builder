@@ -300,7 +300,7 @@ public record RuntimeConfig
             {
                 // Use default replacement settings for environment variable replacement
                 DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
-                
+
                 if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
                     try

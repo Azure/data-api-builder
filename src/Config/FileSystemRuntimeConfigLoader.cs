@@ -304,10 +304,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
         // Convert legacy replaceEnvVar parameter to replacement settings for backward compatibility
-        DeserializationVariableReplacementSettings? replacementSettings = replaceEnvVar 
+        DeserializationVariableReplacementSettings? replacementSettings = replaceEnvVar
             ? new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true)
             : new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false);
-            
+
         return TryLoadConfig(ConfigFilePath, out config, replacementSettings: replacementSettings);
     }
 
@@ -318,10 +318,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        
+
         // Use default replacement settings for hot reload
         DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
-        
+
         if (!TryLoadConfig(ConfigFilePath, out _, logger: logger, isDevMode: isDevMode, replacementSettings: replacementSettings))
         {
             throw new DataApiBuilderException(

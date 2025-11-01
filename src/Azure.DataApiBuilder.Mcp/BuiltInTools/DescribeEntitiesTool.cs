@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         public ToolType ToolType { get; } = ToolType.BuiltIn;
 
         /// <summary>
-        /// Gets the metadata for the delete-record tool, including its name, description, and input schema.
+        /// Gets the metadata for the describe-entities tool, including its name, description, and input schema.
         /// </summary>
         /// <returns></returns>
         public Tool GetToolMetadata()
@@ -33,21 +33,21 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "describe_entities",
-                Description = "Lists and describes all entities in the database, including their types and available operations.",
+                Description = "Lists all entities and metadata. ALWAYS CALL FIRST. Each entity includes: name, type, fields, parameters, and permissions. The permissions array defines which tools are allowed. 'ALL' expands by type: data->CREATE, READ, UPDATE, DELETE.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""nameOnly"": {
                                 ""type"": ""boolean"",
-                                ""description"": ""If true, only entity names and descriptions will be returned. If false, full metadata including fields, parameters etc. will be included. Default is false.""
+                                ""description"": ""If true, the response includes only entity names and short summaries, omitting detailed metadata such as fields, parameters, and permissions. Use this when the database contains many entities and the full payload would be too large. The usual strategy is: first call describe_entities with nameOnly=true to get a lightweight list, then call describe_entities again with nameOnly=false for specific entities that require full metadata. This flag is meant for discovery, not execution planning. The model must not assume that nameOnly=true provides enough detail for CRUD or EXECUTE operations.""
                             },
                             ""entities"": {
                                 ""type"": ""array"",
                                 ""items"": {
                                     ""type"": ""string""
                                 },
-                                ""description"": ""Optional list of specific entity names to filter by. If empty, all entities will be described.""
+                                ""description"": ""Optional list of entity names to describe in full detail. Use this to reduce payload size when only certain entities are relevant. Do NOT pass both entities[] and nameOnly=true together, as that combination is nonsensical: nameOnly=true ignores detailed metadata, while entities[] explicitly requests it. Choose one approach—broad discovery with nameOnly=true OR targeted metadata with entities[].""
                             }
                         }
                     }"

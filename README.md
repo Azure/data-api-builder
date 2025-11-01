@@ -169,7 +169,7 @@ The file `dab-config.json` is automatically created through this process. These 
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps"
+        "provider": "AppService"
       },
       "mode": "development"
     }

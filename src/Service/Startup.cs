@@ -798,8 +798,16 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    string scheme = easyAuthType switch
+                    {
+                        EasyAuthType.AppService => EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+                        EasyAuthType.StaticWebApps => EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+                        _ => EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME
+                    };
+
+                    services.AddAuthentication(scheme)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
+                    _logger.LogInformation($"Registered EasyAuth scheme: {scheme}");
                 }
                 else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
                 {
@@ -820,7 +828,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Sets EasyAuth as the default authentication scheme when runtime configuration
                 // is not present.
-                SetStaticWebAppsAuthentication(services);
+                SetAppServiceAuthentication(services);
             }
         }
 
@@ -1012,13 +1020,13 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Sets Static Web Apps EasyAuth as the authentication scheme for the engine.
+        /// Sets App Service EasyAuth as the authentication scheme for the engine.
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
-        private static void SetStaticWebAppsAuthentication(IServiceCollection services)
+        private static void SetAppServiceAuthentication(IServiceCollection services)
         {
-            services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
+            services.AddAuthentication(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME)
+                    .AddEasyAuthAuthentication(EasyAuthType.AppService);
         }
 
         /// <summary>

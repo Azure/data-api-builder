@@ -818,6 +818,7 @@ namespace Azure.DataApiBuilder.Service
 
                     services.AddAuthentication(scheme)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
+                    _logger.LogInformation($"Registered EasyAuth scheme: {scheme}");
                 }
                 else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
                 {
@@ -1035,7 +1036,7 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="services">The service collection where authentication services are added.</param>
         private static void SetAppServiceAuthentication(IServiceCollection services)
         {
-            services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+            services.AddAuthentication(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME)
                     .AddEasyAuthAuthentication(EasyAuthType.AppService);
         }
 

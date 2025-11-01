@@ -113,16 +113,15 @@ public record DmlToolsConfig
     /// </summary>
     public static DmlToolsConfig FromBoolean(bool enabled)
     {
-        return new DmlToolsConfig
-        {
-            AllToolsEnabled = enabled,
-            DescribeEntities = null,
-            CreateRecord = null,
-            ReadRecords = null,
-            UpdateRecord = null,
-            DeleteRecord = null,
-            ExecuteEntity = null
-        };
+        return new DmlToolsConfig(
+            allToolsEnabled: enabled,
+            describeEntities: enabled,
+            createRecord: enabled,
+            readRecords: enabled,
+            updateRecord: enabled,
+            deleteRecord: enabled,
+            executeEntity: enabled
+        );
     }
 
     /// <summary>

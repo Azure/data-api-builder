@@ -48,7 +48,15 @@ public record McpRuntimeOptions
             this.Path = DEFAULT_PATH;
         }
 
-        this.DmlTools = DmlTools;
+        // if DmlTools is null, set All tools enabled by default
+        if (DmlTools is null)
+        {
+            this.DmlTools = DmlToolsConfig.FromBoolean(true);
+        }
+        else
+        {
+            this.DmlTools = DmlTools;
+        }
     }
 
     /// <summary>

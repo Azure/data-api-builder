@@ -28,10 +28,18 @@
         Source: {
           Object: s001.book,
           Type: stored-procedure,
-          Parameters: {
-            param1: dab,
-            param2: false
-          }
+          Parameters: [
+            {
+              Name: param1,
+              Required: false,
+              Default: dab
+            },
+            {
+              Name: param2,
+              Required: false,
+              Default: False
+            }
+          ]
         },
         GraphQL: {
           Singular: MyEntity,

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFrameworks>net8.0</TargetFrameworks>
@@ -102,6 +102,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Azure.DataApiBuilder.Mcp\Azure.DataApiBuilder.Mcp.csproj" />
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 

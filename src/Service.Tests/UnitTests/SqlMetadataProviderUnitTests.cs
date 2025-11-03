@@ -347,6 +347,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new("sampleElement", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: false),
                 GraphQL: new("", ""),
                 Permissions: new EntityPermission[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -423,6 +424,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     "get_book_by_id", new Entity(
                         Source: new("dbo.get_book_by_id", EntitySourceType.StoredProcedure, null, null),
+                        Fields: null,
                         Rest: new(Enabled: true),
                         GraphQL: new("get_book_by_id", "get_book_by_ids", Enabled: true),
                         Permissions: new EntityPermission[] {

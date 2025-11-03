@@ -89,6 +89,7 @@ namespace Cli
             DatabaseType dbType = options.DatabaseType;
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
+            string mcpPath = options.McpPath;
             string? runtimeBaseRoute = options.RuntimeBaseRoute;
             Dictionary<string, object?> dbOptions = new();
 
@@ -108,9 +109,10 @@ namespace Cli
                     " We recommend that you use the --graphql.enabled option instead.");
             }
 
-            bool restEnabled, graphQLEnabled;
+            bool restEnabled, graphQLEnabled, mcpEnabled;
             if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
-                !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled))
+                !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled) ||
+                !TryDetermineIfMcpIsEnabled(options.McpEnabled, out mcpEnabled))
             {
                 return false;
             }
@@ -262,6 +264,7 @@ namespace Cli
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
+                    Mcp: new(mcpEnabled, mcpPath ?? McpRuntimeOptions.DEFAULT_PATH),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -312,6 +315,17 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the mcp api is enabled or not based on the enabled/disabled options in the dab init command.
+        /// </summary>
+        /// <param name="mcpEnabledOptionValue">True, if MCP is enabled</param>
+        /// <param name="isMcpEnabled">Out param isMcpEnabled</param>
+        /// <returns>True if MCP is enabled</returns>
+        private static bool TryDetermineIfMcpIsEnabled(CliBool mcpEnabledOptionValue, out bool isMcpEnabled)
+        {
+            return TryDetermineIfApiIsEnabled(false, mcpEnabledOptionValue, ApiType.MCP, out isMcpEnabled);
         }
 
         /// <summary>
@@ -439,6 +453,7 @@ namespace Cli
             // Create new entity.
             Entity entity = new(
                 Source: source,
+                Fields: null,
                 Rest: restOptions,
                 GraphQL: graphqlOptions,
                 Permissions: permissionSettings,
@@ -459,6 +474,7 @@ namespace Cli
         /// <summary>
         /// This method creates the source object for a new entity
         /// if the given source fields specified by the user are valid.
+        /// Supports both old (dictionary) and new (ParameterMetadata list) parameter formats.
         /// </summary>
         public static bool TryCreateSourceObjectForNewEntity(
             AddOptions options,
@@ -487,17 +503,53 @@ namespace Cli
             if (!VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     objectType,
                     options.SourceParameters,
+                    options.ParametersNameCollection,
                     options.SourceKeyFields))
             {
                 return false;
             }
 
-            // Parses the string array to parameter Dictionary
-            if (!TryParseSourceParameterDictionary(
-                    options.SourceParameters,
-                    out Dictionary<string, object>? parametersDictionary))
+            // Check for both old and new parameter formats
+            bool hasOldParams = options.SourceParameters != null && options.SourceParameters.Any();
+            bool hasNewParams = options.ParametersNameCollection != null && options.ParametersNameCollection.Any();
+
+            if (hasOldParams && hasNewParams)
             {
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
                 return false;
+            }
+
+            List<ParameterMetadata>? parameters = null;
+            if (hasNewParams)
+            {
+                // Parse new format
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+
+                parameters = [];
+                for (int i = 0; i < names.Count; i++)
+                {
+                    parameters.Add(new ParameterMetadata
+                    {
+                        Name = names[i],
+                        Description = descriptions.ElementAtOrDefault(i),
+                        Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
+                        Default = defaults.ElementAtOrDefault(i)
+                    });
+                }
+            }
+            else if (hasOldParams)
+            {
+                // Parse old format and convert to new type
+                if (!TryParseSourceParameterDictionary(options.SourceParameters, out parameters))
+                {
+                    return false;
+                }
+
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+
             }
 
             string[]? sourceKeyFields = null;
@@ -510,7 +562,7 @@ namespace Cli
             if (!TryCreateSourceObject(
                     options.Source,
                     objectType,
-                    parametersDictionary,
+                    parameters,
                     sourceKeyFields,
                     out sourceObject))
             {
@@ -520,7 +572,6 @@ namespace Cli
 
             return true;
         }
-
         /// <summary>
         /// Tries to update the runtime settings based on the provided runtime options.
         /// </summary>
@@ -744,6 +795,23 @@ namespace Cli
                 }
             }
 
+            // MCP: Enabled and Path
+            if (options.RuntimeMcpEnabled != null ||
+                options.RuntimeMcpPath != null)
+            {
+                McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
+                bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
+
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Mcp = updatedMcpOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             // Cache: Enabled and TTL
             if (options.RuntimeCacheEnabled != null ||
                 options.RuntimeCacheTTL != null)
@@ -940,6 +1008,142 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.GraphQL with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Mcp runtime settings based on the provided value.
+        /// Validates that any user-provided values are valid and then returns true if the updated Mcp options
+        /// need to be overwritten on the existing config parameters
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedMcpOptions">updatedMcpOptions</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredMcpValues(
+            ConfigureOptions options,
+            ref McpRuntimeOptions updatedMcpOptions)
+        {
+            object? updatedValue;
+
+            try
+            {
+                // Runtime.Mcp.Enabled
+                updatedValue = options?.RuntimeMcpEnabled;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.Mcp.Path
+                updatedValue = options?.RuntimeMcpPath;
+                if (updatedValue != null)
+                {
+                    bool status = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: (string)updatedValue, out string exceptionMessage);
+                    if (status)
+                    {
+                        updatedMcpOptions = updatedMcpOptions! with { Path = (string)updatedValue };
+                        _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Path as '{updatedValue}'", updatedValue);
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
+                        return false;
+                    }
+                }
+
+                // Handle DML tools configuration
+                bool hasToolUpdates = false;
+                DmlToolsConfig? currentDmlTools = updatedMcpOptions?.DmlTools;
+
+                // If setting all tools at once
+                updatedValue = options?.RuntimeMcpDmlToolsEnabled;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { DmlTools = DmlToolsConfig.FromBoolean((bool)updatedValue) };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Dml-Tools as '{updatedValue}'", updatedValue);
+                    return true; // Return early since we're setting all tools at once
+                }
+
+                // Handle individual tool updates
+                bool? describeEntities = currentDmlTools?.DescribeEntities;
+                bool? createRecord = currentDmlTools?.CreateRecord;
+                bool? readRecord = currentDmlTools?.ReadRecords;
+                bool? updateRecord = currentDmlTools?.UpdateRecord;
+                bool? deleteRecord = currentDmlTools?.DeleteRecord;
+                bool? executeEntity = currentDmlTools?.ExecuteEntity;
+
+                updatedValue = options?.RuntimeMcpDmlToolsDescribeEntitiesEnabled;
+                if (updatedValue != null)
+                {
+                    describeEntities = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.describe-entities as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsCreateRecordEnabled;
+                if (updatedValue != null)
+                {
+                    createRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.create-record as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsReadRecordsEnabled;
+                if (updatedValue != null)
+                {
+                    readRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.read-records as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsUpdateRecordEnabled;
+                if (updatedValue != null)
+                {
+                    updateRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.update-record as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsDeleteRecordEnabled;
+                if (updatedValue != null)
+                {
+                    deleteRecord = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.delete-record as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeMcpDmlToolsExecuteEntityEnabled;
+                if (updatedValue != null)
+                {
+                    executeEntity = (bool)updatedValue;
+                    hasToolUpdates = true;
+                    _logger.LogInformation("Updated RuntimeConfig with runtime.mcp.dml-tools.execute-entity as '{updatedValue}'", updatedValue);
+                }
+
+                if (hasToolUpdates)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with
+                    {
+                        DmlTools = new DmlToolsConfig
+                        {
+                            AllToolsEnabled = false,
+                            DescribeEntities = describeEntities,
+                            CreateRecord = createRecord,
+                            ReadRecords = readRecord,
+                            UpdateRecord = updateRecord,
+                            DeleteRecord = deleteRecord,
+                            ExecuteEntity = executeEntity
+                        }
+                    };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Mcp with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -1479,24 +1683,182 @@ namespace Cli
                 updatedRelationships[options.Relationship] = new_relationship;
             }
 
-            if (options.Map is not null && options.Map.Any())
+            bool hasFields = options.FieldsNameCollection != null && options.FieldsNameCollection.Count() > 0;
+            bool hasMappings = options.Map != null && options.Map.Any();
+            bool hasKeyFields = options.SourceKeyFields != null && options.SourceKeyFields.Any();
+
+            List<FieldMetadata>? fields;
+            if (hasFields)
             {
-                // Parsing mappings dictionary from Collection
-                if (!TryParseMappingDictionary(options.Map, out updatedMappings))
+                if (hasMappings && hasKeyFields)
                 {
+                    _logger.LogError("Entity cannot define 'fields', 'mappings', and 'key-fields' together. Please use only one.");
                     return false;
                 }
+
+                if (hasMappings)
+                {
+                    _logger.LogError("Entity cannot define both 'fields' and 'mappings'. Please use only one.");
+                    return false;
+                }
+
+                if (hasKeyFields)
+                {
+                    _logger.LogError("Entity cannot define both 'fields' and 'key-fields'. Please use only one.");
+                    return false;
+                }
+
+                // Merge updated fields with existing fields
+                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? [];
+                List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
+                Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
+                List<FieldMetadata> mergedFields = [];
+
+                foreach (FieldMetadata field in existingFields)
+                {
+                    if (updatedFieldsDict.TryGetValue(field.Name, out FieldMetadata? updatedField))
+                    {
+                        mergedFields.Add(new FieldMetadata
+                        {
+                            Name = updatedField.Name,
+                            Alias = updatedField.Alias ?? field.Alias,
+                            Description = updatedField.Description ?? field.Description,
+                            PrimaryKey = updatedField.PrimaryKey
+                        });
+                        updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
+                    }
+                    else
+                    {
+                        mergedFields.Add(field); // Keep existing field
+                    }
+                }
+
+                // Add any new fields that didn't exist before
+                mergedFields.AddRange(updatedFieldsDict.Values);
+
+                fields = mergedFields;
+
+                // If user didn't mark any PK in fields, carry over existing source key-fields
+                if (!fields.Any(f => f.PrimaryKey) && updatedSource.KeyFields is { Length: > 0 })
+                {
+                    foreach (string k in updatedSource.KeyFields)
+                    {
+                        FieldMetadata? f = fields.FirstOrDefault(f => string.Equals(f.Name, k, StringComparison.OrdinalIgnoreCase));
+                        if (f is not null)
+                        {
+                            f.PrimaryKey = true;
+                        }
+                        else
+                        {
+                            fields.Add(new FieldMetadata { Name = k, PrimaryKey = true });
+                        }
+                    }
+                }
+
+                // Remove legacy props if fields present
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else if (hasMappings || hasKeyFields)
+            {
+                // If mappings or key-fields are provided, convert them to fields and remove legacy props
+                // Start with existing fields
+                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
+
+                // Build a dictionary for quick lookup and merging
+                Dictionary<string, FieldMetadata> fieldDict = existingFields
+                    .ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
+
+                // Parse mappings from options
+                if (hasMappings)
+                {
+                    if (options.Map is null || !TryParseMappingDictionary(options.Map, out updatedMappings))
+                    {
+                        _logger.LogError("Failed to parse mappings from --map option.");
+                        return false;
+                    }
+
+                    foreach (KeyValuePair<string, string> mapping in updatedMappings)
+                    {
+                        if (fieldDict.TryGetValue(mapping.Key, out FieldMetadata? existing) && existing != null)
+                        {
+                            // Update alias, preserve PK and description
+                            existing.Alias = mapping.Value ?? existing.Alias;
+                        }
+                        else
+                        {
+                            // New field from mapping
+                            fieldDict[mapping.Key] = new FieldMetadata
+                            {
+                                Name = mapping.Key,
+                                Alias = mapping.Value
+                            };
+                        }
+                    }
+                }
+
+                // Always carry over existing PKs on the entity/update, not only when the user re-supplies --source.key-fields.
+                string[]? existingKeys = updatedSource.KeyFields;
+                if (existingKeys is not null && existingKeys.Length > 0)
+                {
+                    foreach (string key in existingKeys)
+                    {
+                        if (fieldDict.TryGetValue(key, out FieldMetadata? pkField) && pkField != null)
+                        {
+                            pkField.PrimaryKey = true;
+                        }
+                        else
+                        {
+                            fieldDict[key] = new FieldMetadata { Name = key, PrimaryKey = true };
+                        }
+                    }
+                }
+
+                // Final merged list, no duplicates
+                fields = fieldDict.Values.ToList();
+
+                // Remove legacy props only after we have safely embedded PKs into fields.
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else if (!hasFields && !hasMappings && !hasKeyFields && entity.Source.KeyFields?.Length > 0)
+            {
+                // If no fields, mappings, or key-fields are provided with update command, use the entity's key-fields added using add command.
+                fields = entity.Source.KeyFields.Select(k => new FieldMetadata
+                {
+                    Name = k,
+                    PrimaryKey = true
+                }).ToList();
+
+                updatedSource = updatedSource with { KeyFields = null };
+                updatedMappings = null;
+            }
+            else
+            {
+                fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
+                if (entity.Mappings is not null || entity.Source?.KeyFields is not null)
+                {
+                    _logger.LogWarning("Using legacy 'mappings' and 'key-fields' properties. Consider using 'fields' for new entities.");
+                }
+            }
+
+            if (!ValidateFields(fields, out string errorMessage))
+            {
+                _logger.LogError(errorMessage);
+                return false;
             }
 
             Entity updatedEntity = new(
                 Source: updatedSource,
+                Fields: fields,
                 Rest: updatedRestDetails,
                 GraphQL: updatedGraphQLDetails,
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description);
+                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description
+                );
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
                 [options.Entity] = updatedEntity
@@ -1653,10 +2015,12 @@ namespace Cli
             string updatedSourceName = options.Source ?? entity.Source.Object;
             string[]? updatedKeyFields = entity.Source.KeyFields;
             EntitySourceType? updatedSourceType = entity.Source.Type;
-            Dictionary<string, object>? updatedSourceParameters = entity.Source.Parameters;
 
-            // If SourceType provided by user is null,
-            // no update is required.
+            // Support for new parameter format
+            bool hasOldParams = options.SourceParameters is not null && options.SourceParameters.Any();
+            bool hasNewParams = options.ParametersNameCollection is not null && options.ParametersNameCollection.Any();
+
+            // If SourceType provided by user is not null, update type
             if (options.SourceType is not null)
             {
                 if (!EnumExtensions.TryDeserialize(options.SourceType, out EntitySourceType? deserializedEntityType))
@@ -1666,7 +2030,6 @@ namespace Cli
                 }
 
                 updatedSourceType = (EntitySourceType)deserializedEntityType;
-
                 if (IsStoredProcedureConvertedToOtherTypes(entity, options) || IsEntityBeingConvertedToStoredProcedure(entity, options))
                 {
                     _logger.LogWarning(
@@ -1675,13 +2038,15 @@ namespace Cli
                 }
             }
 
-            // No need to validate parameter and key field usage when there are no changes to the source object defined in 'options'
+            // Validate correct pairing of parameters and key fields
             if ((options.SourceType is not null
-                || (options.SourceParameters is not null && options.SourceParameters.Any())
-                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any()))
+                || hasOldParams
+                || (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
+                || hasNewParams)
                 && !VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
                     updatedSourceType,
                     options.SourceParameters,
+                    options.ParametersNameCollection,
                     options.SourceKeyFields))
             {
                 return false;
@@ -1689,23 +2054,61 @@ namespace Cli
 
             // Changing source object from stored-procedure to table/view
             // should automatically update the parameters to be null.
-            // Similarly from table/view to stored-procedure, key-fields
-            // should be marked null.
+            // Similarly from table/view to stored-procedure, key-fields should be marked null.
             if (EntitySourceType.StoredProcedure.Equals(updatedSourceType))
             {
                 updatedKeyFields = null;
             }
             else
             {
-                updatedSourceParameters = null;
+                hasOldParams = false;
+                hasNewParams = false;
             }
 
-            // If given SourceParameter is null or is Empty, no update is required.
-            // Else updatedSourceParameters will contain the parsed dictionary of parameters.
-            if (options.SourceParameters is not null && options.SourceParameters.Any() &&
-                !TryParseSourceParameterDictionary(options.SourceParameters, out updatedSourceParameters))
+            // Warn and error if both formats are provided
+            if (hasOldParams && hasNewParams)
             {
+                _logger.LogError("Cannot use both --source.params and --parameters.name/description/required/default together. Please use only one format.");
                 return false;
+            }
+
+            List<ParameterMetadata>? parameters = null;
+
+            if (hasNewParams)
+            {
+                // Parse new format
+                List<string> names = options.ParametersNameCollection != null ? options.ParametersNameCollection.ToList() : new List<string>();
+                List<string> descriptions = options.ParametersDescriptionCollection?.ToList() ?? new List<string>();
+                List<string> requiredFlags = options.ParametersRequiredCollection?.ToList() ?? new List<string>();
+                List<string> defaults = options.ParametersDefaultCollection?.ToList() ?? new List<string>();
+
+                parameters = [];
+                for (int i = 0; i < names.Count; i++)
+                {
+                    parameters.Add(new ParameterMetadata
+                    {
+                        Name = names[i],
+                        Description = descriptions.ElementAtOrDefault(i),
+                        Required = requiredFlags.ElementAtOrDefault(i)?.ToLower() == "true",
+                        Default = defaults.ElementAtOrDefault(i)
+                    });
+                }
+            }
+            else if (hasOldParams)
+            {
+                // Parse old format and convert to new type
+                if (!TryParseSourceParameterDictionary(options.SourceParameters, out parameters))
+                {
+                    return false;
+                }
+
+                _logger.LogWarning("The --source.params format is deprecated. Please use --parameters.name/description/required/default instead.");
+            }
+
+            // In TryGetUpdatedSourceObjectWithOptions, before TryCreateSourceObject:
+            if (parameters == null && EntitySourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                parameters = entity.Source.Parameters?.ToList();
             }
 
             if (options.SourceKeyFields is not null && options.SourceKeyFields.Any())
@@ -1713,11 +2116,77 @@ namespace Cli
                 updatedKeyFields = options.SourceKeyFields.ToArray();
             }
 
+            if (hasNewParams && EntitySourceType.StoredProcedure.Equals(updatedSourceType))
+            {
+                List<ParameterMetadata> existingParams;
+                if (entity.Source.Parameters != null)
+                {
+                    existingParams = entity.Source.Parameters.ToList();
+                }
+                else
+                {
+                    existingParams = new List<ParameterMetadata>();
+                }
+
+                List<ParameterMetadata> mergedParams = new();
+
+                if (parameters != null)
+                {
+                    foreach (ParameterMetadata newParam in parameters)
+                    {
+                        ParameterMetadata? match = null;
+                        foreach (ParameterMetadata p in existingParams)
+                        {
+                            if (p.Name == newParam.Name)
+                            {
+                                match = p;
+                                break;
+                            }
+                        }
+
+                        if (match != null)
+                        {
+                            mergedParams.Add(new ParameterMetadata
+                            {
+                                Name = newParam.Name,
+                                Description = newParam.Description != null ? newParam.Description : match.Description,
+                                Required = newParam.Required,
+                                Default = newParam.Default != null ? newParam.Default : match.Default
+                            });
+                        }
+                        else
+                        {
+                            mergedParams.Add(newParam);
+                        }
+                    }
+                }
+
+                foreach (ParameterMetadata param in existingParams)
+                {
+                    bool found = false;
+                    foreach (ParameterMetadata p in mergedParams)
+                    {
+                        if (p.Name == param.Name)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        mergedParams.Add(param);
+                    }
+                }
+
+                parameters = mergedParams;
+            }
+
             // Try Creating Source Object with the updated values.
             if (!TryCreateSourceObject(
                     updatedSourceName,
                     updatedSourceType,
-                    updatedSourceParameters,
+                    parameters,
                     updatedKeyFields,
                     out updatedSourceObject))
             {
@@ -1910,7 +2379,29 @@ namespace Cli
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
+            bool isValid = runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
+
+            // Additional validation: warn if fields are missing and MCP is enabled
+            if (isValid)
+            {
+                if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config is not null)
+                {
+                    bool mcpEnabled = config.Runtime?.Mcp?.Enabled == true;
+                    if (mcpEnabled)
+                    {
+                        foreach (KeyValuePair<string, Entity> entity in config.Entities)
+                        {
+                            if (entity.Value.Fields == null || !entity.Value.Fields.Any())
+                            {
+                                _logger.LogWarning($"Entity '{entity.Key}' is missing 'fields' definition while MCP is enabled. " +
+                                    "It's recommended to define fields explicitly to ensure optimal performance with MCP.");
+                            }
+                        }
+                    }
+                }
+            }
+
+            return isValid;
         }
 
         /// <summary>
@@ -2229,7 +2720,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyMaxCount.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.max-count. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.max-count. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2244,7 +2735,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyDelaySeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.delay-seconds. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.delay-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2259,7 +2750,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.max-delay-seconds. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.max-delay-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2274,7 +2765,7 @@ namespace Cli
                 {
                     if (options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value < 1)
                     {
-                        _logger.LogError("Failed to update azure-key-vault.retry-policy.network-timeout-seconds. Value must be at least 1.");
+                        _logger.LogError("Failed to update configuration with runtime.azure-key-vault.retry-policy.network-timeout-seconds. Value must be a positive integer greater than 0.");
                         return false;
                     }
 
@@ -2305,6 +2796,69 @@ namespace Cli
                 _logger.LogError("Failed to update RuntimeConfig.AzureKeyVault with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Helper to build a list of FieldMetadata from UpdateOptions.
+        /// </summary>
+        private static List<FieldMetadata> ComposeFieldsFromOptions(UpdateOptions options)
+        {
+            List<FieldMetadata> fields = [];
+            if (options.FieldsNameCollection != null)
+            {
+                List<string> names = options.FieldsNameCollection.ToList();
+                List<string> aliases = options.FieldsAliasCollection?.ToList() ?? [];
+                List<string> descriptions = options.FieldsDescriptionCollection?.ToList() ?? [];
+                List<bool> keys = options.FieldsPrimaryKeyCollection?.ToList() ?? [];
+
+                for (int i = 0; i < names.Count; i++)
+                {
+                    fields.Add(new FieldMetadata
+                    {
+                        Name = names[i],
+                        Alias = aliases.Count > i ? aliases[i] : null,
+                        Description = descriptions.Count > i ? descriptions[i] : null,
+                        PrimaryKey = keys.Count > i && keys[i],
+                    });
+                }
+            }
+
+            return fields;
+        }
+
+        /// <summary>
+        /// Validates that the provided fields are valid against the database columns and constraints.
+        /// </summary>
+        private static bool ValidateFields(
+            List<FieldMetadata> fields,
+            out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            HashSet<string> aliases = [];
+            HashSet<string> keys = [];
+
+            foreach (FieldMetadata field in fields)
+            {
+                if (!string.IsNullOrEmpty(field.Alias))
+                {
+                    if (!aliases.Add(field.Alias))
+                    {
+                        errorMessage = $"Alias '{field.Alias}' is not unique within the entity.";
+                        return false;
+                    }
+                }
+
+                if (field.PrimaryKey)
+                {
+                    if (!keys.Add(field.Name))
+                    {
+                        errorMessage = $"Duplicate key field '{field.Name}' detected.";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
     }
 }

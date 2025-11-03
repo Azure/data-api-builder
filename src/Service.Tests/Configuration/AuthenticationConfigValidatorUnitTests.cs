@@ -194,6 +194,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: hostOptions
                 ),
                 Entities: new(new Dictionary<string, Entity>())

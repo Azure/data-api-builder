@@ -513,6 +513,7 @@ type Planet @model(name:""Planet"") {
 }";
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
             Dictionary<string, object> dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
@@ -541,6 +542,7 @@ type Planet @model(name:""Planet"") {
                        new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { readAction, createAction, deleteAction })};
 
             Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Fields: null,
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,
@@ -548,7 +550,7 @@ type Planet @model(name:""Planet"") {
                                   Mappings: null);
 
             string entityName = "Planet";
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
 
             const string CUSTOM_CONFIG = "custom-config.json";
             const string CUSTOM_SCHEMA = "custom-schema.gql";
@@ -642,6 +644,7 @@ type Planet @model(name:""Planet"") {
 }";
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
             Dictionary<string, object> dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
@@ -670,6 +673,7 @@ type Planet @model(name:""Planet"") {
                        new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { createAction })};
 
             Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Fields: null,
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,
@@ -677,7 +681,7 @@ type Planet @model(name:""Planet"") {
                                   Mappings: null);
 
             string entityName = "Planet";
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
 
             const string CUSTOM_CONFIG = "custom-config.json";
             const string CUSTOM_SCHEMA = "custom-schema.gql";

@@ -163,6 +163,10 @@ public class ConfigGeneratorTests
                   ""path"": ""/An_"",
                   ""allow-introspection"": true
                  },
+                 ""mcp"": {
+                 ""enabled"": true,
+                 ""path"": ""/mcp""
+                 },
                 ""host"": {
                   ""cors"": {
                     ""origins"": [],

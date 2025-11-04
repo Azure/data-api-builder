@@ -51,7 +51,7 @@ public record McpRuntimeOptions
         // if DmlTools is null, set All tools enabled by default
         if (DmlTools is null)
         {
-            this.DmlTools = DmlToolsConfig.FromBoolean(true);
+            this.DmlTools = DmlToolsConfig.FromBoolean(DmlToolsConfig.DEFAULT_ENABLED);
         }
         else
         {

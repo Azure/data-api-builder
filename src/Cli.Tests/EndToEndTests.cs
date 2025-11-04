@@ -122,19 +122,16 @@ public class EndToEndTests
             out RuntimeConfig? runtimeConfig,
             replacementSettings: replacementSettings));
 
-        if (runtimeConfig is not null)
-        {
-            SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
-            Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
+        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
+        Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
 
-            Assert.IsNotNull(runtimeConfig);
-            Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
-            Assert.IsNotNull(runtimeConfig.Runtime);
-            Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest?.Path);
-            Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
-            Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
-            Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
-        }
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest?.Path);
+        Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
+        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
+        Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
     }
 
     /// <summary>

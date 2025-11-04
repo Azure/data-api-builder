@@ -95,7 +95,7 @@ namespace Cli.Tests
 
             Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNull(config.Runtime!.GraphQL!.DepthLimit);
 
             // Act: Attmepts to Add Depth Limit
@@ -108,7 +108,7 @@ namespace Cli.Tests
             // Assert: Validate the Depth Limit is added
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config, replacementSettings: null));
             Assert.IsNotNull(config.Runtime?.GraphQL?.DepthLimit);
             Assert.AreEqual(maxDepthLimit, config.Runtime.GraphQL.DepthLimit);
         }
@@ -139,7 +139,7 @@ namespace Cli.Tests
             // Assert: Validate the AKV options are added.
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNotNull(config.AzureKeyVault);
             Assert.IsNotNull(config.AzureKeyVault?.RetryPolicy);
             Assert.AreEqual("foo", config.AzureKeyVault?.Endpoint);
@@ -177,7 +177,7 @@ namespace Cli.Tests
             // Assert: Validate the Azure Log Analytics options are added.
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNotNull(config.Runtime);
             Assert.IsNotNull(config.Runtime.Telemetry);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics);
@@ -222,7 +222,7 @@ namespace Cli.Tests
             // Assert: Validate the file options are added.
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNotNull(config.Runtime);
             Assert.IsNotNull(config.Runtime.Telemetry);
             Assert.IsNotNull(config.Runtime.Telemetry.File);
@@ -255,7 +255,7 @@ namespace Cli.Tests
             // Assert: Validate the Enabled Flag is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Enabled);
             Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.GraphQL.Enabled);
         }
@@ -283,7 +283,7 @@ namespace Cli.Tests
             // Assert: Validate the Path update is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
             Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.GraphQL.Path);
         }
@@ -311,7 +311,7 @@ namespace Cli.Tests
             // Assert: Validate the Allow-Introspection value is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.AllowIntrospection);
             Assert.AreEqual(updatedAllowIntrospectionValue, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
         }
@@ -339,7 +339,7 @@ namespace Cli.Tests
             // Assert: Validate the Multiple-Mutation.Create.Enabled is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.MultipleMutationOptions?.MultipleCreateOptions?.Enabled);
             Assert.AreEqual(updatedMultipleMutationsCreateEnabledValue, runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
         }
@@ -368,7 +368,7 @@ namespace Cli.Tests
             // Assert: Validate the path is updated and allow introspection is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
             Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.AllowIntrospection);
             Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.GraphQL.Path);
@@ -397,7 +397,7 @@ namespace Cli.Tests
             // Assert: Validate the Enabled Flag is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
             Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
         }
@@ -425,7 +425,7 @@ namespace Cli.Tests
             // Assert: Validate the Path update is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
             Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
         }
@@ -452,7 +452,7 @@ namespace Cli.Tests
             // Assert: Validate the RequestBodyStrict Value is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.RequestBodyStrict);
             Assert.AreEqual(updatedRequestBodyStrictValue, runtimeConfig.Runtime.Rest.RequestBodyStrict);
         }
@@ -480,7 +480,7 @@ namespace Cli.Tests
             // Assert: Validate the path is updated and enabled is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
             Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
             Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
@@ -509,7 +509,7 @@ namespace Cli.Tests
             // Assert: Validate the cache Enabled Flag is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.Enabled);
             Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Cache.Enabled);
         }
@@ -535,7 +535,7 @@ namespace Cli.Tests
             // Assert: Validate the TTL Value is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.TtlSeconds);
             Assert.AreEqual(updatedTtlValue, runtimeConfig.Runtime.Cache.TtlSeconds);
         }
@@ -565,7 +565,7 @@ namespace Cli.Tests
             // Assert: Validate the Mode in Host is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Mode);
             Assert.AreEqual(updatedModeValue, runtimeConfig.Runtime.Host.Mode);
         }
@@ -594,7 +594,7 @@ namespace Cli.Tests
             // Assert: Validate the Cors.Origins in Host is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Cors?.Origins);
             CollectionAssert.AreEqual(originsValue.ToArray(), runtimeConfig.Runtime.Host.Cors.Origins);
         }
@@ -621,7 +621,7 @@ namespace Cli.Tests
             // Assert: Validate the cors.allow-credentials in Host is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Cors?.AllowCredentials);
             Assert.AreEqual(allowCredentialsValue, runtimeConfig.Runtime.Host.Cors.AllowCredentials);
         }
@@ -650,7 +650,7 @@ namespace Cli.Tests
             // Assert: Validate the authentication.provider in Host is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Provider);
             Assert.AreEqual(authenticationProviderValue, runtimeConfig.Runtime.Host.Authentication.Provider);
         }
@@ -676,7 +676,7 @@ namespace Cli.Tests
             // Assert: Validate the authentication.jwt.audience in Host is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.Audience);
             Assert.AreEqual(updatedJwtAudienceValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Audience);
         }
@@ -702,7 +702,7 @@ namespace Cli.Tests
             // Assert: Validate the authentication.jwt.issuer in Host is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig, replacementSettings: null));
             Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.Issuer);
             Assert.AreEqual(updatedJwtIssuerValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer);
         }
@@ -720,7 +720,7 @@ namespace Cli.Tests
             int currentDepthLimit = 8;
 
             // Arrange
-            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config, replacementSettings: null);
             Assert.IsNotNull(config);
             config = config with
             {
@@ -745,7 +745,7 @@ namespace Cli.Tests
             // Assert: Validate the Depth Limit is updated
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config, replacementSettings: null));
 
             Assert.AreEqual(newDepthLimit, config.Runtime?.GraphQL?.DepthLimit);
         }
@@ -779,7 +779,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNotNull(config.Runtime);
             Assert.AreEqual(config.DataSource.DatabaseType, Enum.Parse<DatabaseType>(dbType, ignoreCase: true));
         }
@@ -809,7 +809,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNotNull(config.Runtime);
             Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.MSSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("set-session-context", false), true);
@@ -845,7 +845,7 @@ namespace Cli.Tests
             // Assert
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNotNull(config.Runtime);
             Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
             Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("database"), "testdb");
@@ -938,7 +938,7 @@ namespace Cli.Tests
 
             Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config, replacementSettings: null));
             Assert.IsNotNull(config.Runtime);
         }
     }

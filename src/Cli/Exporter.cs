@@ -63,12 +63,9 @@ namespace Cli
                 {
                     try
                     {
-                        if (runtimeConfig is not null)
-                        {
-                            ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger).Wait();
-                            isSuccess = true;
-                            break;
-                        }
+                        ExportGraphQL(options, runtimeConfig, fileSystem, loader, logger).Wait();
+                        isSuccess = true;
+                        break;
                     }
                     catch
                     {

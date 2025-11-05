@@ -71,41 +71,24 @@ public record DmlToolsConfig
             AllToolsEnabled = DEFAULT_ENABLED;
         }
 
-        if (describeEntities is not null)
-        {
-            DescribeEntities = describeEntities;
-            UserProvidedDescribeEntities = true;
-        }
+        // Set values with defaults and track user-provided status
+        DescribeEntities = describeEntities ?? DEFAULT_ENABLED;
+        UserProvidedDescribeEntities = describeEntities is not null;
 
-        if (createRecord is not null)
-        {
-            CreateRecord = createRecord;
-            UserProvidedCreateRecord = true;
-        }
+        CreateRecord = createRecord ?? DEFAULT_ENABLED;
+        UserProvidedCreateRecord = createRecord is not null;
 
-        if (readRecords is not null)
-        {
-            ReadRecords = readRecords;
-            UserProvidedReadRecords = true;
-        }
+        ReadRecords = readRecords ?? DEFAULT_ENABLED;
+        UserProvidedReadRecords = readRecords is not null;
 
-        if (updateRecord is not null)
-        {
-            UpdateRecord = updateRecord;
-            UserProvidedUpdateRecord = true;
-        }
+        UpdateRecord = updateRecord ?? DEFAULT_ENABLED;
+        UserProvidedUpdateRecord = updateRecord is not null;
 
-        if (deleteRecord is not null)
-        {
-            DeleteRecord = deleteRecord;
-            UserProvidedDeleteRecord = true;
-        }
+        DeleteRecord = deleteRecord ?? DEFAULT_ENABLED;
+        UserProvidedDeleteRecord = deleteRecord is not null;
 
-        if (executeEntity is not null)
-        {
-            ExecuteEntity = executeEntity;
-            UserProvidedExecuteEntity = true;
-        }
+        ExecuteEntity = executeEntity ?? DEFAULT_ENABLED;
+        UserProvidedExecuteEntity = executeEntity is not null;
     }
 
     /// <summary>
@@ -113,16 +96,15 @@ public record DmlToolsConfig
     /// </summary>
     public static DmlToolsConfig FromBoolean(bool enabled)
     {
-        return new DmlToolsConfig
-        {
-            AllToolsEnabled = enabled,
-            DescribeEntities = null,
-            CreateRecord = null,
-            ReadRecords = null,
-            UpdateRecord = null,
-            DeleteRecord = null,
-            ExecuteEntity = null
-        };
+        return new DmlToolsConfig(
+            allToolsEnabled: enabled,
+            describeEntities: enabled,
+            createRecord: enabled,
+            readRecords: enabled,
+            updateRecord: enabled,
+            deleteRecord: enabled,
+            executeEntity: enabled
+        );
     }
 
     /// <summary>

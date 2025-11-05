@@ -139,12 +139,13 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
 
         // Only write the boolean value if it's provided by user
         // This prevents writing "dml-tools": true when it's the default
-        if (!hasIndividualSettings && value.UserProvidedAllToolsEnabled)
+        if (!hasIndividualSettings && value.UserProvidedAllTools)
         {
             writer.WritePropertyName("dml-tools");
             writer.WriteBooleanValue(value.AllToolsEnabled);
         }
-        else
+
+        if(hasIndividualSettings)
         {
             writer.WritePropertyName("dml-tools");
 

@@ -450,12 +450,30 @@ namespace Cli
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
+
+            // Validate and construct MCP options
+            EntityMcpOptions? mcpOptions = null;
+            if (options.McpCustomToolEnabled is not null and not CliBool.None)
+            {
+                if (!isStoredProcedure)
+                {
+                    _logger.LogError("--mcp.custom-tool can only be configured for stored procedures.");
+                    return false;
+                }
+            }
+
+            if (isStoredProcedure)
+            {
+                mcpOptions = ConstructMcpOptions(options.McpCustomToolEnabled, options.McpDmlToolsEnabled);
+            }
+
             // Create new entity.
             Entity entity = new(
                 Source: source,
                 Fields: null,
                 Rest: restOptions,
                 GraphQL: graphqlOptions,
+                Mcp: mcpOptions,
                 Permissions: permissionSettings,
                 Relationships: null,
                 Mappings: null,
@@ -1583,18 +1601,30 @@ namespace Cli
 
             // Validations to ensure that REST methods and GraphQL operations can be configured only
             // for stored procedures
-            if (options.GraphQLOperationForStoredProcedure is not null &&
-                !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
+            if (options.GraphQLOperationForStoredProcedure is not null && !isCurrentEntityStoredProcedure)
             {
                 _logger.LogError("--graphql.operation can be configured only for stored procedures.");
                 return false;
             }
 
             if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
-                && !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
+                && !isCurrentEntityStoredProcedure)
             {
                 _logger.LogError("--rest.methods can be configured only for stored procedures.");
                 return false;
+            }
+
+            // Validate MCP custom-tool is only for stored procedures
+            if (options.McpCustomToolEnabled is not null and not CliBool.None)
+            {
+                bool willBeStoredProcedure = (isCurrentEntityStoredProcedure && options.SourceType is null) ||
+                                              (options.SourceType is not null && IsStoredProcedure(options));
+
+                if (!willBeStoredProcedure)
+                {
+                    _logger.LogError("--mcp.custom-tool can only be configured for stored procedures.");
+                    return false;
+                }
             }
 
             if (isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure)
@@ -1614,251 +1644,154 @@ namespace Cli
 
             EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
-            EntityPermission[]? updatedPermissions = entity!.Permissions;
-            Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
-            Dictionary<string, string>? updatedMappings = entity.Mappings;
-            EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
-            EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
-            EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityMcpOptions? updatedMcpOptions = ConstructUpdatedMcpOptions(entity, options);
 
-            if (!updatedGraphQLDetails.Enabled)
-            {
-                _logger.LogWarning("Disabling GraphQL for this entity will restrict its usage in relationships");
-            }
+            // Add these missing variable definitions
+            EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
+            EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            EntitySourceType? updatedSourceType = updatedSource.Type;
-
+            EntityPermission[]? updatedPermissions = null;
             if (options.Permissions is not null && options.Permissions.Any())
             {
-                // Get the Updated Permission Settings
-                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields, updatedSourceType);
-
-                if (updatedPermissions is null)
-                {
-                    _logger.LogError("Failed to update permissions.");
-                    return false;
-                }
+                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, policy, field, updatedSource.Type);
             }
             else
             {
-
-                if (options.FieldsToInclude is not null && options.FieldsToInclude.Any()
-                    || options.FieldsToExclude is not null && options.FieldsToExclude.Any())
-                {
-                    _logger.LogInformation("--permissions is mandatory with --fields.include and --fields.exclude.");
-                    return false;
-                }
-
-                if (options.PolicyRequest is not null || options.PolicyDatabase is not null)
-                {
-                    _logger.LogInformation("--permissions is mandatory with --policy-request and --policy-database.");
-                    return false;
-                }
-
-                if (updatedSourceType is EntitySourceType.StoredProcedure &&
-                    !VerifyPermissionOperationsForStoredProcedures(entity.Permissions))
-                {
-                    return false;
-                }
+                updatedPermissions = entity.Permissions;
             }
 
-            if (options.Relationship is not null)
+            if (updatedPermissions is null)
             {
-                if (!VerifyCanUpdateRelationship(initialConfig, options.Cardinality, options.TargetEntity))
-                {
-                    return false;
-                }
-
-                if (updatedRelationships is null)
-                {
-                    updatedRelationships = new();
-                }
-
-                EntityRelationship? new_relationship = CreateNewRelationshipWithUpdateOptions(options);
-                if (new_relationship is null)
-                {
-                    return false;
-                }
-
-                updatedRelationships[options.Relationship] = new_relationship;
-            }
-
-            bool hasFields = options.FieldsNameCollection != null && options.FieldsNameCollection.Count() > 0;
-            bool hasMappings = options.Map != null && options.Map.Any();
-            bool hasKeyFields = options.SourceKeyFields != null && options.SourceKeyFields.Any();
-
-            List<FieldMetadata>? fields;
-            if (hasFields)
-            {
-                if (hasMappings && hasKeyFields)
-                {
-                    _logger.LogError("Entity cannot define 'fields', 'mappings', and 'key-fields' together. Please use only one.");
-                    return false;
-                }
-
-                if (hasMappings)
-                {
-                    _logger.LogError("Entity cannot define both 'fields' and 'mappings'. Please use only one.");
-                    return false;
-                }
-
-                if (hasKeyFields)
-                {
-                    _logger.LogError("Entity cannot define both 'fields' and 'key-fields'. Please use only one.");
-                    return false;
-                }
-
-                // Merge updated fields with existing fields
-                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? [];
-                List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
-                Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
-                List<FieldMetadata> mergedFields = [];
-
-                foreach (FieldMetadata field in existingFields)
-                {
-                    if (updatedFieldsDict.TryGetValue(field.Name, out FieldMetadata? updatedField))
-                    {
-                        mergedFields.Add(new FieldMetadata
-                        {
-                            Name = updatedField.Name,
-                            Alias = updatedField.Alias ?? field.Alias,
-                            Description = updatedField.Description ?? field.Description,
-                            PrimaryKey = updatedField.PrimaryKey
-                        });
-                        updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
-                    }
-                    else
-                    {
-                        mergedFields.Add(field); // Keep existing field
-                    }
-                }
-
-                // Add any new fields that didn't exist before
-                mergedFields.AddRange(updatedFieldsDict.Values);
-
-                fields = mergedFields;
-
-                // If user didn't mark any PK in fields, carry over existing source key-fields
-                if (!fields.Any(f => f.PrimaryKey) && updatedSource.KeyFields is { Length: > 0 })
-                {
-                    foreach (string k in updatedSource.KeyFields)
-                    {
-                        FieldMetadata? f = fields.FirstOrDefault(f => string.Equals(f.Name, k, StringComparison.OrdinalIgnoreCase));
-                        if (f is not null)
-                        {
-                            f.PrimaryKey = true;
-                        }
-                        else
-                        {
-                            fields.Add(new FieldMetadata { Name = k, PrimaryKey = true });
-                        }
-                    }
-                }
-
-                // Remove legacy props if fields present
-                updatedSource = updatedSource with { KeyFields = null };
-                updatedMappings = null;
-            }
-            else if (hasMappings || hasKeyFields)
-            {
-                // If mappings or key-fields are provided, convert them to fields and remove legacy props
-                // Start with existing fields
-                List<FieldMetadata> existingFields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
-
-                // Build a dictionary for quick lookup and merging
-                Dictionary<string, FieldMetadata> fieldDict = existingFields
-                    .ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
-
-                // Parse mappings from options
-                if (hasMappings)
-                {
-                    if (options.Map is null || !TryParseMappingDictionary(options.Map, out updatedMappings))
-                    {
-                        _logger.LogError("Failed to parse mappings from --map option.");
-                        return false;
-                    }
-
-                    foreach (KeyValuePair<string, string> mapping in updatedMappings)
-                    {
-                        if (fieldDict.TryGetValue(mapping.Key, out FieldMetadata? existing) && existing != null)
-                        {
-                            // Update alias, preserve PK and description
-                            existing.Alias = mapping.Value ?? existing.Alias;
-                        }
-                        else
-                        {
-                            // New field from mapping
-                            fieldDict[mapping.Key] = new FieldMetadata
-                            {
-                                Name = mapping.Key,
-                                Alias = mapping.Value
-                            };
-                        }
-                    }
-                }
-
-                // Always carry over existing PKs on the entity/update, not only when the user re-supplies --source.key-fields.
-                string[]? existingKeys = updatedSource.KeyFields;
-                if (existingKeys is not null && existingKeys.Length > 0)
-                {
-                    foreach (string key in existingKeys)
-                    {
-                        if (fieldDict.TryGetValue(key, out FieldMetadata? pkField) && pkField != null)
-                        {
-                            pkField.PrimaryKey = true;
-                        }
-                        else
-                        {
-                            fieldDict[key] = new FieldMetadata { Name = key, PrimaryKey = true };
-                        }
-                    }
-                }
-
-                // Final merged list, no duplicates
-                fields = fieldDict.Values.ToList();
-
-                // Remove legacy props only after we have safely embedded PKs into fields.
-                updatedSource = updatedSource with { KeyFields = null };
-                updatedMappings = null;
-            }
-            else if (!hasFields && !hasMappings && !hasKeyFields && entity.Source.KeyFields?.Length > 0)
-            {
-                // If no fields, mappings, or key-fields are provided with update command, use the entity's key-fields added using add command.
-                fields = entity.Source.KeyFields.Select(k => new FieldMetadata
-                {
-                    Name = k,
-                    PrimaryKey = true
-                }).ToList();
-
-                updatedSource = updatedSource with { KeyFields = null };
-                updatedMappings = null;
-            }
-            else
-            {
-                fields = entity.Fields?.ToList() ?? new List<FieldMetadata>();
-                if (entity.Mappings is not null || entity.Source?.KeyFields is not null)
-                {
-                    _logger.LogWarning("Using legacy 'mappings' and 'key-fields' properties. Consider using 'fields' for new entities.");
-                }
-            }
-
-            if (!ValidateFields(fields, out string errorMessage))
-            {
-                _logger.LogError(errorMessage);
+                _logger.LogError("Failed to update entity permissions.");
                 return false;
             }
 
+            // Handle relationships
+            Dictionary<string, EntityRelationship>? updatedRelationships = null;
+            if (VerifyCanUpdateRelationship(initialConfig, options.Cardinality, options.TargetEntity))
+            {
+                EntityRelationship? newRelationship = CreateNewRelationshipWithUpdateOptions(options);
+                if (newRelationship is not null)
+                {
+                    updatedRelationships = entity.Relationships is null
+                        ? new Dictionary<string, EntityRelationship> { { options.Relationship ?? options.TargetEntity!, newRelationship } }
+                        : new Dictionary<string, EntityRelationship>(entity.Relationships) { [options.Relationship ?? options.TargetEntity!] = newRelationship };
+                }
+            }
+            else
+            {
+                updatedRelationships = entity.Relationships;
+            }
+
+            // Handle mappings
+            Dictionary<string, string>? updatedMappings = null;
+            if (options.Map is not null && options.Map.Any())
+            {
+                updatedMappings = new Dictionary<string, string>();
+                
+                // Parse the mapping strings (format: "backendName:exposedName")
+                foreach (string mapping in options.Map)
+                {
+                    string[] parts = mapping.Split(':');
+                    if (parts.Length != 2)
+                    {
+                        _logger.LogError("Invalid mapping format: {mapping}. Expected format: 'backendName:exposedName'", mapping);
+                        return false;
+                    }
+                    
+                    string backendName = parts[0].Trim();
+                    string exposedName = parts[1].Trim();
+                    
+                    if (string.IsNullOrEmpty(backendName) || string.IsNullOrEmpty(exposedName))
+                    {
+                        _logger.LogError("Invalid mapping: both backend name and exposed name must be non-empty.");
+                        return false;
+                    }
+                    
+                    updatedMappings[backendName] = exposedName;
+                }
+
+                // Merge with existing mappings
+                if (entity.Mappings is not null)
+                {
+                    foreach (KeyValuePair<string, string> existingMapping in entity.Mappings)
+                    {
+                        if (!updatedMappings.ContainsKey(existingMapping.Key))
+                        {
+                            updatedMappings[existingMapping.Key] = existingMapping.Value;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                updatedMappings = entity.Mappings;
+            }
+
+            // Handle cache options
+            EntityCacheOptions? updatedCacheOptions = entity.Cache;
+            if (!string.IsNullOrEmpty(options.CacheEnabled) || !string.IsNullOrEmpty(options.CacheTtl))
+            {
+                updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            }
+
+            // Handle fields
+            List<FieldMetadata>? fields = null;
+            if (options.FieldsNameCollection != null && options.FieldsNameCollection.Any())
+            {
+                fields = ComposeFieldsFromOptions(options);
+                if (!ValidateFields(fields, out string errorMessage))
+                {
+                    _logger.LogError(errorMessage);
+                    return false;
+                }
+            }
+            else
+            {
+                fields = entity.Fields;
+            }
+
+            // If entity is being converted to stored procedure, default the REST settings
+            if (IsEntityBeingConvertedToStoredProcedure(entity, options))
+            {
+                // Check if REST path is valid
+                if (updatedRestDetails.Path == null || string.IsNullOrEmpty(updatedRestDetails.Path) || !IsRouteValid(updatedRestDetails.Path))
+                {
+                    updatedRestDetails = updatedRestDetails with { Path = RestRuntimeOptions.DEFAULT_PATH };
+                }
+            }
+
+            // If entity is being converted from stored procedure, clear the GraphQL operation
+            if (isCurrentEntityStoredProcedure && !doOptionsRepresentStoredProcedure)
+            {
+                updatedGraphQLDetails = updatedGraphQLDetails with { Operation = null };
+            }
+
+            // Check for GraphQL multiple create options
+            bool isMultipleCreateEnabledForGraphQL = initialConfig.IsMultipleCreateOperationEnabled();
+
+            // We log a warning when enabling GraphQL for SP entity without multiple-create option as it may not be supported.
+            if (updatedGraphQLDetails.Enabled
+                && updatedGraphQLDetails.Operation is GraphQLOperation.Mutation
+                && !isMultipleCreateEnabledForGraphQL)
+            {
+                _logger.LogWarning("Enabling GraphQL mutation for this entity without the multiple-create option. The current configuration may not be optimal.");
+            }
+
+            // Create entity with updated details
             Entity updatedEntity = new(
                 Source: updatedSource,
                 Fields: fields,
                 Rest: updatedRestDetails,
                 GraphQL: updatedGraphQLDetails,
+                Mcp: updatedMcpOptions,
                 Permissions: updatedPermissions,
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description
-                );
+            );
+
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
                 [options.Entity] = updatedEntity
@@ -2489,7 +2422,7 @@ namespace Cli
         /// <param name="options">Input from update command</param>
         /// <returns>Boolean -> when the entity's REST configuration is true/false.
         /// RestEntitySettings -> when a non stored procedure entity is configured with granular REST settings (Path).
-        /// RestStoredProcedureEntitySettings -> when a stored procedure entity is configured with explicit SupportedRestMethods.
+        /// RestStoredProcedureEntitySettings-> when a stored procedure entity is configured with explicit SupportedRestMethods.
         /// RestStoredProcedureEntityVerboseSettings-> when a stored procedure entity is configured with explicit SupportedRestMethods and Path settings.</returns>
         private static EntityRestOptions ConstructUpdatedRestDetails(Entity entity, EntityOptions options, bool isCosmosDbNoSql)
         {
@@ -2859,6 +2792,118 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Constructs MCP options for an entity based on the provided CLI options.
+        /// Only applicable for stored-procedure entities.
+        /// </summary>
+        /// <param name="customToolEnabled">Whether to enable this entity as a custom MCP tool.</param>
+        /// <param name="dmlToolsEnabled">Whether to enable DML tools for this entity.</param>
+        /// <returns>EntityMcpOptions or null if no MCP options are specified.</returns>
+        private static EntityMcpOptions? ConstructMcpOptions(CliBool? customToolEnabled, CliBool? dmlToolsEnabled)
+        {
+            // If neither option is specified, return null (use defaults from schema)
+            if ((customToolEnabled is null or CliBool.None) && (dmlToolsEnabled is null or CliBool.None))
+            {
+                return null;
+            }
+
+            bool? customTool = customToolEnabled switch
+            {
+                CliBool.True => true,
+                CliBool.False => false,
+                _ => null
+            };
+
+            bool? dmlTools = dmlToolsEnabled switch
+            {
+                CliBool.True => true,
+                CliBool.False => false,
+                _ => null
+            };
+
+            return new EntityMcpOptions(customTool, dmlTools);
+        }
+
+        /// <summary>
+        /// Constructs the updated MCP settings based on the input from update command and
+        /// existing MCP configuration for an entity
+        /// </summary>
+        /// <param name="entity">Entity for which MCP settings are updated</param>
+        /// <param name="options">Input from update command</param>
+        /// <returns>Updated EntityMcpOptions or null</returns>
+        private static EntityMcpOptions? ConstructUpdatedMcpOptions(Entity entity, UpdateOptions options)
+        {
+            // Get the current and potential new entity types
+            bool isCurrentEntityStoredProcedure = IsStoredProcedure(entity);
+            bool isBecomingStoredProcedure = options.SourceType is not null && IsStoredProcedure(options);
+
+            // MCP custom-tool is only applicable for stored procedures
+            if (!isCurrentEntityStoredProcedure && !isBecomingStoredProcedure)
+            {
+                // Not a stored procedure, MCP custom-tool not applicable
+                if (options.McpCustomToolEnabled is not null and not CliBool.None)
+                {
+                    _logger.LogWarning("--mcp.custom-tool is only applicable for stored procedures and will be ignored.");
+                }
+                return null;
+            }
+
+            // Start with existing MCP options or create new if converting to stored procedure
+            EntityMcpOptions? existingMcp = entity.Mcp;
+
+            bool? customToolEnabled = existingMcp?.CustomToolEnabled;
+            bool? dmlToolsEnabled = existingMcp?.DmlToolEnabled;
+
+            // Update custom-tool if provided
+            if (options.McpCustomToolEnabled is not null and not CliBool.None)
+            {
+                customToolEnabled = options.McpCustomToolEnabled == CliBool.True;
+            }
+
+            // Update dml-tools if provided
+            if (options.McpDmlToolsEnabled is not null and not CliBool.None)
+            {
+                dmlToolsEnabled = options.McpDmlToolsEnabled == CliBool.True;
+            }
+
+            // If converting from stored procedure to table/view, clear MCP options
+            if (isCurrentEntityStoredProcedure && options.SourceType is not null && !isBecomingStoredProcedure)
+            {
+                return null;
+            }
+
+            // If converting to stored procedure and no MCP options specified, use defaults
+            if (!isCurrentEntityStoredProcedure && isBecomingStoredProcedure)
+            {
+                // Converting to stored procedure - apply defaults if no values specified
+                if (customToolEnabled == null && options.McpCustomToolEnabled is null or CliBool.None)
+                {
+                    customToolEnabled = false; // default
+                }
+                if (dmlToolsEnabled == null && options.McpDmlToolsEnabled is null or CliBool.None)
+                {
+                    dmlToolsEnabled = true; // default
+                }
+            }
+
+            // Return updated MCP options if any values are set
+            if (customToolEnabled != null || dmlToolsEnabled != null)
+            {
+                return new EntityMcpOptions(customToolEnabled, dmlToolsEnabled);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Validates if a REST route is valid.
+        /// </summary>
+        private static bool IsRouteValid(string route)
+        {
+            // Basic validation for route
+            return !string.IsNullOrWhiteSpace(route) && route.StartsWith("/");
         }
     }
 }

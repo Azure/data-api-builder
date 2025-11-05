@@ -32,7 +32,7 @@
         UpdateRecord: true,
         DeleteRecord: true,
         ExecuteEntity: true,
-        UserProvidedAllTools: true,
+        UserProvidedAllTools: false,
         UserProvidedDescribeEntities: false,
         UserProvidedCreateRecord: false,
         UserProvidedReadRecords: false,

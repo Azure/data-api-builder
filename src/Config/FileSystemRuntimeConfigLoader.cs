@@ -172,7 +172,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         catch (Exception ex)
         {
             // Need to remove the dependencies in startup on the RuntimeConfigProvider
-            // before we can have anILogger here.
+            // before we can have an ILogger here.
             Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
         }
     }

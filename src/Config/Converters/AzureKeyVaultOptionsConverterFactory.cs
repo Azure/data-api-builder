@@ -16,8 +16,7 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
     // value or not while deserializing.
     private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
+    /// <param name="replacementSettings">How to handle variable replacement during deserialization.</param>
     internal AzureKeyVaultOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
         _replacementSettings = replacementSettings;
@@ -86,7 +85,7 @@ internal class AzureKeyVaultOptionsConverterFactory : JsonConverterFactory
                         case "retry-policy":
                             if (reader.TokenType is JsonTokenType.StartObject)
                             {
-                                // Pass the replaceEnvVar setting to the retry policy converter
+                                // Uses the AKVRetryPolicyOptionsConverter to read the retry-policy object.
                                 retryPolicy = JsonSerializer.Deserialize<AKVRetryPolicyOptions>(ref reader, options);
                             }
 

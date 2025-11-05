@@ -305,12 +305,9 @@ public record RuntimeConfig
                 {
                     try
                     {
-                        if (config is not null)
-                        {
-                            _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                            _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                            allEntities = allEntities.Concat(config.Entities.AsEnumerable());
-                        }
+                        _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        allEntities = allEntities.Concat(config.Entities.AsEnumerable());
                     }
                     catch (Exception e)
                     {

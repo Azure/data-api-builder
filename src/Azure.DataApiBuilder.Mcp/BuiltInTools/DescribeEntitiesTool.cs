@@ -368,13 +368,30 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <returns>A list of permissions available to the entity</returns>
         private static string[] BuildPermissionsInfo(Entity entity)
         {
-            HashSet<string> permissions = new();
-
-            if (entity.Permissions != null)
+            if (entity.Permissions == null)
             {
-                foreach (EntityPermission permission in entity.Permissions)
+                return Array.Empty<string>();
+            }
+
+            bool isStoredProcedure = entity.Source.Type == EntitySourceType.StoredProcedure;
+            HashSet<EntityActionOperation> validOperations = isStoredProcedure
+                ? EntityAction.ValidStoredProcedurePermissionOperations
+                : EntityAction.ValidPermissionOperations;
+
+            HashSet<string> permissions = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                foreach (EntityAction action in permission.Actions)
                 {
-                    foreach (EntityAction action in permission.Actions)
+                    if (action.Action == EntityActionOperation.All)
+                    {
+                        foreach (EntityActionOperation op in validOperations)
+                        {
+                            permissions.Add(op.ToString().ToUpperInvariant());
+                        }
+                    }
+                    else
                     {
                         permissions.Add(action.Action.ToString().ToUpperInvariant());
                     }

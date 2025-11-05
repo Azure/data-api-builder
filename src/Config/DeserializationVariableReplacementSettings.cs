@@ -52,8 +52,8 @@ namespace Azure.DataApiBuilder.Config
 
         public DeserializationVariableReplacementSettings(
             AzureKeyVaultOptions? azureKeyVaultOptions = null,
-            bool doReplaceEnvVar = true,
-            bool doReplaceAkvVar = true,
+            bool doReplaceEnvVar = false,
+            bool doReplaceAkvVar = false,
             EnvironmentVariableReplacementFailureMode envFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
         {
             _azureKeyVaultOptions = azureKeyVaultOptions;

@@ -226,7 +226,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             }
 
             // Use default replacement settings if none provided
-            replacementSettings ??= new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+            replacementSettings ??= new DeserializationVariableReplacementSettings();
 
             if (!string.IsNullOrEmpty(json) && TryParseConfig(
                 json,

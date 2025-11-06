@@ -893,7 +893,7 @@ type Moon {
             bool configParsed = RuntimeConfigLoader.TryParseConfig(
                 json: runtimeConfig.ToJson(),
                 config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new());
+                replacementSettings: new(doReplaceEnvVar: true));
 
             // Assert
             Assert.AreEqual(
@@ -958,7 +958,7 @@ type Moon {
             bool configParsed = RuntimeConfigLoader.TryParseConfig(
                 json: runtimeConfig.ToJson(),
                 config: out RuntimeConfig updatedRuntimeConfig,
-                replacementSettings: new());
+                replacementSettings: new(doReplaceEnvVar: true));
 
             // Assert
             Assert.AreEqual(

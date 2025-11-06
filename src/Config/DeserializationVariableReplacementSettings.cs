@@ -126,6 +126,7 @@ namespace Azure.DataApiBuilder.Config
                     secrets[key] = value;
                 }
             }
+
             return secrets;
         }
 

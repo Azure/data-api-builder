@@ -89,13 +89,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
                 // Get current user's role for permission filtering
+                // For discovery tools like describe_entities, we use the first valid role from the header
+                // This differs from operation-specific tools that check permissions per entity per operation
                 string? currentUserRole = null;
-                if (httpContext != null)
+                if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
                 {
                     string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                     if (!string.IsNullOrWhiteSpace(roleHeader))
                     {
-                        // Take the first role if multiple roles are provided
+                        // For discovery operations, take the first role from comma-separated list
+                        // This provides a consistent view of available entities for the primary role
                         currentUserRole = roleHeader
                             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                             .FirstOrDefault();
@@ -103,6 +106,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 (bool nameOnly, HashSet<string>? entityFilter) = ParseArguments(arguments, logger);
+
+                if (currentUserRole == null)
+                {
+                    logger?.LogWarning("Current user role could not be determined from HTTP context or role header. Returning empty permissions for all entities.");
+                }
 
                 List<Dictionary<string, object?>> entityList = new();
 
@@ -311,6 +319,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <summary>
         /// Builds full entity info: name, description, fields, parameters (for stored procs), permissions.
         /// </summary>
+        /// <param name="entityName">The name of the entity to include in the dictionary.</param>
+        /// <param name="entity">The entity object from which to extract additional information.</param>
+        /// <param name="currentUserRole">The role of the current user, used to determine permissions.</param>
+        /// <returns>
+        /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
+        /// </returns>
         private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole)
         {
             // Use GraphQL singular name as alias if available, otherwise use entity name

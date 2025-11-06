@@ -114,7 +114,7 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
         public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             // Always replace env variable in case of Enum otherwise string to enum conversion will fail.
-            string? stringValue = reader.DeserializeString(new());
+            string? stringValue = reader.DeserializeString(new(doReplaceEnvVar: true));
 
             if (stringValue == null)
             {

@@ -78,13 +78,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 if (replaceEnvVar)
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repValues, @"""postgresql"""), out expectedConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: true)),
+                        GetModifiedJsonString(repValues, @"""postgresql"""), out expectedConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: false)),
                         "Should read the expected config");
                 }
                 else
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repKeys, @"""postgresql"""), out expectedConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: true)),
+                        GetModifiedJsonString(repKeys, @"""postgresql"""), out expectedConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: false)),
                         "Should read the expected config");
                 }
 

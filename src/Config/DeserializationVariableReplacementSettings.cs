@@ -13,8 +13,8 @@ namespace Azure.DataApiBuilder.Config
 {
     public class DeserializationVariableReplacementSettings
     {
-        public bool DoReplaceEnvVar { get; set; } = true;
-        public bool DoReplaceAkvVar { get; set; } = true;
+        public bool DoReplaceEnvVar { get; set; }
+        public bool DoReplaceAkvVar { get; set; }
         public EnvironmentVariableReplacementFailureMode EnvFailureMode { get; set; } = EnvironmentVariableReplacementFailureMode.Throw;
 
         // @env\('  : match @env('

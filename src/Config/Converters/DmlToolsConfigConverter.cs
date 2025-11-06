@@ -144,8 +144,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
             writer.WritePropertyName("dml-tools");
             writer.WriteBooleanValue(value.AllToolsEnabled);
         }
-
-        if (hasIndividualSettings)
+        else if (hasIndividualSettings)
         {
             writer.WritePropertyName("dml-tools");
 

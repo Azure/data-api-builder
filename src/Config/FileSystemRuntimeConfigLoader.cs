@@ -184,7 +184,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="logger">ILogger for logging errors.</param>
     /// <param name="isDevMode">When not null indicates we need to overwrite mode and how to do so.</param>
-    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, uses default settings with environment variable replacement enabled.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, uses default settings with environment variable replacement disabled.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,

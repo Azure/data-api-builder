@@ -47,6 +47,7 @@ namespace Azure.DataApiBuilder.Config
 
         private readonly AzureKeyVaultOptions? _azureKeyVaultOptions;
         private readonly SecretClient? _akvClient;
+        private readonly Dictionary<string, string>? _akvFileSecrets; // Local .akv file secrets
 
         public Dictionary<Regex, Func<Match, string>> ReplacementStrategies { get; private set; } = new();
 
@@ -70,11 +71,63 @@ namespace Azure.DataApiBuilder.Config
 
             if (DoReplaceAkvVar && _azureKeyVaultOptions is not null)
             {
-                _akvClient = CreateSecretClient(_azureKeyVaultOptions);
+                // Determine if endpoint points to a local .akv file. If so, load secrets from file; otherwise, use remote AKV.
+                if (IsLocalAkvFileEndpoint(_azureKeyVaultOptions.Endpoint))
+                {
+                    _akvFileSecrets = LoadAkvFileSecrets(_azureKeyVaultOptions.Endpoint!);
+                }
+                else
+                {
+                    _akvClient = CreateSecretClient(_azureKeyVaultOptions);
+                }
+
                 ReplacementStrategies.Add(
                     new Regex(OUTER_AKV_PATTERN, RegexOptions.Compiled),
                     ReplaceAkvVariable);
             }
+        }
+
+        // Checks if the endpoint is a path to a local .akv file.
+        private static bool IsLocalAkvFileEndpoint(string? endpoint)
+            => !string.IsNullOrWhiteSpace(endpoint)
+               && endpoint.EndsWith(".akv", StringComparison.OrdinalIgnoreCase)
+               && File.Exists(endpoint);
+
+        // Loads key=value pairs from a .akv file, similar to .env style. Lines starting with '#' are comments.
+        private static Dictionary<string, string> LoadAkvFileSecrets(string filePath)
+        {
+            Dictionary<string, string> secrets = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string rawLine in File.ReadAllLines(filePath))
+            {
+                string line = rawLine.Trim();
+                if (string.IsNullOrEmpty(line) || line.StartsWith('#'))
+                {
+                    continue;
+                }
+
+                int eqIndex = line.IndexOf('=');
+                if (eqIndex <= 0)
+                {
+                    // Ignore malformed lines silently; could be enhanced to log.
+                    continue;
+                }
+
+                string key = line.Substring(0, eqIndex).Trim();
+                string value = line[(eqIndex + 1)..].Trim();
+
+                // Remove optional surrounding quotes
+                if (value.Length >= 2 && ((value.StartsWith('"') && value.EndsWith('"')) || (value.StartsWith('\'') && value.EndsWith('\''))))
+                {
+                    value = value[1..^1];
+                }
+
+                if (!string.IsNullOrEmpty(key))
+                {
+                    secrets[key] = value;
+                }
+            }
+
+            return secrets;
         }
 
         private string ReplaceEnvVariable(Match match)
@@ -116,6 +169,15 @@ namespace Azure.DataApiBuilder.Config
 
         private static SecretClient CreateSecretClient(AzureKeyVaultOptions options)
         {
+            // If endpoint is a local .akv file, we should not create a SecretClient.
+            if (IsLocalAkvFileEndpoint(options.Endpoint))
+            {
+                throw new DataApiBuilderException(
+                    "Attempted to create Azure Key Vault client for local .akv file endpoint.",
+                    System.Net.HttpStatusCode.InternalServerError,
+                    DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
             if (string.IsNullOrWhiteSpace(options.Endpoint))
             {
                 throw new DataApiBuilderException(
@@ -149,6 +211,12 @@ namespace Azure.DataApiBuilder.Config
 
         private string? GetAkvVariable(string name)
         {
+            // If using local .akv file secrets, return from dictionary.
+            if (_akvFileSecrets is not null)
+            {
+                return _akvFileSecrets.TryGetValue(name, out string? value) ? value : null;
+            }
+
             if (_akvClient is null)
             {
                 throw new InvalidOperationException("Azure Key Vault client is not initialized.");

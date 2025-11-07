@@ -51,13 +51,13 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         public static void UnsetAppServiceEasyAuthEnvironment()
         {
-          Environment.SetEnvironmentVariable(
-              AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR,
-              null);
+            Environment.SetEnvironmentVariable(
+                AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR,
+                null);
 
-          Environment.SetEnvironmentVariable(
-              AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR,
-              null);
+            Environment.SetEnvironmentVariable(
+                AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR,
+                null);
         }
 
         /// <summary>
@@ -67,9 +67,9 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <returns></returns>
         public static FileSystemRuntimeConfigLoader GetRuntimeConfigLoader()
         {
-          FileSystem fileSystem = new();
-          FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
-          return runtimeConfigLoader;
+            FileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
+            return runtimeConfigLoader;
         }
 
         public static ILoggerFactory ProvisionLoggerFactory() =>

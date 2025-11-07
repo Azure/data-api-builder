@@ -304,11 +304,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
         // Convert legacy replaceEnvVar parameter to replacement settings for backward compatibility
-        DeserializationVariableReplacementSettings? replacementSettings = new (
-            azureKeyVaultOptions: null,
-            doReplaceEnvVar: replaceEnvVar,
-            doReplaceAkvVar: replaceEnvVar);
-
+        DeserializationVariableReplacementSettings? replacementSettings = new (azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: replaceEnvVar);
         return TryLoadConfig(ConfigFilePath, out config, replacementSettings: replacementSettings);
     }
 

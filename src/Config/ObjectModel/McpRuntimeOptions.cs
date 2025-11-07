@@ -32,11 +32,11 @@ public record McpRuntimeOptions
 
     [JsonConstructor]
     public McpRuntimeOptions(
-        bool Enabled = true,
+        bool? Enabled = null,
         string? Path = null,
         DmlToolsConfig? DmlTools = null)
     {
-        this.Enabled = Enabled;
+        this.Enabled = Enabled ?? true;
 
         if (Path is not null)
         {
@@ -51,7 +51,8 @@ public record McpRuntimeOptions
         // if DmlTools is null, set All tools enabled by default
         if (DmlTools is null)
         {
-            this.DmlTools = DmlToolsConfig.FromBoolean(DmlToolsConfig.DEFAULT_ENABLED);
+            // Use Default instead of FromBoolean to avoid setting UserProvided flags
+            this.DmlTools = DmlToolsConfig.Default;
         }
         else
         {

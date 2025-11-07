@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
 
                 Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: true)),
+                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: false)),
                     "Should read actual config");
                 Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
             }

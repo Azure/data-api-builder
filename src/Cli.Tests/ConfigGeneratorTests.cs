@@ -165,15 +165,7 @@ public class ConfigGeneratorTests
                  },
                  ""mcp"": {
                  ""enabled"": true,
-                 ""path"": ""/mcp"",
-                 ""dml-tools"":{
-                   ""describe-entities"": true,
-                   ""create-record"": true,
-                   ""read-records"": true,
-                   ""update-record"": true,
-                   ""delete-record"": true,
-                   ""execute-entity"":true
-                 }
+                 ""path"": ""/mcp""
                 },
                 ""host"": {
                   ""cors"": {

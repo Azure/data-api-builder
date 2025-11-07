@@ -97,11 +97,19 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                     if (!string.IsNullOrWhiteSpace(roleHeader))
                     {
+                        string[] roles = roleHeader
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                        if (roles.Length > 1)
+                        {
+                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
+                                "Consider using a single role for consistent permission reporting.",
+                                string.Join(", ", roles), roles[0]);
+                        }
+
                         // For discovery operations, take the first role from comma-separated list
                         // This provides a consistent view of available entities for the primary role
-                        currentUserRole = roleHeader
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                            .FirstOrDefault();
+                        currentUserRole = roles.FirstOrDefault();
                     }
                 }
 
@@ -109,7 +117,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (currentUserRole == null)
                 {
-                    logger?.LogWarning("Current user role could not be determined from HTTP context or role header. Returning empty permissions for all entities.");
+                    logger?.LogWarning("Current user role could not be determined from HTTP context or role header. " +
+                        "Entity permissions will be empty (no permissions shown) rather than using anonymous permissions. " +
+                        "Ensure the '{RoleHeader}' header is properly set.", AuthorizationResolver.CLIENT_ROLE_HEADER);
                 }
 
                 List<Dictionary<string, object?>> entityList = new();
@@ -174,8 +184,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 };
 
                 logger?.LogInformation(
-                    "DescribeEntitiesTool returned {EntityCount} entities with nameOnly={NameOnly}.",
+                    "DescribeEntitiesTool returned {EntityCount} entities. Response type: {ResponseType} (nameOnly={NameOnly}).",
                     finalEntityList.Count,
+                    nameOnly ? "lightweight summary (names and descriptions only)" : "full metadata with fields, parameters, and permissions",
                     nameOnly);
 
                 return Task.FromResult(McpResponseBuilder.BuildSuccessResult(
@@ -391,7 +402,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     Dictionary<string, object?> paramInfo = new()
                     {
                         ["name"] = param.Name,
-                        ["required"] = param.Default == null, // required if no default
+                        ["required"] = param.Required,
                         ["default"] = param.Default,
                         ["description"] = param.Description ?? string.Empty
                     };

@@ -24,13 +24,13 @@
         UpdateRecord: true,
         DeleteRecord: true,
         ExecuteEntity: true,
-        UserProvidedAllToolsEnabled: true,
-        UserProvidedDescribeEntities: true,
-        UserProvidedCreateRecord: true,
-        UserProvidedReadRecords: true,
-        UserProvidedUpdateRecord: true,
-        UserProvidedDeleteRecord: true,
-        UserProvidedExecuteEntity: true
+        UserProvidedAllTools: false,
+        UserProvidedDescribeEntities: false,
+        UserProvidedCreateRecord: false,
+        UserProvidedReadRecords: false,
+        UserProvidedUpdateRecord: false,
+        UserProvidedDeleteRecord: false,
+        UserProvidedExecuteEntity: false
       }
     },
     Host: {

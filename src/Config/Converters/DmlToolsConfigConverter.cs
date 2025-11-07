@@ -37,7 +37,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
         // Handle object format
         if (reader.TokenType is JsonTokenType.StartObject)
         {
-            // When using object format, unspecified tools default to true
+            // Start with null values - only set when explicitly provided in JSON
             bool? describeEntities = null;
             bool? createRecord = null;
             bool? readRecords = null;
@@ -102,8 +102,7 @@ internal class DmlToolsConfigConverter : JsonConverter<DmlToolsConfig>
                 }
             }
 
-            // Create the config with specified values
-            // Unspecified values (null) will default to true in the DmlToolsConfig constructor
+            // Pass null for unspecified values - the constructor will handle defaults
             return new DmlToolsConfig(
                 allToolsEnabled: null,
                 describeEntities: describeEntities,

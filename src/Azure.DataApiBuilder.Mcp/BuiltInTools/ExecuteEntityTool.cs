@@ -44,18 +44,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "execute_entity",
-                Description = "Executes a stored procedure or function, returns the results (if any)",
+                Description = "STEP 1: describe_entities -> find entities with EXECUTE permission and their parameters. STEP 2: call this tool with matching parameter values. Used for entities that perform actions or return computed results.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
                                 ""type"": ""string"",
-                                ""description"": ""The entity name of the procedure or function to execute. Must match a stored-procedure entity as configured in dab-config. Required.""
+                                ""description"": ""Entity name with EXECUTE permission.""
                             },
                             ""parameters"": {
                                 ""type"": ""object"",
-                                ""description"": ""A dictionary of parameter names and values to pass to the procedure. Parameters must match those defined in dab-config. Optional if no parameters.""
+                                ""description"": ""Optional parameter names and values.""
                             }
                         },
                         ""required"": [""entity""]

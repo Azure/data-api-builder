@@ -166,7 +166,7 @@ public class ConfigGeneratorTests
                  ""mcp"": {
                  ""enabled"": true,
                  ""path"": ""/mcp""
-                 },
+                },
                 ""host"": {
                   ""cors"": {
                     ""origins"": [],

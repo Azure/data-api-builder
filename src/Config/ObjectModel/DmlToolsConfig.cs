@@ -64,71 +64,71 @@ public record DmlToolsConfig
         if (allToolsEnabled is not null)
         {
             AllToolsEnabled = allToolsEnabled.Value;
-            UserProvidedAllToolsEnabled = true;
+            UserProvidedAllTools = true;
+
+            // When allToolsEnabled is set, use it as the default for all tools
+            bool toolDefault = allToolsEnabled.Value;
+
+            DescribeEntities = describeEntities ?? toolDefault;
+            CreateRecord = createRecord ?? toolDefault;
+            ReadRecords = readRecords ?? toolDefault;
+            UpdateRecord = updateRecord ?? toolDefault;
+            DeleteRecord = deleteRecord ?? toolDefault;
+            ExecuteEntity = executeEntity ?? toolDefault;
         }
         else
         {
             AllToolsEnabled = DEFAULT_ENABLED;
+
+            // Set values with defaults
+            DescribeEntities = describeEntities ?? DEFAULT_ENABLED;
+            CreateRecord = createRecord ?? DEFAULT_ENABLED;
+            ReadRecords = readRecords ?? DEFAULT_ENABLED;
+            UpdateRecord = updateRecord ?? DEFAULT_ENABLED;
+            DeleteRecord = deleteRecord ?? DEFAULT_ENABLED;
+            ExecuteEntity = executeEntity ?? DEFAULT_ENABLED;
         }
 
-        if (describeEntities is not null)
-        {
-            DescribeEntities = describeEntities;
-            UserProvidedDescribeEntities = true;
-        }
-
-        if (createRecord is not null)
-        {
-            CreateRecord = createRecord;
-            UserProvidedCreateRecord = true;
-        }
-
-        if (readRecords is not null)
-        {
-            ReadRecords = readRecords;
-            UserProvidedReadRecords = true;
-        }
-
-        if (updateRecord is not null)
-        {
-            UpdateRecord = updateRecord;
-            UserProvidedUpdateRecord = true;
-        }
-
-        if (deleteRecord is not null)
-        {
-            DeleteRecord = deleteRecord;
-            UserProvidedDeleteRecord = true;
-        }
-
-        if (executeEntity is not null)
-        {
-            ExecuteEntity = executeEntity;
-            UserProvidedExecuteEntity = true;
-        }
+        // Track user-provided status - only true if the parameter was not null
+        UserProvidedDescribeEntities = describeEntities is not null;
+        UserProvidedCreateRecord = createRecord is not null;
+        UserProvidedReadRecords = readRecords is not null;
+        UserProvidedUpdateRecord = updateRecord is not null;
+        UserProvidedDeleteRecord = deleteRecord is not null;
+        UserProvidedExecuteEntity = executeEntity is not null;
     }
 
     /// <summary>
     /// Creates a DmlToolsConfig with all tools set to the same state
+    /// Used when user explicitly sets "dml-tools": true/false
     /// </summary>
     public static DmlToolsConfig FromBoolean(bool enabled)
     {
-        return new DmlToolsConfig
-        {
-            AllToolsEnabled = enabled,
-            DescribeEntities = null,
-            CreateRecord = null,
-            ReadRecords = null,
-            UpdateRecord = null,
-            DeleteRecord = null,
-            ExecuteEntity = null
-        };
+        // Only pass allToolsEnabled, leave individual tools as null
+        return new DmlToolsConfig(
+            allToolsEnabled: enabled,
+            describeEntities: null,
+            createRecord: null,
+            readRecords: null,
+            updateRecord: null,
+            deleteRecord: null,
+            executeEntity: null
+        );
     }
 
     /// <summary>
     /// Creates a default DmlToolsConfig with all tools enabled
+    /// Used when dml-tools is not specified in config at all
     /// </summary>
-    public static DmlToolsConfig Default => FromBoolean(DEFAULT_ENABLED);
+    public static DmlToolsConfig Default => new(
+        allToolsEnabled: null,
+        describeEntities: null,
+        createRecord: null,
+        readRecords: null,
+        updateRecord: null,
+        deleteRecord: null,
+        executeEntity: null
+    );
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write all-tools-enabled
@@ -136,7 +136,7 @@ public record DmlToolsConfig
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(AllToolsEnabled))]
-    public bool UserProvidedAllToolsEnabled { get; init; } = false;
+    public bool UserProvidedAllTools { get; init; } = false;
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write describe-entities

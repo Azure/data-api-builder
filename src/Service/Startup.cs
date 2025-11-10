@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
@@ -452,6 +453,9 @@ namespace Azure.DataApiBuilder.Service
             }
 
             services.AddSingleton<DabCacheService>();
+
+            services.AddDabMcpServer(configProvider);
+
             services.AddControllers();
         }
 
@@ -472,7 +476,10 @@ namespace Azure.DataApiBuilder.Service
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
+                    // The GraphQLSchemaCreator is an application service that is not available on 
+                    // the schema specific service provider, this means we have to get it with 
+                    // the GetRootServiceProvider helper.
+                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
                     graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
@@ -666,14 +673,17 @@ namespace Azure.DataApiBuilder.Service
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
 
-            IRequestExecutorResolver requestExecutorResolver = app.ApplicationServices.GetRequiredService<IRequestExecutorResolver>();
+            IRequestExecutorManager requestExecutorManager = app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
             _hotReloadEventHandler.Subscribe(
                 "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED",
-                (_, _) => EvictGraphQLSchema(requestExecutorResolver));
+                (_, _) => EvictGraphQLSchema(requestExecutorManager));
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+
+                // Special for MCP
+                endpoints.MapDabMcp(runtimeConfigProvider);
 
                 endpoints
                     .MapGraphQL()
@@ -706,10 +716,10 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Evicts the GraphQL schema from the request executor resolver.
         /// </summary>
-        private static void EvictGraphQLSchema(IRequestExecutorResolver requestExecutorResolver)
+        private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorResolver)
         {
             Console.WriteLine("Evicting old GraphQL schema.");
-            requestExecutorResolver.EvictRequestExecutor();
+            requestExecutorResolver.EvictExecutor();
         }
 
         /// <summary>

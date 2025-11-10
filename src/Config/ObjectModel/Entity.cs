@@ -23,18 +23,20 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// how long that response should be valid in the cache.</param>
 /// <param name="Health">Defines whether to enable comprehensive health check for the entity
 /// and how many rows to return in query and under what threshold-ms.</param>
+/// <param name="Description">Optional description for the entity. Used for API documentation and GraphQL schema comments.</param>
 public record Entity
 {
     public const string PROPERTY_PATH = "path";
     public const string PROPERTY_METHODS = "methods";
+    public string? Description { get; init; }
     public EntitySource Source { get; init; }
+    public List<FieldMetadata>? Fields { get; init; }
     public EntityGraphQLOptions GraphQL { get; init; }
     public EntityRestOptions Rest { get; init; }
     public EntityPermission[] Permissions { get; init; }
     public Dictionary<string, string>? Mappings { get; init; }
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
-
     public EntityHealthCheckConfig? Health { get; init; }
 
     [JsonIgnore]
@@ -44,16 +46,19 @@ public record Entity
     public Entity(
         EntitySource Source,
         EntityGraphQLOptions GraphQL,
+        List<FieldMetadata>? Fields,
         EntityRestOptions Rest,
         EntityPermission[] Permissions,
         Dictionary<string, string>? Mappings,
         Dictionary<string, EntityRelationship>? Relationships,
         EntityCacheOptions? Cache = null,
         bool IsLinkingEntity = false,
-        EntityHealthCheckConfig? Health = null)
+        EntityHealthCheckConfig? Health = null,
+        string? Description = null)
     {
         this.Health = Health;
         this.Source = Source;
+        this.Fields = Fields;
         this.GraphQL = GraphQL;
         this.Rest = Rest;
         this.Permissions = Permissions;
@@ -61,6 +66,7 @@ public record Entity
         this.Relationships = Relationships;
         this.Cache = Cache;
         this.IsLinkingEntity = IsLinkingEntity;
+        this.Description = Description;
     }
 
     /// <summary>

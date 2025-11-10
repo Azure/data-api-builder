@@ -1608,11 +1608,12 @@ type Moon {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), new());
 
             // creating an entity with invalid table name
             Entity entityWithInvalidSourceName = new(
                 Source: new("bokos", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1622,6 +1623,7 @@ type Moon {
 
             Entity entityWithInvalidSourceType = new(
                 Source: new("publishers", EntitySourceType.StoredProcedure, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
@@ -1679,11 +1681,12 @@ type Moon {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), new());
 
             // creating an entity with invalid table name
             Entity entityWithInvalidSource = new(
                 Source: new(null, EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1694,6 +1697,7 @@ type Moon {
             // creating an entity with invalid source object and adding relationship with an entity with invalid source
             Entity entityWithInvalidSourceAndRelationship = new(
                 Source: new(null, EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -2214,7 +2218,7 @@ type Moon {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
                 Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, new(), new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -2543,7 +2547,7 @@ type Moon {
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, null);
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -2618,6 +2622,7 @@ type Moon {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -2641,6 +2646,7 @@ type Moon {
                        new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { readAction, createAction, deleteAction })};
 
             Entity entity = new(Source: new("stocks", EntitySourceType.Table, null, null),
+                                  Fields: null,
                                   Rest: null,
                                   GraphQL: new(Singular: "Stock", Plural: "Stocks"),
                                   Permissions: permissions,
@@ -2648,7 +2654,7 @@ type Moon {
                                   Mappings: null);
 
             string entityName = "Stock";
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
 
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
@@ -2919,6 +2925,7 @@ type Moon {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -2942,6 +2949,7 @@ type Moon {
                        new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { createAction })};
 
             Entity entity = new(Source: new("stocks", EntitySourceType.Table, null, null),
+                                  Fields: null,
                                   Rest: null,
                                   GraphQL: new(Singular: "Stock", Plural: "Stocks"),
                                   Permissions: permissions,
@@ -2949,7 +2957,7 @@ type Moon {
                                   Mappings: null);
 
             string entityName = "Stock";
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
 
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
@@ -3060,6 +3068,7 @@ type Moon {
 
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -3069,6 +3078,7 @@ type Moon {
             if (entityType is EntitySourceType.StoredProcedure)
             {
                 Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                              Fields: null,
                               Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
                               GraphQL: null,
                               Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -3077,11 +3087,11 @@ type Moon {
                              );
 
                 string entityName = "GetBooks";
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
             }
             else
             {
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
             }
 
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -3158,6 +3168,7 @@ type Moon {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: false);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -3167,6 +3178,7 @@ type Moon {
             if (entityType is EntitySourceType.StoredProcedure)
             {
                 Entity entity = new(Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                              Fields: null,
                               Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
                               GraphQL: null,
                               Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -3175,11 +3187,11 @@ type Moon {
                              );
 
                 string entityName = "GetBooks";
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName);
             }
             else
             {
-                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+                configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
             }
 
             const string CUSTOM_CONFIG = "custom-config.json";
@@ -3188,7 +3200,7 @@ type Moon {
             HostOptions staticWebAppsHostOptions = new(null, authenticationOptions);
 
             RuntimeOptions runtimeOptions = configuration.Runtime;
-            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, staticWebAppsHostOptions, "/data-api");
+            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, runtimeOptions?.Mcp, staticWebAppsHostOptions, "/data-api");
             RuntimeConfig baseRouteEnabledConfig = configuration with { Runtime = baseRouteEnabledRuntimeOptions };
             File.WriteAllText(CUSTOM_CONFIG, baseRouteEnabledConfig.ToJson());
 
@@ -3340,6 +3352,7 @@ type Moon {
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
             Entity viewEntity = new(
                 Source: new("books_view_all", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("", ""),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -3347,7 +3360,7 @@ type Moon {
                 Mappings: null
             );
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), viewEntity, "books_view_all");
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), new(), viewEntity, "books_view_all");
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
@@ -3568,6 +3581,7 @@ type Planet @model(name:""PlanetAlias"") {
             RuntimeOptions runtimeOptions = new(
                 Rest: new(),
                 GraphQL: new(),
+                Mcp: new(),
                 Host: new(Cors: null, authenticationOptions, hostMode)
             );
             RuntimeConfig configWithCustomHostMode = config with { Runtime = runtimeOptions };
@@ -3608,10 +3622,11 @@ type Planet @model(name:""PlanetAlias"") {
         {
             GraphQLRuntimeOptions graphqlOptions = new(AllowIntrospection: enableIntrospection);
             RestRuntimeOptions restRuntimeOptions = new();
+            McpRuntimeOptions mcpRuntimeOptions = new();
 
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions);
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions);
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -3660,6 +3675,7 @@ type Planet @model(name:""PlanetAlias"") {
         {
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: globalGraphQLEnabled);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: true);
+            McpRuntimeOptions mcpOptions = new(Enabled: true);
 
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
@@ -3676,6 +3692,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             Entity entity = new(
                 Source: new("graphql_incompatible", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: false),
                 GraphQL: new("graphql_incompatible", "graphql_incompatibles", entityGraphQLEnabled),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -3683,7 +3700,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Mappings: mappings
             );
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, "graphqlNameCompat");
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpOptions, entity, "graphqlNameCompat");
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -3739,7 +3756,8 @@ type Planet @model(name:""PlanetAlias"") {
             RuntimeConfig configuration = InitMinimalRuntimeConfig(
                 dataSource: dataSource,
                 graphqlOptions: new(),
-                restOptions: new(Path: customRestPath));
+                restOptions: new(Path: customRestPath),
+                mcpOptions: new());
 
             configuration = configuration
                 with
@@ -4057,6 +4075,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null),
                     Telemetry: new(LoggerLevel: logLevelOptions)
                 ),
@@ -4270,6 +4289,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null),
                     Telemetry: telemetryOptions
                 ),
@@ -4298,6 +4318,7 @@ type Planet @model(name:""PlanetAlias"") {
             // file creation function.
             Entity requiredEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -4359,6 +4380,7 @@ type Planet @model(name:""PlanetAlias"") {
             // config file creation.
             Entity requiredEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -4408,6 +4430,7 @@ type Planet @model(name:""PlanetAlias"") {
             // Create the entities under test.
             Entity restEnabledEntity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("", "", false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -4416,6 +4439,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             Entity restDisabledEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: false),
                 GraphQL: new("publisher", "publishers", true),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -4498,6 +4522,7 @@ type Planet @model(name:""PlanetAlias"") {
             // file creation function.
             Entity requiredEntity = new(
                 Source: new("bookmarks", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new(Singular: "", Plural: "", Enabled: false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -4623,6 +4648,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             Entity requiredEntity = new(
                 Source: new("bookmarks", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new(Singular: "", Plural: "", Enabled: false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -4739,7 +4765,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -4838,7 +4864,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -4921,7 +4947,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource = new(DatabaseType.MSSQL,
                 GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new(), mcpOptions: new());
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -4984,11 +5010,13 @@ type Planet @model(name:""PlanetAlias"") {
                 ? new(
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: true),
                     Host: hostOptions,
                     Pagination: paginationOptions)
                 : new(
                     Rest: new(Enabled: enableGlobalRest),
                     GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: true),
                     Host: hostOptions);
 
             RuntimeConfig runtimeConfig = new(
@@ -5312,6 +5340,8 @@ type Planet @model(name:""PlanetAlias"") {
 
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
 
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
+
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             EntityAction createAction = new(
@@ -5335,6 +5365,7 @@ type Planet @model(name:""PlanetAlias"") {
                                                       LinkingTargetFields: null);
 
             Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
+                                    Fields: null,
                                     Rest: null,
                                     GraphQL: new(Singular: "book", Plural: "books"),
                                     Permissions: permissions,
@@ -5358,6 +5389,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             Entity publisherEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: permissions,
@@ -5370,7 +5402,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
                                               DataSource: dataSource,
-                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: null),
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, mcpRuntimeOptions, Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development), Cache: null),
                                               Entities: new(entityMap));
             return runtimeConfig;
         }
@@ -5383,6 +5415,7 @@ type Planet @model(name:""PlanetAlias"") {
             DataSource dataSource,
             GraphQLRuntimeOptions graphqlOptions,
             RestRuntimeOptions restOptions,
+            McpRuntimeOptions mcpOptions,
             Entity entity = null,
             string entityName = null,
             RuntimeCacheOptions cacheOptions = null
@@ -5390,6 +5423,7 @@ type Planet @model(name:""PlanetAlias"") {
         {
             entity ??= new(
                 Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -5407,6 +5441,7 @@ type Planet @model(name:""PlanetAlias"") {
             // Adding an entity with only Authorized Access
             Entity anotherEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
@@ -5420,7 +5455,7 @@ type Planet @model(name:""PlanetAlias"") {
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
-                Runtime: new(restOptions, graphqlOptions,
+                Runtime: new(restOptions, graphqlOptions, mcpOptions,
                     Host: new(Cors: null, Authentication: authenticationOptions, Mode: HostMode.Development),
                     Cache: cacheOptions
                 ),
@@ -5496,6 +5531,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(null, null)
                 ),
                 Entities: new(new Dictionary<string, Entity>())
@@ -5513,6 +5549,7 @@ type Planet @model(name:""PlanetAlias"") {
         {
             Entity entity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -5533,6 +5570,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(Cors: null, Authentication: authenticationOptions)
                 ),
                 Entities: new(entityMap)

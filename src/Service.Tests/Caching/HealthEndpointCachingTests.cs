@@ -148,7 +148,7 @@ public class HealthEndpointCachingTests
             ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
             Options: null,
             Health: new(true));
-        HostOptions hostOptions = new(Mode: HostMode.Development, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.StaticWebApps) });
+        HostOptions hostOptions = new(Mode: HostMode.Development, Cors: null, Authentication: new() { Provider = nameof(EasyAuthType.AppService) });
 
         RuntimeConfig runtimeConfig = new(
             Schema: string.Empty,

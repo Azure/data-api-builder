@@ -8,7 +8,7 @@ var databaseConnectionString = Environment.GetEnvironmentVariable("ASPIRE_DATABA
 
 switch (aspireDB)
 {
-    case "sql":
+    case "mssql":
         var sqlScript = File.ReadAllText("./init-scripts/sql/create-database.sql");
 
         IResourceBuilder<SqlServerDatabaseResource>? sqlDbContainer = null;
@@ -48,7 +48,7 @@ switch (aspireDB)
         }
 
         break;
-    case "postgres":
+    case "postgresql":
         var pgScript = File.ReadAllText("./init-scripts/pg/create-database-pg.sql");
 
         IResourceBuilder<PostgresDatabaseResource>? postgresDB = null;
@@ -89,7 +89,7 @@ switch (aspireDB)
 
         break;
     default:
-        throw new Exception("Please set the ASPIRE_DATABASE environment variable to either 'sql' or 'postgre'.");
+        throw new Exception("Please set the ASPIRE_DATABASE environment variable to either 'mssql' or 'postgresql'.");
 }
 
 builder.Build().Run();

@@ -32,13 +32,13 @@
         "DOTNET_ENVIRONMENT": "Development",
         "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21213",
         "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22145",
-        "ASPIRE_DATABASE_TYPE": "sql",
+        "ASPIRE_DATABASE_TYPE": "mssql",
         "ASPIRE_DATABASE_CONNECTION_STRING": ""
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:17047;http://localhost:15161"
     },
-    "aspire-postgres": {
+    "aspire-postgresql": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
@@ -46,7 +46,7 @@
         "DOTNET_ENVIRONMENT": "Development",
         "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21213",
         "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22145",
-        "ASPIRE_DATABASE_TYPE": "postgres",
+        "ASPIRE_DATABASE_TYPE": "postgresql",
         "ASPIRE_DATABASE_CONNECTION_STRING": ""
       },
       "dotnetRunMessages": true,

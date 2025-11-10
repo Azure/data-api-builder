@@ -24,7 +24,7 @@
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:15161"
     },
-    "aspire-sql": {
+    "aspire-mssql": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {

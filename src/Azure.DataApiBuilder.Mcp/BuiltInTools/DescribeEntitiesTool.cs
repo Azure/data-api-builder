@@ -2,11 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -80,7 +83,44 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         logger));
                 }
 
+                // Get authorization services to determine current user's role
+                IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
+                IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+                HttpContext? httpContext = httpContextAccessor.HttpContext;
+
+                // Get current user's role for permission filtering
+                // For discovery tools like describe_entities, we use the first valid role from the header
+                // This differs from operation-specific tools that check permissions per entity per operation
+                string? currentUserRole = null;
+                if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
+                {
+                    string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+                    if (!string.IsNullOrWhiteSpace(roleHeader))
+                    {
+                        string[] roles = roleHeader
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                        if (roles.Length > 1)
+                        {
+                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
+                                "Consider using a single role for consistent permission reporting.",
+                                string.Join(", ", roles), roles[0]);
+                        }
+
+                        // For discovery operations, take the first role from comma-separated list
+                        // This provides a consistent view of available entities for the primary role
+                        currentUserRole = roles.FirstOrDefault();
+                    }
+                }
+
                 (bool nameOnly, HashSet<string>? entityFilter) = ParseArguments(arguments, logger);
+
+                if (currentUserRole == null)
+                {
+                    logger?.LogWarning("Current user role could not be determined from HTTP context or role header. " +
+                        "Entity permissions will be empty (no permissions shown) rather than using anonymous permissions. " +
+                        "Ensure the '{RoleHeader}' header is properly set.", AuthorizationResolver.CLIENT_ROLE_HEADER);
+                }
 
                 List<Dictionary<string, object?>> entityList = new();
 
@@ -102,7 +142,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         {
                             Dictionary<string, object?> entityInfo = nameOnly
                                 ? BuildBasicEntityInfo(entityName, entity)
-                                : BuildFullEntityInfo(entityName, entity);
+                                : BuildFullEntityInfo(entityName, entity, currentUserRole);
 
                             entityList.Add(entityInfo);
                         }
@@ -140,19 +180,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 Dictionary<string, object?> responseData = new()
                 {
                     ["entities"] = finalEntityList,
-                    ["count"] = finalEntityList.Count,
-                    ["mode"] = nameOnly ? "basic" : "full"
+                    ["count"] = finalEntityList.Count
                 };
 
-                if (entityFilter != null && entityFilter.Count > 0)
-                {
-                    responseData["filter"] = entityFilter.ToArray();
-                }
-
                 logger?.LogInformation(
-                    "DescribeEntitiesTool returned {EntityCount} entities in {Mode} mode.",
+                    "DescribeEntitiesTool returned {EntityCount} entities. Response type: {ResponseType} (nameOnly={NameOnly}).",
                     finalEntityList.Count,
-                    nameOnly ? "basic" : "full");
+                    nameOnly ? "lightweight summary (names and descriptions only)" : "full metadata with fields, parameters, and permissions",
+                    nameOnly);
 
                 return Task.FromResult(McpResponseBuilder.BuildSuccessResult(
                     responseData,
@@ -276,13 +311,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// </summary>
         /// <param name="entityName">The name of the entity to include in the dictionary.</param>
         /// <param name="entity">The entity object from which to extract additional information.</param>
-        /// <returns>A dictionary with two keys: "name", containing the entity name, and "description", containing the entity's
+        /// <returns>A dictionary with two keys: "name", containing the entity alias (or name if no alias), and "description", containing the entity's
         /// description or an empty string if the description is null.</returns>
         private static Dictionary<string, object?> BuildBasicEntityInfo(string entityName, Entity entity)
         {
+            // Use GraphQL singular name as alias if available, otherwise use entity name
+            string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
+                ? entity.GraphQL.Singular
+                : entityName;
+
             return new Dictionary<string, object?>
             {
-                ["name"] = entityName,
+                ["name"] = displayName,
                 ["description"] = entity.Description ?? string.Empty
             };
         }
@@ -290,11 +330,22 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <summary>
         /// Builds full entity info: name, description, fields, parameters (for stored procs), permissions.
         /// </summary>
-        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity)
+        /// <param name="entityName">The name of the entity to include in the dictionary.</param>
+        /// <param name="entity">The entity object from which to extract additional information.</param>
+        /// <param name="currentUserRole">The role of the current user, used to determine permissions.</param>
+        /// <returns>
+        /// A dictionary containing the entity's name, description, fields, parameters (if applicable), and permissions.
+        /// </returns>
+        private static Dictionary<string, object?> BuildFullEntityInfo(string entityName, Entity entity, string? currentUserRole)
         {
+            // Use GraphQL singular name as alias if available, otherwise use entity name
+            string displayName = !string.IsNullOrWhiteSpace(entity.GraphQL?.Singular)
+                ? entity.GraphQL.Singular
+                : entityName;
+
             Dictionary<string, object?> info = new()
             {
-                ["name"] = entityName,
+                ["name"] = displayName,
                 ["description"] = entity.Description ?? string.Empty,
                 ["fields"] = BuildFieldMetadataInfo(entity.Fields),
             };
@@ -304,7 +355,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 info["parameters"] = BuildParameterMetadataInfo(entity.Source.Parameters);
             }
 
-            info["permissions"] = BuildPermissionsInfo(entity);
+            info["permissions"] = BuildPermissionsInfo(entity, currentUserRole);
 
             return info;
         }
@@ -325,7 +376,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     result.Add(new
                     {
-                        name = field.Name,
+                        name = field.Alias ?? field.Name,
                         description = field.Description ?? string.Empty
                     });
                 }
@@ -338,7 +389,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// Builds a list of parameter metadata objects containing information about each parameter.
         /// </summary>
         /// <param name="parameters">A list of <see cref="ParameterMetadata"/> objects representing the parameters to process. Can be null.</param>
-        /// <returns>A list of anonymous objects, each containing the parameter's name, whether it is required, its default
+        /// <returns>A list of dictionaries, each containing the parameter's name, whether it is required, its default
         /// value, and its description. Returns an empty list if <paramref name="parameters"/> is null.</returns>
         private static List<object> BuildParameterMetadataInfo(List<ParameterMetadata>? parameters)
         {
@@ -348,13 +399,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 foreach (ParameterMetadata param in parameters)
                 {
-                    result.Add(new
+                    Dictionary<string, object?> paramInfo = new()
                     {
-                        name = param.Name,
-                        required = param.Default == null, // required if no default
-                        @default = param.Default,
-                        description = param.Description ?? string.Empty
-                    });
+                        ["name"] = param.Name,
+                        ["required"] = param.Required,
+                        ["default"] = param.Default,
+                        ["description"] = param.Description ?? string.Empty
+                    };
+                    result.Add(paramInfo);
                 }
             }
 
@@ -362,19 +414,44 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Build a list of permission metadata info
+        /// Build a list of permission metadata info for the current user's role
         /// </summary>
         /// <param name="entity">The entity object</param>
-        /// <returns>A list of permissions available to the entity</returns>
-        private static string[] BuildPermissionsInfo(Entity entity)
+        /// <param name="currentUserRole">The current user's role - if null, returns empty permissions</param>
+        /// <returns>A list of permissions available to the current user's role for this entity</returns>
+        private static string[] BuildPermissionsInfo(Entity entity, string? currentUserRole)
         {
-            HashSet<string> permissions = new();
-
-            if (entity.Permissions != null)
+            if (entity.Permissions == null || string.IsNullOrWhiteSpace(currentUserRole))
             {
-                foreach (EntityPermission permission in entity.Permissions)
+                return Array.Empty<string>();
+            }
+
+            bool isStoredProcedure = entity.Source.Type == EntitySourceType.StoredProcedure;
+            HashSet<EntityActionOperation> validOperations = isStoredProcedure
+                ? EntityAction.ValidStoredProcedurePermissionOperations
+                : EntityAction.ValidPermissionOperations;
+
+            HashSet<string> permissions = new(StringComparer.OrdinalIgnoreCase);
+
+            // Only include permissions for the current user's role
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                // Check if this permission applies to the current user's role
+                if (!string.Equals(permission.Role, currentUserRole, StringComparison.OrdinalIgnoreCase))
                 {
-                    foreach (EntityAction action in permission.Actions)
+                    continue;
+                }
+
+                foreach (EntityAction action in permission.Actions)
+                {
+                    if (action.Action == EntityActionOperation.All)
+                    {
+                        foreach (EntityActionOperation op in validOperations)
+                        {
+                            permissions.Add(op.ToString().ToUpperInvariant());
+                        }
+                    }
+                    else
                     {
                         permissions.Add(action.Action.ToString().ToUpperInvariant());
                     }

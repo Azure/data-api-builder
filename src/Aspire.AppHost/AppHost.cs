@@ -13,7 +13,7 @@ switch (aspireDB)
 
         IResourceBuilder<SqlServerDatabaseResource>? sqlDbContainer = null;
 
-        if(string.IsNullOrEmpty(databaseConnectionString))
+        if (string.IsNullOrEmpty(databaseConnectionString))
         {
             Console.WriteLine("No connection string provided, starting a local SQL Server container.");
 

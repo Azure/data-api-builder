@@ -1,9 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Microsoft.Data.SqlClient;
+using Npgsql;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -29,6 +33,20 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     return "SELECT 1";
                 default:
                     return string.Empty;
+            }
+        }
+
+        public static DbProviderFactory GetDbProviderFactory(DatabaseType dbType)
+        {
+            switch (dbType)
+            {
+                case DatabaseType.PostgreSQL:
+                    return NpgsqlFactory.Instance;
+                case DatabaseType.MSSQL:
+                case DatabaseType.DWSQL:
+                    return SqlClientFactory.Instance;
+                default:
+                    throw new NotSupportedException($"Database type '{dbType}' is not supported.");
             }
         }
 

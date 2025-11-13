@@ -56,7 +56,14 @@
           Methods: [
             Post
           ],
+          Path: /api,
           Enabled: true
+        },
+        Mcp: {
+          CustomToolEnabled: false,
+          DmlToolEnabled: true,
+          UserProvidedCustomToolEnabled: true,
+          UserProvidedDmlToolsEnabled: true
         },
         Permissions: [
           {

@@ -1654,21 +1654,29 @@ namespace Cli
             EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
+            // Validate that permissions are provided when using field include/exclude
+            if (field is not null && (options.Permissions is null || !options.Permissions.Any()))
+            {
+                _logger.LogError("Permissions must be specified when using --fields.include or --fields.exclude options.");
+                return false;
+            }
+
             EntityPermission[]? updatedPermissions;
 
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, policy, field, updatedSource.Type);
+                
+                // Only fail if we tried to update permissions and it failed
+                if (updatedPermissions is null)
+                {
+                    _logger.LogError("Failed to update entity permissions.");
+                    return false;
+                }
             }
             else
             {
                 updatedPermissions = entity.Permissions;
-            }
-
-            if (updatedPermissions is null)
-            {
-                _logger.LogError("Failed to update entity permissions.");
-                return false;
             }
 
             // Handle relationships
@@ -2856,7 +2864,8 @@ namespace Cli
                     _logger.LogWarning("--mcp.custom-tool is only applicable for stored procedures and will be ignored.");
                 }
 
-                return null;
+                // Preserve existing MCP options (likely null for non-SP entities)
+                return entity.Mcp;
             }
 
             // Start with existing MCP options or create new if converting to stored procedure

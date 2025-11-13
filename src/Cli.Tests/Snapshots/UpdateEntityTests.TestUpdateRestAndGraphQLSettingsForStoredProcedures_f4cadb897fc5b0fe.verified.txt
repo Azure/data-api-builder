@@ -33,7 +33,7 @@
           Singular: book,
           Plural: books,
           Enabled: true,
-          Operation: Query
+          Operation: Mutation
         },
         Rest: {
           Methods: [

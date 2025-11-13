@@ -241,4 +241,3 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         delegate void metaDataCallback(string entity, string exposedField, out string? backingColumn);
     }
 }
-

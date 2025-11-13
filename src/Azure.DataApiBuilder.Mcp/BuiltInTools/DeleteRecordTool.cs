@@ -44,18 +44,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "delete_record",
-                Description = "Deletes a record from a table based on primary key or composite key",
+                Description = "STEP 1: describe_entities -> find entities with DELETE permission and their key fields. STEP 2: call this tool with full key values.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
                                 ""type"": ""string"",
-                                ""description"": ""The name of the entity (table) as configured in dab-config. Required.""
+                                ""description"": ""Entity name with DELETE permission.""
                             },
                             ""keys"": {
                                 ""type"": ""object"",
-                                ""description"": ""Primary key values to identify the record to delete. For composite keys, provide all key columns as properties. Required.""
+                                ""description"": ""All key fields identifying the record.""
                             }
                         },
                         ""required"": [""entity"", ""keys""]

@@ -35,37 +35,38 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return new Tool
             {
                 Name = "read_records",
-                Description = "Retrieves records from a given entity.",
+                Description = "STEP 1: describe_entities -> find entities with READ permission and their fields. STEP 2: call this tool with select, filter, sort, or pagination options.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
                     @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
                                 ""type"": ""string"",
-                                ""description"": ""The name of the entity to read, as provided by the describe_entities tool. Required.""
+                                ""description"": ""Entity name with READ permission.""
                             },
                             ""select"": {
                                 ""type"": ""string"",
-                                ""description"": ""A comma-separated list of field names to include in the response. If omitted, all fields are returned. Optional.""
+                                ""description"": ""Comma-separated field names.""
                             },
                             ""filter"": {
                                 ""type"": ""string"",
-                                ""description"": ""A case-insensitive OData-like expression that defines a query predicate. Supports logical grouping with parentheses and the operators eq, ne, gt, ge, lt, le, and, or, not. Examples: year ge 1990, date lt 2025-01-01T00:00:00Z, (title eq 'Foundation') and (available ne false). Optional.""
-                            },
-                            ""first"": {
-                                ""type"": ""integer"",
-                                ""description"": ""The maximum number of records to return in the current page. Optional.""
+                                ""description"": ""OData expression: eq, ne, gt, ge, lt, le, and, or, not.""
                             },
                             ""orderby"": {
                                 ""type"": ""array"",
                                 ""items"": { ""type"": ""string"" },
-                                ""description"": ""A list of field names and directions for sorting, for example 'name asc' or 'year desc'. Optional.""
+                                ""description"": ""Sort fields and directions, e.g., ['name asc', 'year desc'].""
+                            },
+                            ""first"": {
+                                ""type"": ""integer"",
+                                ""description"": ""Max number of records (page size).""
                             },
                             ""after"": {
                                 ""type"": ""string"",
-                                ""description"": ""A cursor token for retrieving the next page of results. Returned as 'after' in the previous response. Optional.""
+                                ""description"": ""Cursor token for next page.""
                             }
-                        }
+                        },
+                        ""required"": [""entity""]
                     }"
                 )
             };

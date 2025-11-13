@@ -1666,7 +1666,7 @@ namespace Cli
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, policy, field, updatedSource.Type);
-                
+
                 // Only fail if we tried to update permissions and it failed
                 if (updatedPermissions is null)
                 {

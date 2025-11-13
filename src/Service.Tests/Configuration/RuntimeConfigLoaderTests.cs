@@ -101,4 +101,37 @@ public class RuntimeConfigLoaderTests
         Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
         Assert.IsTrue(error.Contains("An item with the same key has already been added."));
     }
+
+    /// <summary>
+    /// Test validates that a config file with autoentities section can be loaded successfully.
+    /// </summary>
+    [TestMethod]
+    public async Task CanLoadConfigWithAutoEntities()
+    {
+        string configPath = "dab-config.AutoEntities.json";
+        string fileContents = await File.ReadAllTextAsync(configPath);
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>() { { configPath, new MockFileData(fileContents) } });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        Assert.IsTrue(loader.TryLoadConfig(configPath, out RuntimeConfig runtimeConfig), "Failed to load config with autoentities");
+        Assert.IsNotNull(runtimeConfig.AutoEntities, "AutoEntities should not be null");
+        Assert.AreEqual(2, runtimeConfig.AutoEntities.Count, "Should have 2 auto-entity definitions");
+        
+        // Verify first auto-entity definition
+        Assert.IsTrue(runtimeConfig.AutoEntities.ContainsKey("all-tables"), "Should contain 'all-tables' definition");
+        AutoEntity allTables = runtimeConfig.AutoEntities["all-tables"];
+        Assert.AreEqual("%.%", allTables.Patterns.Include, "Include pattern should match");
+        Assert.AreEqual("sys.%", allTables.Patterns.Exclude, "Exclude pattern should match");
+        Assert.AreEqual("{schema}_{object}", allTables.Patterns.Name, "Name pattern should match");
+        Assert.AreEqual(1, allTables.Permissions.Length, "Should have 1 permission");
+        
+        // Verify second auto-entity definition
+        Assert.IsTrue(runtimeConfig.AutoEntities.ContainsKey("admin-tables"), "Should contain 'admin-tables' definition");
+        AutoEntity adminTables = runtimeConfig.AutoEntities["admin-tables"];
+        Assert.AreEqual("admin.%", adminTables.Patterns.Include, "Include pattern should match");
+        Assert.IsNull(adminTables.Patterns.Exclude, "Exclude pattern should be null");
+        Assert.AreEqual(1, adminTables.Permissions.Length, "Should have 1 permission");
+    }
 }

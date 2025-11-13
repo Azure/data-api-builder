@@ -1617,6 +1617,7 @@ type Moon {
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
                 );
@@ -1627,6 +1628,7 @@ type Moon {
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
                 );
@@ -1690,6 +1692,7 @@ type Moon {
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
                 );
@@ -1701,6 +1704,7 @@ type Moon {
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: new Dictionary<string, EntityRelationship>() { {"books", new (
                     Cardinality: Cardinality.Many,
                     TargetEntity: "Book",
@@ -2650,6 +2654,7 @@ type Moon {
                                   Rest: null,
                                   GraphQL: new(Singular: "Stock", Plural: "Stocks"),
                                   Permissions: permissions,
+                                  Mcp: null,
                                   Relationships: null,
                                   Mappings: null);
 
@@ -2953,6 +2958,7 @@ type Moon {
                                   Rest: null,
                                   GraphQL: new(Singular: "Stock", Plural: "Stocks"),
                                   Permissions: permissions,
+                                  Mcp: null,
                                   Relationships: null,
                                   Mappings: null);
 
@@ -3082,6 +3088,7 @@ type Moon {
                               Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
                               GraphQL: null,
                               Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                              Mcp: null,
                               Relationships: null,
                               Mappings: null
                              );
@@ -3182,6 +3189,7 @@ type Moon {
                               Rest: new(new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }),
                               GraphQL: null,
                               Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                              Mcp: null,
                               Relationships: null,
                               Mappings: null
                              );
@@ -3356,6 +3364,7 @@ type Moon {
                 Rest: new(Enabled: true),
                 GraphQL: new("", ""),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
             );
@@ -3696,6 +3705,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: new(Enabled: false),
                 GraphQL: new("graphql_incompatible", "graphql_incompatibles", entityGraphQLEnabled),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: mappings
             );
@@ -4322,6 +4332,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: new(Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -4384,6 +4395,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: new(Enabled: false),
                 GraphQL: new("book", "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -4434,6 +4446,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: new(Enabled: true),
                 GraphQL: new("", "", false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -4443,6 +4456,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: new(Enabled: false),
                 GraphQL: new("publisher", "publishers", true),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -4526,6 +4540,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: new(Enabled: true),
                 GraphQL: new(Singular: "", Plural: "", Enabled: false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -4652,6 +4667,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: new(Enabled: true),
                 GraphQL: new(Singular: "", Plural: "", Enabled: false),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -5369,6 +5385,7 @@ type Planet @model(name:""PlanetAlias"") {
                                     Rest: null,
                                     GraphQL: new(Singular: "book", Plural: "books"),
                                     Permissions: permissions,
+                                    Mcp: null,
                                     Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
                                     Mappings: null);
 
@@ -5393,6 +5410,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: permissions,
+                Mcp: null,
                 Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
                 Mappings: null);
 
@@ -5427,6 +5445,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
                 );
@@ -5445,6 +5464,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: null,
                 GraphQL: new(Singular: "publisher", Plural: "publishers"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
                 );
@@ -5553,6 +5573,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Rest: null,
                 GraphQL: new(Singular: "book", Plural: "books"),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
                 );
@@ -5595,3 +5616,4 @@ type Planet @model(name:""PlanetAlias"") {
         }
     }
 }
+

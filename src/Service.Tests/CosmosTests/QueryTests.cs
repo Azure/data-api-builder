@@ -714,6 +714,7 @@ type Planet @model(name:""Planet"") {
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,
+                                  Mcp: null,
                                   Relationships: null,
                                   Mappings: null,
                                   Cache: new EntityCacheOptions()
@@ -748,3 +749,4 @@ type Planet @model(name:""Planet"") {
         }
     }
 }
+

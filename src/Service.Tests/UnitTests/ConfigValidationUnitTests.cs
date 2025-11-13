@@ -120,6 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Rest: new(EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP),
                 GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY + "s"),
                 Permissions: permissionSettings.ToArray(),
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
             );
@@ -1005,6 +1006,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Rest: null,
                 GraphQL: null,
                 Permissions: new[] { permissionForEntity },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
                 );
@@ -1543,6 +1545,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Rest: restDetails ?? new(Enabled: false),
                 GraphQL: graphQLDetails,
                 Permissions: new[] { permissionForEntity },
+                Mcp: null,
                 Relationships: relationshipMap,
                 Mappings: null
                 );
@@ -2019,6 +2022,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                  Rest: new(Methods: methods),
                                  GraphQL: new(entityName, ""),
                                  Permissions: Array.Empty<EntityPermission>(),
+                                 Mcp: null,
                                  Relationships: new(),
                                  Mappings: new());
             entityMap.Add(entityName, entity);
@@ -2345,6 +2349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 GraphQL: null,
                 Rest: null,
                 Permissions: null,
+                Mcp: null,
                 Mappings: null,
                 Relationships: null);
 
@@ -2519,3 +2524,4 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
     }
 }
+

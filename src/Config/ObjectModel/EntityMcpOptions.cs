@@ -13,13 +13,13 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         /// <summary>
         /// Indicates whether custom tools are enabled for this entity.
         /// </summary>
-        [JsonPropertyName("customToolEnabled")]
+        [JsonPropertyName("custom-tool")]
         public bool? CustomToolEnabled { get; init; } = false;
 
         /// <summary>
         /// Indicates whether DML tools are enabled for this entity.
         /// </summary>
-        [JsonPropertyName("dmlToolEnabled")]
+        [JsonPropertyName("dml-tools")]
         public bool? DmlToolEnabled { get; init; } = true;
 
         /// <summary>

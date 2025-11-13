@@ -2299,6 +2299,7 @@ query {
                 Rest: new(Enabled: true),
                 GraphQL: new("club", "clubs"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
             );
@@ -2309,6 +2310,7 @@ query {
                 Rest: new(Enabled: true),
                 GraphQL: new("player", "players"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: new Dictionary<string, EntityRelationship>() { {"clubs", new (
                     Cardinality: Cardinality.One,
                     TargetEntity: "Club",
@@ -2371,4 +2373,5 @@ query {
         #endregion
     }
 }
+
 

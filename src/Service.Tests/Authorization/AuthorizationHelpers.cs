@@ -116,6 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 GraphQL: new(entityName.Singularize(), entityName.Pluralize()),
                 Permissions: new EntityPermission[] { permissionForEntity },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null
             );
@@ -240,3 +241,5 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         delegate void metaDataCallback(string entity, string exposedField, out string? backingColumn);
     }
 }
+
+

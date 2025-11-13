@@ -462,7 +462,11 @@ namespace Cli
                 }
             }
 
-            if (isStoredProcedure)
+            // Construct MCP options if any MCP-related flags are provided
+            // For stored procedures: both custom-tool and dml-tools can be set
+            // For other entity types: only dml-tools can be set
+            if (options.McpCustomToolEnabled is not null and not CliBool.None ||
+                options.McpDmlToolsEnabled is not null and not CliBool.None)
             {
                 mcpOptions = ConstructMcpOptions(options.McpCustomToolEnabled, options.McpDmlToolsEnabled);
             }
@@ -1688,7 +1692,7 @@ namespace Cli
             if (options.Map is not null && options.Map.Any())
             {
                 updatedMappings = new Dictionary<string, string>();
-                
+
                 // Parse the mapping strings (format: "backendName:exposedName")
                 foreach (string mapping in options.Map)
                 {
@@ -1698,16 +1702,16 @@ namespace Cli
                         _logger.LogError("Invalid mapping format: {mapping}. Expected format: 'backendName:exposedName'", mapping);
                         return false;
                     }
-                    
+
                     string backendName = parts[0].Trim();
                     string exposedName = parts[1].Trim();
-                    
+
                     if (string.IsNullOrEmpty(backendName) || string.IsNullOrEmpty(exposedName))
                     {
                         _logger.LogError("Invalid mapping: both backend name and exposed name must be non-empty.");
                         return false;
                     }
-                    
+
                     updatedMappings[backendName] = exposedName;
                 }
 

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
@@ -1128,7 +1129,7 @@ type Moon {
                 await httpClient.GetAsync($"/{OPENAPI_SWAGGER_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, preConfigOpenApiSwaggerEndpointAvailability.StatusCode);
 
-            HttpStatusCode responseCode = await HydratePostStartupConfiguration(httpClient, content, configurationEndpoint);
+            HttpStatusCode responseCode = await HydratePostStartupConfiguration(httpClient, content, configurationEndpoint, configuration.Runtime.Rest);
 
             // When the authorization resolver is properly configured, authorization will have failed
             // because no auth headers are present.
@@ -2531,14 +2532,14 @@ type Moon {
         [DataRow(true, true, true, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest, GraphQL, and MCP enabled globally")]
         [DataRow(true, true, false, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest and GraphQL enabled, MCP disabled globally")]
         [DataRow(true, false, true, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled, GraphQL disabled, and MCP enabled globally")]
-        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled, GraphQL and MCP enabled globally")]
+        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest enabled, GraphQL and MCP disabled globally")]
         [DataRow(false, true, true, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest disabled, GraphQL and MCP enabled globally")]
         [DataRow(false, true, false, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest disabled, GraphQL enabled, and MCP disabled globally")]
         [DataRow(false, false, true, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT, DisplayName = "V1 - Rest and GraphQL disabled, MCP enabled globally")]
         [DataRow(true, true, true, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest, GraphQL, and MCP enabled globally")]
         [DataRow(true, true, false, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest and GraphQL enabled, MCP disabled globally")]
         [DataRow(true, false, true, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled, GraphQL disabled, and MCP enabled globally")]
-        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled, GraphQL and MCP enabled globally")]
+        [DataRow(true, false, false, HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest enabled, GraphQL and MCP disabled globally")]
         [DataRow(false, true, true, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest disabled, GraphQL and MCP enabled globally")]
         [DataRow(false, true, false, HttpStatusCode.NotFound, HttpStatusCode.OK, HttpStatusCode.NotFound, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest disabled, GraphQL enabled, and MCP disabled globally")]
         [DataRow(false, false, true, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.OK, CONFIGURATION_ENDPOINT_V2, DisplayName = "V2 - Rest and GraphQL disabled, MCP enabled globally")]
@@ -2582,7 +2583,7 @@ type Moon {
                 object payload = new { query };
 
                 // GraphQL request
-                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, configuration.Runtime.GraphQL.Path)
                 {
                     Content = JsonContent.Create(payload)
                 };
@@ -2591,7 +2592,7 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode, "The GraphQL response is different from the expected result.");
 
                 // REST request
-                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
+                HttpRequestMessage restRequest = new(HttpMethod.Get, $"{configuration.Runtime.Rest.Path}/Book");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode, "The REST response is different from the expected result.");
 
@@ -2603,7 +2604,7 @@ type Moon {
                     id = 1,
                     method = "tools/list"
                 };
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
+                HttpRequestMessage mcpRequest = new(HttpMethod.Post, configuration.Runtime.Mcp.Path)
                 {
                     Content = JsonContent.Create(mcpPayload)
                 };
@@ -2622,13 +2623,13 @@ type Moon {
                 HttpResponseMessage postResult = await client.PostAsync(configurationEndpoint, content);
                 Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode, "The hydration post-response is different from the expected result.");
 
-                HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
+                HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client, configuration.Runtime.Rest);
                 Assert.AreEqual(expected: expectedStatusCodeForREST, actual: restResponseCode, "The REST hydration post-response is different from the expected result.");
 
-                HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
+                HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client, configuration.Runtime.GraphQL);
                 Assert.AreEqual(expected: expectedStatusCodeForGraphQL, actual: graphqlResponseCode, "The GraphQL hydration post-response is different from the expected result.");
 
-                HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client);
+                HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client, configuration.Runtime.Mcp);
                 Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode, "The MCP hydration post-response is different from the expected result.");
             }
         }
@@ -3674,7 +3675,7 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, configuration, configurationEndpoint);
-                HttpStatusCode responseCode = await HydratePostStartupConfiguration(client, content, configurationEndpoint);
+                HttpStatusCode responseCode = await HydratePostStartupConfiguration(client, content, configurationEndpoint, configuration.Runtime.Rest);
 
                 Assert.AreEqual(expected: HttpStatusCode.OK, actual: responseCode, message: "Configuration hydration failed.");
 
@@ -5271,14 +5272,14 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="httpClient">Client used for request execution.</param>
         /// <param name="config">Post-startup configuration</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config</returns>
-        private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, JsonContent content, string configurationEndpoint)
+        private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, JsonContent content, string configurationEndpoint, RestRuntimeOptions rest)
         {
             // Hydrate configuration post-startup
             HttpResponseMessage postResult =
                 await httpClient.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
-            return await GetRestResponsePostConfigHydration(httpClient);
+            return await GetRestResponsePostConfigHydration(httpClient, rest);
         }
 
         /// <summary>
@@ -5287,7 +5288,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="httpClient">Client used for request execution.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
         /// else the response code from the REST request</returns>
-        private static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient)
+        private static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient, RestRuntimeOptions rest)
         {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.
@@ -5297,7 +5298,7 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 // Spot test authorization resolver utilization to ensure configuration is used.
                 HttpResponseMessage postConfigHydrationResult =
-                    await httpClient.GetAsync($"api/{POST_STARTUP_CONFIG_ENTITY}");
+                    await httpClient.GetAsync($"{rest.Path}/{POST_STARTUP_CONFIG_ENTITY}");
                 responseCode = postConfigHydrationResult.StatusCode;
 
                 if (postConfigHydrationResult.StatusCode == HttpStatusCode.ServiceUnavailable)
@@ -5319,7 +5320,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="httpClient">Client used for request execution.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
         /// else the response code from the GRAPHQL request</returns>
-        private static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient)
+        private static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient, GraphQLRuntimeOptions graphQL)
         {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.
@@ -5337,7 +5338,7 @@ type Planet @model(name:""PlanetAlias"") {
 
                 object payload = new { query };
 
-                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, graphQL.Path)
                 {
                     Content = JsonContent.Create(payload)
                 };
@@ -5364,7 +5365,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="httpClient">Client used for request execution.</param>	
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,	
         /// else the response code from the MCP request</returns>	
-        private static async Task<HttpStatusCode> GetMcpResponsePostConfigHydration(HttpClient httpClient)
+        private static async Task<HttpStatusCode> GetMcpResponsePostConfigHydration(HttpClient httpClient, McpRuntimeOptions mcp)
         {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services	
             // time to instantiate and hydrate permissions.	
@@ -5373,14 +5374,13 @@ type Planet @model(name:""PlanetAlias"") {
             while (retryCount > 0)
             {
                 // Minimal MCP request (list tools) – valid JSON-RPC request
-                await Task.Delay(2000);
                 object payload = new
                 {
                     jsonrpc = "2.0",
                     id = 1,
                     method = "tools/list"
                 };
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, "/mcp")
+                HttpRequestMessage mcpRequest = new(HttpMethod.Post, mcp.Path)
                 {
                     Content = JsonContent.Create(payload)
                 };

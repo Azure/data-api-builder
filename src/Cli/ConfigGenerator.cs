@@ -1682,14 +1682,22 @@ namespace Cli
             // Handle relationships
             Dictionary<string, EntityRelationship>? updatedRelationships = null;
 
-            if (VerifyCanUpdateRelationship(initialConfig, options.Cardinality, options.TargetEntity))
+            // Only verify and update relationships if relationship options are provided
+            if (options.Cardinality is not null || options.TargetEntity is not null)
             {
-                EntityRelationship? newRelationship = CreateNewRelationshipWithUpdateOptions(options);
-                if (newRelationship is not null)
+                if (VerifyCanUpdateRelationship(initialConfig, options.Cardinality, options.TargetEntity))
                 {
-                    updatedRelationships = entity.Relationships is null
-                        ? new Dictionary<string, EntityRelationship> { { options.Relationship ?? options.TargetEntity!, newRelationship } }
-                        : new Dictionary<string, EntityRelationship>(entity.Relationships) { [options.Relationship ?? options.TargetEntity!] = newRelationship };
+                    EntityRelationship? newRelationship = CreateNewRelationshipWithUpdateOptions(options);
+                    if (newRelationship is not null)
+                    {
+                        updatedRelationships = entity.Relationships is null
+                            ? new Dictionary<string, EntityRelationship> { { options.Relationship ?? options.TargetEntity!, newRelationship } }
+                            : new Dictionary<string, EntityRelationship>(entity.Relationships) { [options.Relationship ?? options.TargetEntity!] = newRelationship };
+                    }
+                }
+                else
+                {
+                    return false;
                 }
             }
             else

@@ -25,6 +25,9 @@ public record RuntimeConfig
     [JsonPropertyName("azure-key-vault")]
     public AzureKeyVaultOptions? AzureKeyVault { get; init; }
 
+    [JsonPropertyName("autoentities")]
+    public RuntimeAutoEntities? AutoEntities { get; init; }
+
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }

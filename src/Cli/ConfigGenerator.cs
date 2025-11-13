@@ -450,9 +450,9 @@ namespace Cli
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
-
             // Validate and construct MCP options
             EntityMcpOptions? mcpOptions = null;
+
             if (options.McpCustomToolEnabled is not null and not CliBool.None)
             {
                 if (!isStoredProcedure)
@@ -1654,7 +1654,8 @@ namespace Cli
             EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            EntityPermission[]? updatedPermissions = null;
+            EntityPermission[]? updatedPermissions;
+
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, policy, field, updatedSource.Type);
@@ -1672,6 +1673,7 @@ namespace Cli
 
             // Handle relationships
             Dictionary<string, EntityRelationship>? updatedRelationships = null;
+
             if (VerifyCanUpdateRelationship(initialConfig, options.Cardinality, options.TargetEntity))
             {
                 EntityRelationship? newRelationship = CreateNewRelationshipWithUpdateOptions(options);
@@ -1688,7 +1690,8 @@ namespace Cli
             }
 
             // Handle mappings
-            Dictionary<string, string>? updatedMappings = null;
+            Dictionary<string, string>? updatedMappings;
+
             if (options.Map is not null && options.Map.Any())
             {
                 updatedMappings = new Dictionary<string, string>();
@@ -1740,7 +1743,8 @@ namespace Cli
             }
 
             // Handle fields
-            List<FieldMetadata>? fields = null;
+            List<FieldMetadata>? fields;
+
             if (options.FieldsNameCollection != null && options.FieldsNameCollection.Any())
             {
                 fields = ComposeFieldsFromOptions(options);
@@ -2851,6 +2855,7 @@ namespace Cli
                 {
                     _logger.LogWarning("--mcp.custom-tool is only applicable for stored procedures and will be ignored.");
                 }
+
                 return null;
             }
 
@@ -2886,6 +2891,7 @@ namespace Cli
                 {
                     customToolEnabled = false; // default
                 }
+
                 if (dmlToolsEnabled == null && options.McpDmlToolsEnabled is null or CliBool.None)
                 {
                     dmlToolsEnabled = true; // default

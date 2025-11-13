@@ -242,4 +242,3 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
     }
 }
 
-

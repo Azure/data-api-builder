@@ -69,6 +69,7 @@ public class AuthorizationResolverHotReloadTests
             Rest: new(Enabled: true),
             GraphQL: new(Singular: "", Plural: "", Enabled: false),
             Permissions: new[] { permissionsHR },
+            Mcp: null,
             Relationships: null,
             Mappings: null);
 
@@ -183,6 +184,7 @@ public class AuthorizationResolverHotReloadTests
             Rest: new(Enabled: true),
             GraphQL: new(Singular: "", Plural: "", Enabled: false),
             Permissions: new[] { permissions },
+            Mcp: null,
             Relationships: null,
             Mappings: null);
 
@@ -224,3 +226,4 @@ public class AuthorizationResolverHotReloadTests
         _testClient.Dispose();
     }
 }
+

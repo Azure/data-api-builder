@@ -1033,6 +1033,7 @@ namespace Cli.Tests
                 Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("SOURCE1", "SOURCE1s"),
+                Mcp: null,
                 Permissions: new[] { permissionForEntity },
                 Relationships: null,
                 Mappings: null
@@ -1044,6 +1045,7 @@ namespace Cli.Tests
                 Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("SOURCE2", "SOURCE2s", false),
+                Mcp: null,
                 Permissions: new[] { permissionForEntity },
                 Relationships: null,
                 Mappings: null
@@ -1197,7 +1199,9 @@ namespace Cli.Tests
                 fieldsNameCollection: null,
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
-                fieldsPrimaryKeyCollection: null
+                fieldsPrimaryKeyCollection: null,
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null
             );
         }
 

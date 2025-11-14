@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
 using CommandLine;
 
 namespace Cli.Commands
@@ -34,6 +35,8 @@ namespace Cli.Commands
             IEnumerable<string>? fieldsAliasCollection,
             IEnumerable<string>? fieldsDescriptionCollection,
             IEnumerable<bool>? fieldsPrimaryKeyCollection,
+            CliBool? mcpCustomToolEnabled,
+            CliBool? mcpDmlToolsEnabled,
             string? config
         )
             : base(config)
@@ -61,6 +64,8 @@ namespace Cli.Commands
             FieldsAliasCollection = fieldsAliasCollection;
             FieldsDescriptionCollection = fieldsDescriptionCollection;
             FieldsPrimaryKeyCollection = fieldsPrimaryKeyCollection;
+            McpCustomToolEnabled = mcpCustomToolEnabled;
+            McpDmlToolsEnabled = mcpDmlToolsEnabled;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -132,5 +137,11 @@ namespace Cli.Commands
 
         [Option("fields.primary-key", Required = false, Separator = ',', HelpText = "Set this field as a primary key.")]
         public IEnumerable<bool>? FieldsPrimaryKeyCollection { get; }
+
+        [Option("mcp.custom-tool", Required = false, HelpText = "Enable this stored procedure as a custom MCP tool. Valid values: true, false")]
+        public CliBool? McpCustomToolEnabled { get; }
+
+        [Option("mcp.dml-tools", Required = false, HelpText = "Enable DML tools for this entity. Valid values: true, false")]
+        public CliBool? McpDmlToolsEnabled { get; }
     }
 }

@@ -9,9 +9,8 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
 {
-    /// Determines whether to replace environment variable with its
-    /// value or not while deserializing.
-    private bool _replaceEnvVar;
+    /// Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -22,27 +21,26 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new EntityGraphQLOptionsConverter(_replaceEnvVar);
+        return new EntityGraphQLOptionsConverter(_replacementSettings);
     }
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    internal EntityGraphQLOptionsConverterFactory(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    internal EntityGraphQLOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     private class EntityGraphQLOptionsConverter : JsonConverter<EntityGraphQLOptions>
     {
-        // Determines whether to replace environment variable with its
-        // value or not while deserializing.
-        private bool _replaceEnvVar;
+        // Settings for variable replacement during deserialization.
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-        /// <param name="replaceEnvVar">Whether to replace environment variable with its
-        /// value or not while deserializing.</param>
-        public EntityGraphQLOptionsConverter(bool replaceEnvVar)
+        /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+        /// If null, no variable replacement will be performed.</param>
+        public EntityGraphQLOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <inheritdoc/>
@@ -73,7 +71,7 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
                         case "type":
                             if (reader.TokenType is JsonTokenType.String)
                             {
-                                singular = reader.DeserializeString(_replaceEnvVar) ?? string.Empty;
+                                singular = reader.DeserializeString(_replacementSettings) ?? string.Empty;
                             }
                             else if (reader.TokenType is JsonTokenType.StartObject)
                             {
@@ -95,10 +93,10 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
                                         switch (property2)
                                         {
                                             case "singular":
-                                                singular = reader.DeserializeString(_replaceEnvVar) ?? string.Empty;
+                                                singular = reader.DeserializeString(_replacementSettings) ?? string.Empty;
                                                 break;
                                             case "plural":
-                                                plural = reader.DeserializeString(_replaceEnvVar) ?? string.Empty;
+                                                plural = reader.DeserializeString(_replacementSettings) ?? string.Empty;
                                                 break;
                                         }
                                     }
@@ -112,7 +110,7 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
                             break;
 
                         case "operation":
-                            string? op = reader.DeserializeString(_replaceEnvVar);
+                            string? op = reader.DeserializeString(_replacementSettings);
 
                             if (op is not null)
                             {
@@ -136,7 +134,7 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
 
             if (reader.TokenType is JsonTokenType.String)
             {
-                string? singular = reader.DeserializeString(_replaceEnvVar);
+                string? singular = reader.DeserializeString(_replacementSettings);
                 return new EntityGraphQLOptions(singular ?? string.Empty, string.Empty);
             }
 

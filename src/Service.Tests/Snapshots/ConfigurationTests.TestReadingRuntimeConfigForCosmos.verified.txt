@@ -17,26 +17,6 @@
       Path: /graphql,
       AllowIntrospection: true
     },
-    Mcp: {
-      Enabled: true,
-      Path: /mcp,
-      DmlTools: {
-        AllToolsEnabled: true,
-        DescribeEntities: true,
-        CreateRecord: true,
-        ReadRecords: true,
-        UpdateRecord: true,
-        DeleteRecord: true,
-        ExecuteEntity: true,
-        UserProvidedAllTools: false,
-        UserProvidedDescribeEntities: false,
-        UserProvidedCreateRecord: false,
-        UserProvidedReadRecords: false,
-        UserProvidedUpdateRecord: false,
-        UserProvidedDeleteRecord: false,
-        UserProvidedExecuteEntity: false
-      }
-    },
     Host: {
       Cors: {
         Origins: [
@@ -47,7 +27,8 @@
       Authentication: {
         Provider: StaticWebApps
       }
-    }
+    },
+    Telemetry: {}
   },
   Entities: [
     {

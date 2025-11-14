@@ -18,32 +18,28 @@ namespace Azure.DataApiBuilder.Config
         public EnvironmentVariableReplacementFailureMode EnvFailureMode { get; set; } = EnvironmentVariableReplacementFailureMode.Throw;
 
         // @env\('  : match @env('
-        // @AKV\('  : match @AKV('
+        // @akv\('  : match @akv('
         // .*?      : lazy match any character except newline 0 or more times
         // (?='\))  : look ahead for ')' which will combine with our lazy match
         //            ie: in @env('hello')goodbye') we match @env('hello')
         // '\)      : consume the ') into the match (look ahead doesn't capture)
-        // This pattern lazy matches any string that starts with @env(' and ends with ')
-        // ie: fooBAR@env('hello-world')bash)FOO')  match: @env('hello-world')
-        // This matching pattern allows for the @env('<match>') to be safely nested
-        // within strings that contain ') after our match.
-        // ie: if the environment variable "Baz" has the value of "Bar"
-        // fooBarBaz: "('foo@env('Baz')Baz')" would parse into
-        // fooBarBaz: "('fooBarBaz')"
-        // Note that there is no escape character currently for ') to exist
-        // within the name of the environment variable, but that ') is not
-        // a valid environment variable name in certain shells.
+        // This pattern lazy matches any string that starts with @env(' and ends with ') OR @akv(' and ends with ')
+        // Example: fooBAR@env('hello-world')bash)FOO')  match: @env('hello-world')
+        // Example: fooBAR@akv('secret-name')bash)FOO') match: @akv('secret-name')
+        // This matching pattern allows for the @env('<match>') / @akv('<match>') to be safely nested
+        // within strings that contain ')' after our match.
+        // Note that there is no escape character currently for ')' to exist within the name of the variable.
         public const string OUTER_ENV_PATTERN = @"@env\('.*?(?='\))'\)";
-        public const string OUTER_AKV_PATTERN = @"@AKV\('.*?(?='\))'\)";
+        public const string OUTER_AKV_PATTERN = @"@akv\('.*?(?='\))'\)"; // changed from @AKV to @akv
 
         // [^@env\(]   :  any substring that is not @env(
-        // [^@AKV\(]   :  any substring that is not @AKV(
+        // [^@akv\(]   :  any substring that is not @akv(
         // .*          :  any char except newline any number of times
         // (?=\))      :  look ahead for end char of )
-        // This pattern greedy matches all characters that are not a part of @env()
+        // This pattern greedy matches all characters that are not a part of @env() / @akv()
         // ie: @env('hello@env('goodbye')world') match: 'hello@env('goodbye')world'
         public const string INNER_ENV_PATTERN = @"[^@env\(].*(?=\))";
-        public const string INNER_AKV_PATTERN = @"[^@AKV\(].*(?=\))";
+        public const string INNER_AKV_PATTERN = @"[^@akv\(].*(?=\))"; // changed from [^@AKV\(]
 
         private readonly AzureKeyVaultOptions? _azureKeyVaultOptions;
         private readonly SecretClient? _akvClient;

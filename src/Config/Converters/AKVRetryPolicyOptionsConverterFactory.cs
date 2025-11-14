@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
 {
     // Settings for variable replacement during deserialization.
-    // Currently allows for Azure Key Vault and Environment Variable replacement.
+    // Currently allows for Azure Key Vault (via @akv('secret-name')) and Environment Variable replacement.
     private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
@@ -38,7 +38,7 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
     private class AKVRetryPolicyOptionsConverter : JsonConverter<AKVRetryPolicyOptions>
     {
         // Settings for variable replacement during deserialization.
-        // Currently allows for Azure Key Vault and Environment Variable replacement.
+        // Currently allows for Azure Key Vault (via @akv('<secret>')) and Environment Variable replacement.
         private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replacementSettings">Settings for variable replacement during deserialization.
@@ -52,7 +52,7 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
         /// Defines how DAB reads AKV Retry Policy options and defines which values are
         /// used to instantiate those options.
         /// </summary>
-        /// <exception cref="JsonException">Thrown when improperly formatted cache options are provided.</exception>
+        /// <exception cref="JsonException">Thrown when improperly formatted retry policy options are provided.</exception>
         public override AKVRetryPolicyOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType is JsonTokenType.StartObject)

@@ -36,7 +36,7 @@ flowchart TD
 
 ## Data structures
 
-This schema demonstrates most relationship cardinalities.
+This schema demonstrates all of the relationship cardinalities.
 
 ```mermaid
 stateDiagram-v2

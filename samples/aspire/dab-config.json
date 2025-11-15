@@ -1,0 +1,534 @@
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v1.7.81/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('MSSQL_CONNECTION_STRING')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api",
+      "request-body-strict": true
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    },
+    "host": {
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": {
+    "Series": {
+      "description": "Star Trek series",
+      "source": {
+        "object": "dbo.Series",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "Id",
+          "description": "Primary key",
+          "primary-key": true
+        },
+        {
+          "name": "Name",
+          "description": "Series name",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Series",
+          "plural": "Series"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "Series_Characters": {
+          "cardinality": "many",
+          "target.entity": "Series_Character",
+          "source.fields": [
+            "Id"
+          ],
+          "target.fields": [
+            "SeriesId"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "Actor": {
+      "description": "An actor in the franchise",
+      "source": {
+        "object": "dbo.Actor",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "Id",
+          "description": "Primary key",
+          "primary-key": true
+        },
+        {
+          "name": "FirstName",
+          "description": "Given name",
+          "primary-key": false
+        },
+        {
+          "name": "LastName",
+          "description": "Family name",
+          "primary-key": false
+        },
+        {
+          "name": "BirthYear",
+          "description": "Year of birth",
+          "primary-key": false
+        },
+        {
+          "name": "FullName",
+          "description": "Computed full name",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Actor",
+          "plural": "Actors"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "Actor_Characters": {
+          "cardinality": "many",
+          "target.entity": "Character",
+          "source.fields": [
+            "Id"
+          ],
+          "target.fields": [
+            "ActorId"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "Species": {
+      "description": "Alien species in Star Trek",
+      "source": {
+        "object": "dbo.Species",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "Id",
+          "description": "Primary key",
+          "primary-key": true
+        },
+        {
+          "name": "Name",
+          "description": "Species name",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Species",
+          "plural": "Species"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "Species_Characters": {
+          "cardinality": "many",
+          "target.entity": "Character_Species",
+          "source.fields": [
+            "Id"
+          ],
+          "target.fields": [
+            "SpeciesId"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "Character": {
+      "description": "A fictional character portrayed by an actor",
+      "source": {
+        "object": "dbo.Character",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "Id",
+          "description": "Primary key",
+          "primary-key": true
+        },
+        {
+          "name": "Name",
+          "description": "Character name",
+          "primary-key": false
+        },
+        {
+          "name": "ActorId",
+          "description": "Foreign key to Actor",
+          "primary-key": false
+        },
+        {
+          "name": "Stardate",
+          "description": "Birth stardate",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Character",
+          "plural": "Characters"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "Character_Actor": {
+          "cardinality": "one",
+          "target.entity": "Actor",
+          "source.fields": [
+            "ActorId"
+          ],
+          "target.fields": [
+            "Id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "Character_Series": {
+          "cardinality": "many",
+          "target.entity": "Series_Character",
+          "source.fields": [
+            "Id"
+          ],
+          "target.fields": [
+            "CharacterId"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "Character_Species": {
+          "cardinality": "many",
+          "target.entity": "Character_Species",
+          "source.fields": [
+            "Id"
+          ],
+          "target.fields": [
+            "CharacterId"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "Series_Character": {
+      "description": "Characters appearing in series",
+      "source": {
+        "object": "dbo.Series_Character",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "SeriesId",
+          "description": "Foreign key to Series",
+          "primary-key": true
+        },
+        {
+          "name": "CharacterId",
+          "description": "Foreign key to Character",
+          "primary-key": true
+        },
+        {
+          "name": "Role",
+          "description": "Character role in series",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Series_Character",
+          "plural": "Series_Characters"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "SeriesCharacter_Series": {
+          "cardinality": "one",
+          "target.entity": "Series",
+          "source.fields": [
+            "SeriesId"
+          ],
+          "target.fields": [
+            "Id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "SeriesCharacter_Character": {
+          "cardinality": "one",
+          "target.entity": "Character",
+          "source.fields": [
+            "CharacterId"
+          ],
+          "target.fields": [
+            "Id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "Character_Species": {
+      "description": "Species composition of characters",
+      "source": {
+        "object": "dbo.Character_Species",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "CharacterId",
+          "description": "Foreign key to Character",
+          "primary-key": true
+        },
+        {
+          "name": "SpeciesId",
+          "description": "Foreign key to Species",
+          "primary-key": true
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Character_Species",
+          "plural": "Character_Species"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "CharacterSpecies_Character": {
+          "cardinality": "one",
+          "target.entity": "Character",
+          "source.fields": [
+            "CharacterId"
+          ],
+          "target.fields": [
+            "Id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "CharacterSpecies_Species": {
+          "cardinality": "one",
+          "target.entity": "Species",
+          "source.fields": [
+            "SpeciesId"
+          ],
+          "target.fields": [
+            "Id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "SeriesActors": {
+      "description": "Actors appearing in each series",
+      "source": {
+        "object": "dbo.SeriesActors",
+        "type": "view"
+      },
+      "fields": [
+        {
+          "name": "Id",
+          "description": "Actor id",
+          "primary-key": true
+        },
+        {
+          "name": "SeriesId",
+          "description": "Series id",
+          "primary-key": true
+        },
+        {
+          "name": "Actor",
+          "description": "Actor name",
+          "primary-key": false
+        },
+        {
+          "name": "BirthYear",
+          "description": "Year of birth",
+          "primary-key": false
+        },
+        {
+          "name": "Series",
+          "description": "Series name",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "SeriesActors",
+          "plural": "SeriesActors"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "GetSeriesActors": {
+      "description": "Return actors in a series",
+      "source": {
+        "object": "dbo.GetSeriesActors",
+        "type": "stored-procedure",
+        "parameters": [
+          {
+            "name": "top",
+            "description": "Limit rows",
+            "required": false,
+            "default": "5"
+          },
+          {
+            "name": "seriesId",
+            "description": "Series identifier",
+            "required": false,
+            "default": "1"
+          }
+        ]
+      },
+      "fields": [],
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "GetSeriesActors",
+          "plural": "GetSeriesActors"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

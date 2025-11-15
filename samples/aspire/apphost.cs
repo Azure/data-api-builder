@@ -56,7 +56,7 @@ var sqlCommander = builder
     .WaitFor(sqlDatabase);
 
 // MCP Inspector
-var mcpInspector =builder
+var mcpInspector = builder
     .AddMcpInspector("mcp")
     .WithMcpServer(dataApiBuilder)
     .WithParentRelationship(dataApiBuilder)

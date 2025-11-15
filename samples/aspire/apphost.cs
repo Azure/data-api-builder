@@ -6,26 +6,29 @@
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-// parameters
-var sqlPath = new FileInfo("database.sql");
-var sqlScript = File.ReadAllText(sqlPath.FullName);
-var sqlPassword = builder.AddParameter("sql-password", "P@ssw0rd!");
+var options = new
+{
+    SqlScript = "database.sql",
+    SqlPassword = "P@ssw0rd!",
+    SqlDatabase = "StarTrek",
+    DabConfig = "dab-config.json",
+    DabImage = "1.7.81-rc",
+    SqlCmdrImage = "latest"
+};
 
-// SQL Server
-var sqlDatabase = builder
-    .AddSqlServer("sql", sqlPassword)
-    .WithDataVolume("sql-data")
-    .WithLifetime(ContainerLifetime.Persistent)
-    .AddDatabase("StarTrek")
-    .WithCreationScript(sqlScript);
+var sqlServer = builder
+    .AddSqlServer("sql-server", builder.AddParameter("sql-password", options.SqlPassword))
+    .WithDataVolume("sql-data-volume")
+    .WithLifetime(ContainerLifetime.Persistent);
 
-var dabConfig = new FileInfo("dab-config.json");
+var sqlDatabase = sqlServer
+    .AddDatabase("sql-database", options.SqlDatabase)
+    .WithCreationScript(File.ReadAllText(new FileInfo(options.SqlScript).FullName));
 
-// Data API builder
-var dataApiBuilder = builder
-    .AddContainer("dab", image: "azure-databases/data-api-builder", tag: "1.7.81-rc")
+var dabServer = builder
+    .AddContainer("data-api", image: "azure-databases/data-api-builder", tag: options.DabImage)
     .WithImageRegistry("mcr.microsoft.com")
-    .WithBindMount(source: dabConfig.FullName, target: "/App/dab-config.json", isReadOnly: true)
+    .WithBindMount(source: new FileInfo(options.DabConfig).FullName, target: "/App/dab-config.json", isReadOnly: true)
     .WithHttpEndpoint(targetPort: 5000, name: "http")
     .WithEnvironment("MSSQL_CONNECTION_STRING", sqlDatabase)
     .WithUrls(context =>
@@ -40,9 +43,8 @@ var dataApiBuilder = builder
     .WithHttpHealthCheck("/health")
     .WaitFor(sqlDatabase);
 
-// SQL Commander
 var sqlCommander = builder
-    .AddContainer("sql-cmdr", "jerrynixon/sql-commander", "latest")
+    .AddContainer("sql-cmdr", "jerrynixon/sql-commander", options.SqlCmdrImage)
     .WithImageRegistry("docker.io")
     .WithHttpEndpoint(targetPort: 8080, name: "http")
     .WithEnvironment("ConnectionStrings__db", sqlDatabase)
@@ -55,13 +57,12 @@ var sqlCommander = builder
     .WithHttpHealthCheck("/health")
     .WaitFor(sqlDatabase);
 
-// MCP Inspector
-var mcpInspector =builder
-    .AddMcpInspector("mcp")
-    .WithMcpServer(dataApiBuilder)
-    .WithParentRelationship(dataApiBuilder)
+var mcpInspector = builder
+    .AddMcpInspector("mcp-inspector")
+    .WithMcpServer(dabServer)
+    .WithParentRelationship(dabServer)
     .WithEnvironment("NODE_TLS_REJECT_UNAUTHORIZED", "0")
-    .WaitFor(dataApiBuilder)
+    .WaitFor(dabServer)
     .WithUrls(context =>
     {
         context.Urls.First().DisplayText = "Inspector";

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
@@ -2597,20 +2596,8 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode, "The REST response is different from the expected result.");
 
                 // MCP request
-                await Task.Delay(2000);
-                object mcpPayload = new
-                {
-                    jsonrpc = "2.0",
-                    id = 1,
-                    method = "tools/list"
-                };
-                HttpRequestMessage mcpRequest = new(HttpMethod.Post, configuration.Runtime.Mcp.Path)
-                {
-                    Content = JsonContent.Create(mcpPayload)
-                };
-                mcpRequest.Headers.Add("Accept", "*/*");
-                HttpResponseMessage mcpResponse = await client.SendAsync(mcpRequest);
-                Assert.AreEqual(expectedStatusCodeForMcp, mcpResponse.StatusCode, "The MCP response is different from the expected result.");
+                HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client, configuration.Runtime.Mcp);
+                Assert.AreEqual(expectedStatusCodeForMcp, mcpResponseCode, "The MCP response is different from the expected result.");
             }
 
             // Hosted Scenario
@@ -5304,7 +5291,7 @@ type Planet @model(name:""PlanetAlias"") {
                 if (postConfigHydrationResult.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
                     retryCount--;
-                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    await Task.Delay(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
                     continue;
                 }
 
@@ -5349,7 +5336,7 @@ type Planet @model(name:""PlanetAlias"") {
                 if (responseCode == HttpStatusCode.ServiceUnavailable)
                 {
                     retryCount--;
-                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    await Task.Delay(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
                     continue;
                 }
 
@@ -5392,7 +5379,7 @@ type Planet @model(name:""PlanetAlias"") {
                 if (responseCode == HttpStatusCode.ServiceUnavailable || responseCode == HttpStatusCode.NotFound)
                 {
                     retryCount--;
-                    Thread.Sleep(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    await Task.Delay(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
                     continue;
                 }
 

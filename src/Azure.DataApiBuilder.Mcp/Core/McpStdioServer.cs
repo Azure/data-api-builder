@@ -17,27 +17,27 @@ namespace Azure.DataApiBuilder.Mcp.Core
     {
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
-        
+
         private const string PROTOCOL_VERSION = "2025-06-18";
 
         public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
         {
-            _toolRegistry   = toolRegistry   ?? throw new ArgumentNullException(nameof(toolRegistry));
+            _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
-        
+
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             Console.Error.WriteLine("[MCP DEBUG] MCP stdio server started.");
 
             // Use UTF-8 WITHOUT BOM
             UTF8Encoding utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-            
+
             using Stream stdin = Console.OpenStandardInput();
             using Stream stdout = Console.OpenStandardOutput();
             using StreamReader reader = new(stdin, utf8NoBom);
             using StreamWriter writer = new(stdout, utf8NoBom) { AutoFlush = true };
-            
+
             // Redirect Console.Out to use our writer
             Console.SetOut(writer);
 
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                             case "initialize":
                                 HandleInitialize(id);
                                 break;
-                            
+
                             case "notifications/initialized":
                                 Console.Error.WriteLine("[MCP DEBUG] notifications/initialized received.");
                                 break;
@@ -149,7 +149,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             // Extract the actual id value from the request
             int requestId = id.HasValue ? id.Value.GetInt32() : 0;
-            
+
             // Create the initialize response
             var response = new
             {
@@ -173,11 +173,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     // Remove "instructions" - not part of MCP spec
                 }
             };
-            
+
             string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);
             Console.Out.Flush();
-            
+
             // DO NOT send notifications here - wait for client to send notifications/initialized first
         }
 

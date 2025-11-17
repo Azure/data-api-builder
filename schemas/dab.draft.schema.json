@@ -707,19 +707,19 @@
               "additionalProperties": false,
               "properties": {
                 "include": {
-                  "type": ["string", "null"],
+                  "type": "string",
                   "description": "T-SQL LIKE pattern to include database objects (e.g., '%.%')",
-                  "default": null
+                  "default": "%.%"
                 },
                 "exclude": {
-                  "type": ["string", "null"],
+                  "type": "string",
                   "description": "T-SQL LIKE pattern to exclude database objects (e.g., 'sales.%')",
                   "default": null
                 },
                 "name": {
-                  "type": ["string", "null"],
-                  "description": "Interpolation syntax for entity naming (must be unique, e.g., '{schema}{object}')",
-                  "default": null
+                  "type": "string",
+                  "description": "Interpolation syntax for entity naming, must be unique for every entity inside the pattern",
+                  "default": "{schema}{object}"
                 }
               }
             },
@@ -733,10 +733,50 @@
                   "description": "MCP endpoint configuration",
                   "additionalProperties": false,
                   "properties": {
-                    "dml-tool": {
-                      "type": "boolean",
-                      "description": "Enable/disable DML tool",
-                      "default": true
+                    "dml-tools": {
+                      "oneOf": [
+                        {
+                          "type": "boolean",
+                          "description": "Enable/disable all DML tools with default settings."
+                        },
+                        {
+                          "type": "object",
+                          "description": "Individual DML tools configuration",
+                          "additionalProperties": false,
+                          "properties": {
+                            "describe-entities": {
+                              "type": "boolean",
+                              "description": "Enable/disable the describe-entities tool.",
+                              "default": false
+                            },
+                            "create-record": {
+                              "type": "boolean",
+                              "description": "Enable/disable the create-record tool.",
+                              "default": false
+                            },
+                            "read-records": {
+                              "type": "boolean",
+                              "description": "Enable/disable the read-records tool.",
+                              "default": false
+                            },
+                            "update-record": {
+                              "type": "boolean",
+                              "description": "Enable/disable the update-record tool.",
+                              "default": false
+                            },
+                            "delete-record": {
+                              "type": "boolean",
+                              "description": "Enable/disable the delete-record tool.",
+                              "default": false
+                            },
+                            "execute-entity": {
+                              "type": "boolean",
+                              "description": "Enable/disable the execute-entity tool.",
+                              "default": false
+                            }
+                          }
+                        }
+                      ]
                     }
                   }
                 },
@@ -787,15 +827,15 @@
                       "default": false
                     },
                     "ttl-seconds": {
-                      "type": ["integer", "null"],
+                      "type": [ "integer", "null" ],
                       "description": "Time-to-live for cached responses in seconds",
                       "default": null,
                       "minimum": 1
                     },
                     "level": {
-                      "type": ["string", "null"],
+                      "type": "string",
                       "description": "Cache level (L1 or L1L2)",
-                      "enum": ["L1", "L1L2", null],
+                      "enum": [ "L1", "L1L2", null ],
                       "default": null
                     }
                   }
@@ -804,27 +844,75 @@
             },
             "permissions": {
               "type": "array",
-              "description": "Permissions configuration for generated entities (at least one required)",
-              "minItems": 1,
+              "description": "Permissions assigned to this object",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["role", "actions"],
                 "properties": {
                   "role": {
-                    "type": "string",
-                    "description": "Role name"
+                    "type": "string"
                   },
                   "actions": {
-                    "type": "array",
-                    "description": "Allowed actions for this role",
-                    "items": {
-                      "$ref": "#/$defs/action"
-                    }
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "[*]"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/$defs/action"
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "action": {
+                                  "$ref": "#/$defs/action"
+                                },
+                                "fields": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "include": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "exclude": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                },
+                                "policy": {
+                                  "type": "object",
+                                  "description": "Define item-level security policy",
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "database": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "uniqueItems": true
+                      }
+                    ]
                   }
                 }
-              }
+              },
+              "required": [ "role", "actions" ]
             }
+          }
           },
           "required": ["permissions"]
         }

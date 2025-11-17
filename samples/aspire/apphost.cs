@@ -9,7 +9,6 @@ var builder = DistributedApplication.CreateBuilder(args);
 var options = new
 {
     SqlScript = "database.sql",
-    SqlPassword = "P@ssw0rd!",
     SqlDatabase = "StarTrek",
     DabConfig = "dab-config.json",
     DabImage = "1.7.81-rc",
@@ -17,7 +16,7 @@ var options = new
 };
 
 var sqlServer = builder
-    .AddSqlServer("sql-server", builder.AddParameter("sql-password", options.SqlPassword))
+    .AddSqlServer("sql-server")
     .WithDataVolume("sql-data-volume")
     .WithLifetime(ContainerLifetime.Persistent);
 

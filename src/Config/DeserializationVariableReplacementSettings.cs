@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Config
         // within strings that contain ')' after our match.
         // Note that there is no escape character currently for ')' to exist within the name of the variable.
         public const string OUTER_ENV_PATTERN = @"@env\('.*?(?='\))'\)";
-        public const string OUTER_AKV_PATTERN = @"@akv\('.*?(?='\))'\)"; // changed from @AKV to @akv
+        public const string OUTER_AKV_PATTERN = @"@akv\('.*?(?='\))'\)";
 
         // [^@env\(]   :  any substring that is not @env(
         // [^@akv\(]   :  any substring that is not @akv(
@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Config
         // This pattern greedy matches all characters that are not a part of @env() / @akv()
         // ie: @env('hello@env('goodbye')world') match: 'hello@env('goodbye')world'
         public const string INNER_ENV_PATTERN = @"[^@env\(].*(?=\))";
-        public const string INNER_AKV_PATTERN = @"[^@akv\(].*(?=\))"; // changed from [^@AKV\(]
+        public const string INNER_AKV_PATTERN = @"[^@akv\(].*(?=\))";
 
         private readonly AzureKeyVaultOptions? _azureKeyVaultOptions;
         private readonly SecretClient? _akvClient;

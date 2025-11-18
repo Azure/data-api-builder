@@ -96,6 +96,20 @@ namespace Azure.DataApiBuilder.Config
         {
             // strips first and last characters, ie: '''hello'' --> ''hello'
             string name = Regex.Match(match.Value, INNER_AKV_PATTERN).Value[1..^1];
+            
+            // Validate AKV secret name per rules:
+            // Allowed: alphanumeric and hyphen (-)
+            // Disallowed: spaces or any other symbols
+            // Must start and end with alphanumeric
+            // Length: 1 to 127 chars
+            if (!IsValidAkvSecretName(name, out string validationError))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Azure Key Vault secret name '{name}' is invalid. {validationError} Requirements: allowed characters are alphanumeric and hyphen (-); must start and end with an alphanumeric character; length 1-127 characters; case-insensitive.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+            
             string? value = GetAkvVariable(name);
             if (EnvFailureMode == EnvironmentVariableReplacementFailureMode.Throw)
             {
@@ -109,7 +123,43 @@ namespace Azure.DataApiBuilder.Config
                 return value ?? match.Value;
             }
         }
+        
+        private static bool IsValidAkvSecretName(string name, out string error)
+        {
+            error = string.Empty;
+            if (string.IsNullOrEmpty(name))
+            {
+                error = "Name cannot be null or empty.";
+                return false;
+            }
 
+            if (name.Length < 1 || name.Length > 127)
+            {
+                error = $"Length {name.Length} is outside allowed range (1-127).";
+                return false;
+            }
+
+            // Must start and end with alphanumeric
+            if (!char.IsLetterOrDigit(name[0]) || !char.IsLetterOrDigit(name[^1]))
+            {
+                error = "Must start and end with an alphanumeric character.";
+                return false;
+            }
+
+            // Allowed characters: letters, digits, hyphen.
+            for (int i = 0; i < name.Length; i++)
+            {
+                char c = name[i];
+                if (!(char.IsLetterOrDigit(c) || c == '-'))
+                {
+                    error = $"Invalid character '{c}' at position {i}.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
         private static SecretClient CreateSecretClient(AzureKeyVaultOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.Endpoint))

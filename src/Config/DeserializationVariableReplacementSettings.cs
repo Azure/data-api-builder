@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Config
         {
             // strips first and last characters, ie: '''hello'' --> ''hello'
             string name = Regex.Match(match.Value, INNER_AKV_PATTERN).Value[1..^1];
-
+            
             // Validate AKV secret name per rules:
             // Allowed: alphanumeric and hyphen (-)
             // Disallowed: spaces or any other symbols
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Config
                     statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
-
+            
             string? value = GetAkvVariable(name);
             if (EnvFailureMode == EnvironmentVariableReplacementFailureMode.Throw)
             {
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Config
                 return value ?? match.Value;
             }
         }
-
+        
         private static bool IsValidAkvSecretName(string name, out string error)
         {
             error = string.Empty;
@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Config
 
             return true;
         }
-
+        
         private static SecretClient CreateSecretClient(AzureKeyVaultOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.Endpoint))

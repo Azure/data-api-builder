@@ -707,13 +707,19 @@
               "additionalProperties": false,
               "properties": {
                 "include": {
-                  "type": "string",
+                  "type": "array",
                   "description": "T-SQL LIKE pattern to include database objects (e.g., '%.%')",
-                  "default": "%.%"
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": null
                 },
                 "exclude": {
-                  "type": "string",
+                  "type": "array",
                   "description": "T-SQL LIKE pattern to exclude database objects (e.g., 'sales.%')",
+                  "items": {
+                    "type": "string"
+                  },
                   "default": null
                 },
                 "name": {
@@ -871,34 +877,6 @@
                               "properties": {
                                 "action": {
                                   "$ref": "#/$defs/action"
-                                },
-                                "fields": {
-                                  "type": "object",
-                                  "additionalProperties": false,
-                                  "properties": {
-                                    "include": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string"
-                                      }
-                                    },
-                                    "exclude": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string"
-                                      }
-                                    }
-                                  }
-                                },
-                                "policy": {
-                                  "type": "object",
-                                  "description": "Define item-level security policy",
-                                  "additionalProperties": false,
-                                  "properties": {
-                                    "database": {
-                                      "type": "string"
-                                    }
-                                  }
                                 }
                               }
                             }
@@ -913,8 +891,6 @@
               "required": [ "role", "actions" ]
             }
           }
-          },
-          "required": ["permissions"]
         }
       }
     },

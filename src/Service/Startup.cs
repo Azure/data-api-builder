@@ -359,7 +359,18 @@ namespace Azure.DataApiBuilder.Service
             }
             else
             {
-                ConfigureAuthentication(services, configProvider);
+                // Allow a CLI/stdio override to force Simulator authentication for the session.
+                // This supports running MCP stdio with a supplied role without modifying config files.
+                if (string.Equals(Environment.GetEnvironmentVariable("DAB_MCP_SIMULATOR_AUTH"), "1", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Force registration of Simulator authentication as default scheme.
+                    services.AddAuthentication(defaultScheme: Core.AuthenticationHelpers.AuthenticationSimulator.SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                            .AddSimulatorAuthentication();
+                }
+                else
+                {
+                    ConfigureAuthentication(services, configProvider);
+                }
             }
 
             services.AddAuthorization();

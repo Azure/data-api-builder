@@ -3,6 +3,8 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Mcp.Model;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 
 namespace Azure.DataApiBuilder.Mcp.Core
@@ -26,6 +28,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
+        /// <summary>
+        /// Runs the MCP stdio server loop, reading JSON-RPC requests from STDIN and writing MCP JSON responses to STDOUT.
+        /// </summary>
+        /// <param name="cancellationToken">Token to signal cancellation of the server loop.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             Console.Error.WriteLine("[MCP DEBUG] MCP stdio server started.");
@@ -49,7 +56,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     continue;
                 }
 
-                Console.Error.WriteLine($"[MCP DEBUG] Received raw: {line}");
+                Console.Error.WriteLine($"[MCP DEBUG] Received: {line}");
 
                 JsonDocument doc;
                 try
@@ -81,7 +88,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     }
 
                     string method = methodEl.GetString() ?? string.Empty;
-                    //Console.Error.WriteLine($"[MCP DEBUG] Method: {method}, Id: {FormatIdForLog(id)}");
 
                     try
                     {
@@ -95,27 +101,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 Console.Error.WriteLine("[MCP DEBUG] notifications/initialized received.");
                                 break;
 
-                            case "tools/list":  // ← Changed from "listTools"
+                            case "tools/list":
                                 Console.Error.WriteLine("[MCP DEBUG] tools/list → received.");
                                 HandleListTools(id);
                                 Console.Error.WriteLine("[MCP DEBUG] tools/list → OK (tool catalog sent).");
                                 break;
 
-                            case "tools/call":  // ← Changed from "callTool"
+                            case "tools/call":
                                 await HandleCallToolAsync(id, root, cancellationToken);
                                 Console.Error.WriteLine("[MCP DEBUG] tools/call → OK (tool executed).");
-                                break;
-
-                            case "prompts/list":  // ← Add this
-                                Console.Error.WriteLine("[MCP DEBUG] prompts/list → received.");
-                                // Return empty prompts list if you don't have prompts
-                                WriteResult(id, new { prompts = new object[] { } });
-                                break;
-
-                            case "resources/list":  // ← Add this
-                                Console.Error.WriteLine("[MCP DEBUG] resources/list → received.");
-                                // Return empty resources list if you don't have resources
-                                WriteResult(id, new { resources = new object[] { } });
                                 break;
 
                             case "ping":
@@ -143,8 +137,17 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
         }
 
-        // -------------------- Handlers --------------------
-
+        /// <summary>
+        /// Handles the "initialize" JSON-RPC method by sending the MCP protocol version, server capabilities, and server info to the client.
+        /// </summary>
+        /// <param name="id">
+        /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
+        /// </param>
+        /// <remarks>
+        /// This method constructs and writes the MCP "initialize" response to STDOUT. It uses the protocol version defined by <c>PROTOCOL_VERSION</c>
+        /// and includes supported capabilities and server information. No notifications are sent here; the server waits for the client to send
+        /// "notifications/initialized" before sending any notifications.
+        /// </remarks>
         private static void HandleInitialize(JsonElement? id)
         {
             // Extract the actual id value from the request
@@ -154,10 +157,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
             var response = new
             {
                 jsonrpc = "2.0",
-                id = requestId,  // Use the id from the request, not hardcoded 0
+                id = requestId,
                 result = new
                 {
-                    protocolVersion = PROTOCOL_VERSION,  // Should be "2025-06-18"
+                    protocolVersion = PROTOCOL_VERSION,
                     capabilities = new
                     {
                         tools = new { listChanged = true },
@@ -170,17 +173,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         name = "ExampleServer",
                         version = "1.0.0"
                     }
-                    // Remove "instructions" - not part of MCP spec
                 }
             };
 
             string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);
             Console.Out.Flush();
-
-            // DO NOT send notifications here - wait for client to send notifications/initialized first
         }
 
+        /// <summary>
+        /// Handles the "tools/list" JSON-RPC method by sending the list of available tools to the client.
+        /// </summary>
+        /// <param name="id">
+        /// The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.
+        /// </param>
         private void HandleListTools(JsonElement? id)
         {
             List<object> toolsWire = new();
@@ -193,7 +199,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     name = tool.Name,
                     description = tool.Description,
-                    inputSchema = tool.InputSchema // keep raw schema (JsonElement)
+                    inputSchema = tool.InputSchema
                 });
             }
 
@@ -202,6 +208,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
             Console.Out.Flush();
         }
 
+        /// <summary>
+        /// Handles the "tools/call" JSON-RPC method by executing the specified tool with the provided arguments.
+        /// </summary>
+        /// <param name="id"> The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
+        /// <param name="root"> The root JSON element of the incoming JSON-RPC request.</param>
+        /// <param name="ct"> Cancellation token to signal operation cancellation.</param>
         private async Task HandleCallToolAsync(JsonElement? id, JsonElement root, CancellationToken ct)
         {
             if (!root.TryGetProperty("params", out JsonElement @params) || @params.ValueKind != JsonValueKind.Object)
@@ -253,8 +265,41 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
                 }
 
-                // Execute the tool
-                CallToolResult callResult = await tool.ExecuteAsync(argsDoc, _serviceProvider, ct);
+                // Execute the tool. If a MCP stdio role override is set in the environment, create
+                // a request HttpContext with the X-MS-API-ROLE header so tools and authorization
+                // helpers that read IHttpContextAccessor will see the role.
+                CallToolResult callResult;
+                string? stdioRole = Environment.GetEnvironmentVariable("DAB_MCP_STDIO_ROLE");
+                if (!string.IsNullOrWhiteSpace(stdioRole))
+                {
+                    var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
+                    using var scope = scopeFactory.CreateScope();
+                    var scopedProvider = scope.ServiceProvider;
+
+                    // Create a default HttpContext and set the client role header
+                    var httpContext = new DefaultHttpContext();
+                    httpContext.Request.Headers["X-MS-API-ROLE"] = stdioRole;
+
+                    // If IHttpContextAccessor is registered, populate it for downstream code.
+                    var httpContextAccessor = scopedProvider.GetService<IHttpContextAccessor>();
+                    if (httpContextAccessor is not null)
+                    {
+                        httpContextAccessor.HttpContext = httpContext;
+                    }
+
+                    // Execute the tool with the scoped service provider so any scoped services resolve correctly.
+                    callResult = await tool.ExecuteAsync(argsDoc, scopedProvider, ct);
+
+                    // Clear the accessor's HttpContext to avoid leaking across calls
+                    if (httpContextAccessor is not null)
+                    {
+                        httpContextAccessor.HttpContext = null;
+                    }
+                }
+                else
+                {
+                    callResult = await tool.ExecuteAsync(argsDoc, _serviceProvider, ct);
+                }
 
                 // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
                 // otherwise we wrap into a single text block.
@@ -269,8 +314,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
         }
 
-        // -------------------- Content coercion (no ContentBlock dependency) --------------------
-
+        /// <summary>
+        /// Coerces the call result into an array of MCP content blocks.
+        /// </summary>
+        /// <param name="callResult">The result object returned from a tool execution.</param>
+        /// <returns>An array of content blocks suitable for MCP output.</returns>
         private static object[] CoerceToMcpContentBlocks(object? callResult)
         {
             if (callResult == null)
@@ -328,6 +376,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             return new object[] { new { type = "text", text } };
         }
 
+        /// <summary>
+        /// Safely converts an object to its string representation, preferring JSON serialization for readability.
+        /// </summary>
+        /// <param name="obj">The object to convert to a string.</param>
+        /// <returns>A string representation of the object.</returns>
         private static string SafeToString(object obj)
         {
             try
@@ -341,8 +394,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
         }
 
-        // -------------------- JSON-RPC I/O --------------------
-
+        /// <summary>
+        /// Writes a JSON-RPC result response to the standard output.
+        /// </summary>
+        /// <param name="id">The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
+        /// <param name="resultObject">The result object to include in the response.</param>
         private static void WriteResult(JsonElement? id, object resultObject)
         {
             var response = new
@@ -358,6 +414,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
             Console.Error.WriteLine($"[MCP DEBUG] Sent result for Id={FormatIdForLog(id)}: {Truncate(json, 2000)}");
         }
 
+        /// <summary>
+        /// Writes a JSON-RPC error response to the standard output.
+        /// </summary>
+        /// <param name="id">The request identifier extracted from the incoming JSON-RPC request. Used to correlate the response with the request.</param>
+        /// <param name="code">The error code.</param>
+        /// <param name="message">The error message.</param>
         private static void WriteError(JsonElement? id, int code, string message)
         {
             var errorObj = new
@@ -373,6 +435,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             Console.Error.WriteLine($"[MCP DEBUG] Sent error for Id={FormatIdForLog(id)}: code={code}, message={message}");
         }
 
+        /// <summary>
+        /// Extracts the value of a JSON-RPC request identifier.
+        /// </summary>
+        /// <param name="id">The JSON element representing the request identifier.</param>
+        /// <returns>The extracted identifier value as an object, or null if the identifier is not a primitive type.</returns>
         private static object? GetIdValue(JsonElement id)
         {
             return id.ValueKind switch
@@ -384,6 +451,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             };
         }
 
+        /// <summary>
+        /// Formats a JSON-RPC request identifier for logging purposes.
+        /// </summary>
+        /// <param name="id">The JSON element representing the request identifier.</param>
+        /// <returns>A string representation of the identifier suitable for logging.</returns>
         private static string FormatIdForLog(JsonElement? id)
         {
             if (!id.HasValue)
@@ -399,6 +471,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
             };
         }
 
+        /// <summary>
+        /// Truncates a string to a specified maximum length, adding an ellipsis if truncation occurs.
+        /// </summary>
+        /// <param name="s">The string to truncate.</param>
+        /// <param name="max">The maximum allowed length of the string.</param>
+        /// <returns>The truncated string if it exceeds the maximum length; otherwise, the original string.</returns>
         private static string Truncate(string s, int max)
         {
             if (string.IsNullOrEmpty(s) || s.Length <= max)

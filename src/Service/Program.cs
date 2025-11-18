@@ -26,9 +26,8 @@ using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Core;
 using Serilog.Extensions.Logging;
-using Azure.DataApiBuilder.Mcp.Core;
-using Azure.DataApiBuilder.Mcp.Model;
-using Microsoft.Extensions.Logging.Console;
+using System.Collections.Generic;
+using ModelContextProtocol.Protocol;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -39,22 +38,31 @@ namespace Azure.DataApiBuilder.Service
         public static void Main(string[] args)
         {
             Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);         
+            Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);    
+
             // Detect stdio mode as early as possible and route any Console.WriteLine to STDERR
             bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
             if (runMcpStdio)
             {
                 // MCP requires STDOUT to contain only protocol JSON; send all other text to STDERR
-                try
-                {
-                    Console.SetOut(Console.Error);
-                }
-                catch
-                {
-                     /* ignore */
-                }
+                Console.SetOut(Console.Error);
+
                 // Hint to logging pipeline (used below) to log to STDERR only
                 Environment.SetEnvironmentVariable("DAB_MCP_STDIO", "1");
+
+                // If caller provided an optional role token like `role:authenticated`, capture it and
+                // force the runtime to use the Simulator authentication provider for this session.
+                // This makes it easy to run MCP stdio sessions with a preconfigured permissions role.
+                string? roleArg = Array.Find(args, a => a != null && a.StartsWith("role:", StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(roleArg))
+                {
+                    string roleValue = roleArg.Substring(roleArg.IndexOf(':') + 1);
+                    if (!string.IsNullOrWhiteSpace(roleValue))
+                    {
+                        Environment.SetEnvironmentVariable("DAB_MCP_STDIO_ROLE", roleValue);
+                        Environment.SetEnvironmentVariable("DAB_MCP_SIMULATOR_AUTH", "1");
+                    }
+                }
             }
 
             if (!ValidateAspNetCoreUrls())
@@ -75,26 +83,28 @@ Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
             Console.WriteLine("Starting the runtime engine...");
             try
             {
-                var host = CreateHostBuilder(args).Build();
+                IHost host = CreateHostBuilder(args).Build();
 
                 if (runMcpStdio)
                 {
                     // Start DI/telemetry/metadata etc., but don't block on Kestrel
                     host.Start();
 
-                    var registry = host.Services.GetRequiredService<Azure.DataApiBuilder.Mcp.Core.McpToolRegistry>();
-                    foreach (var tool in host.Services.GetServices<Azure.DataApiBuilder.Mcp.Model.IMcpTool>())
+                    Mcp.Core.McpToolRegistry registry = host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
+                    IEnumerable<Mcp.Model.IMcpTool> tools = host.Services.GetServices<Mcp.Model.IMcpTool>();
+                    foreach (Mcp.Model.IMcpTool tool in tools)
                     {
-                        var metadata = tool.GetToolMetadata();
+                        Tool metadata = tool.GetToolMetadata();
                         Console.Error.WriteLine($"[MCP DEBUG] Registering tool: {metadata.Name}");
                         registry.RegisterTool(tool);
                     }
 
                     // Resolve and run the MCP stdio server from DI
-                    var scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
-                    using var scope = scopeFactory.CreateScope();
-                    var lifetime = scope.ServiceProvider.GetRequiredService<IHostApplicationLifetime>();
-                    var stdio = scope.ServiceProvider.GetRequiredService<Azure.DataApiBuilder.Mcp.Core.IMcpStdioServer>();
+                    IServiceScopeFactory scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
+                    using IServiceScope scope = scopeFactory.CreateScope();
+                    IHostApplicationLifetime lifetime = scope.ServiceProvider.GetRequiredService<IHostApplicationLifetime>();
+                    Mcp.Core.IMcpStdioServer stdio = scope.ServiceProvider.GetRequiredService<Mcp.Core.IMcpStdioServer>();
+                    
                     // Run the stdio loop until cancellation (Ctrl+C / process end)
                     stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
 
@@ -116,6 +126,13 @@ Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
                 Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
                 return false;
             }
+        }
+
+        // Compatibility overload used by external callers that do not pass the runMcpStdio flag.
+        public static bool StartEngine(string[] args)
+        {
+            bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
+            return StartEngine(args, runMcpStdio);
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args)
@@ -280,14 +297,11 @@ Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
                     // In stdio mode, route console logs to STDERR to keep STDOUT clean for MCP JSON
                     if (stdio)
                     {
-                       if (stdio)
+                        builder.ClearProviders();
+                        builder.AddConsole(options =>
                         {
-                            builder.ClearProviders();
-                            builder.AddConsole(options =>
-                            {
-                                options.LogToStandardErrorThreshold = LogLevel.Trace;
-                            });
-                        }
+                            options.LogToStandardErrorThreshold = LogLevel.Trace;
+                        });
                     }
                     else
                     {

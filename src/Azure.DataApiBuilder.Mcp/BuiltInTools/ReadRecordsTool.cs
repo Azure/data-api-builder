@@ -173,7 +173,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string? effectiveRole,
                         out string readAuthError))
                 {
-                    // Provide tool-specific message rather than generic helper message.
                     string finalError = readAuthError.StartsWith("You do not have permission", StringComparison.OrdinalIgnoreCase)
                         ? $"You do not have permission to read records for entity '{entityName}'."
                         : readAuthError;

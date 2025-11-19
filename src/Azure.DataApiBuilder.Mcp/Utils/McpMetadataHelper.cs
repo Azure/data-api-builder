@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.DependencyInjection;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp.Utils
 {

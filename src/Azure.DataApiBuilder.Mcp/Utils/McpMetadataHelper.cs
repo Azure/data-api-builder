@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 return false;
             }
 
-            dbObject = temp!;
+            dbObject = temp;
             return true;
         }
     }

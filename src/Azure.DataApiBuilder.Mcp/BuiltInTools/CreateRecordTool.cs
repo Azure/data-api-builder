@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authorizationResolver, out string roleCtxError))
                 {
-                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", "Permission denied: Unable to resolve a valid role context for create operation.", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {roleCtxError} for create operation for entity: {entityName}.", logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(

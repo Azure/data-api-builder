@@ -9,7 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
-
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -97,17 +97,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                // 4) Resolve metadata for entity existence check
-                string dataSourceName;
-                Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider sqlMetadataProvider;
-
+                // 4) Resolve metadata for entity existence
                 if (!McpMetadataHelper.TryResolveMetadata(
                         entityName,
                         config,
                         serviceProvider,
-                        out sqlMetadataProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
                         out DatabaseObject dbObject,
-                        out dataSourceName,
+                        out string dataSourceName,
                         out string metadataError))
                 {
                     return McpResponseBuilder.BuildErrorResult("EntityNotFound", metadataError, logger);

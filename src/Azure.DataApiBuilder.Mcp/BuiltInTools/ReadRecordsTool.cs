@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleCtxError))
                 {
-                    return BuildErrorResult("PermissionDenied", $"You do not have permission to read records for entity '{entityName}'.", logger);
+                    return BuildErrorResult("PermissionDenied", $"Permission denied: {roleCtxError} for read operation for entity: '{entityName}'.", logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(

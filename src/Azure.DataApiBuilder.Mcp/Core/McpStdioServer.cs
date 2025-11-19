@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// <summary>
     /// MCP stdio server:
     /// - Reads JSON-RPC requests (initialize, listTools, callTool) from STDIN
-    /// - Writes ONLY MCP JSON responses to STDOUT (always Flush()!)
+    /// - Writes ONLY MCP JSON responses to STDOUT
     /// - Writes diagnostics to STDERR (so STDOUT remains “pure MCP”)
     /// </summary>
     public class McpStdioServer : IMcpStdioServer
@@ -59,16 +59,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     continue;
                 }
 
-                Console.Error.WriteLine($"[MCP DEBUG] Received: {line}");
-
                 JsonDocument doc;
                 try
                 {
                     doc = JsonDocument.Parse(line);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Console.Error.WriteLine($"[MCP DEBUG] Parse error: {ex.Message}");
                     WriteError(id: null, code: -32700, message: "Parse error");
                     continue;
                 }
@@ -85,7 +82,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                     if (!root.TryGetProperty("method", out JsonElement methodEl))
                     {
-                        Console.Error.WriteLine("[MCP DEBUG] Invalid Request (no method).");
                         WriteError(id, -32600, "Invalid Request");
                         continue;
                     }
@@ -101,39 +97,31 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 break;
 
                             case "notifications/initialized":
-                                Console.Error.WriteLine("[MCP DEBUG] notifications/initialized received.");
                                 break;
 
                             case "tools/list":
-                                Console.Error.WriteLine("[MCP DEBUG] tools/list → received.");
                                 HandleListTools(id);
-                                Console.Error.WriteLine("[MCP DEBUG] tools/list → OK (tool catalog sent).");
                                 break;
 
                             case "tools/call":
                                 await HandleCallToolAsync(id, root, cancellationToken);
-                                Console.Error.WriteLine("[MCP DEBUG] tools/call → OK (tool executed).");
                                 break;
 
                             case "ping":
                                 WriteResult(id, new { ok = true });
-                                Console.Error.WriteLine("[MCP DEBUG] ping → ok:true");
                                 break;
 
                             case "shutdown":
                                 WriteResult(id, new { ok = true });
-                                Console.Error.WriteLine("[MCP DEBUG] shutdown → terminating stdio loop.");
                                 return;
 
                             default:
-                                Console.Error.WriteLine($"[MCP DEBUG] Method not found: {method}");
                                 WriteError(id, -32601, $"Method not found: {method}");
                                 break;
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Console.Error.WriteLine($"[MCP DEBUG] Handler error for '{method}': {ex}");
                         WriteError(id, -32603, "Internal error");
                     }
                 }
@@ -173,7 +161,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     },
                     serverInfo = new
                     {
-                        name = "ExampleServer",
+                        name = "Data API Builder",
                         version = "1.0.0"
                     }
                 }
@@ -206,7 +194,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 });
             }
 
-            Console.Error.WriteLine($"[MCP DEBUG] listTools → toolCount: {count}");
             WriteResult(id, new { tools = toolsWire });
             Console.Out.Flush();
         }
@@ -221,13 +208,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             if (!root.TryGetProperty("params", out JsonElement @params) || @params.ValueKind != JsonValueKind.Object)
             {
-                Console.Error.WriteLine("[MCP DEBUG] callTool → missing params.");
                 WriteError(id, -32602, "Missing params");
                 Console.Out.Flush();
                 return;
             }
 
-            // MCP standard: params.name; allow params.tool for compatibility.
+            // If neither params.name (the MCP-standard field for the tool identifier)
+            // nor the legacy params.tool field is present or non-empty, we cannot tell
+            // which tool to execute. In that case we log a debug message to STDERR for
+            // diagnostics and return a JSON-RPC error (-32602 "Missing tool name") to
+            // the MCP client so it can fix the request payload.
             string? toolName = null;
             if (@params.TryGetProperty("name", out JsonElement nameEl) && nameEl.ValueKind == JsonValueKind.String)
             {
@@ -268,61 +258,33 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
                 }
 
-                // Execute the tool. If a MCP stdio role override is set in the environment, create
+                // Execute the tool.
+                // If a MCP stdio role override is set in the environment, create
                 // a request HttpContext with the X-MS-API-ROLE header so tools and authorization
                 // helpers that read IHttpContextAccessor will see the role. We also ensure the
                 // Simulator authentication handler can authenticate the user by flowing the
                 // Authorization header commonly used in tests/simulator scenarios.
                 CallToolResult callResult;
-                var configuration = _serviceProvider.GetService<IConfiguration>();
+                IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
                 string? stdioRole = configuration?.GetValue<string>("MCP:Role");
                 if (!string.IsNullOrWhiteSpace(stdioRole))
                 {
-                    var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-                    using var scope = scopeFactory.CreateScope();
-                    var scopedProvider = scope.ServiceProvider;
+                    IServiceScopeFactory scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
+                    IServiceScope scope = scopeFactory.CreateScope();
+                    IServiceProvider scopedProvider = scope.ServiceProvider;
 
                     // Create a default HttpContext and set the client role header
-                    var httpContext = new DefaultHttpContext();
+                    DefaultHttpContext httpContext = new();
                     httpContext.Request.Headers["X-MS-API-ROLE"] = stdioRole;
 
                     // Build a simulator-style identity with the given role
-                    var identity = new ClaimsIdentity(
+                    ClaimsIdentity identity = new(
                         authenticationType: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
                     identity.AddClaim(new Claim(ClaimTypes.Role, stdioRole));
                     httpContext.User = new ClaimsPrincipal(identity);
 
-                    // // When the simulator authentication handler is enabled, it authenticates based
-                    // // on the X-MS-API-ROLE header and issues a ClaimsPrincipal with the
-                    // // corresponding role. However, AuthorizationResolver.IsValidRoleContext requires
-                    // // the role to be present as a ClaimTypes.Role on an authenticated identity.
-                    // // To ensure that pipeline runs in MCP stdio mode (where there is no inbound
-                    // // HTTP request), we invoke AuthenticateAsync for the simulator scheme and set
-                    // // HttpContext.User when successful.
-
-                    // // Attempt to authenticate using the simulator scheme so that IsValidRoleContext
-                    // // sees an authenticated identity whose roles contain the client role header.
-                    // var authService = scopedProvider.GetService<Microsoft.AspNetCore.Authentication.IAuthenticationService>();
-                    // if (authService is not null)
-                    // {
-                    //     try
-                    //     {
-                    //         var authResult = await authService.AuthenticateAsync(httpContext, Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator.SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
-                    //         if (authResult.Succeeded && authResult.Principal is not null)
-                    //         {
-                    //             httpContext.User = authResult.Principal;
-                    //         }
-                    //     }
-                    //     catch(Exception e)
-                    //     {
-                    //         Console.Error.WriteLine($"Authentication failed: {e.Message}");
-                    //         // If authentication fails for any reason, we fall back to the default
-                    //         // empty user; downstream authorization will surface appropriate errors.
-                    //     }
-                    // }
-
                     // If IHttpContextAccessor is registered, populate it for downstream code.
-                    var httpContextAccessor = scopedProvider.GetService<IHttpContextAccessor>();
+                    IHttpContextAccessor? httpContextAccessor = scopedProvider.GetService<IHttpContextAccessor>();
                     if (httpContextAccessor is not null)
                     {
                         httpContextAccessor.HttpContext = httpContext;
@@ -357,22 +319,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
         /// <summary>
         /// Coerces the call result into an array of MCP content blocks.
+        /// Tools can either return a custom object with a public "Content" property
+        /// or a raw value; this helper normalizes both patterns into the MCP wire format.
         /// </summary>
         /// <param name="callResult">The result object returned from a tool execution.</param>
         /// <returns>An array of content blocks suitable for MCP output.</returns>
         private static object[] CoerceToMcpContentBlocks(object? callResult)
         {
-            if (callResult == null)
+            if (callResult is null)
             {
                 return Array.Empty<object>();
             }
 
-            PropertyInfo? prop = callResult != null
-                ? callResult.GetType().GetProperty("Content", BindingFlags.Instance | BindingFlags.Public)
-                : null;
+            // Prefer a public instance "Content" property if present.
+            PropertyInfo? prop = callResult.GetType().GetProperty("Content", BindingFlags.Instance | BindingFlags.Public);
+
             if (prop is not null)
             {
                 object? value = prop.GetValue(callResult);
+
                 if (value is IEnumerable enumerable && value is not string)
                 {
                     List<object> list = new();
@@ -406,14 +371,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
             }
 
-            // If callResult is a JsonElement, return as application/json
+            // If callResult itself is a JsonElement, treat it as application/json.
             if (callResult is JsonElement jsonResult)
             {
                 return new object[] { new { type = "application/json", data = jsonResult } };
             }
 
-            // Fall back: serialize as text
-            string text = callResult is not null ? SafeToString(callResult) : string.Empty;
+            // Fallback: serialize to text.
+            string text = SafeToString(callResult);
             return new object[] { new { type = "text", text } };
         }
 
@@ -452,7 +417,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);
             Console.Out.Flush();
-            Console.Error.WriteLine($"[MCP DEBUG] Sent result for Id={FormatIdForLog(id)}: {Truncate(json, 2000)}");
         }
 
         /// <summary>
@@ -473,7 +437,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             string json = JsonSerializer.Serialize(errorObj);
             Console.Out.WriteLine(json);
             Console.Out.Flush();
-            Console.Error.WriteLine($"[MCP DEBUG] Sent error for Id={FormatIdForLog(id)}: code={code}, message={message}");
         }
 
         /// <summary>
@@ -490,42 +453,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                         id.TryGetDouble(out double d) ? d : null,
                 _ => null
             };
-        }
-
-        /// <summary>
-        /// Formats a JSON-RPC request identifier for logging purposes.
-        /// </summary>
-        /// <param name="id">The JSON element representing the request identifier.</param>
-        /// <returns>A string representation of the identifier suitable for logging.</returns>
-        private static string FormatIdForLog(JsonElement? id)
-        {
-            if (!id.HasValue)
-            {
-                return "null";
-            }
-
-            return id.Value.ValueKind switch
-            {
-                JsonValueKind.String => $"\"{id.Value.GetString()}\"",
-                JsonValueKind.Number => id.Value.TryGetInt64(out long l) ? l.ToString() : "<num>",
-                _ => "<non-primitive>"
-            };
-        }
-
-        /// <summary>
-        /// Truncates a string to a specified maximum length, adding an ellipsis if truncation occurs.
-        /// </summary>
-        /// <param name="s">The string to truncate.</param>
-        /// <param name="max">The maximum allowed length of the string.</param>
-        /// <returns>The truncated string if it exceeds the maximum length; otherwise, the original string.</returns>
-        private static string Truncate(string s, int max)
-        {
-            if (string.IsNullOrEmpty(s) || s.Length <= max)
-            {
-                return s;
-            }
-
-            return s.Substring(0, max) + "…";
         }
     }
 }

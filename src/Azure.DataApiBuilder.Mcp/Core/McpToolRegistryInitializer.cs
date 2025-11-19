@@ -24,7 +24,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public Task StartAsync(CancellationToken cancellationToken)
         {
             // Register all IMcpTool implementations
-
             IEnumerable<IMcpTool> tools = _serviceProvider.GetServices<IMcpTool>();
             foreach (IMcpTool tool in tools)
             {

@@ -350,19 +350,19 @@ namespace Azure.DataApiBuilder.Service
 
             bool isMcpStdio = Configuration.GetValue<bool>("MCP:StdioMode");
 
-            if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
-            {
-                // Development mode implies support for "Hot Reload". The V2 authentication function
-                // wires up all DAB supported authentication providers (schemes) so that at request time,
-                // the runtime config defined authentication provider is used to authenticate requests.
-                ConfigureAuthenticationV2(services, configProvider);
-            }
-            else if (isMcpStdio)
+            if (isMcpStdio)
             {
                 // Explicitly force Simulator when running in MCP stdio mode.
                 services.AddAuthentication(
                         defaultScheme: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                     .AddSimulatorAuthentication();
+            }
+            else if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
+            {
+                // Development mode implies support for "Hot Reload". The V2 authentication function
+                // wires up all DAB supported authentication providers (schemes) so that at request time,
+                // the runtime config defined authentication provider is used to authenticate requests.
+                ConfigureAuthenticationV2(services, configProvider);
             }
             else
             {
@@ -464,8 +464,6 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<DabCacheService>();
 
             services.AddDabMcpServer(configProvider);
-
-            services.AddSingleton<McpToolRegistry>();
 
             services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 

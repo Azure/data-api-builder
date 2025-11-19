@@ -109,7 +109,13 @@ namespace Cli
             }
             else
             {
-                StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
+                StartOptions startOptions = new(
+                    verbose: false,
+                    logLevel: LogLevel.None,
+                    isHttpsRedirectionDisabled: false,
+                    config: options.Config!,
+                    mcpStdio: false,
+                    mcpRole: null);
 
                 Task dabService = Task.Run(() =>
                 {

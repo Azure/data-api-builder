@@ -2359,6 +2359,17 @@ namespace Cli
                 args.Add(Startup.NO_HTTPS_REDIRECT_FLAG);
             }
 
+            // If MCP stdio was requested, append the stdio-specific switches.
+            if (options.McpStdio)
+            {
+                string effectiveRole = string.IsNullOrWhiteSpace(options.McpRole)
+                    ? "anonymous"
+                    : options.McpRole;
+
+                args.Add("--mcp-stdio");
+                args.Add(effectiveRole);
+            }
+
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
 

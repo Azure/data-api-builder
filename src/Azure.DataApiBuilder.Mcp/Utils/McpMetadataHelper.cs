@@ -1,11 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#pragma warning disable IDE0005 // Using directive is unnecessary (analyzer noise)
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Microsoft.Extensions.DependencyInjection;
-#pragma warning restore IDE0005
 
 namespace Azure.DataApiBuilder.Mcp.Utils
 {

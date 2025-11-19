@@ -230,9 +230,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IQueryEngineFactory queryEngineFactory = serviceProvider.GetRequiredService<IQueryEngineFactory>();
                 IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
+                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IActionResult actionResult = queryResult is null
-                    ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true)
-                    : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
+                    ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, metadataProviderFactory.GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true)
+                    : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, metadataProviderFactory.GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
 
                 // Normalize response
                 string rawPayloadJson = ExtractResultJson(actionResult);

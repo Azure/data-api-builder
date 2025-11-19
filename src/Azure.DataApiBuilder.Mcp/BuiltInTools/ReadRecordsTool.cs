@@ -111,7 +111,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 JsonElement root = arguments.RootElement;
 
-                // Use common parser
                 if (!McpArgumentParser.TryParseEntity(root, out entityName, out string parseError))
                 {
                     return BuildErrorResult("InvalidArguments", parseError, logger);

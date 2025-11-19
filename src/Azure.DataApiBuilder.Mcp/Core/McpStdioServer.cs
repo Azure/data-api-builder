@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 
@@ -273,7 +274,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 // Simulator authentication handler can authenticate the user by flowing the
                 // Authorization header commonly used in tests/simulator scenarios.
                 CallToolResult callResult;
-                string? stdioRole = Environment.GetEnvironmentVariable("DAB_MCP_STDIO_ROLE");
+                var configuration = _serviceProvider.GetService<IConfiguration>();
+                string? stdioRole = configuration?.GetValue<string>("MCP:Role");
                 if (!string.IsNullOrWhiteSpace(stdioRole))
                 {
                     var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();

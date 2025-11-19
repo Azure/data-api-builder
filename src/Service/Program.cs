@@ -42,6 +42,8 @@ namespace Azure.DataApiBuilder.Service
 
             // Detect stdio mode as early as possible and route any Console.WriteLine to STDERR
             bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
+            string? mcpRole = null;
+
             if (runMcpStdio)
             {
                 // MCP requires STDOUT to contain only protocol JSON; send all other text to STDERR
@@ -56,8 +58,7 @@ namespace Azure.DataApiBuilder.Service
                     string roleValue = roleArg.Substring(roleArg.IndexOf(':') + 1);
                     if (!string.IsNullOrWhiteSpace(roleValue))
                     {
-                        Environment.SetEnvironmentVariable("DAB_MCP_STDIO_ROLE", roleValue);
-                        Environment.SetEnvironmentVariable("DAB_MCP_SIMULATOR_AUTH", "1");
+                        mcpRole = roleValue;
                     }
                 }
             }
@@ -69,18 +70,18 @@ namespace Azure.DataApiBuilder.Service
                 return;
             }
 
-            if (!StartEngine(args, runMcpStdio))
+            if (!StartEngine(args, runMcpStdio, mcpRole))
             {
                 Environment.ExitCode = -1;
             }
         }
 
-        public static bool StartEngine(string[] args, bool runMcpStdio)
+        public static bool StartEngine(string[] args, bool runMcpStdio, string? mcpRole)
         {
             Console.WriteLine("Starting the runtime engine...");
             try
             {
-                IHost host = CreateHostBuilder(args).Build();
+                IHost host = CreateHostBuilder(args, runMcpStdio, mcpRole).Build();
 
                 if (runMcpStdio)
                 {
@@ -92,7 +93,7 @@ namespace Azure.DataApiBuilder.Service
                     foreach (Mcp.Model.IMcpTool tool in tools)
                     {
                         Tool metadata = tool.GetToolMetadata();
-                        Console.Error.WriteLine($"[MCP DEBUG] Registering tool: {metadata.Name}");
+                        Console.Error.WriteLine($"[MCP STDIO] Registering tool: {metadata.Name}");
                         registry.RegisterTool(tool);
                     }
 
@@ -129,17 +130,26 @@ namespace Azure.DataApiBuilder.Service
         public static bool StartEngine(string[] args)
         {
             bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
-            return StartEngine(args, runMcpStdio);
+            return StartEngine(args, runMcpStdio, mcpRole: null);
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args)
+        public static IHostBuilder CreateHostBuilder(string[] args, bool runMcpStdio, string? mcpRole)
         {
-            bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
-
             return Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration(builder =>
                 {
                     AddConfigurationProviders(builder, args);
+                    if (runMcpStdio)
+                    {
+                        builder.AddInMemoryCollection(new Dictionary<string, string?>
+                        {
+                            ["MCP:StdioMode"] = "true"
+                        });
+                        builder.AddInMemoryCollection(new Dictionary<string, string?>
+                        {
+                            ["MCP:Role"] = mcpRole
+                        });
+                    }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

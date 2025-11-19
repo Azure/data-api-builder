@@ -24,9 +24,7 @@ using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Core.Telemetry;
-using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Core;
-using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
@@ -350,6 +348,8 @@ namespace Azure.DataApiBuilder.Service
                     return handler;
                 });
 
+            bool isMcpStdio = Configuration.GetValue<bool>("MCP:StdioMode");
+
             if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Mode is HostMode.Development)
             {
                 // Development mode implies support for "Hot Reload". The V2 authentication function
@@ -357,20 +357,16 @@ namespace Azure.DataApiBuilder.Service
                 // the runtime config defined authentication provider is used to authenticate requests.
                 ConfigureAuthenticationV2(services, configProvider);
             }
+            else if (isMcpStdio)
+            {
+                // Explicitly force Simulator when running in MCP stdio mode.
+                services.AddAuthentication(
+                        defaultScheme: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                    .AddSimulatorAuthentication();
+            }
             else
             {
-                // Allow a CLI/stdio override to force Simulator authentication for the session.
-                // This supports running MCP stdio with a supplied role without modifying config files.
-                if (string.Equals(Environment.GetEnvironmentVariable("DAB_MCP_SIMULATOR_AUTH"), "1", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Force registration of Simulator authentication as default scheme.
-                    services.AddAuthentication(defaultScheme: Core.AuthenticationHelpers.AuthenticationSimulator.SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                            .AddSimulatorAuthentication();
-                }
-                else
-                {
-                    ConfigureAuthentication(services, configProvider);
-                }
+                ConfigureAuthentication(services, configProvider);
             }
 
             services.AddAuthorization();
@@ -470,8 +466,6 @@ namespace Azure.DataApiBuilder.Service
             services.AddDabMcpServer(configProvider);
 
             services.AddSingleton<McpToolRegistry>();
-
-            services.AddSingleton<IMcpTool, UpdateRecordTool>();
 
             services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 

@@ -2,7 +2,7 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;",
+    "connection-string": "Server=tcp:localhost,1433;Persist Security Info=False;Initial Catalog=Library;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=30;",
     "options": {
       "set-session-context": true
     }
@@ -2533,36 +2533,6 @@
               }
             }
           ]
-        },
-        {
-          "role": "TestNestedFilterManyOne_EntityReadForbidden",
-          "actions": [
-            {
-              "action": "create"
-            },
-            {
-              "action": "update"
-            },
-            {
-              "action": "delete"
-            }
-          ]
-        },
-        {
-          "role": "TestNestedFilterOneMany_ColumnForbidden",
-          "actions": [
-            {
-              "action": "read"
-            }
-          ]
-        },
-        {
-          "role": "TestNestedFilterOneMany_EntityReadForbidden",
-          "actions": [
-            {
-              "action": "read"
-            }
-          ]
         }
       ],
       "relationships": {
@@ -2865,7 +2835,7 @@
       },
       "graphql": {
         "enabled": true,
-        "operation": "mutation",
+        "operation": "query",
         "type": {
           "singular": "GetBooks",
           "plural": "GetBooks"
@@ -2941,7 +2911,7 @@
       },
       "graphql": {
         "enabled": true,
-        "operation": "mutation",
+        "operation": "query",
         "type": {
           "singular": "GetPublisher",
           "plural": "GetPublishers"
@@ -3445,22 +3415,7 @@
           "role": "anonymous",
           "actions": [
             {
-              "action": "create",
-              "fields": {
-                "exclude": [
-                  "current_date",
-                  "next_date"
-                ]
-              }
-            },
-            {
-              "action": "read"
-            },
-            {
-              "action": "update"
-            },
-            {
-              "action": "delete"
+              "action": "*"
             }
           ]
         }
@@ -3762,117 +3717,6 @@
           "linking.target.fields": []
         }
       }
-    },
-    "dbo_DimAccount": {
-      "source": {
-        "object": "DimAccount",
-        "type": "table"
-      },
-      "rest": {
-        "enabled": true
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "dbo_DimAccount",
-          "plural": "dbo_DimAccounts"
-        }
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ],
-      "relationships": {
-        "parent_account": {
-          "cardinality": "one",
-          "target.entity": "dbo_DimAccount",
-          "source.fields": [
-            "ParentAccountKey"
-          ],
-          "target.fields": [
-            "AccountKey"
-          ],
-          "linking.source.fields": [],
-          "linking.target.fields": []
-        },
-        "child_accounts": {
-          "cardinality": "many",
-          "target.entity": "dbo_DimAccount",
-          "source.fields": [
-            "AccountKey"
-          ],
-          "target.fields": [
-            "ParentAccountKey"
-          ],
-          "linking.source.fields": [],
-          "linking.target.fields": []
-        }
-      }
-    },
-    "DateOnlyTable": {
-      "source": {
-        "object": "date_only_table",
-        "type": "table",
-        "key-fields": [
-          "event_date"
-        ]
-      },
-      "rest": {
-        "enabled": true
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "DateOnlyTable",
-          "plural": "DateOnlyTables"
-        }
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
-    },
-    "GetBooksAuth": {
-      "source": {
-        "object": "get_books",
-        "type": "stored-procedure"
-      },
-      "rest": {
-        "enabled": true,
-        "methods": [
-          "get"
-        ]
-      },
-      "graphql": {
-        "enabled": true,
-        "operation": "query",
-        "type": {
-          "singular": "GetBooksAuth",
-          "plural": "GetBooksAuths"
-        }
-      },
-      "permissions": [
-        {
-          "role": "teststoredprocauth",
-          "actions": [
-            {
-              "action": "execute"
-            }
-          ]
-        }
-      ]
     }
   }
 }

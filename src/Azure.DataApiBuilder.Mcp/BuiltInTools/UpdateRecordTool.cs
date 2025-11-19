@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils; // added metadata helper
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -114,26 +115,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
+                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
 
-                // 4) Resolve metadata for entity existence check
-                string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
-
-                try
+                // Use metadata helper to resolve metadata instead of manual resolution.
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entityName,
+                        config,
+                        serviceProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return BuildErrorResult("EntityNotFound", metadataError, logger);
                 }
 
                 // 5) Authorization after we have a known entity

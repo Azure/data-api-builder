@@ -123,23 +123,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("InvalidEntity", $"Entity {entity} cannot be executed.", logger);
                 }
 
-                // 5) Resolve metadata
-                string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
-
-                try
+                // Use shared metadata helper.
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entity,
+                        config,
+                        serviceProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = config.GetDataSourceNameFromEntityName(entity);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Failed to resolve entity metadata for '{entity}'.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entity, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Failed to resolve database object for entity '{entity}'.", logger);
+                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", metadataError, logger);
                 }
 
                 // 6) Authorization - Never bypass permissions

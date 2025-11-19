@@ -71,10 +71,10 @@ foreach($databaseType in $databaseTypes){
         Invoke-Expression $commandToExecute;
     }
 
-    # Post-process MsSql config to fix stored procedure GraphQL operations
+    # Post-process MsSql and DwSql configs to fix stored procedure GraphQL operations
     # The CLI currently ignores --graphql.operation parameter for stored procedures,
     # defaulting them to 'mutation'. We manually fix specific procedures that should be 'query'.
-    if($databaseType -eq "mssql"){
+    if($databaseType -eq "mssql" -or $databaseType -eq "dwsql"){
         $configContent = Get-Content $configFile -Raw | ConvertFrom-Json;
         if($configContent.entities.GetBooks){
             $configContent.entities.GetBooks.graphql.operation = "query";

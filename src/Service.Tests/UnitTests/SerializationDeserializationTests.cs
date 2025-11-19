@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             _sourceDefinition.SourceEntityRelationshipMap.Add("persons", metadata);
 
-            // In serialization options we need  ReferenceHandler = ReferenceHandler.Preserve, or else it doesnot seiliate objects with cycle references
+            // In serialization options we need  ReferenceHandler = ReferenceHandler.Preserve, or else it does not serialize objects with cycle references
             // SourceDefinition -> RelationShipMetadata -> ForeignKeyDefinition RelationshipPair ->DatabaseTable -> SourceDefinition
             Assert.ThrowsException<JsonException>(() =>
             {

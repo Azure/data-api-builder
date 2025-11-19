@@ -160,20 +160,30 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
                 HttpContext? httpContext = httpContextAccessor.HttpContext;
 
-                if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
+                if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleCtxError))
                 {
                     return BuildErrorResult("PermissionDenied", $"You do not have permission to read records for entity '{entityName}'.", logger);
                 }
 
-                if (!TryResolveAuthorizedRole(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
+                if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
+                        httpContext!,
+                        authResolver,
+                        entityName,
+                        EntityActionOperation.Read,
+                        out string? effectiveRole,
+                        out string readAuthError))
                 {
-                    return BuildErrorResult("PermissionDenied", authError, logger);
+                    // Provide tool-specific message rather than generic helper message.
+                    string finalError = readAuthError.StartsWith("You do not have permission", StringComparison.OrdinalIgnoreCase)
+                        ? $"You do not have permission to read records for entity '{entityName}'."
+                        : readAuthError;
+                    return BuildErrorResult("PermissionDenied", finalError, logger);
                 }
 
                 // Build and validate Find context
                 RequestValidator requestValidator = new(serviceProvider.GetRequiredService<IMetadataProviderFactory>(), runtimeConfigProvider);
                 FindRequestContext context = new(entityName, dbObject, true);
-                httpContext.Request.Method = "GET";
+                httpContext!.Request.Method = "GET";
 
                 requestValidator.ValidateEntity(entityName);
 
@@ -190,20 +200,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                 }
 
-                if (orderby is not null && orderby.Count() != 0)
+                if (orderby is not null && orderby.Any())
                 {
-                    string sortQueryString = $"?{RequestParser.SORT_URL}=";
-                    foreach (string param in orderby)
+                    string sortQueryString = $"?{RequestParser.SORT_URL}=" + string.Join(", ", orderby.Where(p => !string.IsNullOrWhiteSpace(p)));
+                    if (sortQueryString.EndsWith(", "))
                     {
-                        if (string.IsNullOrWhiteSpace(param))
-                        {
-                            return BuildErrorResult("InvalidArguments", "Parameters inside 'orderby' argument cannot be empty or null.", logger);
-                        }
-
-                        sortQueryString += $"{param}, ";
+                        sortQueryString = sortQueryString[..^2];
                     }
 
-                    sortQueryString = sortQueryString.Substring(0, sortQueryString.Length - 2);
                     (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = RequestParser.GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
                 }
 
@@ -226,8 +230,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IQueryEngineFactory queryEngineFactory = serviceProvider.GetRequiredService<IQueryEngineFactory>();
                 IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
-                IActionResult actionResult = queryResult is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true)
-                                               : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
+                IActionResult actionResult = queryResult is null
+                    ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true)
+                    : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
 
                 // Normalize response
                 string rawPayloadJson = ExtractResultJson(actionResult);
@@ -259,60 +264,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 return BuildErrorResult("UnexpectedError", "Unexpected error occurred in ReadRecordsTool.", logger);
             }
-        }
-
-        /// <summary>
-        /// Ensures that the role used on the request has the necessary authorizations.
-        /// </summary>
-        /// <param name="httpContext">Contains request headers and metadata of the user.</param>
-        /// <param name="authorizationResolver">Resolver used to check if role has necessary authorizations.</param>
-        /// <param name="entityName">Name of the entity used in the request.</param>
-        /// <param name="effectiveRole">Role defined in client role header.</param>
-        /// <param name="error">Error message given to the user.</param>
-        /// <returns>True if the user role is authorized, along with the role.</returns>
-        private static bool TryResolveAuthorizedRole(
-            HttpContext httpContext,
-            IAuthorizationResolver authorizationResolver,
-            string entityName,
-            out string? effectiveRole,
-            out string error)
-        {
-            effectiveRole = null;
-            error = string.Empty;
-
-            string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-
-            if (string.IsNullOrWhiteSpace(roleHeader))
-            {
-                error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
-                return false;
-            }
-
-            string[] roles = roleHeader
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (roles.Length == 0)
-            {
-                error = $"Client role header '{AuthorizationResolver.CLIENT_ROLE_HEADER}' is missing or empty.";
-                return false;
-            }
-
-            foreach (string role in roles)
-            {
-                bool allowed = authorizationResolver.AreRoleAndOperationDefinedForEntity(
-                    entityName, role, EntityActionOperation.Read);
-
-                if (allowed)
-                {
-                    effectiveRole = role;
-                    return true;
-                }
-            }
-
-            error = $"You do not have permission to read records for entity '{entityName}'.";
-            return false;
         }
 
         /// <summary>

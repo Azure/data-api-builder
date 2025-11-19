@@ -5,13 +5,12 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
+
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
@@ -88,27 +87,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return Utils.McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                string dataSourceName;
-                try
+                // Use metadata helper for data source/provider/dbObject resolution.
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entityName,
+                        runtimeConfig,
+                        serviceProvider,
+                        out Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
-                }
-                catch (Exception)
-                {
-                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidConfiguration", $"Entity '{entityName}' not found in configuration", logger);
-                }
-
-                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                ISqlMetadataProvider sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-
-                DatabaseObject dbObject;
-                try
-                {
-                    dbObject = sqlMetadataProvider.GetDatabaseObjectByKey(entityName);
-                }
-                catch (Exception)
-                {
-                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidConfiguration", $"Database object for entity '{entityName}' not found", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidConfiguration", metadataError, logger);
                 }
 
                 // Create an HTTP context for authorization
@@ -116,13 +105,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 HttpContext httpContext = httpContextAccessor.HttpContext ?? new DefaultHttpContext();
                 IAuthorizationResolver authorizationResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
 
-                if (httpContext is null || !authorizationResolver.IsValidRoleContext(httpContext))
+                if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authorizationResolver, out string roleCtxError))
                 {
-                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", "Permission denied: Unable to resolve a valid role context for update operation.", logger);
+                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", "Permission denied: Unable to resolve a valid role context for create operation.", logger);
                 }
 
-                // Validate that we have at least one role authorized for create
-                if (!TryResolveAuthorizedRole(httpContext, authorizationResolver, entityName, out string authError))
+                if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
+                        httpContext,
+                        authorizationResolver,
+                        entityName,
+                        EntityActionOperation.Create,
+                        out string? effectiveRole,
+                        out string authError))
                 {
                     return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", authError, logger);
                 }
@@ -223,48 +217,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 return Utils.McpResponseBuilder.BuildErrorResult("Error", $"Error: {ex.Message}", logger);
             }
-        }
-
-        private static bool TryResolveAuthorizedRole(
-            HttpContext httpContext,
-            IAuthorizationResolver authorizationResolver,
-            string entityName,
-            out string error)
-        {
-            error = string.Empty;
-
-            string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-
-            if (string.IsNullOrWhiteSpace(roleHeader))
-            {
-                error = "Client role header is missing or empty.";
-                return false;
-            }
-
-            string[] roles = roleHeader
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (roles.Length == 0)
-            {
-                error = "Client role header is missing or empty.";
-                return false;
-            }
-
-            foreach (string role in roles)
-            {
-                bool allowed = authorizationResolver.AreRoleAndOperationDefinedForEntity(
-                    entityName, role, EntityActionOperation.Create);
-
-                if (allowed)
-                {
-                    return true;
-                }
-            }
-
-            error = "You do not have permission to create records for this entity.";
-            return false;
         }
     }
 }

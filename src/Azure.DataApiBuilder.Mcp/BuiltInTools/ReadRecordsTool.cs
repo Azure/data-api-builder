@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -110,12 +111,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 JsonElement root = arguments.RootElement;
 
-                if (!root.TryGetProperty("entity", out JsonElement entityElement) || string.IsNullOrWhiteSpace(entityElement.GetString()))
+                // Use common parser
+                if (!McpArgumentParser.TryParseEntity(root, out entityName, out string parseError))
                 {
-                    return BuildErrorResult("InvalidArguments", "Missing required argument 'entity'.", logger);
+                    return BuildErrorResult("InvalidArguments", parseError, logger);
                 }
-
-                entityName = entityElement.GetString()!;
 
                 if (root.TryGetProperty("select", out JsonElement selectElement))
                 {

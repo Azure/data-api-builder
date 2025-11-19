@@ -11,6 +11,63 @@ namespace Azure.DataApiBuilder.Mcp.Utils
     public static class McpArgumentParser
     {
         /// <summary>
+        /// Parses only the entity name from arguments.
+        /// </summary>
+        public static bool TryParseEntity(
+            JsonElement root,
+            out string entityName,
+            out string error)
+        {
+            entityName = string.Empty;
+            error = string.Empty;
+
+            if (!root.TryGetProperty("entity", out JsonElement entityEl))
+            {
+                error = "Missing required argument 'entity'.";
+                return false;
+            }
+
+            entityName = entityEl.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(entityName))
+            {
+                error = "Entity is required";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Parses entity and data arguments for create operations.
+        /// </summary>
+        public static bool TryParseEntityAndData(
+            JsonElement root,
+            out string entityName,
+            out JsonElement dataElement,
+            out string error)
+        {
+            dataElement = default;
+            if (!TryParseEntity(root, out entityName, out error))
+            {
+                return false;
+            }
+
+            if (!root.TryGetProperty("data", out dataElement))
+            {
+                error = "Missing required argument 'data'.";
+                return false;
+            }
+
+            if (dataElement.ValueKind != JsonValueKind.Object)
+            {
+                error = "'data' must be a JSON object.";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Parses entity and keys arguments for delete/update operations.
         /// </summary>
         public static bool TryParseEntityAndKeys(
@@ -19,26 +76,18 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             out Dictionary<string, object?> keys,
             out string error)
         {
-            entityName = string.Empty;
             keys = new Dictionary<string, object?>();
-            error = string.Empty;
-
-            if (!root.TryGetProperty("entity", out JsonElement entityEl) ||
-                !root.TryGetProperty("keys", out JsonElement keysEl))
+            if (!TryParseEntity(root, out entityName, out error))
             {
-                error = "Missing required arguments 'entity' or 'keys'.";
                 return false;
             }
 
-            // Parse and validate entity name
-            entityName = entityEl.GetString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(entityName))
+            if (!root.TryGetProperty("keys", out JsonElement keysEl))
             {
-                error = "Entity is required";
+                error = "Missing required argument 'keys'.";
                 return false;
             }
 
-            // Parse and validate keys
             if (keysEl.ValueKind != JsonValueKind.Object)
             {
                 error = "'keys' must be a JSON object.";

@@ -37,12 +37,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <summary>
         /// Gets the metadata for the delete-record tool, including its name, description, and input schema.
         /// </summary>
-        public Tool GetToolMetadata() => new()
+        public Tool GetToolMetadata()
         {
-            Name = "delete_record",
-            Description = "STEP 1: describe_entities -> find entities with DELETE permission and their key fields. STEP 2: call this tool with full key values.",
-            InputSchema = JsonSerializer.Deserialize<JsonElement>(
-                @"{
+            return new Tool
+            {
+                Name = "delete_record",
+                Description = "STEP 1: describe_entities -> find entities with DELETE permission and their key fields. STEP 2: call this tool with full key values.",
+                InputSchema = JsonSerializer.Deserialize<JsonElement>(
+                    @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
@@ -55,8 +57,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             }
                         },
                         ""required"": [""entity"", ""keys""]
-                    }")
-        };
+                    }"
+                )
+            };
+        }
 
         /// <summary>
         /// Executes the delete-record tool, deleting an existing record in the specified entity using provided keys.

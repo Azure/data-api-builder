@@ -48,24 +48,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 Name = "update_record",
                 Description = "STEP 1: describe_entities -> find entities with UPDATE permission and their key fields. STEP 2: call this tool with keys and new field values.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
-@"{
-    ""type"": ""object"",
-    ""properties"": {
-        ""entity"": {
-            ""type"": ""string"",
-            ""description"": ""Entity name with UPDATE permission.""
-        },
-        ""keys"": {
-            ""type"": ""object"",
-            ""description"": ""Primary or composite keys identifying the record.""
-        },
-        ""fields"": {
-            ""type"": ""object"",
-            ""description"": ""Fields and their new values.""
-        }
-    },
-    ""required"": [""entity"", ""keys"", ""fields""]
-}"
+                    @"{
+                        ""type"": ""object"",
+                        ""properties"": {
+                            ""entity"": {
+                                ""type"": ""string"",
+                                ""description"": ""Entity name with UPDATE permission.""
+                            },
+                            ""keys"": {
+                                ""type"": ""object"",
+                                ""description"": ""Primary or composite keys identifying the record.""
+                            },
+                            ""fields"": {
+                                ""type"": ""object"",
+                                ""description"": ""Fields and their new values.""
+                            }
+                        },
+                        ""required"": [""entity"", ""keys"", ""fields""]
+                    }"
                 )
             };
         }

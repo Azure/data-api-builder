@@ -199,14 +199,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
                 }
 
-                if (orderby is not null && orderby.Any())
+                if (orderby is not null && orderby.Count() != 0)
                 {
-                    string sortQueryString = $"?{RequestParser.SORT_URL}=" + string.Join(", ", orderby.Where(p => !string.IsNullOrWhiteSpace(p)));
-                    if (sortQueryString.EndsWith(", "))
+                    string sortQueryString = $"?{RequestParser.SORT_URL}=";
+                    foreach (string param in orderby)
                     {
-                        sortQueryString = sortQueryString[..^2];
+                        if (string.IsNullOrWhiteSpace(param))
+                        {
+                            return BuildErrorResult("InvalidArguments", "Parameters inside 'orderby' argument cannot be empty or null.", logger);
+                        }
+
+                        sortQueryString += $"{param}, ";
                     }
 
+                    sortQueryString = sortQueryString.Substring(0, sortQueryString.Length - 2);
                     (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = RequestParser.GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
                 }
 

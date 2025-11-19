@@ -5,7 +5,6 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -49,24 +48,24 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 Name = "update_record",
                 Description = "STEP 1: describe_entities -> find entities with UPDATE permission and their key fields. STEP 2: call this tool with keys and new field values.",
                 InputSchema = JsonSerializer.Deserialize<JsonElement>(
-                    @"{
-                        ""type"": ""object"",
-                        ""properties"": {
-                            ""entity"": {
-                                ""type"": ""string"",
-                                ""description"": ""Entity name with UPDATE permission.""
-                            },
-                            ""keys"": {
-                                ""type"": ""object"",
-                                ""description"": ""Primary or composite keys identifying the record.""
-                            },
-                            ""fields"": {
-                                ""type"": ""object"",
-                                ""description"": ""Fields and their new values.""
-                            }
-                        },
-                        ""required"": [""entity"", ""keys"", ""fields""]
-                    }"
+@"{
+    ""type"": ""object"",
+    ""properties"": {
+        ""entity"": {
+            ""type"": ""string"",
+            ""description"": ""Entity name with UPDATE permission.""
+        },
+        ""keys"": {
+            ""type"": ""object"",
+            ""description"": ""Primary or composite keys identifying the record.""
+        },
+        ""fields"": {
+            ""type"": ""object"",
+            ""description"": ""Fields and their new values.""
+        }
+    },
+    ""required"": [""entity"", ""keys"", ""fields""]
+}"
                 )
             };
         }
@@ -110,7 +109,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
                 }
 
-                if (!TryParseArguments(arguments.RootElement, out string entityName, out Dictionary<string, object?> keys, out Dictionary<string, object?> fields, out string parseError))
+                if (!McpArgumentParser.TryParseEntityKeysAndFields(
+                        arguments.RootElement,
+                        out string entityName,
+                        out Dictionary<string, object?> keys,
+                        out Dictionary<string, object?> fields,
+                        out string parseError))
                 {
                     return BuildErrorResult("InvalidArguments", parseError, logger);
                 }
@@ -118,7 +122,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
 
-                // Use metadata helper to resolve metadata instead of manual resolution.
                 if (!McpMetadataHelper.TryResolveMetadata(
                         entityName,
                         config,
@@ -238,75 +241,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
         }
 
-        #region Parsing & Authorization
-
-        private static bool TryParseArguments(
-            JsonElement root,
-            out string entityName,
-            out Dictionary<string, object?> keys,
-            out Dictionary<string, object?> fields,
-            out string error)
-        {
-            entityName = string.Empty;
-            keys = new Dictionary<string, object?>();
-            fields = new Dictionary<string, object?>();
-            error = string.Empty;
-
-            if (!root.TryGetProperty("entity", out JsonElement entityEl) ||
-                !root.TryGetProperty("keys", out JsonElement keysEl) ||
-                !root.TryGetProperty("fields", out JsonElement fieldsEl))
-            {
-                error = "Missing required arguments 'entity', 'keys', or 'fields'.";
-                return false;
-            }
-
-            // Parse and validate required arguments: entity, keys, fields
-            entityName = entityEl.GetString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(entityName))
-            {
-                throw new ArgumentException("Entity is required", nameof(entityName));
-            }
-
-            if (keysEl.ValueKind != JsonValueKind.Object || fieldsEl.ValueKind != JsonValueKind.Object)
-            {
-                throw new ArgumentException("'keys' and 'fields' must be JSON objects.");
-            }
-
-            try
-            {
-                keys = JsonSerializer.Deserialize<Dictionary<string, object?>>(keysEl.GetRawText()) ?? new Dictionary<string, object?>();
-                fields = JsonSerializer.Deserialize<Dictionary<string, object?>>(fieldsEl.GetRawText()) ?? new Dictionary<string, object?>();
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException("Failed to parse 'keys' or 'fields'", ex);
-            }
-
-            if (keys.Count == 0)
-            {
-                throw new ArgumentException("Keys are required to update an entity");
-            }
-
-            if (fields.Count == 0)
-            {
-                throw new ArgumentException("At least one field must be provided to update an entity", nameof(fields));
-            }
-
-            foreach (KeyValuePair<string, object?> kv in keys)
-            {
-                if (kv.Value is null || (kv.Value is string str && string.IsNullOrWhiteSpace(str)))
-                {
-                    throw new ArgumentException($"Key value for '{kv.Key}' cannot be null or empty.");
-                }
-            }
-
-            return true;
-        }
-
-        #endregion
-
-        #region Response Builders & Utilities
-
         private static CallToolResult BuildSuccessResult(
             string entityName,
             JsonElement engineRootElement,
@@ -423,6 +357,5 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
         }
 
-        #endregion
     }
 }

@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions; // Added for DataApiBuilderException
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp.Utils
@@ -31,17 +32,41 @@ namespace Azure.DataApiBuilder.Mcp.Utils
 
             var metadataProviderFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
 
+            // Resolve datasource name for the entity.
             try
             {
                 dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
-                sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
             }
-            catch (Exception)
+            catch (DataApiBuilderException dabEx) when (dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.EntityNotFound)
             {
                 error = $"Entity '{entityName}' is not defined in the configuration.";
                 return false;
             }
+            catch (DataApiBuilderException dabEx)
+            {
+                // Other DAB exceptions during entity->datasource resolution.
+                error = dabEx.Message;
+                return false;
+            }
 
+            // Resolve metadata provider for the datasource.
+            try
+            {
+                sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
+            }
+            catch (DataApiBuilderException dabEx) when (dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.DataSourceNotFound)
+            {
+                error = $"Data source '{dataSourceName}' for entity '{entityName}' is not defined in the configuration.";
+                return false;
+            }
+            catch (DataApiBuilderException dabEx)
+            {
+                // Other DAB exceptions during metadata provider resolution.
+                error = dabEx.Message;
+                return false;
+            }
+
+            // Validate entity exists in metadata mapping.
             if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? temp) || temp is null)
             {
                 error = $"Entity '{entityName}' is not defined in the configuration.";

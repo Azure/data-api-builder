@@ -16,6 +16,10 @@
       "path": "/graphql",
       "allow-introspection": true
     },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    },
     "host": {
       "cors": {
         "origins": [
@@ -35,15 +39,15 @@
         "object": "publishers",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Publisher",
           "plural": "Publishers"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -268,16 +272,16 @@
         "object": "stocks",
         "type": "table"
       },
+      "rest": {
+        "enabled": true,
+        "path": "/commodities"
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Stock",
           "plural": "Stocks"
         }
-      },
-      "rest": {
-        "enabled": true,
-        "path": "/commodities"
       },
       "permissions": [
         {
@@ -425,15 +429,15 @@
         "object": "books",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "book",
           "plural": "books"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -859,15 +863,15 @@
         "object": "default_books",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "default_book",
           "plural": "default_books"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -894,15 +898,15 @@
         "object": "book_website_placements",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "BookWebsitePlacement",
           "plural": "BookWebsitePlacements"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -953,15 +957,15 @@
         "object": "authors",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Author",
           "plural": "Authors"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1007,15 +1011,15 @@
         "object": "reviews",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "review",
           "plural": "reviews"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1066,15 +1070,15 @@
         "object": "comics",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Comic",
           "plural": "Comics"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1168,15 +1172,15 @@
         "object": "brokers",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": false,
         "type": {
           "singular": "Broker",
           "plural": "Brokers"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1211,15 +1215,15 @@
         "object": "website_users",
         "type": "table"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "websiteUser",
           "plural": "websiteUsers"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -1263,15 +1267,15 @@
         "object": "type_table",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "SupportedType",
           "plural": "SupportedTypes"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1318,6 +1322,9 @@
         "object": "stocks_price",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
@@ -1325,18 +1332,7 @@
           "plural": "stocks_prices"
         }
       },
-      "rest": {
-        "enabled": true
-      },
       "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "read"
-            }
-          ]
-        },
         {
           "role": "authenticated",
           "actions": [
@@ -1351,6 +1347,14 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
             }
           ]
         },
@@ -1382,15 +1386,15 @@
         "object": "trees",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": false,
         "type": {
           "singular": "Tree",
           "plural": "Trees"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1438,16 +1442,16 @@
         "object": "trees",
         "type": "table"
       },
+      "rest": {
+        "enabled": true,
+        "path": "/plants"
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Shrub",
           "plural": "Shrubs"
         }
-      },
-      "rest": {
-        "enabled": true,
-        "path": "/plants"
       },
       "permissions": [
         {
@@ -1492,8 +1496,12 @@
         "fungus": {
           "cardinality": "one",
           "target.entity": "Fungus",
-          "source.fields": [ "species" ],
-          "target.fields": [ "habitat" ],
+          "source.fields": [
+            "species"
+          ],
+          "target.fields": [
+            "habitat"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1504,15 +1512,15 @@
         "object": "fungi",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "fungus",
           "plural": "fungi"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1571,11 +1579,15 @@
         "spores": "hazards"
       },
       "relationships": {
-        "shrub": {
+        "Shrub": {
           "cardinality": "one",
           "target.entity": "Shrub",
-          "source.fields": [ "habitat" ],
-          "target.fields": [ "species" ],
+          "source.fields": [
+            "habitat"
+          ],
+          "target.fields": [
+            "species"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1586,15 +1598,15 @@
         "object": "users",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "User_NonAutogenRelationshipColumn",
           "plural": "User_NonAutogenRelationshipColumns"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1626,15 +1638,15 @@
         "object": "user_profiles",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "UserProfile",
           "plural": "UserProfiles"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1652,15 +1664,15 @@
         "object": "users",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "User_AutogenRelationshipColumn",
           "plural": "User_AutogenRelationshipColumns"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1692,15 +1704,15 @@
         "object": "users",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "User_AutogenToNonAutogenRelationshipColumn",
           "plural": "User_AutogenToNonAutogenRelationshipColumns"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1737,15 +1749,15 @@
           "id"
         ]
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "books_view_all",
           "plural": "books_view_alls"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1766,15 +1778,15 @@
           "id"
         ]
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "books_view_with_mapping",
           "plural": "books_view_with_mappings"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1799,15 +1811,15 @@
           "pieceid"
         ]
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "stocks_view_selected",
           "plural": "stocks_view_selecteds"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1829,15 +1841,15 @@
           "pub_id"
         ]
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "books_publishers_view_composite",
           "plural": "books_publishers_view_composites"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1858,15 +1870,15 @@
           "id"
         ]
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "books_publishers_view_composite_insertable",
           "plural": "books_publishers_view_composite_insertables"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1884,15 +1896,15 @@
         "object": "empty_table",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Empty",
           "plural": "Empties"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1927,15 +1939,15 @@
         "object": "notebooks",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Notebook",
           "plural": "Notebooks"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -1971,15 +1983,15 @@
         "object": "journals",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Journal",
           "plural": "Journals"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2069,15 +2081,15 @@
         "object": "aow",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": false,
         "type": {
           "singular": "ArtOfWar",
           "plural": "ArtOfWars"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2109,15 +2121,15 @@
         "object": "series",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "series",
           "plural": "series"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2188,15 +2200,15 @@
         "object": "sales",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Sales",
           "plural": "Sales"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2222,15 +2234,15 @@
         "object": "gqlmappings",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "GQLmappings",
           "plural": "GQLmappings"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2260,15 +2272,15 @@
         "object": "bookmarks",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Bookmarks",
           "plural": "Bookmarks"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2294,15 +2306,15 @@
         "object": "mappedbookmarks",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "MappedBookmarks",
           "plural": "MappedBookmarks"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2332,15 +2344,15 @@
         "object": "books_sold",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "books_sold",
           "plural": "books_sold"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2353,10 +2365,54 @@
         }
       ]
     },
+    "DefaultBuiltInFunction": {
+      "source": {
+        "object": "default_with_function_table",
+        "type": "table"
+      },
+      "rest": {
+        "enabled": true
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "DefaultBuiltInFunction",
+          "plural": "DefaultBuiltInFunctions"
+        }
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
     "PublisherNF": {
       "source": {
         "object": "publishers",
         "type": "table"
+      },
+      "rest": {
+        "enabled": true
       },
       "graphql": {
         "enabled": true,
@@ -2364,9 +2420,6 @@
           "singular": "PublisherNF",
           "plural": "PublisherNFs"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2440,15 +2493,15 @@
         "object": "books",
         "type": "table"
       },
+      "rest": {
+        "enabled": true
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "bookNF",
           "plural": "booksNF"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2549,44 +2602,13 @@
         }
       }
     },
-    "DefaultBuiltInFunction": {
-      "source": {
-        "object": "default_with_function_table",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "create",
-              "fields": {
-                "include": [
-                  "*"
-                ],
-                "exclude": [
-                  "current_date",
-                  "next_date"
-                ]
-              }
-            },
-            "read",
-            "update",
-            "delete"
-          ]
-        }
-      ]
-    },
     "AuthorNF": {
       "source": {
         "object": "authors",
         "type": "table"
+      },
+      "rest": {
+        "enabled": true
       },
       "graphql": {
         "enabled": true,
@@ -2594,9 +2616,6 @@
           "singular": "AuthorNF",
           "plural": "AuthorNFs"
         }
-      },
-      "rest": {
-        "enabled": true
       },
       "permissions": [
         {
@@ -2672,21 +2691,33 @@
       }
     },
     "dbo_DimAccount": {
-      "source": "dimaccount",
+      "source": {
+        "object": "dimaccount",
+        "type": "table"
+      },
+      "rest": {
+        "enabled": true
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "dbo_DimAccount",
+          "plural": "dbo_DimAccounts"
+        }
+      },
       "permissions": [
         {
           "role": "anonymous",
           "actions": [
-            "read",
-            "create",
-            "update",
-            "delete"
+            {
+              "action": "*"
+            }
           ]
         }
       ],
       "mappings": {
-        "accountkey": "AccountKey",
-        "parentaccountkey": "ParentAccountKey"
+        "parentaccountkey": "ParentAccountKey",
+        "accountkey": "AccountKey"
       },
       "relationships": {
         "parent_account": {
@@ -2697,7 +2728,9 @@
           ],
           "target.fields": [
             "accountkey"
-          ]
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
         },
         "child_accounts": {
           "cardinality": "many",
@@ -2707,7 +2740,9 @@
           ],
           "target.fields": [
             "parentaccountkey"
-          ]
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
         }
       }
     }

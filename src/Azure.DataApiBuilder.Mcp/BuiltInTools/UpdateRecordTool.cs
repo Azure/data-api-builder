@@ -119,8 +119,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
 
                 if (!McpMetadataHelper.TryResolveMetadata(
                         entityName,

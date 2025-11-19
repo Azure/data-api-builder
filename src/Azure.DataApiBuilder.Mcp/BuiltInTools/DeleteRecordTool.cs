@@ -9,9 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -39,14 +37,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// <summary>
         /// Gets the metadata for the delete-record tool, including its name, description, and input schema.
         /// </summary>
-        public Tool GetToolMetadata()
+        public Tool GetToolMetadata() => new()
         {
-            return new Tool
-            {
-                Name = "delete_record",
-                Description = "STEP 1: describe_entities -> find entities with DELETE permission and their key fields. STEP 2: call this tool with full key values.",
-                InputSchema = JsonSerializer.Deserialize<JsonElement>(
-                    @"{
+            Name = "delete_record",
+            Description = "STEP 1: describe_entities -> find entities with DELETE permission and their key fields. STEP 2: call this tool with full key values.",
+            InputSchema = JsonSerializer.Deserialize<JsonElement>(
+                @"{
                         ""type"": ""object"",
                         ""properties"": {
                             ""entity"": {
@@ -59,10 +55,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             }
                         },
                         ""required"": [""entity"", ""keys""]
-                    }"
-                )
-            };
-        }
+                    }")
+        };
 
         /// <summary>
         /// Executes the delete-record tool, deleting an existing record in the specified entity using provided keys.
@@ -88,7 +82,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     return McpResponseBuilder.BuildErrorResult(
                         "ToolDisabled",
-                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
+                        $"The {GetToolMetadata().Name} tool is disabled in the configuration.",
                         logger);
                 }
 
@@ -103,26 +97,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
-
                 // 4) Resolve metadata for entity existence check
                 string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
+                Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider sqlMetadataProvider;
 
-                try
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entityName,
+                        config,
+                        serviceProvider,
+                        out sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", metadataError, logger);
                 }
 
                 // Validate it's a table or view
@@ -152,8 +140,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
                 }
 
-                // 6) Build and validate Delete context
-                RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
+                // Need MetadataProviderFactory for RequestValidator; resolve here.
+                var metadataProviderFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+                Azure.DataApiBuilder.Core.Services.RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
 
                 DeleteRequestContext context = new(
                     entityName: entityName,
@@ -172,7 +161,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 requestValidator.ValidatePrimaryKey(context);
 
-                // 7) Execute
+                var mutationEngineFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Resolvers.Factories.IMutationEngineFactory>();
                 DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(dbType);
 

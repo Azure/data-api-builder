@@ -142,27 +142,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     after = afterElement.GetString();
                 }
 
-                // Get required services & configuration
-                IQueryEngineFactory queryEngineFactory = serviceProvider.GetRequiredService<IQueryEngineFactory>();
-                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-
-                // Check metadata for entity exists
-                string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
-
-                try
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entityName,
+                        runtimeConfig,
+                        serviceProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return BuildErrorResult("EntityNotFound", metadataError, logger);
                 }
 
                 // Authorization check in the existing entity
@@ -182,7 +171,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 // Build and validate Find context
-                RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
+                RequestValidator requestValidator = new(serviceProvider.GetRequiredService<IMetadataProviderFactory>(), runtimeConfigProvider);
                 FindRequestContext context = new(entityName, dbObject, true);
                 httpContext.Request.Method = "GET";
 
@@ -234,10 +223,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 // Execute
+                IQueryEngineFactory queryEngineFactory = serviceProvider.GetRequiredService<IQueryEngineFactory>();
                 IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
                 JsonDocument? queryResult = await queryEngine.ExecuteAsync(context);
-                IActionResult actionResult = queryResult is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, metadataProviderFactory.GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true)
-                                               : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, metadataProviderFactory.GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
+                IActionResult actionResult = queryResult is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true)
+                                               : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, serviceProvider.GetRequiredService<IMetadataProviderFactory>().GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
 
                 // Normalize response
                 string rawPayloadJson = ExtractResultJson(actionResult);

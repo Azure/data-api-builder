@@ -5,7 +5,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
+
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -141,7 +141,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
                 }
 
-                if (!TryResolveAuthorizedRoleHasPermission(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
+                if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
+                    httpContext!,
+                    authResolver,
+                    entityName,
+                    EntityActionOperation.Update,
+                    out string? effectiveRole,
+                    out string authError))
                 {
                     return BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
                 }
@@ -295,51 +301,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
 
             return true;
-        }
-
-        private static bool TryResolveAuthorizedRoleHasPermission(
-            HttpContext httpContext,
-            IAuthorizationResolver authorizationResolver,
-            string entityName,
-            out string? effectiveRole,
-            out string error)
-        {
-            effectiveRole = null;
-            error = string.Empty;
-
-            string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-
-            if (string.IsNullOrWhiteSpace(roleHeader))
-            {
-                error = "Client role header is missing or empty.";
-                return false;
-            }
-
-            string[] roles = roleHeader
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (roles.Length == 0)
-            {
-                error = "Client role header is missing or empty.";
-                return false;
-            }
-
-            foreach (string role in roles)
-            {
-                bool allowed = authorizationResolver.AreRoleAndOperationDefinedForEntity(
-                    entityName, role, EntityActionOperation.Update);
-
-                if (allowed)
-                {
-                    effectiveRole = role;
-                    return true;
-                }
-            }
-
-            error = "You do not have permission to update records for this entity.";
-            return false;
         }
 
         #endregion

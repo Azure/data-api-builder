@@ -32,7 +32,7 @@
         UpdateRecord: true,
         DeleteRecord: true,
         ExecuteEntity: true,
-        UserProvidedAllTools: true,
+        UserProvidedAllTools: false,
         UserProvidedDescribeEntities: false,
         UserProvidedCreateRecord: false,
         UserProvidedReadRecords: false,
@@ -2437,36 +2437,6 @@
                 }
               }
             ]
-          },
-          {
-            Role: TestNestedFilterManyOne_EntityReadForbidden,
-            Actions: [
-              {
-                Action: Create
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterOneMany_ColumnForbidden,
-            Actions: [
-              {
-                Action: Read
-              }
-            ]
-          },
-          {
-            Role: TestNestedFilterOneMany_EntityReadForbidden,
-            Actions: [
-              {
-                Action: Read
-              }
-            ]
           }
         ],
         Relationships: {
@@ -2745,7 +2715,7 @@
           Singular: GetBooks,
           Plural: GetBooks,
           Enabled: true,
-          Operation: Query
+          Operation: Mutation
         },
         Rest: {
           Methods: [
@@ -2821,7 +2791,7 @@
           Singular: GetPublisher,
           Plural: GetPublishers,
           Enabled: true,
-          Operation: Query
+          Operation: Mutation
         },
         Rest: {
           Methods: [
@@ -3327,22 +3297,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Create,
-                Fields: {
-                  Exclude: [
-                    current_date,
-                    next_date
-                  ]
-                }
-              },
-              {
-                Action: Read
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
+                Action: *
               }
             ]
           }
@@ -3622,112 +3577,6 @@
             LinkingObject: book_author_link
           }
         }
-      }
-    },
-    {
-      dbo_DimAccount: {
-        Source: {
-          Object: DimAccount,
-          Type: Table
-        },
-        GraphQL: {
-          Singular: dbo_DimAccount,
-          Plural: dbo_DimAccounts,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: true
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: *
-              }
-            ]
-          }
-        ],
-        Relationships: {
-          child_accounts: {
-            Cardinality: Many,
-            TargetEntity: dbo_DimAccount,
-            SourceFields: [
-              AccountKey
-            ],
-            TargetFields: [
-              ParentAccountKey
-            ]
-          },
-          parent_account: {
-            TargetEntity: dbo_DimAccount,
-            SourceFields: [
-              ParentAccountKey
-            ],
-            TargetFields: [
-              AccountKey
-            ]
-          }
-        }
-      }
-    },
-    {
-      DateOnlyTable: {
-        Source: {
-          Object: date_only_table,
-          Type: Table,
-          KeyFields: [
-            event_date
-          ]
-        },
-        GraphQL: {
-          Singular: DateOnlyTable,
-          Plural: DateOnlyTables,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: true
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: *
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      GetBooksAuth: {
-        Source: {
-          Object: get_books,
-          Type: stored-procedure
-        },
-        GraphQL: {
-          Singular: GetBooksAuth,
-          Plural: GetBooksAuths,
-          Enabled: true,
-          Operation: Query
-        },
-        Rest: {
-          Methods: [
-            Get
-          ],
-          Enabled: true
-        },
-        Permissions: [
-          {
-            Role: teststoredprocauth,
-            Actions: [
-              {
-                Action: Execute
-              }
-            ]
-          }
-        ]
       }
     }
   ]

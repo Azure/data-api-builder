@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -267,7 +269,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 // Execute the tool. If a MCP stdio role override is set in the environment, create
                 // a request HttpContext with the X-MS-API-ROLE header so tools and authorization
-                // helpers that read IHttpContextAccessor will see the role.
+                // helpers that read IHttpContextAccessor will see the role. We also ensure the
+                // Simulator authentication handler can authenticate the user by flowing the
+                // Authorization header commonly used in tests/simulator scenarios.
                 CallToolResult callResult;
                 string? stdioRole = Environment.GetEnvironmentVariable("DAB_MCP_STDIO_ROLE");
                 if (!string.IsNullOrWhiteSpace(stdioRole))
@@ -279,6 +283,41 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     // Create a default HttpContext and set the client role header
                     var httpContext = new DefaultHttpContext();
                     httpContext.Request.Headers["X-MS-API-ROLE"] = stdioRole;
+
+                    // Build a simulator-style identity with the given role
+                    var identity = new ClaimsIdentity(
+                        authenticationType: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
+                    identity.AddClaim(new Claim(ClaimTypes.Role, stdioRole));
+                    httpContext.User = new ClaimsPrincipal(identity);
+
+                    // // When the simulator authentication handler is enabled, it authenticates based
+                    // // on the X-MS-API-ROLE header and issues a ClaimsPrincipal with the
+                    // // corresponding role. However, AuthorizationResolver.IsValidRoleContext requires
+                    // // the role to be present as a ClaimTypes.Role on an authenticated identity.
+                    // // To ensure that pipeline runs in MCP stdio mode (where there is no inbound
+                    // // HTTP request), we invoke AuthenticateAsync for the simulator scheme and set
+                    // // HttpContext.User when successful.
+
+                    // // Attempt to authenticate using the simulator scheme so that IsValidRoleContext
+                    // // sees an authenticated identity whose roles contain the client role header.
+                    // var authService = scopedProvider.GetService<Microsoft.AspNetCore.Authentication.IAuthenticationService>();
+                    // if (authService is not null)
+                    // {
+                    //     try
+                    //     {
+                    //         var authResult = await authService.AuthenticateAsync(httpContext, Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator.SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
+                    //         if (authResult.Succeeded && authResult.Principal is not null)
+                    //         {
+                    //             httpContext.User = authResult.Principal;
+                    //         }
+                    //     }
+                    //     catch(Exception e)
+                    //     {
+                    //         Console.Error.WriteLine($"Authentication failed: {e.Message}");
+                    //         // If authentication fails for any reason, we fall back to the default
+                    //         // empty user; downstream authorization will surface appropriate errors.
+                    //     }
+                    // }
 
                     // If IHttpContextAccessor is registered, populate it for downstream code.
                     var httpContextAccessor = scopedProvider.GetService<IHttpContextAccessor>();

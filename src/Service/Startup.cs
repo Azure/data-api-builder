@@ -24,7 +24,9 @@ using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Core.Telemetry;
+using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Core;
+using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
@@ -66,8 +68,6 @@ using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
-using Azure.DataApiBuilder.Mcp.Model;
-using Azure.DataApiBuilder.Mcp.BuiltInTools;
 
 namespace Azure.DataApiBuilder.Service
 {

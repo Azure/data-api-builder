@@ -2,32 +2,32 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
+using ModelContextProtocol.Protocol;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using Serilog;
 using Serilog.Core;
 using Serilog.Extensions.Logging;
-using System.Collections.Generic;
-using ModelContextProtocol.Protocol;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service
         public static void Main(string[] args)
         {
             Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-            Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);    
+            Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
             // Detect stdio mode as early as possible and route any Console.WriteLine to STDERR
             bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
@@ -46,9 +46,6 @@ namespace Azure.DataApiBuilder.Service
             {
                 // MCP requires STDOUT to contain only protocol JSON; send all other text to STDERR
                 Console.SetOut(Console.Error);
-
-                // Hint to logging pipeline (used below) to log to STDERR only
-                Environment.SetEnvironmentVariable("DAB_MCP_STDIO", "1");
 
                 // If caller provided an optional role token like `role:authenticated`, capture it and
                 // force the runtime to use the Simulator authentication provider for this session.
@@ -104,7 +101,7 @@ namespace Azure.DataApiBuilder.Service
                     using IServiceScope scope = scopeFactory.CreateScope();
                     IHostApplicationLifetime lifetime = scope.ServiceProvider.GetRequiredService<IHostApplicationLifetime>();
                     Mcp.Core.IMcpStdioServer stdio = scope.ServiceProvider.GetRequiredService<Mcp.Core.IMcpStdioServer>();
-                    
+
                     // Run the stdio loop until cancellation (Ctrl+C / process end)
                     stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
 
@@ -137,6 +134,8 @@ namespace Azure.DataApiBuilder.Service
 
         public static IHostBuilder CreateHostBuilder(string[] args)
         {
+            bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
+
             return Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration(builder =>
                 {
@@ -145,7 +144,7 @@ namespace Azure.DataApiBuilder.Service
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
-                    ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
+                    ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
@@ -203,13 +202,11 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="appTelemetryClient">Telemetry client</param>
         /// <param name="logLevelInitializer">Hot-reloadable log level</param>
         /// <param name="serilogLogger">Core Serilog logging pipeline</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null, LogLevelInitializer? logLevelInitializer = null, Logger? serilogLogger = null)
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null, LogLevelInitializer? logLevelInitializer = null, Logger? serilogLogger = null, bool stdio = false)
         {
             return LoggerFactory
                 .Create(builder =>
                 {
-                    bool stdio = string.Equals(Environment.GetEnvironmentVariable("DAB_MCP_STDIO"), "1", StringComparison.OrdinalIgnoreCase);
-
                     // Category defines the namespace we will log from,
                     // including all subdomains. ie: "Azure" includes
                     // "Azure.DataApiBuilder.Service"

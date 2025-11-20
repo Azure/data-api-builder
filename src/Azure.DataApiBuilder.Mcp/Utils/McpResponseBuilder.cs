@@ -43,12 +43,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         /// Builds an error response for MCP tools.
         /// </summary>
         public static CallToolResult BuildErrorResult(
+            string toolName,
             string errorType,
             string message,
             ILogger? logger = null)
         {
             Dictionary<string, object?> errorObj = new()
             {
+                ["toolName"] = toolName,
                 ["status"] = "error",
                 ["error"] = new Dictionary<string, object?>
                 {

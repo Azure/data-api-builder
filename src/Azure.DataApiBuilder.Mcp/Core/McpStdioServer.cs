@@ -22,13 +22,18 @@ namespace Azure.DataApiBuilder.Mcp.Core
     {
         private readonly McpToolRegistry _toolRegistry;
         private readonly IServiceProvider _serviceProvider;
+        private readonly string _protocolVersion;
 
-        private const string PROTOCOL_VERSION = "2025-06-18";
+        private const int MAX_LINE_LENGTH = 1024 * 1024; // 1 MB limit for incoming JSON-RPC requests
 
         public McpStdioServer(McpToolRegistry toolRegistry, IServiceProvider serviceProvider)
         {
             _toolRegistry = toolRegistry ?? throw new ArgumentNullException(nameof(toolRegistry));
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+
+            // Allow protocol version to be configured via IConfiguration, using centralized defaults.
+            IConfiguration? configuration = _serviceProvider.GetService<IConfiguration>();
+            _protocolVersion = McpProtocolDefaults.ResolveProtocolVersion(configuration);
         }
 
         /// <summary>
@@ -50,12 +55,17 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             // Redirect Console.Out to use our writer
             Console.SetOut(writer);
-
             while (!cancellationToken.IsCancellationRequested)
             {
-                string? line = await reader.ReadLineAsync();
+                string? line = await reader.ReadLineAsync(cancellationToken);
                 if (string.IsNullOrWhiteSpace(line))
                 {
+                    continue;
+                }
+
+                if (line.Length > MAX_LINE_LENGTH)
+                {
+                    WriteError(id: null, code: -32600, message: "Request too large");
                     continue;
                 }
 
@@ -64,9 +74,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     doc = JsonDocument.Parse(line);
                 }
-                catch (Exception)
+                catch (JsonException jsonEx)
                 {
+                    Console.Error.WriteLine($"[MCP DEBUG] JSON parse error: {jsonEx.Message}");
                     WriteError(id: null, code: -32700, message: "Parse error");
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[MCP DEBUG] Unexpected error parsing request: {ex.Message}");
+                    WriteError(id: null, code: -32603, message: "Internal error");
                     continue;
                 }
 
@@ -139,10 +156,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// and includes supported capabilities and server information. No notifications are sent here; the server waits for the client to send
         /// "notifications/initialized" before sending any notifications.
         /// </remarks>
-        private static void HandleInitialize(JsonElement? id)
+        private void HandleInitialize(JsonElement? id)
         {
             // Extract the actual id value from the request
-            int requestId = id.HasValue ? id.Value.GetInt32() : 0;
+            object? requestId = id.HasValue ? GetIdValue(id.Value) : null;
 
             // Create the initialize response
             var response = new
@@ -151,12 +168,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 id = requestId,
                 result = new
                 {
-                    protocolVersion = PROTOCOL_VERSION,
+                    protocolVersion = _protocolVersion,
                     capabilities = new
                     {
                         tools = new { listChanged = true },
-                        resources = new { subscribe = true, listChanged = true },
-                        prompts = new { listChanged = true },
                         logging = new { }
                     },
                     serverInfo = new
@@ -169,7 +184,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);
-            Console.Out.Flush();
         }
 
         /// <summary>
@@ -183,6 +197,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
             List<object> toolsWire = new();
             int count = 0;
 
+            // Tools are expected to be registered during application startup only.
+            // If this ever changes and tools can be added/removed at runtime while
+            // requests are being handled, we may need to introduce locking here or
+            // have the registry return a thread-safe snapshot.
             foreach (Tool tool in _toolRegistry.GetAllTools())
             {
                 count++;
@@ -195,7 +213,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             WriteResult(id, new { tools = toolsWire });
-            Console.Out.Flush();
         }
 
         /// <summary>
@@ -209,7 +226,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (!root.TryGetProperty("params", out JsonElement @params) || @params.ValueKind != JsonValueKind.Object)
             {
                 WriteError(id, -32602, "Missing params");
-                Console.Out.Flush();
                 return;
             }
 
@@ -232,7 +248,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             {
                 Console.Error.WriteLine("[MCP DEBUG] callTool → missing tool name.");
                 WriteError(id, -32602, "Missing tool name");
-                Console.Out.Flush();
                 return;
             }
 
@@ -240,7 +255,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             {
                 Console.Error.WriteLine($"[MCP DEBUG] callTool → tool not found: {toolName}");
                 WriteError(id, -32602, $"Tool not found: {toolName}");
-                Console.Out.Flush();
                 return;
             }
 
@@ -270,7 +284,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 if (!string.IsNullOrWhiteSpace(stdioRole))
                 {
                     IServiceScopeFactory scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-                    IServiceScope scope = scopeFactory.CreateScope();
+                    using IServiceScope scope = scopeFactory.CreateScope();
                     IServiceProvider scopedProvider = scope.ServiceProvider;
 
                     // Create a default HttpContext and set the client role header
@@ -290,13 +304,18 @@ namespace Azure.DataApiBuilder.Mcp.Core
                         httpContextAccessor.HttpContext = httpContext;
                     }
 
-                    // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                    callResult = await tool.ExecuteAsync(argsDoc, scopedProvider, ct);
-
-                    // Clear the accessor's HttpContext to avoid leaking across calls
-                    if (httpContextAccessor is not null)
+                    try
                     {
-                        httpContextAccessor.HttpContext = null;
+                        // Execute the tool with the scoped service provider so any scoped services resolve correctly.
+                        callResult = await tool.ExecuteAsync(argsDoc, scopedProvider, ct);
+                    }
+                    finally
+                    {
+                        // Clear the accessor's HttpContext to avoid leaking across calls
+                        if (httpContextAccessor is not null)
+                        {
+                            httpContextAccessor.HttpContext = null;
+                        }
                     }
                 }
                 else
@@ -309,7 +328,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 object[] content = CoerceToMcpContentBlocks(callResult);
 
                 WriteResult(id, new { content });
-                Console.Out.Flush();
             }
             finally
             {
@@ -392,7 +410,19 @@ namespace Azure.DataApiBuilder.Mcp.Core
             try
             {
                 // Try JSON first for readability
-                return JsonSerializer.Serialize(obj);
+                string json = JsonSerializer.Serialize(obj);
+
+                // If JSON is extremely large, truncate to avoid flooding MCP output.
+                // 32 KB is large enough to show useful JSON detail for diagnostics
+                // without flooding MCP output or impacting performance.
+                const int MAX_JSON_PREVIEW_CHARS = 32 * 1024; // 32 KB
+
+                if (json.Length > MAX_JSON_PREVIEW_CHARS)
+                {
+                    return string.Concat(json.AsSpan(0, MAX_JSON_PREVIEW_CHARS), $"... [truncated, total length={json.Length} chars]");
+                }
+
+                return json;
             }
             catch
             {
@@ -416,7 +446,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);
-            Console.Out.Flush();
         }
 
         /// <summary>
@@ -436,7 +465,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             string json = JsonSerializer.Serialize(errorObj);
             Console.Out.WriteLine(json);
-            Console.Out.Flush();
         }
 
         /// <summary>

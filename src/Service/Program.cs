@@ -47,9 +47,6 @@ namespace Azure.DataApiBuilder.Service
                 Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
                 Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
-                // MCP requires STDOUT to contain only protocol JSON; send all other text to STDERR
-                Console.SetOut(Console.Error);
-
                 // If caller provided an optional role token like `role:authenticated`, capture it and
                 // force the runtime to use the Simulator authentication provider for this session.
                 // This makes it easy to run MCP stdio sessions with a preconfigured permissions role.

@@ -351,8 +351,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             entity = entityElement.GetString() ?? string.Empty;
 
             // Extract parameters if provided (optional)
-            if (rootElement.TryGetProperty("parameters", out JsonElement parametersElement) &&
-                parametersElement.ValueKind == JsonValueKind.Object)
+            if (rootElement.TryGetProperty("arguments", out JsonElement argumentsElement) &&
+                argumentsElement.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty property in argumentsElement.EnumerateObject())
+                {
+                    parameters[property.Name] = GetParameterValue(property.Value);
+                }
+            }
+            else if (rootElement.TryGetProperty("parameters", out JsonElement parametersElement) &&
+                    parametersElement.ValueKind == JsonValueKind.Object)
             {
                 foreach (JsonProperty property in parametersElement.EnumerateObject())
                 {

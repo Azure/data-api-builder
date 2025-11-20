@@ -115,7 +115,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         provider.GetConfig().ToJson(),
                         graphQLSchema: null,
                         connectionString: connectionString,
-                        accessToken: CONFIG_TOKEN);
+                        accessToken: CONFIG_TOKEN,
+                        replacementSettings: new());
                     msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }

@@ -182,17 +182,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
     /// <param name="logger">ILogger for logging errors.</param>
     /// <param name="isDevMode">When not null indicates we need to overwrite mode and how to do so.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, uses default settings with environment variable replacement disabled.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,
         [NotNullWhen(true)] out RuntimeConfig? config,
-        bool replaceEnvVar = false,
         ILogger? logger = null,
-        bool? isDevMode = null)
+        bool? isDevMode = null,
+        DeserializationVariableReplacementSettings? replacementSettings = null)
     {
         if (_fileSystem.File.Exists(path))
         {
@@ -226,7 +225,15 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 }
             }
 
-            if (!string.IsNullOrEmpty(json) && TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
+            // Use default replacement settings if none provided
+            replacementSettings ??= new DeserializationVariableReplacementSettings();
+
+            if (!string.IsNullOrEmpty(json) && TryParseConfig(
+                json,
+                out RuntimeConfig,
+                replacementSettings,
+                logger: null,
+                connectionString: _connectionString))
             {
                 if (TrySetupConfigFileWatcher())
                 {
@@ -292,12 +299,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Tries to load the config file using the filename known to the RuntimeConfigLoader and for the default environment.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, uses default settings with environment variable replacement disabled.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
-        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
+        // Convert legacy replaceEnvVar parameter to replacement settings for backward compatibility
+        DeserializationVariableReplacementSettings? replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: replaceEnvVar);
+        return TryLoadConfig(ConfigFilePath, out config, replacementSettings: replacementSettings);
     }
 
     /// <summary>
@@ -307,7 +315,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        if (!TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, isDevMode: isDevMode))
+
+        // Use default replacement settings for hot reload
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+
+        if (!TryLoadConfig(ConfigFilePath, out _, logger: logger, isDevMode: isDevMode, replacementSettings: replacementSettings))
         {
             throw new DataApiBuilderException(
                 message: "Deserialization of the configuration file failed.",
@@ -467,7 +479,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
         string? schemaPath = _fileSystem.Path.Combine(assemblyDirectory, "dab.draft.schema.json");
         string schemaFileContent = _fileSystem.File.ReadAllText(schemaPath);
-        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions());
+        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions(replacementSettings: null));
 
         if (jsonDictionary is null)
         {

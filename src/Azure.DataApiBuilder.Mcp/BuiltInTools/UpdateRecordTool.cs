@@ -231,8 +231,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (Exception ex)
             {
-                ILogger<UpdateRecordTool>? innerLogger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
-                innerLogger?.LogError(ex, "Unexpected error in UpdateRecordTool.");
+                logger?.LogError(ex, "Unexpected error in UpdateRecordTool.");
 
                 return BuildErrorResult(
                     "UnexpectedError",

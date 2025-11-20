@@ -323,8 +323,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (Exception ex)
             {
-                ILogger<DeleteRecordTool>? innerLogger = serviceProvider.GetService<ILogger<DeleteRecordTool>>();
-                innerLogger?.LogError(ex, "Unexpected error in DeleteRecordTool.");
+                logger?.LogError(ex, "Unexpected error in DeleteRecordTool.");
 
                 return McpResponseBuilder.BuildErrorResult(
                     "UnexpectedError",

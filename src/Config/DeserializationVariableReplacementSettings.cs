@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else
                 {
-                _akvClient = CreateSecretClient(_azureKeyVaultOptions);
+                    _akvClient = CreateSecretClient(_azureKeyVaultOptions);
                 }
 
                 ReplacementStrategies.Add(

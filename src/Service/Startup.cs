@@ -32,6 +32,7 @@ using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
 using Azure.Identity;
 using Azure.Monitor.Ingestion;
+using Microsoft.Azure.Cosmos;
 using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.Execution;
@@ -105,13 +106,68 @@ namespace Azure.DataApiBuilder.Service
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
-            IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, _hotReloadEventHandler, configFileName, connectionString);
+
+            string configSource = Configuration.GetValue<string>("ConfigSource")
+                ?? Environment.GetEnvironmentVariable("DAB_CONFIG_SOURCE")
+                ?? "FileSystem";
+
+            RuntimeConfigLoader configLoader;
+
+            switch (configSource.ToLowerInvariant())
+            {
+                case "cosmosdb":
+                    string cosmosConnectionString =
+                        Configuration.GetValue<string>("CosmosDB:ConnectionString")
+                        ?? Environment.GetEnvironmentVariable("DAB_COSMOS_CONNECTION_STRING")
+                        ?? throw new InvalidOperationException("CosmosDB connection string missing.");
+
+                    string databaseName =
+                        Configuration.GetValue<string>("CosmosDB:DatabaseName")
+                        ?? Environment.GetEnvironmentVariable("DAB_COSMOS_DATABASE")
+                        ?? "dab-config";
+
+                    string containerName =
+                        Configuration.GetValue<string>("CosmosDB:ContainerName")
+                        ?? Environment.GetEnvironmentVariable("DAB_COSMOS_CONTAINER")
+                        ?? "configurations";
+
+                    string documentId =
+                        Configuration.GetValue<string>("CosmosDB:DocumentId")
+                        ?? Environment.GetEnvironmentVariable("DAB_COSMOS_DOCUMENT_ID")
+                        ?? "runtime-config";
+
+                    string partitionKey =
+                        Configuration.GetValue<string>("CosmosDB:PartitionKey")
+                        ?? Environment.GetEnvironmentVariable("DAB_COSMOS_PARTITION_KEY")
+                        ?? "production";
+
+                    CosmosClient cosmosClient = new(cosmosConnectionString);
+                    services.AddSingleton(cosmosClient);
+
+                    configLoader = new CosmosDbRuntimeConfigLoader(
+                        cosmosClient,
+                        databaseName,
+                        containerName,
+                        documentId,
+                        partitionKey,
+                        _hotReloadEventHandler,
+                        connectionString);
+                    break;
+
+                default:
+                    IFileSystem fileSystem = new FileSystem();
+                    services.AddSingleton(fileSystem);
+                    configLoader = new FileSystemRuntimeConfigLoader(
+                        fileSystem,
+                        _hotReloadEventHandler,
+                        configFileName,
+                        connectionString);
+                    break;
+            }
+
+            services.AddSingleton(configLoader);
             RuntimeConfigProvider configProvider = new(configLoader);
             _configProvider = configProvider;
-
-            services.AddSingleton(fileSystem);
-            services.AddSingleton(configLoader);
             services.AddSingleton(configProvider);
 
             bool runtimeConfigAvailable = configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);

@@ -84,8 +84,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<UpdateRecordTool>? logger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
-
-            // 1) Resolve required services & configuration
+            string toolName = GetToolMetadata().Name;
 
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             RuntimeConfig config = runtimeConfigProvider.GetConfig();
@@ -94,6 +93,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             if (config.McpDmlTools?.UpdateRecord != true)
             {
                 return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "ToolDisabled",
                     "The update_record tool is disabled in the configuration.",
                     logger);
@@ -107,12 +107,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 3) Parsing & basic argument validation (entity, keys, fields)
                 if (arguments is null)
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
                 if (!TryParseArguments(arguments.RootElement, out string entityName, out Dictionary<string, object?> keys, out Dictionary<string, object?> fields, out string parseError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
@@ -129,12 +129,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (Exception)
                 {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
                 {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
                 // 5) Authorization after we have a known entity
@@ -144,12 +144,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
                 }
 
                 if (!TryResolveAuthorizedRoleHasPermission(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", $"Permission denied: {authError}", logger);
                 }
 
                 // 6) Build and validate Upsert (UpdateIncremental) context
@@ -166,7 +166,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     if (kvp.Value is null)
                     {
-                        return McpResponseBuilder.BuildErrorResult("InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
                     }
 
                     context.PrimaryKeyValuePairs[kvp.Key] = kvp.Value;
@@ -195,6 +195,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     if (errorMsg.Contains("No Update could be performed, record not found", StringComparison.OrdinalIgnoreCase))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "InvalidArguments",
                             "No record found with the given key.",
                             logger);
@@ -238,17 +239,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (OperationCanceledException)
             {
-                return McpResponseBuilder.BuildErrorResult("OperationCanceled", "The update operation was canceled.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The update operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
-                return McpResponseBuilder.BuildErrorResult("InvalidArguments", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
             }
             catch (Exception ex)
             {
                 ILogger<UpdateRecordTool>? innerLogger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
                 innerLogger?.LogError(ex, "Unexpected error in UpdateRecordTool.");
                 return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "UnexpectedError",
                     ex.Message ?? "An unexpected error occurred during the update operation.",
                     logger);

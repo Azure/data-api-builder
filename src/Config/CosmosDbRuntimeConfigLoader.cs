@@ -21,6 +21,12 @@ public class CosmosDbRuntimeConfigLoader : RuntimeConfigLoader
     private string? _lastETag;
     private Timer? _pollingTimer;
 
+    /// <summary>
+    /// Default polling interval for checking configuration changes in CosmosDB.
+    /// Used only when in development mode.
+    /// </summary>
+    private const int DEFAULT_POLLING_INTERVAL_SECONDS = 5;
+
     public CosmosDbRuntimeConfigLoader(
         CosmosClient cosmosClient,
         string databaseName,
@@ -46,6 +52,7 @@ public class CosmosDbRuntimeConfigLoader : RuntimeConfigLoader
             ItemResponse<ConfigDocument> response = _container
                 .ReadItemAsync<ConfigDocument>(
                     _documentId, new PartitionKey(_partitionKey))
+                .ConfigureAwait(false)
                 .GetAwaiter()
                 .GetResult();
 
@@ -92,8 +99,8 @@ public class CosmosDbRuntimeConfigLoader : RuntimeConfigLoader
         _pollingTimer ??= new Timer(
             callback: CheckForConfigChanges,
             state: null,
-            dueTime: TimeSpan.FromSeconds(5),
-            period: TimeSpan.FromSeconds(5));
+            dueTime: TimeSpan.FromSeconds(DEFAULT_POLLING_INTERVAL_SECONDS),
+            period: TimeSpan.FromSeconds(DEFAULT_POLLING_INTERVAL_SECONDS));
     }
 
     private void CheckForConfigChanges(object? state)
@@ -103,6 +110,7 @@ public class CosmosDbRuntimeConfigLoader : RuntimeConfigLoader
             ItemResponse<ConfigDocument> response = _container
                 .ReadItemAsync<ConfigDocument>(
                     _documentId, new PartitionKey(_partitionKey))
+                .ConfigureAwait(false)
                 .GetAwaiter()
                 .GetResult();
 

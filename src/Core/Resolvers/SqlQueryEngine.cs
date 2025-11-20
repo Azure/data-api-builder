@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, ObjectField fieldSchema, ref IMetadata metadata)
         {
 
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>List of JsonElements parsed from the provided JSON array.</returns>
         /// <remarks>Return type is 'object' instead of a 'List of JsonElements' because when this function returns JsonElement,
         /// the HC12 engine doesn't know how to handle the JsonElement and results in requests failing at runtime.</remarks>
-        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata? metadata)
+        public object ResolveList(JsonElement array, ObjectField fieldSchema, ref IMetadata? metadata)
         {
             if (metadata is not null)
             {

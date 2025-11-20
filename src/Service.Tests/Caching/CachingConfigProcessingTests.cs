@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -56,10 +55,7 @@ public class CachingConfigProcessingTests
         RuntimeConfigLoader.TryParseConfig(
             json: fullConfig,
             out RuntimeConfig? config,
-            logger: null,
-            connectionString: null,
-            replaceEnvVar: false,
-            replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+            replacementSettings: null);
 
         // Assert
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
@@ -103,10 +99,7 @@ public class CachingConfigProcessingTests
         bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
             json: fullConfig,
             out _,
-            logger: null,
-            connectionString: null,
-            replaceEnvVar: false,
-            replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+            replacementSettings: null);
 
         // Assert
         Assert.IsFalse(isParsingSuccessful, message: "Expected JSON parsing to fail.");
@@ -141,10 +134,7 @@ public class CachingConfigProcessingTests
         RuntimeConfigLoader.TryParseConfig(
             json: fullConfig,
             out RuntimeConfig? config,
-            logger: null,
-            connectionString: null,
-            replaceEnvVar: false,
-            replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+            replacementSettings: null);
 
         // Assert
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
@@ -187,10 +177,7 @@ public class CachingConfigProcessingTests
         bool parsingSuccessful = RuntimeConfigLoader.TryParseConfig(
             json: fullConfig,
             out _,
-            logger: null,
-            connectionString: null,
-            replaceEnvVar: false,
-            replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+            replacementSettings: null);
 
         // Assert
         Assert.IsFalse(parsingSuccessful, message: "Expected JSON parsing to fail.");
@@ -216,10 +203,7 @@ public class CachingConfigProcessingTests
         RuntimeConfigLoader.TryParseConfig(
                        json: fullConfig,
                        out RuntimeConfig? config,
-                       logger: null,
-                       connectionString: null,
-                       replaceEnvVar: false,
-                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+                       replacementSettings: null);
 
         // Assert
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
@@ -252,10 +236,7 @@ public class CachingConfigProcessingTests
         RuntimeConfigLoader.TryParseConfig(
                        json: fullConfig,
                        out RuntimeConfig? config,
-                       logger: null,
-                       connectionString: null,
-                       replaceEnvVar: false,
-                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+                       replacementSettings: null);
         Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
 
         // Act
@@ -300,10 +281,7 @@ public class CachingConfigProcessingTests
         RuntimeConfigLoader.TryParseConfig(
                        json: fullConfig,
                        out RuntimeConfig? config,
-                       logger: null,
-                       connectionString: null,
-                       replaceEnvVar: false,
-                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+                       replacementSettings: null);
         Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
 
         // Act
@@ -342,10 +320,7 @@ public class CachingConfigProcessingTests
         RuntimeConfigLoader.TryParseConfig(
                        json: fullConfig,
                        out RuntimeConfig? config,
-                       logger: null,
-                       connectionString: null,
-                       replaceEnvVar: false,
-                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+                       replacementSettings: null);
         Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
 
         // Act

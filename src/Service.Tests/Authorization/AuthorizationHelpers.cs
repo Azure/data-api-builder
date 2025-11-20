@@ -112,6 +112,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             Entity sampleEntity = new(
                 Source: entitySource,
+                Fields: null,
                 Rest: new(Array.Empty<SupportedHttpVerb>()),
                 GraphQL: new(entityName.Singularize(), entityName.Pluralize()),
                 Permissions: new EntityPermission[] { permissionForEntity },
@@ -126,6 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
+                    Mcp: new(),
                     Host: new(
                         Cors: null,
                         Authentication: new(authProvider, null)

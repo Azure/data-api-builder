@@ -46,6 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    Host: new(null, null)
                ),
                Entities: new(new Dictionary<string, Entity>())
@@ -80,7 +81,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         provider.GetConfig().ToJson(),
                         graphQLSchema: null,
                         connectionString: connectionString,
-                        accessToken: CONFIG_TOKEN);
+                        accessToken: CONFIG_TOKEN,
+                        replacementSettings: new());
                     mySqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }

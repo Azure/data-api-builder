@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
                 .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(queryEngineFactory.Object, mutationEngineFactory.Object, provider)));
-            ISchema schema = schemaBuilder.Create();
+            Schema schema = schemaBuilder.Create();
             IExecutionResult result = await schema.MakeExecutable().ExecuteAsync(_query);
 
             // client is mapped as belonging to the sql data source.
@@ -251,6 +251,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    Host: new(Cors: null, Authentication: null)
                ),
                DefaultDataSourceName: DATA_SOURCE_NAME_1,
@@ -312,6 +313,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),
+                   Mcp: new(),
                    // use prod mode to avoid having to mock config file watcher
                    Host: new(Cors: null, Authentication: null, HostMode.Production)
                ),

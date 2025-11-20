@@ -78,11 +78,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                    {"database", globalDatabase},
                    {"container", globalContainer}
                    }),
-                   Runtime: new(Rest: null, GraphQL: new(), Host: new(null, null)),
+                   Runtime: new(Rest: null, GraphQL: new(), Mcp: new(), Host: new(null, null)),
                    Entities: new(new Dictionary<string, Entity>()
                    {
                        {"Container1", new Entity(
                             Source: new(entitySource, EntitySourceType.Table, null, null),
+                            Fields: null,
                             Rest: new(Enabled: false),
                             GraphQL: new("Container1", "Container1s"),
                             Permissions: new EntityPermission[] {},
@@ -90,6 +91,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                             Mappings: null) },
                        {"Container2", new Entity(
                             Source: new("mydb2.container2", EntitySourceType.Table, null, null),
+                            Fields: null,
                             Rest: new(Enabled: false),
                             GraphQL: new("Container2", "Container2s"),
                             Permissions: new EntityPermission[] {},
@@ -97,6 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                             Mappings: null) },
                        {"Container0", new Entity(
                             Source: new(null, EntitySourceType.Table, null, null),
+                            Fields: null,
                             Rest: new(Enabled: false),
                             GraphQL: new("Container0", "Container0s"),
                             Permissions: new EntityPermission[] {},

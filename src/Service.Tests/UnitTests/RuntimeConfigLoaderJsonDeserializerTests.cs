@@ -79,18 +79,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 if (replaceEnvVar)
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repValues, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repValues, @"""postgresql"""), out expectedConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: false)),
                         "Should read the expected config");
                 }
                 else
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repKeys, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repKeys, @"""postgresql"""), out expectedConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: false)),
                         "Should read the expected config");
                 }
 
                 Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replaceEnvVar: replaceEnvVar),
+                    GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out RuntimeConfig actualConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: false)),
                     "Should read actual config");
                 Assert.AreEqual(expectedConfig.ToJson(), actualConfig.ToJson());
             }
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceConfigForGivenDatabase(databaseType));
             bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: replaceEnvVar);
+              configWithEnvVar, out RuntimeConfig runtimeConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: true));
 
             // Assert
             Assert.IsTrue(isParsingSuccessful);
@@ -178,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceOptionsForCosmosDBWithInvalidValues());
             bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: true);
+              configWithEnvVar, out RuntimeConfig runtimeConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true));
 
             // Assert
             Assert.IsTrue(isParsingSuccessful);
@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TryParseAndAssertOnDefaults("{" + emptyRuntime, out _);
 
             // Test with empty sub properties of runtime
-            minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
+            minJson.Append(@"{ ""rest"": { }, ""graphql"": { }, ""mcp"": { },
                             ""base-route"" : """",");
             StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
             StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string json = @"{ ""foo"" : ""@env('envVarName'), @env('" + invalidEnvVarName + @"')"" }";
             SetEnvVariables();
-            StringJsonConverterFactory stringConverterFactory = new(EnvironmentVariableReplacementFailureMode.Throw);
+            StringJsonConverterFactory stringConverterFactory = new(new(doReplaceEnvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Throw));
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
             options.Converters.Add(stringConverterFactory);
             Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
@@ -324,7 +324,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     ""entities"":{ }
 }";
             // replaceEnvVar: true is needed to make sure we do post-processing for the connection string case
-            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, replaceEnvVar: true));
+            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, replacementSettings: new DeserializationVariableReplacementSettings(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true)));
             Assert.IsNull(deserializedConfig);
         }
 
@@ -343,7 +343,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-            Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
+            // Use null replacement settings for this test
+            Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _, replacementSettings: null));
         }
 
         /// <summary>
@@ -422,6 +423,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ""enabled"": false
         }
       }
+    },
+    ""mcp"": {
+      ""enabled"": true,
+      ""path"": """ + reps[++index % reps.Length] + @"""
     },
     ""host"": {
       ""mode"": ""development"",
@@ -505,6 +510,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                   ""allow-introspection"": true,
                   ""enabled"": true,
                   ""path"": ""/graphql""
+                },
+                ""mcp"": {
+                  ""enabled"": true,
+                  ""path"": ""/mcp""
                 },
                 ""host"": {
                   ""mode"": ""development"",
@@ -641,6 +650,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(RestRuntimeOptions.DEFAULT_PATH, parsedConfig.RestPath);
             Assert.IsTrue(parsedConfig.IsGraphQLEnabled);
             Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, parsedConfig.GraphQLPath);
+            Assert.IsTrue(parsedConfig.IsMcpEnabled);
+            Assert.AreEqual(McpRuntimeOptions.DEFAULT_PATH, parsedConfig.McpPath);
             Assert.IsTrue(parsedConfig.AllowIntrospection);
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
             Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);

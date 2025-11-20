@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// 3. when datasource options is empty, it is deserialized as an empty dictionary
         /// 4. when datasource options is null, it is correctly deserialized as null.
         /// 5. when datasource options is not given, it is correctly deserialized as null.
-        /// MySQL, PgSql, and DwSQL db types are unaffected by replaceEnvVar because those db's don't support options.
+        /// MySQL, PgSql, and DwSql db types are unaffected by replaceEnvVar because those db's don't support options.
         /// </summary>
         /// <param name="replaceEnvVar">A boolean indicating whether to replace environment variables in the configuration.</param>
         [DataTestMethod]

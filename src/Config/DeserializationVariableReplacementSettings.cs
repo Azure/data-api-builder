@@ -8,7 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
-using Microsoft.Extensions.Logging; // added for logging malformed .akv lines
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config
 {

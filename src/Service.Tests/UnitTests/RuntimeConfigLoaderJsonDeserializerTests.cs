@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// 3. when datasource options is empty, it is deserialized as an empty dictionary
         /// 4. when datasource options is null, it is correctly deserialized as null.
         /// 5. when datasource options is not given, it is correctly deserialized as null.
-        /// MySQL, PgSql, and DwSql db types are unaffected by replaceEnvVar because those db's don't support options.
+        /// MySQL, PgSql, and DwSQL db types are unaffected by replaceEnvVar because those db's don't support options.
         /// </summary>
         /// <param name="replaceEnvVar">A boolean indicating whether to replace environment variables in the configuration.</param>
         [DataTestMethod]
@@ -671,5 +671,57 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         #endregion Helper Functions
 
         record StubJsonType(string Foo);
+
+        /// <summary>
+        /// Test to verify Azure Key Vault variable replacement from local .akv file.
+        /// </summary>
+        [TestMethod]
+        public void TestAkvVariableReplacementFromLocalFile()
+        {
+            // Arrange: create a temporary .akv secrets file
+            string akvFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".akv");
+            string secretConnectionString = "Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;";
+            File.WriteAllText(akvFilePath, $"DB_CONN={secretConnectionString}\nAPI_KEY=abcd\n# Comment line should be ignored\n MALFORMEDLINE \n");
+
+            // Escape backslashes for JSON
+            string escapedPath = akvFilePath.Replace("\\", "\\\\");
+
+            string jsonConfig = $$"""
+            {
+              "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json",
+              "data-source": {
+                "database-type": "mssql",
+                "connection-string": "@AKV('DB_CONN')"
+              },
+              "azure-key-vault": {
+                "endpoint": "{{escapedPath}}"
+              },
+              "entities": { }
+            }
+            """;
+
+            try
+            {
+                // Act
+                DeserializationVariableReplacementSettings replacementSettings = new(
+                    azureKeyVaultOptions: null,
+                    doReplaceEnvVar: false,
+                    doReplaceAkvVar: true);
+                bool parsed = RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig config, replacementSettings: replacementSettings);
+
+                // Assert
+                Assert.IsTrue(parsed, "Config should parse successfully with local AKV file replacement.");
+                Assert.IsNotNull(config, "Config should not be null.");
+                Assert.AreEqual(secretConnectionString, config.DataSource.ConnectionString, "Connection string should be replaced from AKV local file secret.");
+            }
+            finally
+            {
+                // Cleanup
+                if (File.Exists(akvFilePath))
+                {
+                    File.Delete(akvFilePath);
+                }
+            }
+        }
     }
 }

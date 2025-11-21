@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -142,8 +143,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 // Need MetadataProviderFactory for RequestValidator; resolve here.
-                var metadataProviderFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
-                Azure.DataApiBuilder.Core.Services.RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
+                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
+                RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
 
                 DeleteRequestContext context = new(
                     entityName: entityName,

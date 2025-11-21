@@ -5,7 +5,6 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -91,7 +90,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         entityName,
                         runtimeConfig,
                         serviceProvider,
-                        out Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider sqlMetadataProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
                         out DatabaseObject dbObject,
                         out string dataSourceName,
                         out string metadataError))

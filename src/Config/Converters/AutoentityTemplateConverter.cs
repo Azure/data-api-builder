@@ -9,15 +9,14 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
 {
-    // Determines whether to replace environment variable with its
-    // value or not while deserializing.
-    private bool _replaceEnvVar;
+    // Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    public AutoentityTemplateConverter(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    public AutoentityTemplateConverter(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     /// <inheritdoc/>
@@ -26,11 +25,11 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
         if (reader.TokenType is JsonTokenType.StartObject)
         {
             // Create converters for each of the sub-properties.
-            EntityRestOptionsConverterFactory restOptionsConverterFactory = new(_replaceEnvVar);
+            EntityRestOptionsConverterFactory restOptionsConverterFactory = new(_replacementSettings);
             JsonConverter<EntityRestOptions> restOptionsConverter = (JsonConverter<EntityRestOptions>)(restOptionsConverterFactory.CreateConverter(typeof(EntityRestOptions), options)
                 ?? throw new JsonException("Unable to create converter for EntityRestOptions"));
 
-            EntityGraphQLOptionsConverterFactory graphQLOptionsConverterFactory = new(_replaceEnvVar);
+            EntityGraphQLOptionsConverterFactory graphQLOptionsConverterFactory = new(_replacementSettings);
             JsonConverter<EntityGraphQLOptions> graphQLOptionsConverter = (JsonConverter<EntityGraphQLOptions>)(graphQLOptionsConverterFactory.CreateConverter(typeof(EntityGraphQLOptions), options)
                 ?? throw new JsonException("Unable to create converter for EntityGraphQLOptions"));
 
@@ -38,7 +37,7 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
             JsonConverter<EntityHealthCheckConfig> healthOptionsConverter = (JsonConverter<EntityHealthCheckConfig>)(healthOptionsConverterFactory.CreateConverter(typeof(EntityHealthCheckConfig), options)
                 ?? throw new JsonException("Unable to create converter for EntityHealthCheckConfig"));
 
-            EntityCacheOptionsConverterFactory cacheOptionsConverterFactory = new(_replaceEnvVar);
+            EntityCacheOptionsConverterFactory cacheOptionsConverterFactory = new(_replacementSettings);
             JsonConverter<EntityCacheOptions> cacheOptionsConverter = (JsonConverter<EntityCacheOptions>)(cacheOptionsConverterFactory.CreateConverter(typeof(EntityCacheOptions), options)
                 ?? throw new JsonException("Unable to create converter for EntityCacheOptions"));
 

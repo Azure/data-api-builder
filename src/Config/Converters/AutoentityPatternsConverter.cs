@@ -9,15 +9,14 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class AutoentityPatternsConverter : JsonConverter<AutoentityPatterns>
 {
-    // Determines whether to replace environment variable with its
-    // value or not while deserializing.
-    private bool _replaceEnvVar;
+    // Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    public AutoentityPatternsConverter(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    public AutoentityPatternsConverter(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     /// <inheritdoc/>
@@ -50,7 +49,7 @@ internal class AutoentityPatternsConverter : JsonConverter<AutoentityPatterns>
                             {
                                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                                 {
-                                    string? value = reader.DeserializeString(_replaceEnvVar);
+                                    string? value = reader.DeserializeString(_replacementSettings);
                                     if (value is not null)
                                     {
                                         includeList.Add(value);
@@ -76,7 +75,7 @@ internal class AutoentityPatternsConverter : JsonConverter<AutoentityPatterns>
                             {
                                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                                 {
-                                    string? value = reader.DeserializeString(_replaceEnvVar);
+                                    string? value = reader.DeserializeString(_replacementSettings);
                                     if (value is not null)
                                     {
                                         excludeList.Add(value);
@@ -94,7 +93,7 @@ internal class AutoentityPatternsConverter : JsonConverter<AutoentityPatterns>
                         break;
 
                     case "name":
-                        name = reader.DeserializeString(_replaceEnvVar);
+                        name = reader.DeserializeString(_replacementSettings);
                         break;
 
                     default:

@@ -9,15 +9,14 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class AutoentityConverter : JsonConverter<Autoentity>
 {
-    // Determines whether to replace environment variable with its
-    // value or not while deserializing.
-    private bool _replaceEnvVar;
+    // Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    public AutoentityConverter(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    public AutoentityConverter(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     /// <inheritdoc/>
@@ -43,12 +42,12 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
                 switch (propertyName)
                 {
                     case "patterns":
-                        AutoentityPatternsConverter patternsConverter = new(_replaceEnvVar);
+                        AutoentityPatternsConverter patternsConverter = new(_replacementSettings);
                         patterns = patternsConverter.Read(ref reader, typeof(AutoentityPatterns), options);
                         break;
 
                     case "template":
-                        AutoentityTemplateConverter templateConverter = new(_replaceEnvVar);
+                        AutoentityTemplateConverter templateConverter = new(_replacementSettings);
                         template = templateConverter.Read(ref reader, typeof(AutoentityTemplate), options);
                         break;
 

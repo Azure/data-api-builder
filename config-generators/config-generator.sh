@@ -73,4 +73,22 @@ do
         eval $command;
     done <$commandFileNameWithPath;
 
+    # Post-process MsSql and DwSql config files to set stored procedures as query operations
+    if [[ $databaseType == "mssql" || $databaseType == "dwsql" ]]; then
+        # Use jq to modify the operation field for GetBooks and GetPublisher
+        if command -v jq &> /dev/null; then
+            tmp_file="${configFile}.tmp"
+            jq '
+                if .entities.GetBooks then
+                    .entities.GetBooks.graphql.operation = "query"
+                else . end |
+                if .entities.GetPublisher then
+                    .entities.GetPublisher.graphql.operation = "query"
+                else . end
+            ' "$configFile" > "$tmp_file" && mv "$tmp_file" "$configFile"
+        else
+            echo "Warning: jq not found. Skipping stored procedure operation post-processing."
+        fi
+    fi
+
 done

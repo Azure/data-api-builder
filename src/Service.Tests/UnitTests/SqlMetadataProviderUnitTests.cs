@@ -351,6 +351,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Rest: new(Enabled: false),
                 GraphQL: new("", ""),
                 Permissions: new EntityPermission[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: columnNameMappings
                 );
@@ -427,6 +428,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         Fields: null,
                         Rest: new(Enabled: true),
                         GraphQL: new("get_book_by_id", "get_book_by_ids", Enabled: true),
+                        Mcp: null,
                         Permissions: new EntityPermission[] {
                             new(
                                 Role: "anonymous",
@@ -590,3 +592,4 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
     }
 }
+

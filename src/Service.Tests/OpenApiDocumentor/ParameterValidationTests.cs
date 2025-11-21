@@ -238,6 +238,7 @@ public class ParameterValidationTests
             GraphQL: new(Singular: null, Plural: null, Enabled: false),
             Rest: new(Methods: supportedHttpMethods ?? EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
             Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
+            Mcp: null,
             Mappings: null,
             Relationships: null);
 
@@ -293,3 +294,4 @@ public class ParameterValidationTests
         }
     }
 }
+

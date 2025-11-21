@@ -49,6 +49,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 GraphQL: new(Singular: null, Plural: null, Enabled: false),
                 Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Path: configuredRestPath),
                 Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
+                Mcp: null,
                 Mappings: null,
                 Relationships: null);
 
@@ -73,3 +74,4 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         }
     }
 }
+

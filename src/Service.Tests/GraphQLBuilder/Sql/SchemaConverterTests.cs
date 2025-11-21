@@ -747,6 +747,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 Rest: new(Enabled: true),
                 GraphQL: new(entityName, ""),
                 Permissions: Array.Empty<EntityPermission>(),
+                Mcp: null,
                 Relationships: new(),
                 Mappings: new()
             );
@@ -952,3 +953,4 @@ type Book @model(name:""Book"") {
         }
     }
 }
+

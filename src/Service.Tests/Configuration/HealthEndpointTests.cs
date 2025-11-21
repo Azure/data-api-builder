@@ -523,6 +523,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Rest: new(Enabled: enableEntityRest),
                 GraphQL: new("book", "bookLists", enableEntityGraphQL),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -573,3 +574,4 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
     }
     #endregion
 }
+

@@ -50,6 +50,7 @@ using Moq.Protected;
 using Serilog;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
 
@@ -1140,10 +1141,21 @@ type Moon {
             // Sends a GET request to a protected entity which requires a specific role to access.
             // Authorization will pass because proper auth headers are present.
             HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: $"api/{POST_STARTUP_CONFIG_ENTITY}");
-            string swaTokenPayload = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
-                addAuthenticated: true,
-                specificRole: POST_STARTUP_CONFIG_ROLE);
-            message.Headers.Add(Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
+
+            // Use an AppService EasyAuth principal carrying the required role when
+            // authentication is configured to use AppService.
+            string appServiceTokenPayload = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims:
+                [
+                    new AppServiceClaim
+                    {
+                        Typ = Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                        Val = POST_STARTUP_CONFIG_ROLE
+                    }
+                ]);
+
+            message.Headers.Add(Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, appServiceTokenPayload);
             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, POST_STARTUP_CONFIG_ROLE);
             HttpResponseMessage authorizedResponse = await httpClient.SendAsync(message);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);

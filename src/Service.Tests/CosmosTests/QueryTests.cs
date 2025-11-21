@@ -105,7 +105,7 @@ query ($id: ID, $partitionKeyValue: String) {
                 queryName: "invalidAuthModel_by_pk",
                 query: MoonWithInvalidAuthorizationPolicy,
                 variables: new() { { "id", id }, { "partitionKeyValue", id } },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.

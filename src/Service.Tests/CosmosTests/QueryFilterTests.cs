@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, bool ignoreBlankResults = false, Dictionary<string, object> variables = null)
         {
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken, variables: variables);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             ValidateResults(actual.GetProperty("items"), expected.RootElement, ignoreBlankResults);
@@ -922,7 +922,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             string dbQuery = $"SELECT c.id " +
@@ -984,7 +984,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1012,7 +1012,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 queryName: "planets",
                 query: gqlQuery,
                 variables: new() { },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             Assert.AreEqual(response.GetProperty("items")[0].GetProperty("name").ToString(), "Earth");
@@ -1037,7 +1037,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement actual = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery, authToken: authToken);
             Assert.AreEqual(actual.GetProperty("items")[0].GetProperty("earth").GetProperty("id").ToString(), _idList[0]);
         }
@@ -1069,7 +1069,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1100,7 +1100,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1131,7 +1131,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string clientRoleHeader = "limited-read-role";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader);
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName,
                 query: gqlQuery,
                 authToken: authToken,
@@ -1190,7 +1190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.

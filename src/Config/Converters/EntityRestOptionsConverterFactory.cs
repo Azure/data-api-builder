@@ -9,9 +9,8 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class EntityRestOptionsConverterFactory : JsonConverterFactory
 {
-    /// Determines whether to replace environment variable with its
-    /// value or not while deserializing.
-    private bool _replaceEnvVar;
+    /// Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -22,27 +21,26 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new EntityRestOptionsConverter(_replaceEnvVar);
+        return new EntityRestOptionsConverter(_replacementSettings);
     }
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    internal EntityRestOptionsConverterFactory(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    internal EntityRestOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     internal class EntityRestOptionsConverter : JsonConverter<EntityRestOptions>
     {
-        // Determines whether to replace environment variable with its
-        // value or not while deserializing.
-        private bool _replaceEnvVar;
+        // Settings for variable replacement during deserialization.
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-        /// <param name="replaceEnvVar">Whether to replace environment variable with its
-        /// value or not while deserializing.</param>
-        public EntityRestOptionsConverter(bool replaceEnvVar)
+        /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+        /// If null, no variable replacement will be performed.</param>
+        public EntityRestOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <inheritdoc/>
@@ -67,7 +65,7 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
 
                             if (reader.TokenType is JsonTokenType.String || reader.TokenType is JsonTokenType.Null)
                             {
-                                restOptions = restOptions with { Path = reader.DeserializeString(_replaceEnvVar) };
+                                restOptions = restOptions with { Path = reader.DeserializeString(_replacementSettings) };
                                 break;
                             }
 
@@ -87,7 +85,7 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
                                     break;
                                 }
 
-                                methods.Add(EnumExtensions.Deserialize<SupportedHttpVerb>(reader.DeserializeString(replaceEnvVar: true)!));
+                                methods.Add(EnumExtensions.Deserialize<SupportedHttpVerb>(reader.DeserializeString(new DeserializationVariableReplacementSettings())!));
                             }
 
                             restOptions = restOptions with { Methods = methods.ToArray() };
@@ -108,7 +106,7 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
 
             if (reader.TokenType is JsonTokenType.String)
             {
-                return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), reader.DeserializeString(_replaceEnvVar), true);
+                return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), reader.DeserializeString(_replacementSettings), true);
             }
 
             if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)

@@ -838,9 +838,9 @@ type Moon {
 
             // Act
             bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                runtimeConfig.ToJson(),
-                out RuntimeConfig updatedRuntimeConfig,
-                replaceEnvVar: true);
+                json: runtimeConfig.ToJson(),
+                config: out RuntimeConfig updatedRuntimeConfig,
+                replacementSettings: new(doReplaceEnvVar: true));
 
             // Assert
             Assert.AreEqual(
@@ -891,9 +891,9 @@ type Moon {
 
             // Act
             bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                runtimeConfig.ToJson(),
-                out RuntimeConfig updatedRuntimeConfig,
-                replaceEnvVar: true);
+                json: runtimeConfig.ToJson(),
+                config: out RuntimeConfig updatedRuntimeConfig,
+                replacementSettings: new(doReplaceEnvVar: true));
 
             // Assert
             Assert.AreEqual(
@@ -956,9 +956,9 @@ type Moon {
 
             // Act
             bool configParsed = RuntimeConfigLoader.TryParseConfig(
-                runtimeConfig.ToJson(),
-                out RuntimeConfig updatedRuntimeConfig,
-                replaceEnvVar: true);
+                json: runtimeConfig.ToJson(),
+                config: out RuntimeConfig updatedRuntimeConfig,
+                replacementSettings: new(doReplaceEnvVar: true));
 
             // Assert
             Assert.AreEqual(
@@ -2346,7 +2346,12 @@ type Moon {
            HttpStatusCode expectedResponseStatusCode)
         {
             string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
-            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig deserializedConfig,
+                replacementSettings: new(),
+                logger: null,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -2429,7 +2434,12 @@ type Moon {
             // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the
             // configuration file (instead of using CLI).
             string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig deserializedConfig,
+                replacementSettings: new(),
+                logger: null,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -3290,7 +3300,12 @@ type Moon {
 
             // The BASE_CONFIG omits the rest.request-body-strict option in the runtime section.
             string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
-            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig deserializedConfig,
+                replacementSettings: new(),
+                logger: null,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, deserializedConfig.ToJson());
             string[] args = new[]
@@ -5619,7 +5634,7 @@ type Planet @model(name:""PlanetAlias"") {
             string sqlFile = new FileSystemRuntimeConfigLoader(fileSystem).GetFileNameForEnvironment(environment, considerOverrides: true);
             string configPayload = File.ReadAllText(sqlFile);
 
-            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig, replaceEnvVar: true);
+            RuntimeConfigLoader.TryParseConfig(configPayload, out RuntimeConfig runtimeConfig, replacementSettings: new());
 
             return runtimeConfig.DataSource.ConnectionString;
         }

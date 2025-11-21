@@ -92,6 +92,7 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
 
                             restOptions = restOptions with { Methods = methods.ToArray() };
                             break;
+
                         case "enabled":
                             reader.Read();
                             restOptions = restOptions with { Enabled = reader.GetBoolean() };

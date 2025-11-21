@@ -1,31 +1,30 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
-/// <summary>
-/// Custom JSON converter for RuntimeAutoEntities.
-/// </summary>
-class RuntimeAutoEntitiesConverter : JsonConverter<RuntimeAutoEntities>
+class RuntimeAutoentitiesConverter : JsonConverter<RuntimeAutoentities>
 {
     /// <inheritdoc/>
-    public override RuntimeAutoEntities? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override RuntimeAutoentities? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        Dictionary<string, AutoEntity>? autoEntities =
-            JsonSerializer.Deserialize<Dictionary<string, AutoEntity>>(ref reader, options);
+        Dictionary<string, Autoentity> autoEntities =
+            JsonSerializer.Deserialize<Dictionary<string, Autoentity>>(ref reader, options) ??
+            throw new JsonException("Failed to read autoentities");
 
-        return new RuntimeAutoEntities(autoEntities);
+        return new RuntimeAutoentities(new ReadOnlyDictionary<string, Autoentity>(autoEntities));
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, RuntimeAutoEntities value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, RuntimeAutoentities value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        foreach ((string key, AutoEntity autoEntity) in value)
+        foreach ((string key, Autoentity autoEntity) in value.AutoEntities)
         {
             writer.WritePropertyName(key);
             JsonSerializer.Serialize(writer, autoEntity, options);

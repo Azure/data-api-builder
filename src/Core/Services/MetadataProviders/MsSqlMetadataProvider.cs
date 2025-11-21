@@ -256,6 +256,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 Fields: null,
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
                 GraphQL: new(Singular: linkingEntityName, Plural: linkingEntityName, Enabled: false),
+                Mcp: null, // null for auto-generated entities
                 Permissions: Array.Empty<EntityPermission>(),
                 Relationships: null,
                 Mappings: new(),

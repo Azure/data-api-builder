@@ -41,7 +41,7 @@ add User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --source "us
 add User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add User_RepeatedReferencingColumnToOneEntity --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add UserProfile_RepeatedReferencingColumnToTwoEntities --config "dab-config.MsSql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
-add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
+add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query"
 add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query"
 add InsertBook --config "dab-config.MsSql.json" --source "insert_book" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:execute" --rest true --graphql true
@@ -176,8 +176,8 @@ update User_RepeatedReferencingColumnToOneEntity --config "dab-config.MsSql.json
 update UserProfile_RepeatedReferencingColumnToTwoEntities --config "dab-config.MsSql.json" --relationship book --target.entity Book --cardinality one --relationship.fields "userid:id"
 update UserProfile_RepeatedReferencingColumnToTwoEntities --config "dab-config.MsSql.json" --relationship publisher --target.entity Publisher --cardinality one --relationship.fields "userid:id"
 update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:execute" --rest.methods "Get"
-update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
-update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"
+update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "query"
+update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "query" --rest.methods "Get"
 update InsertBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update CountBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update DeleteLastInsertedBook --config "dab-config.MsSql.json" --permissions "authenticated:execute"

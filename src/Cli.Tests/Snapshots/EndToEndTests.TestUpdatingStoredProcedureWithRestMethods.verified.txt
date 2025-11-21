@@ -1,4 +1,4 @@
-{
+﻿{
   DataSource: {
     DatabaseType: MSSQL,
     Options: {
@@ -73,7 +73,7 @@
           Singular: MyEntity,
           Plural: MyEntities,
           Enabled: true,
-          Operation: Query
+          Operation: Mutation
         },
         Rest: {
           Methods: [

@@ -3407,6 +3407,23 @@ type Moon {
 
             RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), new(), viewEntity, "books_view_all");
 
+            // For this test we only care that views without key fields
+            // are supported; use a provider with a registered handler
+            // to avoid failures when the default is AppService.
+            configuration = configuration with
+            {
+                Runtime = configuration.Runtime with
+                {
+                    Host = configuration.Runtime.Host with
+                    {
+                        Authentication = configuration.Runtime.Host.Authentication with
+                        {
+                            Provider = nameof(EasyAuthType.StaticWebApps)
+                        }
+                    }
+                }
+            };
+
             const string CUSTOM_CONFIG = "custom-config.json";
 
             File.WriteAllText(

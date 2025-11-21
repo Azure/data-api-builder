@@ -54,7 +54,8 @@ public static class EasyAuthAuthenticationBuilderExtensions
     /// <summary>
     /// Registers the StaticWebApps and AppService EasyAuth authentication schemes.
     /// Used for ConfigureAuthenticationV2() where all EasyAuth schemes are registered.
-    /// This function doesn't register EasyAuthType.AppService if the AppService environment is not detected.
+    /// AppService authentication is always registered, while StaticWebApps authentication
+    /// is also available and configured here.
     /// </summary>
     /// <exception cref="System.ArgumentNullException"></exception>
     public static AuthenticationBuilder AddEnvDetectedEasyAuth(this AuthenticationBuilder builder)
@@ -64,28 +65,25 @@ public static class EasyAuthAuthenticationBuilderExtensions
             throw new ArgumentNullException(nameof(builder));
         }
 
+        // Always register Static Web Apps authentication scheme.
         builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
-           authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
-           displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
-           options =>
-           {
-               options.EasyAuthProvider = EasyAuthType.StaticWebApps;
-           });
+            authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+            displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+            options =>
+            {
+                options.EasyAuthProvider = EasyAuthType.StaticWebApps;
+            });
 
-        bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
-
-        if (appServiceEnvironmentDetected)
-        {
-            // Loggers not available at this point in startup.
-            Console.WriteLine("AppService environment detected, configuring EasyAuth.AppService authentication scheme.");
-            builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
-                authenticationScheme: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
-                displayName: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
-                options =>
-                {
-                    options.EasyAuthProvider = EasyAuthType.AppService;
-                });
-        }
+        // Always register App Service authentication scheme as well so that
+        // AppService can be treated as the default EasyAuth provider without
+        // relying on environment variable detection.
+        builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
+            authenticationScheme: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+            displayName: EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME,
+            options =>
+            {
+                options.EasyAuthProvider = EasyAuthType.AppService;
+            });
 
         return builder;
     }

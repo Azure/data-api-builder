@@ -26,7 +26,6 @@ pr:
     - samples/**
     - docs/**
     - '*.md'
-    - schemas/**
     - templates/**
 
 jobs:

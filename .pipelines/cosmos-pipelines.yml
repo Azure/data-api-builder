@@ -23,7 +23,6 @@ pr:
     - samples/**
     - docs/**
     - '*.md'
-    - schemas/**
     - templates/**
 
 strategy:

@@ -646,13 +646,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool expectsError = false)
         {
             RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+
+            string authToken = null;
+
+            if (isAuthenticated)
+            {
+                string provider = configProvider.GetConfig().Runtime.Host.Authentication.Provider;
+
+                if (string.Equals(provider, nameof(EasyAuthType.AppService), StringComparison.OrdinalIgnoreCase))
+                {
+                    authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                        roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                        additionalClaims: !string.IsNullOrEmpty(clientRoleHeader)
+                            ?
+                            [
+                                new AppServiceClaim
+                                {
+                                    Typ = AuthenticationOptions.ROLE_CLAIM_TYPE,
+                                    Val = clientRoleHeader
+                                }
+                            ]
+                            : null);
+                }
+                else
+                {
+                    authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
+                        addAuthenticated: true,
+                        specificRole: clientRoleHeader);
+                }
+            }
+
             return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                 HttpClient,
                 configProvider,
                 queryName,
                 query,
                 variables,
-                isAuthenticated ? AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader) : null,
+                authToken,
                 clientRoleHeader: clientRoleHeader);
         }
 

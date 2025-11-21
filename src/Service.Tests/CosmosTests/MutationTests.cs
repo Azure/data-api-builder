@@ -278,7 +278,7 @@ mutation {{
         name
     }}
 }}";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetAgain", mutation, variables: new(), authToken: authToken, clientRoleHeader: roleName);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -320,7 +320,7 @@ mutation {{
 
             JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
 
             // Making sure item is created successfully
@@ -340,7 +340,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetAgainInput!)
                 name = "new_name"
             };
 
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "updatePlanetAgain",
                 query: mutation,
@@ -386,7 +386,7 @@ mutation {{
 
             JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
 
             // Making sure item is created successfully
@@ -400,7 +400,7 @@ mutation ($id: ID!, $partitionKeyValue: String!) {
         name
      }
 }";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "deletePlanetAgain",
                 query: mutation,
@@ -563,7 +563,7 @@ type Planet @model(name:""Planet"") {
             };
 
             string id = Guid.NewGuid().ToString();
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
@@ -713,7 +713,7 @@ type Planet @model(name:""Planet"") {
                         query: _createPlanetMutation,
                         queryName: "createPlanet",
                         variables: new() { { "item", input } },
-                        authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                        authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                         clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
                         );
 
@@ -906,7 +906,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
         public async Task CanPatchMoreThan10AttributesInAnItemWithVariables()
         {
             string roleName = "anonymous";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
 
             // Run mutation Add planet;
             string id = Guid.NewGuid().ToString();

@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
                 }
 
-                if (!TryParseExecuteArguments(arguments.RootElement, out string entity, out Dictionary<string, object?> parameters, out string parseError))
+                if (!McpArgumentParser.TryParseExecuteArguments(arguments.RootElement, out string entity, out Dictionary<string, object?> parameters, out string parseError))
                 {
                     return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
@@ -313,48 +313,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     "An unexpected error occurred during the execute operation.",
                     logger);
             }
-        }
-
-        /// <summary>
-        /// Parses the execute arguments from the JSON input.
-        /// </summary>
-        private static bool TryParseExecuteArguments(
-            JsonElement rootElement,
-            out string entity,
-            out Dictionary<string, object?> parameters,
-            out string parseError)
-        {
-            entity = string.Empty;
-            parameters = new Dictionary<string, object?>();
-            parseError = string.Empty;
-
-            if (rootElement.ValueKind != JsonValueKind.Object)
-            {
-                parseError = "Arguments must be an object";
-                return false;
-            }
-
-            // Extract entity name (required)
-            if (!rootElement.TryGetProperty("entity", out JsonElement entityElement) ||
-                entityElement.ValueKind != JsonValueKind.String)
-            {
-                parseError = "Missing or invalid 'entity' parameter";
-                return false;
-            }
-
-            entity = entityElement.GetString() ?? string.Empty;
-
-            // Extract parameters if provided (optional)
-            if (rootElement.TryGetProperty("parameters", out JsonElement parametersElement) &&
-                parametersElement.ValueKind == JsonValueKind.Object)
-            {
-                foreach (JsonProperty property in parametersElement.EnumerateObject())
-                {
-                    parameters[property.Name] = GetParameterValue(property.Value);
-                }
-            }
-
-            return true;
         }
 
         /// <summary>

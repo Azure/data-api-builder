@@ -47,6 +47,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             out string error)
         {
             dataElement = default;
+
             if (!TryParseEntity(root, out entityName, out error))
             {
                 return false;
@@ -171,6 +172,59 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Parses the execute arguments from the JSON input.
+        /// </summary>
+        public static bool TryParseExecuteArguments(
+            JsonElement rootElement,
+            out string entity,
+            out Dictionary<string, object?> parameters,
+            out string parseError)
+        {
+            entity = string.Empty;
+            parameters = new Dictionary<string, object?>();
+
+            if (rootElement.ValueKind != JsonValueKind.Object)
+            {
+                parseError = "Arguments must be an object";
+                return false;
+            }
+
+            if (!TryParseEntity(rootElement, out entity, out parseError))
+            {
+                return false;
+            }
+
+            // Extract parameters if provided (optional)
+            if (rootElement.TryGetProperty("parameters", out JsonElement parametersElement) &&
+                parametersElement.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty property in parametersElement.EnumerateObject())
+                {
+                    parameters[property.Name] = GetExecuteParameterValue(property.Value);
+                }
+            }
+
+            return true;
+        }
+
+        // Local helper replicating ExecuteEntityTool.GetParameterValue without refactoring other tools.
+        private static object? GetExecuteParameterValue(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString(),
+                JsonValueKind.Number =>
+                    element.TryGetInt64(out long longValue) ? longValue :
+                    element.TryGetDecimal(out decimal decimalValue) ? decimalValue :
+                    element.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => element.ToString()
+            };
         }
     }
 }

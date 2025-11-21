@@ -8,6 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp.Utils
 {
+    /// <summary>
+    /// Utility class for resolving metadata and datasource information for MCP tools.
+    /// </summary>
     public static class McpMetadataHelper
     {
         public static bool TryResolveMetadata(

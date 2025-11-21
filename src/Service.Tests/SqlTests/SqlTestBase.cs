@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -36,6 +37,7 @@ using Moq;
 using MySqlConnector;
 using Npgsql;
 using ZiggyCreatures.Caching.Fusion;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
@@ -510,9 +512,37 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             if (clientRoleHeader is not null)
             {
-                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader.ToString());
-                request.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER,
-                    AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated: true, specificRole: clientRoleHeader));
+                request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
+
+                // Detect runtime auth provider once per call
+                var configProvider = _application.Services.GetRequiredService<RuntimeConfigProvider>();
+                string provider = configProvider.GetConfig().Runtime.Host.Authentication.Provider;
+
+                if (string.Equals(provider, nameof(EasyAuthType.AppService), StringComparison.OrdinalIgnoreCase))
+                {
+                    // AppService EasyAuth principal with this role
+                    request.Headers.Add(
+                        AuthenticationOptions.CLIENT_PRINCIPAL_HEADER,
+                        AuthTestHelper.CreateAppServiceEasyAuthToken(
+                            roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                            additionalClaims:
+                            [
+                                new AppServiceClaim
+                                {
+                                    Typ = AuthenticationOptions.ROLE_CLAIM_TYPE,
+                                    Val = clientRoleHeader
+                                }
+                            ]));
+                }
+                else
+                {
+                    // Static Web Apps principal as before
+                    request.Headers.Add(
+                        AuthenticationOptions.CLIENT_PRINCIPAL_HEADER,
+                        AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
+                            addAuthenticated: true,
+                            specificRole: clientRoleHeader));
+                }
             }
 
             // Send request to the engine.

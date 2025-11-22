@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 #:sdk Aspire.AppHost.Sdk@13.0.0
 #:package Aspire.Hosting.SqlServer@13.0.0
 #:package CommunityToolkit.Aspire.Hosting.SqlDatabaseProjects@9.8.1-beta.420

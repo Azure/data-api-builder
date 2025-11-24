@@ -33,6 +33,28 @@
           Object: MyTable,
           Type: Table
         },
+        Fields: [
+          {
+            Name: Macaroni,
+            Alias: Mac & Cheese,
+            PrimaryKey: false
+          },
+          {
+            Name: region,
+            Alias: United State's Region,
+            PrimaryKey: false
+          },
+          {
+            Name: russian,
+            Alias: русский,
+            PrimaryKey: false
+          },
+          {
+            Name: chinese,
+            Alias: 中文,
+            PrimaryKey: false
+          }
+        ],
         GraphQL: {
           Singular: MyEntity,
           Plural: MyEntities,
@@ -53,13 +75,7 @@
               }
             ]
           }
-        ],
-        Mappings: {
-          chinese: 中文,
-          Macaroni: Mac & Cheese,
-          region: United State's Region,
-          russian: русский
-        }
+        ]
       }
     }
   ]

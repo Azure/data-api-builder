@@ -74,6 +74,9 @@ do
     done <$commandFileNameWithPath;
 
     # Post-process MsSql and DwSql config files to set stored procedures as query operations
+    # TODO: This is a workaround until https://github.com/Azure/data-api-builder/issues/XXXX is fixed.
+    # The CLI parameter --graphql.operation does not persist for stored procedures.
+    # We manually set specific procedures to 'query' operations here.
     if [[ $databaseType == "mssql" || $databaseType == "dwsql" ]]; then
         # Use jq to modify the operation field for GetBooks and GetPublisher
         if command -v jq &> /dev/null; then

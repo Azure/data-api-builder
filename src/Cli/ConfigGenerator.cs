@@ -1605,14 +1605,14 @@ namespace Cli
 
             // Validations to ensure that REST methods and GraphQL operations can be configured only
             // for stored procedures
-            if (options.GraphQLOperationForStoredProcedure is not null && !isCurrentEntityStoredProcedure)
+            if (options.GraphQLOperationForStoredProcedure is not null && !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
             {
                 _logger.LogError("--graphql.operation can be configured only for stored procedures.");
                 return false;
             }
 
             if ((options.RestMethodsForStoredProcedure is not null && options.RestMethodsForStoredProcedure.Any())
-                && !isCurrentEntityStoredProcedure)
+                && !(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
             {
                 _logger.LogError("--rest.methods can be configured only for stored procedures.");
                 return false;
@@ -1621,10 +1621,7 @@ namespace Cli
             // Validate MCP custom-tool is only for stored procedures
             if (options.McpCustomToolEnabled is not null and not CliBool.None)
             {
-                bool willBeStoredProcedure = (isCurrentEntityStoredProcedure && options.SourceType is null) ||
-                                              (options.SourceType is not null && IsStoredProcedure(options));
-
-                if (!willBeStoredProcedure)
+                if (!(isCurrentEntityStoredProcedure || doOptionsRepresentStoredProcedure))
                 {
                     _logger.LogError("--mcp.custom-tool can only be configured for stored procedures.");
                     return false;

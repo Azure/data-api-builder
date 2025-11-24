@@ -695,7 +695,7 @@
     },
     "entities": {
       "type": "object",
-      "description": "Entities that will be exposed via REST and/or GraphQL",
+      "description": "Entities that will be exposed via REST, GraphQL, and/or MCP",
       "patternProperties": {
         "^.*$": {
           "type": "object",
@@ -915,7 +915,7 @@
               "oneOf": [
                 {
                   "type": "boolean",
-                  "description": "Enable/disable DML tools. When true, all DML tools are enabled. When false, all DML tools are disabled. For stored procedures only: true also enables custom-tool as false by default."
+                  "description": "Enable/disable DML tools. When true, all DML tools are enabled. When false, all DML tools are disabled. For stored procedures: custom-tool stays disabled by default."
                 },
                 {
                   "type": "object",

@@ -4306,11 +4306,11 @@ type Planet @model(name:""PlanetAlias"") {
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
 
-            Dictionary<string, AutoEntity> createdAutoentity = new();
+            Dictionary<string, Autoentity> createdAutoentity = new();
             createdAutoentity.Add("test-entity",
-                new AutoEntity(
-                    Patterns: new AutoEntityPatterns(include, exclude, name),
-                    Template: new AutoEntityTemplate(
+                new Autoentity(
+                    Patterns: new AutoentityPatterns(include, exclude, name),
+                    Template: new AutoentityTemplate(
                         Rest: restEnabled == null ? null : new EntityRestOptions(Enabled: (bool)restEnabled),
                         GraphQL: graphqlEnabled == null ? null : new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: (bool)graphqlEnabled),
                         Health: new EntityHealthCheckConfig(healthCheckEnabled),
@@ -4318,7 +4318,7 @@ type Planet @model(name:""PlanetAlias"") {
                     ),
                     Permissions: new EntityPermission[1]));
             createdAutoentity["test-entity"].Permissions[0] = new EntityPermission(role, entityActions);
-            RuntimeAutoEntities autoentities = new(createdAutoentity);
+            RuntimeAutoentities autoentities = new(createdAutoentity);
 
             FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
             baseLoader.TryLoadKnownConfig(out RuntimeConfig? baseConfig);

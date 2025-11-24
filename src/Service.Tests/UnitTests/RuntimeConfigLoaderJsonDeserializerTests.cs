@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -240,6 +241,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// but have the effect of default values when deserialized.
         /// It starts with a minimal config and incrementally
         /// adds the optional subproperties. At each step, tests for valid deserialization.
+        /// </summary>
         [TestMethod]
         public void TestNullableOptionalProps()
         {
@@ -681,7 +683,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Arrange: create a temporary .akv secrets file
             string akvFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".akv");
             string secretConnectionString = "Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;";
-            File.WriteAllText(akvFilePath, $"DB_CONN={secretConnectionString}\nAPI_KEY=abcd\n# Comment line should be ignored\n MALFORMEDLINE \n");
+            File.WriteAllText(akvFilePath, $"DBCONN={secretConnectionString}\nAPI_KEY=abcd\n# Comment line should be ignored\n MALFORMEDLINE \n");
 
             // Escape backslashes for JSON
             string escapedPath = akvFilePath.Replace("\\", "\\\\");
@@ -691,7 +693,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
               "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json",
               "data-source": {
                 "database-type": "mssql",
-                "connection-string": "@AKV('DB_CONN')"
+                "connection-string": "@akv('DBCONN')"
               },
               "azure-key-vault": {
                 "endpoint": "{{escapedPath}}"
@@ -721,6 +723,127 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     File.Delete(akvFilePath);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Validates that when an AKV secret's value itself contains an @env('...') pattern, it is NOT further resolved
+        /// because replacement only runs once per original JSON token. Demonstrates that nested env patterns inside
+        /// AKV secret values are left intact.
+        /// </summary>
+        [TestMethod]
+        public void TestAkvSecretValueContainingEnvPatternIsNotEnvExpanded()
+        {
+            string akvFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".akv");
+            // Valid MSSQL connection string which embeds an @env('env') pattern in the Database value.
+            // This pattern should NOT be expanded because replacement only runs once on the original JSON token (@akv('DBCONN')).
+            string secretValueWithEnvPattern = "Server=localhost;Database=@env('env');User Id=sa;Password=Pass@word1;";
+            File.WriteAllText(akvFilePath, $"DBCONN={secretValueWithEnvPattern}\n");
+            string escapedPath = akvFilePath.Replace("\\", "\\\\");
+
+            // Set env variable to prove it would be different if expansion occurred.
+            Environment.SetEnvironmentVariable("env", "SHOULD_NOT_APPEAR");
+
+            string jsonConfig = $$"""
+            {
+              "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json",
+              "data-source": {
+                "database-type": "mssql",
+                "connection-string": "@akv('DBCONN')"
+              },
+              "azure-key-vault": {
+                "endpoint": "{{escapedPath}}"
+              },
+              "entities": { }
+            }
+            """;
+
+            try
+            {
+                DeserializationVariableReplacementSettings replacementSettings = new(
+                    azureKeyVaultOptions: null,
+                    doReplaceEnvVar: true,
+                    doReplaceAkvVar: true);
+                bool parsed = RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig config, replacementSettings: replacementSettings);
+                Assert.IsTrue(parsed, "Config should parse successfully.");
+                Assert.IsNotNull(config);
+
+                string actual = config.DataSource.ConnectionString;
+                Assert.IsTrue(actual.Contains("@env('env')"), "Nested @env pattern inside AKV secret should remain unexpanded.");
+                Assert.IsTrue(actual.Contains("Application Name="), "Application Name should be appended for MSSQL when env replacement is enabled.");
+
+                var builderOriginal = new SqlConnectionStringBuilder(secretValueWithEnvPattern.Replace("Server=", "Data Source=").Replace("Database=", "Initial Catalog="));
+                var builderActual = new SqlConnectionStringBuilder(actual);
+                Assert.AreEqual(builderOriginal["Data Source"], builderActual["Data Source"], "Server/Data Source should match.");
+                Assert.AreEqual(builderOriginal["Initial Catalog"], builderActual["Initial Catalog"], "Database/Initial Catalog should match (with env pattern retained).");
+                Assert.AreEqual(builderOriginal["User ID"], builderActual["User ID"], "User Id should match.");
+                Assert.AreEqual(builderOriginal["Password"], builderActual["Password"], "Password should match.");
+            }
+            finally
+            {
+                if (File.Exists(akvFilePath))
+                {
+                    File.Delete(akvFilePath);
+                }
+
+                Environment.SetEnvironmentVariable("env", null);
+            }
+        }
+
+        /// <summary>
+        /// Validates two-pass replacement where an env var resolves to an AKV pattern which then resolves to the secret value.
+        /// connection-string = @env('env_variable'), env_variable value = @akv('DBCONN'), AKV secret DBCONN holds the final connection string.
+        /// </summary>
+        [TestMethod]
+        public void TestEnvVariableResolvingToAkvPatternIsExpandedInSecondPass()
+        {
+            string akvFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".akv");
+            string finalSecretValue = "Server=localhost;Database=Test;User Id=sa;Password=Pass@word1;";
+            File.WriteAllText(akvFilePath, $"DBCONN={finalSecretValue}\n");
+            string escapedPath = akvFilePath.Replace("\\", "\\\\");
+            Environment.SetEnvironmentVariable("env_variable", "@akv('DBCONN')");
+
+            string jsonConfig = $$"""
+            {
+              "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json",
+              "data-source": {
+                "database-type": "mssql",
+                "connection-string": "@env('env_variable')"
+              },
+              "azure-key-vault": {
+                "endpoint": "{{escapedPath}}"
+              },
+              "entities": { }
+            }
+            """;
+
+            try
+            {
+                DeserializationVariableReplacementSettings replacementSettings = new(
+                    azureKeyVaultOptions: null,
+                    doReplaceEnvVar: true,
+                    doReplaceAkvVar: true);
+                bool parsed = RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig config, replacementSettings: replacementSettings);
+                Assert.IsTrue(parsed, "Config should parse successfully.");
+                Assert.IsNotNull(config);
+
+                string expected = RuntimeConfigLoader.GetConnectionStringWithApplicationName(finalSecretValue);
+                var builderExpected = new SqlConnectionStringBuilder(expected);
+                var builderActual = new SqlConnectionStringBuilder(config.DataSource.ConnectionString);
+                Assert.AreEqual(builderExpected["Data Source"], builderActual["Data Source"], "Data Source should match.");
+                Assert.AreEqual(builderExpected["Initial Catalog"], builderActual["Initial Catalog"], "Initial Catalog should match.");
+                Assert.AreEqual(builderExpected["User ID"], builderActual["User ID"], "User ID should match.");
+                Assert.AreEqual(builderExpected["Password"], builderActual["Password"], "Password should match.");
+                Assert.IsTrue(builderActual.ApplicationName?.Contains("dab_"), "Application Name should be appended including product identifier.");
+            }
+            finally
+            {
+                if (File.Exists(akvFilePath))
+                {
+                    File.Delete(akvFilePath);
+                }
+
+                Environment.SetEnvironmentVariable("env_variable", null);
             }
         }
     }

@@ -27,18 +27,12 @@
       MyEntity: {
         Source: {
           Object: s001.book,
-          Type: View
+          Type: View,
+          KeyFields: [
+            col1,
+            col2
+          ]
         },
-        Fields: [
-          {
-            Name: col1,
-            PrimaryKey: true
-          },
-          {
-            Name: col2,
-            PrimaryKey: true
-          }
-        ],
         GraphQL: {
           Singular: MyEntity,
           Plural: MyEntities,

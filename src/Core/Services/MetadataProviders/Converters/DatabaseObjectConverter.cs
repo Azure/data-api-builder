@@ -135,7 +135,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
             {
                 ColumnDefinition col = sourceDef.Columns[key];
                 sourceDef.Columns.Remove(key);
-                string newKey = DOLLAR_CHAR + key[2..];
+                string newKey = DOLLAR_CHAR + key[11..];
                 sourceDef.Columns[newKey] = col;
             }
         }

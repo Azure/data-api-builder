@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     JsonElement firstItem = valueArray[0];
                     foreach (JsonProperty prop in firstItem.EnumerateObject())
                     {
-                        filteredResult[prop.Name] = GetJsonValue(prop.Value);
+                        filteredResult[prop.Name] = McpResponseBuilder.GetJsonValue(prop.Value);
                     }
                 }
 
@@ -367,21 +367,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             return false;
         }
 
-        #endregion
-
-        #region Utilities
-        private static object? GetJsonValue(JsonElement element)
-        {
-            return element.ValueKind switch
-            {
-                JsonValueKind.String => element.GetString(),
-                JsonValueKind.Number => element.TryGetInt64(out long l) ? l : element.GetDouble(),
-                JsonValueKind.True => true,
-                JsonValueKind.False => false,
-                JsonValueKind.Null => null,
-                _ => element.GetRawText()
-            };
-        }
         #endregion
     }
 }

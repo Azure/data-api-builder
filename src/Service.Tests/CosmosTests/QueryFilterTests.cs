@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -11,6 +12,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
@@ -918,11 +920,19 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Now get the item with item level permission
             string clientRoleHeader = "item-level-permission-role";
-            // string clientRoleHeader = "authenticated";
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
-                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]),
                 clientRoleHeader: clientRoleHeader);
 
             string dbQuery = $"SELECT c.id " +
@@ -980,11 +990,22 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
             string clientRoleHeader = "limited-read-role";
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]);
+
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
+                authToken: authToken,
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1065,11 +1086,22 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string clientRoleHeader = "limited-read-role";
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]);
+
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
+                authToken: authToken,
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1131,7 +1163,17 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string clientRoleHeader = "limited-read-role";
-            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
+            // SWA tests passed without this because SWA uses a looser, header-driven role model.
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]);
             JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName,
                 query: gqlQuery,
                 authToken: authToken,

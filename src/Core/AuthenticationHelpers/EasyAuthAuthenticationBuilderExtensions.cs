@@ -67,12 +67,12 @@ public static class EasyAuthAuthenticationBuilderExtensions
 
         // Always register Static Web Apps authentication scheme.
         builder.AddScheme<EasyAuthAuthenticationOptions, EasyAuthAuthenticationHandler>(
-            authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
-            displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
-            options =>
-            {
-                options.EasyAuthProvider = EasyAuthType.StaticWebApps;
-            });
+           authenticationScheme: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+           displayName: EasyAuthAuthenticationDefaults.SWAAUTHSCHEME,
+           options =>
+           {
+               options.EasyAuthProvider = EasyAuthType.StaticWebApps;
+           });
 
         // Always register App Service authentication scheme as well so that
         // AppService can be treated as the default EasyAuth provider without

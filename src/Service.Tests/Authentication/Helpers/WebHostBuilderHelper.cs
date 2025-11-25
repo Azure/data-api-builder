@@ -76,18 +76,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                             {
                                 EasyAuthType easyAuthProvider = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), provider, ignoreCase: true);
 
-                                // When EasyAuth provider is AppService, set the default scheme accordingly so
-                                // AppServiceAuthentication is registered and available during tests.
-                                if (easyAuthProvider == EasyAuthType.AppService)
-                                {
-                                    services.AddAuthentication(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME)
-                                        .AddEasyAuthAuthentication(easyAuthProvider);
-                                }
-                                else
-                                {
-                                    services.AddAuthentication()
-                                        .AddEasyAuthAuthentication(easyAuthProvider);
-                                }
+                                services.AddAuthentication()
+                                    .AddEasyAuthAuthentication(easyAuthProvider);
                             }
 
                             services.AddSingleton(runtimeConfigProvider);

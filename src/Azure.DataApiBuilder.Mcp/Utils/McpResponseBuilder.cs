@@ -101,5 +101,21 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                     return "{}";
             }
         }
+
+        /// <summary>
+        /// Extracts value from a JsonElement.
+        /// </summary>
+        public static object? GetJsonValue(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString(),
+                JsonValueKind.Number => element.TryGetInt64(out long l) ? l : element.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => element.GetRawText()
+            };
+        }
     }
 }

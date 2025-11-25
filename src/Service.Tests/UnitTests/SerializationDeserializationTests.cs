@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void TestDictionaryDatabaseObjectSerializationDeserialization_WithDollarColumn()
         {
-            InitializeObjects(true);
+            InitializeObjects(generateDollaredColumn: true);
 
             _options = new()
             {

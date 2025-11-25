@@ -18,7 +18,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
     {
         private const string TYPE_NAME = "TypeName";
         private const string DOLLAR_CHAR = "$";
-        private const string ESCAPED_DOLLARCHAR = "_$";
+
+        // ``DAB_ESCAPE$`` is used to escape column names that start with `$` during serialization.
+        // It is chosen to be unique enough to avoid collisions with actual column names.
+        private const string ESCAPED_DOLLARCHAR = "DAB_ESCAPE$";
 
         public override DatabaseObject Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {

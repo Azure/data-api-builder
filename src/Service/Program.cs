@@ -313,21 +313,9 @@ namespace Azure.DataApiBuilder.Service
 
         // This is used for testing purposes only. The test web server takes in a
         // IWebHostBuilder, instead of a IHostBuilder.
-        //
-        // When using the in-memory updatable configuration, we still want the
-        // same configuration providers (environment variables + command-line)
-        // applied so that authentication behaves consistently with the main
-        // host, including App Service as the default EasyAuth provider where
-        // configured.
         public static IWebHostBuilder CreateWebHostFromInMemoryUpdatableConfBuilder(string[] args) =>
-            WebHost
-                .CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((_, builder) =>
-                {
-                    AddConfigurationProviders(builder, args);
-                    DisableHttpsRedirectionIfNeeded(args);
-                })
-                .UseStartup<Startup>();
+            WebHost.CreateDefaultBuilder(args)
+            .UseStartup<Startup>();
 
         /// <summary>
         /// Adds the various configuration providers.

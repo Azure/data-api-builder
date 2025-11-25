@@ -12,9 +12,9 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
 {
-    // Determines whether to replace environment variable with its
-    // value or not while deserializing.
-    private bool _replaceEnvVar;
+    // Settings for variable replacement during deserialization.
+    // Currently allows for Azure Key Vault (via @akv('secret-name')) and Environment Variable replacement.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -25,34 +25,34 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new AKVRetryPolicyOptionsConverter(_replaceEnvVar);
+        return new AKVRetryPolicyOptionsConverter(_replacementSettings);
     }
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    internal AKVRetryPolicyOptionsConverterFactory(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    internal AKVRetryPolicyOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     private class AKVRetryPolicyOptionsConverter : JsonConverter<AKVRetryPolicyOptions>
     {
-        // Determines whether to replace environment variable with its
-        // value or not while deserializing.
-        private bool _replaceEnvVar;
+        // Settings for variable replacement during deserialization.
+        // Currently allows for Azure Key Vault (via @akv('<secret>')) and Environment Variable replacement.
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-        /// <param name="replaceEnvVar">Whether to replace environment variable with its
-        /// value or not while deserializing.</param>
-        public AKVRetryPolicyOptionsConverter(bool replaceEnvVar)
+        /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+        /// If null, no variable replacement will be performed.</param>
+        public AKVRetryPolicyOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <summary>
         /// Defines how DAB reads AKV Retry Policy options and defines which values are
         /// used to instantiate those options.
         /// </summary>
-        /// <exception cref="JsonException">Thrown when improperly formatted cache options are provided.</exception>
+        /// <exception cref="JsonException">Thrown when improperly formatted retry policy options are provided.</exception>
         public override AKVRetryPolicyOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType is JsonTokenType.StartObject)
@@ -82,7 +82,7 @@ internal class AKVRetryPolicyOptionsConverterFactory : JsonConverterFactory
                             }
                             else
                             {
-                                mode = EnumExtensions.Deserialize<AKVRetryPolicyMode>(reader.DeserializeString(_replaceEnvVar)!);
+                                mode = EnumExtensions.Deserialize<AKVRetryPolicyMode>(reader.DeserializeString(_replacementSettings)!);
                             }
 
                             break;

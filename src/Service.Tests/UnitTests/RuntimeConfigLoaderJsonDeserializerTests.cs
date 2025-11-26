@@ -629,7 +629,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             { "DATABASE_NAME", "planet" },
             { "GRAPHQL_SCHEMA_PATH", "gql-schema.gql" },
             { "DATABASE_CONNECTION_STRING", "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;" },
-            { "DATABASE_CONNECTION_STRING_PGSQL", "Host=<>;Database=<>;username=<>;password<>" }
+            { "DATABASE_CONNECTION_STRING_PGSQL", "Host=<>;Database=<>;username=<>;password=<>" }
         };
 
         /// <summary>

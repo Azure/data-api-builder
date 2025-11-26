@@ -83,8 +83,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<UpdateRecordTool>? logger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
-
-            // 1) Resolve required services & configuration
+            string toolName = GetToolMetadata().Name;
 
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             RuntimeConfig config = runtimeConfigProvider.GetConfig();
@@ -103,7 +102,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 3) Parsing & basic argument validation (entity, keys, fields)
                 if (arguments is null)
                 {
-                    return BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
                 if (!McpArgumentParser.TryParseEntityKeysAndFields(
@@ -113,7 +112,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out Dictionary<string, object?> fields,
                         out string parseError))
                 {
-                    return BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
@@ -166,7 +165,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     if (kvp.Value is null)
                     {
-                        return BuildErrorResult("InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
                     }
 
                     context.PrimaryKeyValuePairs[kvp.Key] = kvp.Value;
@@ -194,7 +193,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                     if (errorMsg.Contains("No Update could be performed, record not found", StringComparison.OrdinalIgnoreCase))
                     {
-                        return BuildErrorResult(
+                        return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "InvalidArguments",
                             "No record found with the given key.",
                             logger);
@@ -209,22 +209,40 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // 8) Normalize response (success or engine error payload)
-                string rawPayloadJson = ExtractResultJson(mutationResult);
+                string rawPayloadJson = McpResponseBuilder.ExtractResultJson(mutationResult);
                 using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
                 JsonElement root = resultDoc.RootElement;
 
-                return BuildSuccessResult(
-                    entityName: entityName,
-                    engineRootElement: root.Clone(),
-                    logger: logger);
+                // Extract first item of value[] array (updated record)
+                Dictionary<string, object?> filteredResult = new();
+                if (root.TryGetProperty("value", out JsonElement valueArray) &&
+                    valueArray.ValueKind == JsonValueKind.Array &&
+                    valueArray.GetArrayLength() > 0)
+                {
+                    JsonElement firstItem = valueArray[0];
+                    foreach (JsonProperty prop in firstItem.EnumerateObject())
+                    {
+                        filteredResult[prop.Name] = McpResponseBuilder.GetJsonValue(prop.Value);
+                    }
+                }
+
+                return McpResponseBuilder.BuildSuccessResult(
+                    new Dictionary<string, object?>
+                    {
+                        ["entity"] = entityName,
+                        ["result"] = filteredResult,
+                        ["message"] = $"Successfully updated record in entity '{entityName}'"
+                    },
+                    logger,
+                    $"UpdateRecordTool success for entity {entityName}.");
             }
             catch (OperationCanceledException)
             {
-                return BuildErrorResult("OperationCanceled", "The update operation was canceled.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The update operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
-                return BuildErrorResult("InvalidArguments", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
             }
             catch (Exception ex)
             {

@@ -73,6 +73,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<ExecuteEntityTool>? logger = serviceProvider.GetService<ILogger<ExecuteEntityTool>>();
+            string toolName = GetToolMetadata().Name;
 
             try
             {
@@ -92,18 +93,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 3) Parsing & basic argument validation
                 if (arguments is null)
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
                 if (!McpArgumentParser.TryParseExecuteArguments(arguments.RootElement, out string entity, out Dictionary<string, object?> parameters, out string parseError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
                 // Entity is required
                 if (string.IsNullOrWhiteSpace(entity))
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", "Entity is required", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Entity is required", logger);
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
@@ -112,12 +113,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 4) Validate entity exists and is a stored procedure
                 if (!config.Entities.TryGetValue(entity, out Entity? entityConfig))
                 {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entity}' not found in configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entity}' not found in configuration.", logger);
                 }
 
                 if (entityConfig.Source.Type != EntitySourceType.StoredProcedure)
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidEntity", $"Entity {entity} cannot be executed.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity {entity} cannot be executed.", logger);
                 }
 
                 // Use shared metadata helper.
@@ -162,7 +163,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         if (!entityConfig.Source.Parameters.Any(p => p.Name == param.Key))
                         {
-                            return McpResponseBuilder.BuildErrorResult("InvalidArguments", $"Invalid parameter: {param.Key}", logger);
+                            return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Invalid parameter: {param.Key}", logger);
                         }
                     }
                 }
@@ -232,6 +233,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         message.Contains("authorization", StringComparison.OrdinalIgnoreCase))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "PermissionDenied",
                             "You do not have permission to execute this stored procedure.",
                             logger);
@@ -240,6 +242,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                              message.Contains("type", StringComparison.OrdinalIgnoreCase))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "InvalidArguments",
                             "Invalid data type for one or more parameters.",
                             logger);
@@ -247,6 +250,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                     // For any other DAB exceptions, return the message as-is
                     return McpResponseBuilder.BuildErrorResult(
+                        toolName,
                         "DataApiBuilderError",
                         dabEx.Message,
                         logger);
@@ -264,48 +268,49 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         229 or 262 => $"Permission denied to execute stored procedure '{entityConfig.Source.Object}'.",
                         _ => $"Database error: {sqlEx.Message}"
                     };
-                    return McpResponseBuilder.BuildErrorResult("DatabaseError", errorMessage, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseError", errorMessage, logger);
                 }
                 catch (DbException dbEx)
                 {
                     // Handle generic database exceptions (works for PostgreSQL, MySQL, etc.)
                     logger?.LogError(dbEx, "Database error executing stored procedure {StoredProcedure}", entity);
-                    return McpResponseBuilder.BuildErrorResult("DatabaseError", $"Database error: {dbEx.Message}", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseError", $"Database error: {dbEx.Message}", logger);
                 }
                 catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
                 {
                     // Handle connection-related issues
                     logger?.LogError(ioEx, "Database connection error");
-                    return McpResponseBuilder.BuildErrorResult("ConnectionError", "Failed to connect to the database.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "ConnectionError", "Failed to connect to the database.", logger);
                 }
                 catch (TimeoutException timeoutEx)
                 {
                     // Handle query timeout
                     logger?.LogError(timeoutEx, "Stored procedure execution timeout for {StoredProcedure}", entity);
-                    return McpResponseBuilder.BuildErrorResult("TimeoutError", "The stored procedure execution timed out.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "TimeoutError", "The stored procedure execution timed out.", logger);
                 }
                 catch (Exception ex)
                 {
                     // Generic database/execution errors
                     logger?.LogError(ex, "Unexpected error executing stored procedure {StoredProcedure}", entity);
-                    return McpResponseBuilder.BuildErrorResult("DatabaseError", "An error occurred while executing the stored procedure.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseError", "An error occurred while executing the stored procedure.", logger);
                 }
 
                 // 11) Build response with execution result
-                return BuildExecuteSuccessResponse(entity, parameters, queryResult, logger);
+                return BuildExecuteSuccessResponse(toolName, entity, parameters, queryResult, logger);
             }
             catch (OperationCanceledException)
             {
-                return McpResponseBuilder.BuildErrorResult("OperationCanceled", "The execute operation was canceled.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The execute operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
-                return McpResponseBuilder.BuildErrorResult("InvalidArguments", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Unexpected error in ExecuteEntityTool.");
                 return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "UnexpectedError",
                     "An unexpected error occurred during the execute operation.",
                     logger);
@@ -335,6 +340,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         /// Builds a successful response for the execute operation.
         /// </summary>
         private static CallToolResult BuildExecuteSuccessResponse(
+            string toolName,
             string entityName,
             Dictionary<string, object?>? parameters,
             IActionResult? queryResult,
@@ -375,6 +381,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             else if (queryResult is BadRequestObjectResult badRequest)
             {
                 return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "BadRequest",
                     badRequest.Value?.ToString() ?? "Bad request",
                     logger);

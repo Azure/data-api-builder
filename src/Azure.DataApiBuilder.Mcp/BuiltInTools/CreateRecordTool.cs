@@ -56,15 +56,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<CreateRecordTool>? logger = serviceProvider.GetService<ILogger<CreateRecordTool>>();
+            string toolName = GetToolMetadata().Name;
             if (arguments == null)
             {
-                return Utils.McpResponseBuilder.BuildErrorResult("Invalid Arguments", "No arguments provided", logger);
+                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "Invalid Arguments", "No arguments provided", logger);
             }
 
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                return Utils.McpResponseBuilder.BuildErrorResult("Invalid Configuration", "Runtime configuration not available", logger);
+                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "Invalid Configuration", "Runtime configuration not available", logger);
             }
 
             if (runtimeConfig.McpDmlTools?.CreateRecord != true)
@@ -79,10 +80,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpArgumentParser.TryParseEntityAndData(root, out string entityName, out JsonElement dataElement, out string parseError))
                 {
-                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
                 }
 
-                // Use metadata helper for data source/provider/dbObject resolution.
                 if (!McpMetadataHelper.TryResolveMetadata(
                         entityName,
                         runtimeConfig,
@@ -134,12 +134,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                     catch (Exception ex)
                     {
-                        return Utils.McpResponseBuilder.BuildErrorResult("ValidationFailed", $"Request validation failed: {ex.Message}", logger);
+                        return Utils.McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {ex.Message}", logger);
                     }
                 }
                 else
                 {
                     return Utils.McpResponseBuilder.BuildErrorResult(
+                        toolName,
                         "InvalidCreateTarget",
                         "The create_record tool is only available for tables.",
                         logger);
@@ -169,6 +170,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     if (isError)
                     {
                         return Utils.McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "CreateFailed",
                             $"Failed to create record in entity '{entityName}'. Error: {JsonSerializer.Serialize(objectResult.Value)}",
                             logger);
@@ -191,6 +193,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     if (result is null)
                     {
                         return Utils.McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "UnexpectedError",
                             $"Mutation engine returned null result for entity '{entityName}'",
                             logger);
@@ -210,7 +213,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (Exception ex)
             {
-                return Utils.McpResponseBuilder.BuildErrorResult("Error", $"Error: {ex.Message}", logger);
+                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "Error", $"Error: {ex.Message}", logger);
             }
         }
     }

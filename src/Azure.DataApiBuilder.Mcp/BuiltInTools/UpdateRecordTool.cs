@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -83,8 +84,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<UpdateRecordTool>? logger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
-
-            // 1) Resolve required services & configuration
+            string toolName = GetToolMetadata().Name;
 
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             RuntimeConfig config = runtimeConfigProvider.GetConfig();
@@ -92,7 +92,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // 2)Check if the tool is enabled in configuration before proceeding.
             if (config.McpDmlTools?.UpdateRecord != true)
             {
-                return BuildErrorResult(
+                return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "ToolDisabled",
                     "The update_record tool is disabled in the configuration.",
                     logger);
@@ -106,12 +107,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 3) Parsing & basic argument validation (entity, keys, fields)
                 if (arguments is null)
                 {
-                    return BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
                 if (!TryParseArguments(arguments.RootElement, out string entityName, out Dictionary<string, object?> keys, out Dictionary<string, object?> fields, out string parseError))
                 {
-                    return BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
@@ -128,12 +129,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (Exception)
                 {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
                 {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
                 // 5) Authorization after we have a known entity
@@ -143,12 +144,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
-                    return BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
                 }
 
                 if (!TryResolveAuthorizedRoleHasPermission(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
                 {
-                    return BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", $"Permission denied: {authError}", logger);
                 }
 
                 // 6) Build and validate Upsert (UpdateIncremental) context
@@ -165,7 +166,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     if (kvp.Value is null)
                     {
-                        return BuildErrorResult("InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
                     }
 
                     context.PrimaryKeyValuePairs[kvp.Key] = kvp.Value;
@@ -193,7 +194,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                     if (errorMsg.Contains("No Update could be performed, record not found", StringComparison.OrdinalIgnoreCase))
                     {
-                        return BuildErrorResult(
+                        return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "InvalidArguments",
                             "No record found with the given key.",
                             logger);
@@ -208,29 +210,47 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // 8) Normalize response (success or engine error payload)
-                string rawPayloadJson = ExtractResultJson(mutationResult);
+                string rawPayloadJson = McpResponseBuilder.ExtractResultJson(mutationResult);
                 using JsonDocument resultDoc = JsonDocument.Parse(rawPayloadJson);
                 JsonElement root = resultDoc.RootElement;
 
-                return BuildSuccessResult(
-                    entityName: entityName,
-                    engineRootElement: root.Clone(),
-                    logger: logger);
+                // Extract first item of value[] array (updated record)
+                Dictionary<string, object?> filteredResult = new();
+                if (root.TryGetProperty("value", out JsonElement valueArray) &&
+                    valueArray.ValueKind == JsonValueKind.Array &&
+                    valueArray.GetArrayLength() > 0)
+                {
+                    JsonElement firstItem = valueArray[0];
+                    foreach (JsonProperty prop in firstItem.EnumerateObject())
+                    {
+                        filteredResult[prop.Name] = McpResponseBuilder.GetJsonValue(prop.Value);
+                    }
+                }
+
+                return McpResponseBuilder.BuildSuccessResult(
+                    new Dictionary<string, object?>
+                    {
+                        ["entity"] = entityName,
+                        ["result"] = filteredResult,
+                        ["message"] = $"Successfully updated record in entity '{entityName}'"
+                    },
+                    logger,
+                    $"UpdateRecordTool success for entity {entityName}.");
             }
             catch (OperationCanceledException)
             {
-                return BuildErrorResult("OperationCanceled", "The update operation was canceled.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The update operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
-                return BuildErrorResult("InvalidArguments", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
             }
             catch (Exception ex)
             {
                 ILogger<UpdateRecordTool>? innerLogger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
                 innerLogger?.LogError(ex, "Unexpected error in UpdateRecordTool.");
-
-                return BuildErrorResult(
+                return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "UnexpectedError",
                     ex.Message ?? "An unexpected error occurred during the update operation.",
                     logger);
@@ -345,126 +365,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             error = "You do not have permission to update records for this entity.";
             return false;
-        }
-
-        #endregion
-
-        #region Response Builders & Utilities
-
-        private static CallToolResult BuildSuccessResult(
-            string entityName,
-            JsonElement engineRootElement,
-            ILogger? logger)
-        {
-            // Extract only requested keys and updated fields from engineRootElement
-            Dictionary<string, object?> filteredResult = new();
-
-            // Navigate to "value" array in the engine result
-            if (engineRootElement.TryGetProperty("value", out JsonElement valueArray) &&
-                valueArray.ValueKind == JsonValueKind.Array &&
-                valueArray.GetArrayLength() > 0)
-            {
-                JsonElement firstItem = valueArray[0];
-
-                // Include all properties from the result
-                foreach (JsonProperty prop in firstItem.EnumerateObject())
-                {
-                    filteredResult[prop.Name] = GetJsonValue(prop.Value);
-                }
-            }
-
-            // Build normalized response
-            Dictionary<string, object?> normalized = new()
-            {
-                ["status"] = "success",
-                ["result"] = filteredResult
-            };
-
-            string output = JsonSerializer.Serialize(normalized, new JsonSerializerOptions { WriteIndented = true });
-
-            logger?.LogInformation("UpdateRecordTool success for entity {Entity}.", entityName);
-
-            return new CallToolResult
-            {
-                Content = new List<ContentBlock>
-                {
-                    new TextContentBlock { Type = "text", Text = output }
-                }
-            };
-        }
-
-        /// <summary>
-        /// Converts JsonElement to .NET object dynamically.
-        /// </summary>
-        private static object? GetJsonValue(JsonElement element)
-        {
-            return element.ValueKind switch
-            {
-                JsonValueKind.String => element.GetString(),
-                JsonValueKind.Number => element.TryGetInt64(out long l) ? l : element.GetDouble(),
-                JsonValueKind.True => true,
-                JsonValueKind.False => false,
-                JsonValueKind.Null => null,
-                _ => element.GetRawText() // fallback for arrays/objects
-            };
-        }
-
-        private static CallToolResult BuildErrorResult(
-            string errorType,
-            string message,
-            ILogger? logger)
-        {
-            Dictionary<string, object?> errorObj = new()
-            {
-                ["status"] = "error",
-                ["error"] = new Dictionary<string, object?>
-                {
-                    ["type"] = errorType,
-                    ["message"] = message
-                }
-            };
-
-            string output = JsonSerializer.Serialize(errorObj);
-
-            logger?.LogWarning("UpdateRecordTool error {ErrorType}: {Message}", errorType, message);
-
-            return new CallToolResult
-            {
-                Content =
-                [
-                    new TextContentBlock { Type = "text", Text = output }
-                ],
-                IsError = true
-            };
-        }
-
-        /// <summary>
-        /// Extracts a JSON string from a typical IActionResult.
-        /// Falls back to "{}" for unsupported/empty cases to avoid leaking internals.
-        /// </summary>
-        private static string ExtractResultJson(IActionResult? result)
-        {
-            switch (result)
-            {
-                case ObjectResult obj:
-                    if (obj.Value is JsonElement je)
-                    {
-                        return je.GetRawText();
-                    }
-
-                    if (obj.Value is JsonDocument jd)
-                    {
-                        return jd.RootElement.GetRawText();
-                    }
-
-                    return JsonSerializer.Serialize(obj.Value ?? new object());
-
-                case ContentResult content:
-                    return string.IsNullOrWhiteSpace(content.Content) ? "{}" : content.Content;
-
-                default:
-                    return "{}";
-            }
         }
 
         #endregion

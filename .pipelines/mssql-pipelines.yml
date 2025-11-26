@@ -16,6 +16,18 @@ trigger:
     exclude:
     - docs
 
+pr:
+  branches:
+    include:
+    - main
+    - release/*
+  paths:
+    exclude:
+    - samples/**
+    - docs/**
+    - '*.md'
+    - templates/**
+
 jobs:
 - job: linux
   condition: false # Disable until we resolve flakey pipeline issue. https://github.com/Azure/data-api-builder/issues/2010

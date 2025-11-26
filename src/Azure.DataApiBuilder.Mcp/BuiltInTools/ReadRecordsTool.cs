@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -78,6 +79,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<ReadRecordsTool>? logger = serviceProvider.GetService<ILogger<ReadRecordsTool>>();
+            string toolName = GetToolMetadata().Name;
 
             // Get runtime config
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
@@ -85,7 +87,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (runtimeConfig.McpDmlTools?.ReadRecords is not true)
             {
-                return BuildErrorResult(
+                return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "ToolDisabled",
                     "The read_records tool is disabled in the configuration.",
                     logger);
@@ -105,14 +108,14 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // Extract arguments
                 if (arguments == null)
                 {
-                    return BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
                 JsonElement root = arguments.RootElement;
 
                 if (!root.TryGetProperty("entity", out JsonElement entityElement) || string.IsNullOrWhiteSpace(entityElement.GetString()))
                 {
-                    return BuildErrorResult("InvalidArguments", "Missing required argument 'entity'.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Missing required argument 'entity'.", logger);
                 }
 
                 entityName = entityElement.GetString()!;
@@ -157,12 +160,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
                 catch (Exception)
                 {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
                 {
-                    return BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
                 }
 
                 // Authorization check in the existing entity
@@ -173,12 +176,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
-                    return BuildErrorResult("PermissionDenied", $"You do not have permission to read records for entity '{entityName}'.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", $"You do not have permission to read records for entity '{entityName}'.", logger);
                 }
 
                 if (!TryResolveAuthorizedRole(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
                 {
-                    return BuildErrorResult("PermissionDenied", authError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", authError, logger);
                 }
 
                 // Build and validate Find context
@@ -208,7 +211,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         if (string.IsNullOrWhiteSpace(param))
                         {
-                            return BuildErrorResult("InvalidArguments", "Parameters inside 'orderby' argument cannot be empty or null.", logger);
+                            return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "Parameters inside 'orderby' argument cannot be empty or null.", logger);
                         }
 
                         sortQueryString += $"{param}, ";
@@ -230,7 +233,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     requirements: new[] { new ColumnsPermissionsRequirement() });
                 if (!authorizationResult.Succeeded)
                 {
-                    return BuildErrorResult("PermissionDenied", DataApiBuilderException.AUTHORIZATION_FAILURE, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", DataApiBuilderException.AUTHORIZATION_FAILURE, logger);
                 }
 
                 // Execute
@@ -240,34 +243,40 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                                                : SqlResponseHelpers.FormatFindResult(queryResult.RootElement.Clone(), context, metadataProviderFactory.GetMetadataProvider(dataSourceName), runtimeConfigProvider.GetConfig(), httpContext, true);
 
                 // Normalize response
-                string rawPayloadJson = ExtractResultJson(actionResult);
-                JsonDocument result = JsonDocument.Parse(rawPayloadJson);
+                string rawPayloadJson = McpResponseBuilder.ExtractResultJson(actionResult);
+                using JsonDocument result = JsonDocument.Parse(rawPayloadJson);
                 JsonElement queryRoot = result.RootElement;
 
-                return BuildSuccessResult(
-                    entityName,
-                    queryRoot.Clone(),
-                    logger);
+                return McpResponseBuilder.BuildSuccessResult(
+                    new Dictionary<string, object?>
+                    {
+                        ["entity"] = entityName,
+                        ["result"] = queryRoot.Clone(),
+                        ["message"] = $"Successfully read records for entity '{entityName}'"
+                    },
+                    logger,
+                    $"ReadRecordsTool success for entity {entityName}.");
             }
             catch (OperationCanceledException)
             {
-                return BuildErrorResult("OperationCanceled", "The read operation was canceled.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The read operation was canceled.", logger);
             }
             catch (DbException argEx)
             {
-                return BuildErrorResult("DatabaseOperationFailed", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseOperationFailed", argEx.Message, logger);
             }
             catch (ArgumentException argEx)
             {
-                return BuildErrorResult("InvalidArguments", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
             }
             catch (DataApiBuilderException argEx)
             {
-                return BuildErrorResult(argEx.StatusCode.ToString(), argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, argEx.StatusCode.ToString(), argEx.Message, logger);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return BuildErrorResult("UnexpectedError", "Unexpected error occurred in ReadRecordsTool.", logger);
+                logger?.LogError(ex, "Unexpected error in ReadRecordsTool.");
+                return McpResponseBuilder.BuildErrorResult(toolName, "UnexpectedError", "Unexpected error occurred in ReadRecordsTool.", logger);
             }
         }
 
@@ -323,101 +332,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             error = $"You do not have permission to read records for entity '{entityName}'.";
             return false;
-        }
-
-        /// <summary>
-        /// Returns a result from the query in the case that it was successfully ran.
-        /// </summary>
-        /// <param name="entityName">Name of the entity used in the request.</param>
-        /// <param name="engineRootElement">Query result from engine.</param>
-        /// <param name="logger">MCP logger that returns all logged events.</param>
-        private static CallToolResult BuildSuccessResult(
-            string entityName,
-            JsonElement engineRootElement,
-            ILogger? logger)
-        {
-            // Build normalized response
-            Dictionary<string, object?> normalized = new()
-            {
-                ["status"] = "success",
-                ["result"] = engineRootElement // only requested values
-            };
-
-            string output = JsonSerializer.Serialize(normalized, new JsonSerializerOptions { WriteIndented = true });
-
-            logger?.LogInformation("ReadRecordsTool success for entity {Entity}.", entityName);
-
-            return new CallToolResult
-            {
-                Content = new List<ContentBlock>
-                {
-                    new TextContentBlock { Type = "text", Text = output }
-                }
-            };
-        }
-
-        /// <summary>
-        /// Returns an error if the query failed to run at any point.
-        /// </summary>
-        /// <param name="errorType">Type of error that is encountered.</param>
-        /// <param name="message">Error message given to the user.</param>
-        /// <param name="logger">MCP logger that returns all logged events.</param>
-        private static CallToolResult BuildErrorResult(
-            string errorType,
-            string message,
-            ILogger? logger)
-        {
-            Dictionary<string, object?> errorObj = new()
-            {
-                ["status"] = "error",
-                ["error"] = new Dictionary<string, object?>
-                {
-                    ["type"] = errorType,
-                    ["message"] = message
-                }
-            };
-
-            string output = JsonSerializer.Serialize(errorObj);
-
-            logger?.LogError("ReadRecordsTool error {ErrorType}: {Message}", errorType, message);
-
-            return new CallToolResult
-            {
-                Content =
-                [
-                    new TextContentBlock { Type = "text", Text = output }
-                ],
-                IsError = true
-            };
-        }
-
-        /// <summary>
-        /// Extracts a JSON string from a typical IActionResult.
-        /// Falls back to "{}" for unsupported/empty cases to avoid leaking internals.
-        /// </summary>
-        private static string ExtractResultJson(IActionResult? result)
-        {
-            switch (result)
-            {
-                case ObjectResult obj:
-                    if (obj.Value is JsonElement je)
-                    {
-                        return je.GetRawText();
-                    }
-
-                    if (obj.Value is JsonDocument jd)
-                    {
-                        return jd.RootElement.GetRawText();
-                    }
-
-                    return JsonSerializer.Serialize(obj.Value ?? new object());
-
-                case ContentResult content:
-                    return string.IsNullOrWhiteSpace(content.Content) ? "{}" : content.Content;
-
-                default:
-                    return "{}";
-            }
         }
     }
 }

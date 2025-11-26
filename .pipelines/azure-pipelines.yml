@@ -9,6 +9,18 @@ trigger:
     - gh-readonly-queue/main
     - release/*
 
+pr:
+  branches:
+    include:
+    - main
+    - release/*
+  paths:
+    exclude:
+    - samples/**
+    - docs/**
+    - '*.md'
+    - templates/**
+
 variables:
 #  DebugArguments: ' --filter "TestCategory!=ABC" --verbosity normal '
 #  ReleaseArguments: ' --filter "TestCategory!=ABC" --verbosity normal '

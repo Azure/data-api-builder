@@ -5,7 +5,6 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -92,11 +91,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // 2)Check if the tool is enabled in configuration before proceeding.
             if (config.McpDmlTools?.UpdateRecord != true)
             {
-                return McpResponseBuilder.BuildErrorResult(
-                    toolName,
-                    "ToolDisabled",
-                    "The update_record tool is disabled in the configuration.",
-                    logger);
+                return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
             }
 
             try
@@ -110,7 +105,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
-                if (!TryParseArguments(arguments.RootElement, out string entityName, out Dictionary<string, object?> keys, out Dictionary<string, object?> fields, out string parseError))
+                if (!McpArgumentParser.TryParseEntityKeysAndFields(
+                        arguments.RootElement,
+                        out string entityName,
+                        out Dictionary<string, object?> keys,
+                        out Dictionary<string, object?> fields,
+                        out string parseError))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
@@ -118,23 +118,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
 
-                // 4) Resolve metadata for entity existence check
-                string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
-
-                try
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entityName,
+                        config,
+                        serviceProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // 5) Authorization after we have a known entity
@@ -144,12 +137,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", "unable to resolve a valid role context for update operation.", logger);
                 }
 
-                if (!TryResolveAuthorizedRoleHasPermission(httpContext, authResolver, entityName, out string? effectiveRole, out string authError))
+                if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
+                    httpContext!,
+                    authResolver,
+                    entityName,
+                    EntityActionOperation.Update,
+                    out string? effectiveRole,
+                    out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", $"Permission denied: {authError}", logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "update", authError, logger);
                 }
 
                 // 6) Build and validate Upsert (UpdateIncremental) context
@@ -194,11 +193,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                     if (errorMsg.Contains("No Update could be performed, record not found", StringComparison.OrdinalIgnoreCase))
                     {
-                        return McpResponseBuilder.BuildErrorResult(
-                            toolName,
-                            "InvalidArguments",
-                            "No record found with the given key.",
-                            logger);
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No record found with the given key.", logger);
                     }
                     else
                     {
@@ -247,8 +242,8 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (Exception ex)
             {
-                ILogger<UpdateRecordTool>? innerLogger = serviceProvider.GetService<ILogger<UpdateRecordTool>>();
-                innerLogger?.LogError(ex, "Unexpected error in UpdateRecordTool.");
+                logger?.LogError(ex, "Unexpected error in UpdateRecordTool.");
+
                 return McpResponseBuilder.BuildErrorResult(
                     toolName,
                     "UnexpectedError",
@@ -256,117 +251,5 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     logger);
             }
         }
-
-        #region Parsing & Authorization
-
-        private static bool TryParseArguments(
-            JsonElement root,
-            out string entityName,
-            out Dictionary<string, object?> keys,
-            out Dictionary<string, object?> fields,
-            out string error)
-        {
-            entityName = string.Empty;
-            keys = new Dictionary<string, object?>();
-            fields = new Dictionary<string, object?>();
-            error = string.Empty;
-
-            if (!root.TryGetProperty("entity", out JsonElement entityEl) ||
-                !root.TryGetProperty("keys", out JsonElement keysEl) ||
-                !root.TryGetProperty("fields", out JsonElement fieldsEl))
-            {
-                error = "Missing required arguments 'entity', 'keys', or 'fields'.";
-                return false;
-            }
-
-            // Parse and validate required arguments: entity, keys, fields
-            entityName = entityEl.GetString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(entityName))
-            {
-                throw new ArgumentException("Entity is required", nameof(entityName));
-            }
-
-            if (keysEl.ValueKind != JsonValueKind.Object || fieldsEl.ValueKind != JsonValueKind.Object)
-            {
-                throw new ArgumentException("'keys' and 'fields' must be JSON objects.");
-            }
-
-            try
-            {
-                keys = JsonSerializer.Deserialize<Dictionary<string, object?>>(keysEl.GetRawText()) ?? new Dictionary<string, object?>();
-                fields = JsonSerializer.Deserialize<Dictionary<string, object?>>(fieldsEl.GetRawText()) ?? new Dictionary<string, object?>();
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException("Failed to parse 'keys' or 'fields'", ex);
-            }
-
-            if (keys.Count == 0)
-            {
-                throw new ArgumentException("Keys are required to update an entity");
-            }
-
-            if (fields.Count == 0)
-            {
-                throw new ArgumentException("At least one field must be provided to update an entity", nameof(fields));
-            }
-
-            foreach (KeyValuePair<string, object?> kv in keys)
-            {
-                if (kv.Value is null || (kv.Value is string str && string.IsNullOrWhiteSpace(str)))
-                {
-                    throw new ArgumentException($"Key value for '{kv.Key}' cannot be null or empty.");
-                }
-            }
-
-            return true;
-        }
-
-        private static bool TryResolveAuthorizedRoleHasPermission(
-            HttpContext httpContext,
-            IAuthorizationResolver authorizationResolver,
-            string entityName,
-            out string? effectiveRole,
-            out string error)
-        {
-            effectiveRole = null;
-            error = string.Empty;
-
-            string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
-
-            if (string.IsNullOrWhiteSpace(roleHeader))
-            {
-                error = "Client role header is missing or empty.";
-                return false;
-            }
-
-            string[] roles = roleHeader
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (roles.Length == 0)
-            {
-                error = "Client role header is missing or empty.";
-                return false;
-            }
-
-            foreach (string role in roles)
-            {
-                bool allowed = authorizationResolver.AreRoleAndOperationDefinedForEntity(
-                    entityName, role, EntityActionOperation.Update);
-
-                if (allowed)
-                {
-                    effectiveRole = role;
-                    return true;
-                }
-            }
-
-            error = "You do not have permission to update records for this entity.";
-            return false;
-        }
-
-        #endregion
     }
 }

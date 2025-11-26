@@ -87,11 +87,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 2) Check if the tool is enabled in configuration before proceeding
                 if (config.McpDmlTools?.ExecuteEntity != true)
                 {
-                    return McpResponseBuilder.BuildErrorResult(
-                        toolName,
-                        "ToolDisabled",
-                        $"The {toolName} tool is disabled in the configuration.",
-                        logger);
+                    return McpErrorHelpers.ToolDisabled(this.GetToolMetadata().Name, logger);
                 }
 
                 // 3) Parsing & basic argument validation
@@ -100,7 +96,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
-                if (!TryParseExecuteArguments(arguments.RootElement, out string entity, out Dictionary<string, object?> parameters, out string parseError))
+                if (!McpArgumentParser.TryParseExecuteArguments(arguments.RootElement, out string entity, out Dictionary<string, object?> parameters, out string parseError))
                 {
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
@@ -125,23 +121,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity {entity} cannot be executed.", logger);
                 }
 
-                // 5) Resolve metadata
-                string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
-
-                try
+                // Use shared metadata helper.
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entity,
+                        config,
+                        serviceProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = config.GetDataSourceNameFromEntityName(entity);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Failed to resolve entity metadata for '{entity}'.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entity, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Failed to resolve database object for entity '{entity}'.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // 6) Authorization - Never bypass permissions
@@ -151,7 +141,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", roleError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entity, "execute", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -162,7 +152,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", authError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entity, "execute", authError, logger);
                 }
 
                 // 7) Validate parameters against metadata
@@ -328,48 +318,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
         }
 
         /// <summary>
-        /// Parses the execute arguments from the JSON input.
-        /// </summary>
-        private static bool TryParseExecuteArguments(
-            JsonElement rootElement,
-            out string entity,
-            out Dictionary<string, object?> parameters,
-            out string parseError)
-        {
-            entity = string.Empty;
-            parameters = new Dictionary<string, object?>();
-            parseError = string.Empty;
-
-            if (rootElement.ValueKind != JsonValueKind.Object)
-            {
-                parseError = "Arguments must be an object";
-                return false;
-            }
-
-            // Extract entity name (required)
-            if (!rootElement.TryGetProperty("entity", out JsonElement entityElement) ||
-                entityElement.ValueKind != JsonValueKind.String)
-            {
-                parseError = "Missing or invalid 'entity' parameter";
-                return false;
-            }
-
-            entity = entityElement.GetString() ?? string.Empty;
-
-            // Extract parameters if provided (optional)
-            if (rootElement.TryGetProperty("parameters", out JsonElement parametersElement) &&
-                parametersElement.ValueKind == JsonValueKind.Object)
-            {
-                foreach (JsonProperty property in parametersElement.EnumerateObject())
-                {
-                    parameters[property.Name] = GetParameterValue(property.Value);
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// Converts a JSON element to its appropriate CLR type matching GraphQL data types.
         /// </summary>
         private static object? GetParameterValue(JsonElement element)
@@ -440,11 +388,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             else if (queryResult is UnauthorizedObjectResult)
             {
-                return McpResponseBuilder.BuildErrorResult(
-                    toolName,
-                    "PermissionDenied",
-                    "You do not have permission to execute this entity",
-                    logger);
+                return McpErrorHelpers.PermissionDenied(toolName, entityName, "execute", "You do not have permission to execute this entity", logger);
             }
             else
             {

@@ -67,6 +67,10 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
                         graphQL = graphQLOptionsConverter.Read(ref reader, typeof(EntityGraphQLOptions), options);
                         break;
 
+                    case "mcp":
+                        // TODO: Add MCP support for autoentities needed.
+                        break;
+
                     case "health":
                         health = healthOptionsConverter.Read(ref reader, typeof(EntityHealthCheckConfig), options);
                         break;

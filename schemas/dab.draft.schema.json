@@ -695,7 +695,7 @@
     },
     "autoentities": {
       "type": "object",
-      "description": "Auto-entity definitions for wildcard pattern matching",
+      "description": "Auto-entity definitions for pattern matching",
       "patternProperties": {
         "^.*$": {
           "type": "object",
@@ -712,7 +712,7 @@
                   "items": {
                     "type": "string"
                   },
-                  "default": null
+                  "default": [ "%.%" ]
                 },
                 "exclude": {
                   "type": "array",
@@ -725,7 +725,7 @@
                 "name": {
                   "type": "string",
                   "description": "Interpolation syntax for entity naming, must be unique for every entity inside the pattern",
-                  "default": "{schema}{object}"
+                  "default": "{object}"
                 }
               }
             },
@@ -753,32 +753,32 @@
                             "describe-entities": {
                               "type": "boolean",
                               "description": "Enable/disable the describe-entities tool.",
-                              "default": false
+                              "default": true
                             },
                             "create-record": {
                               "type": "boolean",
                               "description": "Enable/disable the create-record tool.",
-                              "default": false
+                              "default": true
                             },
                             "read-records": {
                               "type": "boolean",
                               "description": "Enable/disable the read-records tool.",
-                              "default": false
+                              "default": true
                             },
                             "update-record": {
                               "type": "boolean",
                               "description": "Enable/disable the update-record tool.",
-                              "default": false
+                              "default": true
                             },
                             "delete-record": {
                               "type": "boolean",
                               "description": "Enable/disable the delete-record tool.",
-                              "default": false
+                              "default": true
                             },
                             "execute-entity": {
                               "type": "boolean",
                               "description": "Enable/disable the execute-entity tool.",
-                              "default": false
+                              "default": true
                             }
                           }
                         }
@@ -842,7 +842,7 @@
                       "type": "string",
                       "description": "Cache level (L1 or L1L2)",
                       "enum": [ "L1", "L1L2", null ],
-                      "default": null
+                      "default": "L1L2"
                     }
                   }
                 }

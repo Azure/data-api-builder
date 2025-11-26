@@ -8,6 +8,11 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
+/// <summary>
+/// This converter is used to convert all the autoentities defined in the configuration file
+/// each into a <see cref="Autoentity"/> object. The resulting collection is then wrapped in the
+/// <see cref="RuntimeAutoentities"/> object.
+/// </summary>
 class RuntimeAutoentitiesConverter : JsonConverter<RuntimeAutoentities>
 {
     /// <inheritdoc/>

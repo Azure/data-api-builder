@@ -4289,8 +4289,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Test validates that autoentities section can be deserialized and serialized correctly.
         /// </summary>
-        [TestMethod]
+        [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
+        [DataRow(null, null, null, null, null, null, null, null, null)]
+        [DataRow("%.%", "%.%", "{object}", true, true, true, true, 5, EntityCacheLevel.L1L2)]
+        [DataRow("%.%", "%.%", "{object}", true, true, true, true, 5, EntityCacheLevel.L1L2)]
         public void TestAutoEntitiesSerializationDeserialization(
             string[]? include,
             string[]? exclude,
@@ -4300,9 +4303,7 @@ type Planet @model(name:""PlanetAlias"") {
             bool? healthCheckEnabled,
             bool? cacheEnabled,
             int? cacheTTL,
-            EntityCacheLevel? cacheLevel,
-            string role,
-            EntityAction[] entityActions)
+            EntityCacheLevel? cacheLevel)
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
 
@@ -4317,7 +4318,8 @@ type Planet @model(name:""PlanetAlias"") {
                         Cache: new EntityCacheOptions(Enabled: cacheEnabled, TtlSeconds: cacheTTL, Level: cacheLevel)
                     ),
                     Permissions: new EntityPermission[1]));
-            createdAutoentity["test-entity"].Permissions[0] = new EntityPermission(role, entityActions);
+
+            createdAutoentity["test-entity"].Permissions[0] = new EntityPermission("anonymous", new EntityAction[] { new(EntityActionOperation.Read, null, null) });
             RuntimeAutoentities autoentities = new(createdAutoentity);
 
             FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();

@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public record RuntimeAutoentities
 {
     /// <summary>
-    /// The collection of <see cref="Entity"/> available from the RuntimeConfig.
+    /// The collection of <see cref="Autoentity"/> available from the RuntimeConfig.
     /// </summary>
     public IReadOnlyDictionary<string, Autoentity> AutoEntities { get; init; }
 

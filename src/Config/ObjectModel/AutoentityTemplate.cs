@@ -67,7 +67,7 @@ public record AutoentityTemplate
         }
         else
         {
-            this.Cache = new EntityCacheOptions(Enabled: true);
+            this.Cache = new EntityCacheOptions();
         }
     }
 

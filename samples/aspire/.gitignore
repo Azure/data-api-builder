@@ -1,0 +1,5 @@
+# Do not ignore anything in this folder
+!*
+
+# Explicitly include dab-config.json
+!dab-config.json

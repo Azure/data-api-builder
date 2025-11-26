@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Mcp.Model;
@@ -163,7 +164,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 requestValidator.ValidatePrimaryKey(context);
 
-                var mutationEngineFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Resolvers.Factories.IMutationEngineFactory>();
+                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
                 DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(dbType);
 

@@ -59,13 +59,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             string toolName = GetToolMetadata().Name;
             if (arguments == null)
             {
-                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
             }
 
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "InvalidConfiguration", "Runtime configuration not available.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidConfiguration", "Runtime configuration not available.", logger);
             }
 
             if (runtimeConfig.McpDmlTools?.CreateRecord != true)

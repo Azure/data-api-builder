@@ -798,7 +798,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void TestEnvVariableResolvingToAkvPatternIsExpandedInSecondPass()
         {
             string akvFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".akv");
-            string finalSecretValue = "Server=localhost;Database=Test;User Id=sa;Password=Pass@word1;";
+            string finalSecretValue = "Server=localhost;Database=Test;User Id=sa;Password=XXXX;";
             File.WriteAllText(akvFilePath, $"DBCONN={finalSecretValue}\n");
             string escapedPath = akvFilePath.Replace("\\", "\\\\");
             Environment.SetEnvironmentVariable("env_variable", "@akv('DBCONN')");

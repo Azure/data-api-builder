@@ -59,18 +59,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             string toolName = GetToolMetadata().Name;
             if (arguments == null)
             {
-                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "Invalid Arguments", "No arguments provided", logger);
+                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
             }
 
             RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "Invalid Configuration", "Runtime configuration not available", logger);
+                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "InvalidConfiguration", "Runtime configuration not available.", logger);
             }
 
             if (runtimeConfig.McpDmlTools?.CreateRecord != true)
             {
-                return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
+                return McpErrorHelpers.ToolDisabled(toolName, logger);
             }
 
             try
@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpArgumentParser.TryParseEntityAndData(root, out string entityName, out JsonElement dataElement, out string parseError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
                 if (!McpMetadataHelper.TryResolveMetadata(
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string dataSourceName,
                         out string metadataError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidConfiguration", metadataError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // Create an HTTP context for authorization
@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authorizationResolver, out string roleCtxError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {roleCtxError} for create operation for entity: {entityName}.", logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "create", roleCtxError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string? effectiveRole,
                         out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", authError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "create", authError, logger);
                 }
 
                 JsonElement insertPayloadRoot = dataElement.Clone();
@@ -134,12 +134,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                     catch (Exception ex)
                     {
-                        return Utils.McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {ex.Message}", logger);
+                        return McpResponseBuilder.BuildErrorResult(toolName, "ValidationFailed", $"Request validation failed: {ex.Message}", logger);
                     }
                 }
                 else
                 {
-                    return Utils.McpResponseBuilder.BuildErrorResult(
+                    return McpResponseBuilder.BuildErrorResult(
                         toolName,
                         "InvalidCreateTarget",
                         "The create_record tool is only available for tables.",
@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (result is CreatedResult createdResult)
                 {
-                    return Utils.McpResponseBuilder.BuildSuccessResult(
+                    return McpResponseBuilder.BuildSuccessResult(
                         new Dictionary<string, object?>
                         {
                             ["entity"] = entityName,
@@ -169,7 +169,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     bool isError = objectResult.StatusCode.HasValue && objectResult.StatusCode.Value >= 400 && objectResult.StatusCode.Value != 403;
                     if (isError)
                     {
-                        return Utils.McpResponseBuilder.BuildErrorResult(
+                        return McpResponseBuilder.BuildErrorResult(
                             toolName,
                             "CreateFailed",
                             $"Failed to create record in entity '{entityName}'. Error: {JsonSerializer.Serialize(objectResult.Value)}",
@@ -177,7 +177,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                     else
                     {
-                        return Utils.McpResponseBuilder.BuildSuccessResult(
+                        return McpResponseBuilder.BuildSuccessResult(
                             new Dictionary<string, object?>
                             {
                                 ["entity"] = entityName,
@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     if (result is null)
                     {
-                        return Utils.McpResponseBuilder.BuildErrorResult(
+                        return McpResponseBuilder.BuildErrorResult(
                             toolName,
                             "UnexpectedError",
                             $"Mutation engine returned null result for entity '{entityName}'",
@@ -200,7 +200,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                     else
                     {
-                        return Utils.McpResponseBuilder.BuildSuccessResult(
+                        return McpResponseBuilder.BuildSuccessResult(
                             new Dictionary<string, object?>
                             {
                                 ["entity"] = entityName,
@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (Exception ex)
             {
-                return Utils.McpResponseBuilder.BuildErrorResult(toolName, "Error", $"Error: {ex.Message}", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "Error", $"Error: {ex.Message}", logger);
             }
         }
     }

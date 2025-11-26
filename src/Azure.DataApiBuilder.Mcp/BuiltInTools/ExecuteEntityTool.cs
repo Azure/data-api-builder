@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string dataSourceName,
                         out string metadataError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", metadataError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // 6) Authorization - Never bypass permissions
@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpErrorHelpers.PermissionDenied(entity, "execute", roleError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entity, "execute", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpErrorHelpers.PermissionDenied(entity, "execute", authError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entity, "execute", authError, logger);
                 }
 
                 // 7) Validate parameters against metadata
@@ -388,7 +388,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             else if (queryResult is UnauthorizedObjectResult)
             {
-                return McpErrorHelpers.PermissionDenied(entityName, "execute", "You do not have permission to execute this entity", logger);
+                return McpErrorHelpers.PermissionDenied(toolName, entityName, "execute", "You do not have permission to execute this entity", logger);
             }
             else
             {

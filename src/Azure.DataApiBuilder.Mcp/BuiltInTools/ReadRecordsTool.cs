@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (runtimeConfig.McpDmlTools?.ReadRecords is not true)
             {
-                return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
+                return McpErrorHelpers.ToolDisabled(toolName, logger);
             }
 
             try
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpArgumentParser.TryParseEntity(root, out entityName, out string parseError))
                 {
-                    return BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
                 if (root.TryGetProperty("select", out JsonElement selectElement))
@@ -148,7 +148,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string dataSourceName,
                         out string metadataError))
                 {
-                    return BuildErrorResult("EntityNotFound", metadataError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // Authorization check in the existing entity
@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleCtxError))
                 {
-                    return McpErrorHelpers.PermissionDenied(entityName, "read", roleCtxError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "read", roleCtxError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     string finalError = readAuthError.StartsWith("You do not have permission", StringComparison.OrdinalIgnoreCase)
                         ? $"You do not have permission to read records for entity '{entityName}'."
                         : readAuthError;
-                    return McpErrorHelpers.PermissionDenied(entityName, "read", finalError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "read", finalError, logger);
                 }
 
                 // Build and validate Find context
@@ -225,7 +225,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     requirements: new[] { new ColumnsPermissionsRequirement() });
                 if (!authorizationResult.Succeeded)
                 {
-                    return McpErrorHelpers.PermissionDenied(entityName, "read", DataApiBuilderException.AUTHORIZATION_FAILURE, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "read", DataApiBuilderException.AUTHORIZATION_FAILURE, logger);
                 }
 
                 // Execute

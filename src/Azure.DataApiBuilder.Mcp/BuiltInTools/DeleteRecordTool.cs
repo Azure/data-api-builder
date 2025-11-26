@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string dataSourceName,
                         out string metadataError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", metadataError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // Validate it's a table or view
@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpErrorHelpers.PermissionDenied(entityName, "delete", roleError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "delete", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpErrorHelpers.PermissionDenied(entityName, "delete", authError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "delete", authError, logger);
                 }
 
                 // Need MetadataProviderFactory for RequestValidator; resolve here.

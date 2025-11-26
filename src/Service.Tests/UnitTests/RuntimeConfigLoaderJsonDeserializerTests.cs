@@ -433,7 +433,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     ""host"": {
       ""mode"": ""development"",
       ""cors"": {
-        ""origins"": [ """ + reps[++index % reps.Length] + @""", """ + reps[++index % reps.Length] + @""" ],
+        ""origins"": [ """ + reps[++index % reps.Length] + @""", """ + reps[++index % reps.Length] + @"""],
         ""allow-credentials"": true
       },
       ""authentication"": {
@@ -629,7 +629,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             { "DATABASE_NAME", "planet" },
             { "GRAPHQL_SCHEMA_PATH", "gql-schema.gql" },
             { "DATABASE_CONNECTION_STRING", "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;" },
-            { "DATABASE_CONNECTION_STRING_PGSQL", "Host=<>;Database=<>;username=<>;password=<>" }
+            { "DATABASE_CONNECTION_STRING_PGSQL", "Host=<>;Database=<>;username=<>;password<>" }
         };
 
         /// <summary>
@@ -770,6 +770,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
                 string actual = config.DataSource.ConnectionString;
                 Assert.IsTrue(actual.Contains("@env('env')"), "Nested @env pattern inside AKV secret should remain unexpanded.");
+                Assert.IsFalse(actual.Contains("SHOULD_NOT_APPEAR"), "Env var value should not be expanded inside AKV secret.");
                 Assert.IsTrue(actual.Contains("Application Name="), "Application Name should be appended for MSSQL when env replacement is enabled.");
 
                 var builderOriginal = new SqlConnectionStringBuilder(secretValueWithEnvPattern.Replace("Server=", "Data Source=").Replace("Database=", "Initial Catalog="));

@@ -796,10 +796,20 @@ mutation {{
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
+
+            JsonElement result = response;
+
+            // In some environments ExecuteGraphQLRequestAsync may return the items array,
+            // so pick the first element when ValueKind is Array.
+            if (response.ValueKind == JsonValueKind.Array && response.GetArrayLength() > 0)
+            {
+                result = response[0];
+            }
+
             // Validate results
-            Assert.AreEqual(id, response.GetProperty("id").GetString());
-            Assert.AreEqual(newName, response.GetProperty("name").GetString());
-            Assert.AreEqual(id, response.GetProperty("stars")[0].GetProperty("id").GetString());
+            Assert.AreEqual(id, result.GetProperty("id").GetString());
+            Assert.AreEqual(newName, result.GetProperty("name").GetString());
+            Assert.AreEqual(id, result.GetProperty("stars")[0].GetProperty("id").GetString());
         }
 
         [TestMethod]

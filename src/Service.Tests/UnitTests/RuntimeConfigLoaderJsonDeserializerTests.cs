@@ -737,7 +737,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string akvFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".akv");
             // Valid MSSQL connection string which embeds an @env('env') pattern in the Database value.
             // This pattern should NOT be expanded because replacement only runs once on the original JSON token (@akv('DBCONN')).
-            string secretValueWithEnvPattern = "Server=localhost;Database=@env('env');User Id=sa;Password=Pass@word1;";
+            string secretValueWithEnvPattern = "Server=localhost;Database=@env('env');User Id=sa;Password=XXXX;";
             File.WriteAllText(akvFilePath, $"DBCONN={secretValueWithEnvPattern}\n");
             string escapedPath = akvFilePath.Replace("\\", "\\\\");
 

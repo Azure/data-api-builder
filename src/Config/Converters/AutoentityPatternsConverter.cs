@@ -45,9 +45,9 @@ internal class AutoentityPatternsConverter : JsonConverter<AutoentityPatterns>
                         {
                             List<string> includeList = new();
 
-                            if (reader.TokenType == JsonTokenType.StartObject)
+                            if (reader.TokenType == JsonTokenType.StartArray)
                             {
-                                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                                 {
                                     string? value = reader.DeserializeString(_replacementSettings);
                                     if (value is not null)
@@ -71,9 +71,9 @@ internal class AutoentityPatternsConverter : JsonConverter<AutoentityPatterns>
                         {
                             List<string> excludeList = new();
 
-                            if (reader.TokenType == JsonTokenType.StartObject)
+                            if (reader.TokenType == JsonTokenType.StartArray)
                             {
-                                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                                 {
                                     string? value = reader.DeserializeString(_replacementSettings);
                                     if (value is not null)

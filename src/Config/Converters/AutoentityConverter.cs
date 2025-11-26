@@ -94,6 +94,12 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
             autoentityTemplateConverter.Write(writer, template, options);
         }
 
+        if (value?.UserProvidedPermissionsOptions is true)
+        {
+            writer.WritePropertyName("permissions");
+            JsonSerializer.Serialize(writer, value.Permissions, options);
+        }
+
         writer.WriteEndObject();
     }
 }

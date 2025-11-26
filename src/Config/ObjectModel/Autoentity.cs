@@ -24,27 +24,14 @@ public record Autoentity
         AutoentityTemplate? Template,
         EntityPermission[]? Permissions)
     {
-        if (Patterns is not null)
-        {
-            this.Patterns = Patterns;
-        }
-        else
-        {
-            this.Patterns = new AutoentityPatterns();
-        }
+        this.Patterns = Patterns ?? new AutoentityPatterns();
 
-        if (Template is not null)
-        {
-            this.Template = Template;
-        }
-        else
-        {
-            this.Template = new AutoentityTemplate();
-        }
+        this.Template = Template ?? new AutoentityTemplate();
 
         if (Permissions is not null)
         {
             this.Permissions = Permissions;
+            UserProvidedPermissionsOptions = true;
         }
         else
         {

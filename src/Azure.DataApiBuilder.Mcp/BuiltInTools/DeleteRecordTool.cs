@@ -86,10 +86,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 2) Check if the tool is enabled in configuration before proceeding
                 if (config.McpDmlTools?.DeleteRecord != true)
                 {
-                    return McpResponseBuilder.BuildErrorResult(
-                        "ToolDisabled",
-                        $"The {GetToolMetadata().Name} tool is disabled in the configuration.",
-                        logger);
+                    return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
                 }
 
                 // 3) Parsing & basic argument validation
@@ -129,7 +126,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {roleError}", logger);
+                    return McpErrorHelpers.PermissionDenied(entityName, "delete", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -140,7 +137,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
+                    return McpErrorHelpers.PermissionDenied(entityName, "delete", authError, logger);
                 }
 
                 // Need MetadataProviderFactory for RequestValidator; resolve here.

@@ -86,10 +86,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (runtimeConfig.McpDmlTools?.ReadRecords is not true)
             {
-                return BuildErrorResult(
-                    "ToolDisabled",
-                    "The read_records tool is disabled in the configuration.",
-                    logger);
+                return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
             }
 
             try
@@ -161,7 +158,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleCtxError))
                 {
-                    return BuildErrorResult("PermissionDenied", $"Permission denied: {roleCtxError} for read operation for entity: '{entityName}'.", logger);
+                    return McpErrorHelpers.PermissionDenied(entityName, "read", roleCtxError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -175,7 +172,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     string finalError = readAuthError.StartsWith("You do not have permission", StringComparison.OrdinalIgnoreCase)
                         ? $"You do not have permission to read records for entity '{entityName}'."
                         : readAuthError;
-                    return BuildErrorResult("PermissionDenied", finalError, logger);
+                    return McpErrorHelpers.PermissionDenied(entityName, "read", finalError, logger);
                 }
 
                 // Build and validate Find context
@@ -227,7 +224,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     requirements: new[] { new ColumnsPermissionsRequirement() });
                 if (!authorizationResult.Succeeded)
                 {
-                    return BuildErrorResult("PermissionDenied", DataApiBuilderException.AUTHORIZATION_FAILURE, logger);
+                    return McpErrorHelpers.PermissionDenied(entityName, "read", DataApiBuilderException.AUTHORIZATION_FAILURE, logger);
                 }
 
                 // Execute

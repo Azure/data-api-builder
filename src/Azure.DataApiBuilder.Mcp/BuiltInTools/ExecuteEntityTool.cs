@@ -86,10 +86,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 2) Check if the tool is enabled in configuration before proceeding
                 if (config.McpDmlTools?.ExecuteEntity != true)
                 {
-                    return McpResponseBuilder.BuildErrorResult(
-                        "ToolDisabled",
-                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
-                        logger);
+                    return McpErrorHelpers.ToolDisabled(this.GetToolMetadata().Name, logger);
                 }
 
                 // 3) Parsing & basic argument validation
@@ -143,7 +140,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", roleError, logger);
+                    return McpErrorHelpers.PermissionDenied(entity, "execute", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -154,7 +151,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", authError, logger);
+                    return McpErrorHelpers.PermissionDenied(entity, "execute", authError, logger);
                 }
 
                 // 7) Validate parameters against metadata
@@ -384,10 +381,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             else if (queryResult is UnauthorizedObjectResult)
             {
-                return McpResponseBuilder.BuildErrorResult(
-                    "PermissionDenied",
-                    "You do not have permission to execute this entity",
-                    logger);
+                return McpErrorHelpers.PermissionDenied(entityName, "execute", "You do not have permission to execute this entity", logger);
             }
             else
             {

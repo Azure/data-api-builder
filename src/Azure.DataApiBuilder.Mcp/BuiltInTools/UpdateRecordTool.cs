@@ -92,10 +92,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             // 2)Check if the tool is enabled in configuration before proceeding.
             if (config.McpDmlTools?.UpdateRecord != true)
             {
-                return BuildErrorResult(
-                    "ToolDisabled",
-                    "The update_record tool is disabled in the configuration.",
-                    logger);
+                return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
             }
 
             try
@@ -141,7 +138,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (httpContext is null || !authResolver.IsValidRoleContext(httpContext))
                 {
-                    return BuildErrorResult("PermissionDenied", "Permission denied: unable to resolve a valid role context for update operation.", logger);
+                    return McpErrorHelpers.PermissionDenied(entityName, "update", "unable to resolve a valid role context for update operation.", logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -152,7 +149,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
+                    return McpErrorHelpers.PermissionDenied(entityName, "update", authError, logger);
                 }
 
                 // 6) Build and validate Upsert (UpdateIncremental) context

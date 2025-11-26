@@ -69,10 +69,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
             if (runtimeConfig.McpDmlTools?.CreateRecord != true)
             {
-                return Utils.McpResponseBuilder.BuildErrorResult(
-                    "ToolDisabled",
-                    "The create_record tool is disabled in the configuration.",
-                    logger);
+                return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
             }
 
             try

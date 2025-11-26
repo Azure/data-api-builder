@@ -1,8 +1,4 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
@@ -12,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
+using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -21,7 +18,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
-using ModelContextProtocol.Protocol;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -37,28 +33,12 @@ namespace Azure.DataApiBuilder.Service
 
         public static void Main(string[] args)
         {
-
-            // Detect stdio mode as early as possible and route any Console.WriteLine to STDERR
-            bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
-            string? mcpRole = null;
+            bool runMcpStdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? mcpRole);
 
             if (runMcpStdio)
             {
                 Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
                 Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-
-                // If caller provided an optional role token like `role:authenticated`, capture it and
-                // force the runtime to use the Simulator authentication provider for this session.
-                // This makes it easy to run MCP stdio sessions with a preconfigured permissions role.
-                string? roleArg = Array.Find(args, a => a != null && a.StartsWith("role:", StringComparison.OrdinalIgnoreCase));
-                if (!string.IsNullOrEmpty(roleArg))
-                {
-                    string roleValue = roleArg.Substring(roleArg.IndexOf(':') + 1);
-                    if (!string.IsNullOrWhiteSpace(roleValue))
-                    {
-                        mcpRole = roleValue;
-                    }
-                }
             }
 
             if (!ValidateAspNetCoreUrls())
@@ -83,34 +63,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (runMcpStdio)
                 {
-                    // In MCP stdio mode we want the full ASP.NET Core host
-                    // (DI container, configuration, logging, telemetry, Startup, etc.)
-                    // to initialize so MCP tools can resolve all their dependencies,
-                    // but we do NOT want to start the normal HTTP server loop.
-                    // host.Start() boots the host without blocking on Kestrel,
-                    // allowing the process to handle MCP requests over stdio instead
-                    // of serving HTTP traffic via host.Run().
-                    host.Start();
-
-                    Mcp.Core.McpToolRegistry registry = host.Services.GetRequiredService<Mcp.Core.McpToolRegistry>();
-                    IEnumerable<Mcp.Model.IMcpTool> tools = host.Services.GetServices<Mcp.Model.IMcpTool>();
-                    foreach (Mcp.Model.IMcpTool tool in tools)
-                    {
-                        Tool metadata = tool.GetToolMetadata();
-                        registry.RegisterTool(tool);
-                    }
-
-                    // Resolve and run the MCP stdio server from DI
-                    IServiceScopeFactory scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
-                    using IServiceScope scope = scopeFactory.CreateScope();
-                    IHostApplicationLifetime lifetime = scope.ServiceProvider.GetRequiredService<IHostApplicationLifetime>();
-                    Mcp.Core.IMcpStdioServer stdio = scope.ServiceProvider.GetRequiredService<Mcp.Core.IMcpStdioServer>();
-
-                    // Run the stdio loop until cancellation (Ctrl+C / process end)
-                    stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
-
-                    host.StopAsync().GetAwaiter().GetResult();
-                    return true;
+                    return McpStdioHelper.RunMcpStdioHost(host);
                 }
 
                 // Normal web mode
@@ -136,22 +89,7 @@ namespace Azure.DataApiBuilder.Service
         // Compatibility overload used by external callers that do not pass the runMcpStdio flag.
         public static bool StartEngine(string[] args)
         {
-            bool runMcpStdio = Array.Exists(args, a => string.Equals(a, "--mcp-stdio", StringComparison.OrdinalIgnoreCase));
-            string? mcpRole = null;
-
-            if (runMcpStdio)
-            {
-                string? roleArg = Array.Find(args, a => a != null && a.StartsWith("role:", StringComparison.OrdinalIgnoreCase));
-                if (!string.IsNullOrEmpty(roleArg))
-                {
-                    string roleValue = roleArg[(roleArg.IndexOf(':') + 1)..];
-                    if (!string.IsNullOrWhiteSpace(roleValue))
-                    {
-                        mcpRole = roleValue;
-                    }
-                }
-            }
-
+            bool runMcpStdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? mcpRole);
             return StartEngine(args, runMcpStdio, mcpRole: mcpRole);
         }
 
@@ -163,12 +101,7 @@ namespace Azure.DataApiBuilder.Service
                     AddConfigurationProviders(builder, args);
                     if (runMcpStdio)
                     {
-                        builder.AddInMemoryCollection(new Dictionary<string, string?>
-                        {
-                            ["MCP:StdioMode"] = "true",
-                            ["MCP:Role"] = mcpRole ?? "anonymous",
-                            ["Runtime:Host:Authentication:Provider"] = "Simulator"
-                        });
+                        McpStdioHelper.ConfigureMcpStdio(builder, mcpRole);
                     }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
@@ -232,7 +165,14 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="appTelemetryClient">Telemetry client</param>
         /// <param name="logLevelInitializer">Hot-reloadable log level</param>
         /// <param name="serilogLogger">Core Serilog logging pipeline</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null, LogLevelInitializer? logLevelInitializer = null, Logger? serilogLogger = null, bool stdio = false)
+        /// <param name="stdio">Whether the logger is for stdio mode</param>
+        /// <returns>ILoggerFactory</returns>
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(
+            LogLevel logLevel,
+            TelemetryClient? appTelemetryClient = null,
+            LogLevelInitializer? logLevelInitializer = null,
+            Logger? serilogLogger = null,
+            bool stdio = false)
         {
             return LoggerFactory
                 .Create(builder =>

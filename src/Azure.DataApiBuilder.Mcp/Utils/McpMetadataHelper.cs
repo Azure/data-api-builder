@@ -20,8 +20,10 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             out Azure.DataApiBuilder.Core.Services.ISqlMetadataProvider sqlMetadataProvider,
             out DatabaseObject dbObject,
             out string dataSourceName,
-            out string error)
+            out string error,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             sqlMetadataProvider = default!;
             dbObject = default!;
             dataSourceName = string.Empty;
@@ -38,6 +40,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             // Resolve datasource name for the entity.
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
             }
             catch (DataApiBuilderException dabEx) when (dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.EntityNotFound)
@@ -55,6 +58,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             // Resolve metadata provider for the datasource.
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
             }
             catch (DataApiBuilderException dabEx) when (dabEx.SubStatusCode == DataApiBuilderException.SubStatusCodes.DataSourceNotFound)
@@ -68,6 +72,8 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 error = dabEx.Message;
                 return false;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             // Validate entity exists in metadata mapping.
             if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? temp) || temp is null)

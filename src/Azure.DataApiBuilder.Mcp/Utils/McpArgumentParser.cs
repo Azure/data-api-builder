@@ -16,8 +16,10 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         public static bool TryParseEntity(
             JsonElement root,
             out string entityName,
-            out string error)
+            out string error,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             entityName = string.Empty;
             error = string.Empty;
 
@@ -44,11 +46,13 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             JsonElement root,
             out string entityName,
             out JsonElement dataElement,
-            out string error)
+            out string error,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             dataElement = default;
 
-            if (!TryParseEntity(root, out entityName, out error))
+            if (!TryParseEntity(root, out entityName, out error, cancellationToken))
             {
                 return false;
             }
@@ -75,10 +79,12 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             JsonElement root,
             out string entityName,
             out Dictionary<string, object?> keys,
-            out string error)
+            out string error,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             keys = new Dictionary<string, object?>();
-            if (!TryParseEntity(root, out entityName, out error))
+            if (!TryParseEntity(root, out entityName, out error, cancellationToken))
             {
                 return false;
             }
@@ -114,6 +120,8 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             // Validate key values
             foreach (KeyValuePair<string, object?> kv in keys)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (kv.Value is null || (kv.Value is string str && string.IsNullOrWhiteSpace(str)))
                 {
                     error = $"Primary key value for '{kv.Key}' cannot be null or empty";
@@ -132,12 +140,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             out string entityName,
             out Dictionary<string, object?> keys,
             out Dictionary<string, object?> fields,
-            out string error)
+            out string error,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             fields = new Dictionary<string, object?>();
 
             // First parse entity and keys
-            if (!TryParseEntityAndKeys(root, out entityName, out keys, out error))
+            if (!TryParseEntityAndKeys(root, out entityName, out keys, out error, cancellationToken))
             {
                 return false;
             }
@@ -181,8 +191,10 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             JsonElement rootElement,
             out string entity,
             out Dictionary<string, object?> parameters,
-            out string parseError)
+            out string parseError,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             entity = string.Empty;
             parameters = new Dictionary<string, object?>();
 
@@ -192,7 +204,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 return false;
             }
 
-            if (!TryParseEntity(rootElement, out entity, out parseError))
+            if (!TryParseEntity(rootElement, out entity, out parseError, cancellationToken))
             {
                 return false;
             }
@@ -203,6 +215,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             {
                 foreach (JsonProperty property in parametersElement.EnumerateObject())
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     parameters[property.Name] = GetExecuteParameterValue(property.Value);
                 }
             }

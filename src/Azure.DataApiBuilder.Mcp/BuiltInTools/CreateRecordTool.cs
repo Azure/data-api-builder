@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string dataSourceName,
                         out string metadataError))
                 {
-                    return Utils.McpResponseBuilder.BuildErrorResult("InvalidConfiguration", metadataError, logger);
+                    return McpResponseBuilder.BuildErrorResult("InvalidConfiguration", metadataError, logger);
                 }
 
                 // Create an HTTP context for authorization
@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authorizationResolver, out string roleCtxError))
                 {
-                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {roleCtxError} for create operation for entity: {entityName}.", logger);
+                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {roleCtxError} for create operation for entity: {entityName}.", logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         out string? effectiveRole,
                         out string authError))
                 {
-                    return Utils.McpResponseBuilder.BuildErrorResult("PermissionDenied", authError, logger);
+                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", authError, logger);
                 }
 
                 JsonElement insertPayloadRoot = dataElement.Clone();

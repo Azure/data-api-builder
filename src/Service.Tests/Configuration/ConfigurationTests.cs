@@ -4291,9 +4291,10 @@ type Planet @model(name:""PlanetAlias"") {
         /// </summary>
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        [DataRow(null, null, null, null, null, null, null, null, null)]
-        [DataRow("%.%", "%.%", "{object}", true, true, true, true, 5, EntityCacheLevel.L1L2)]
-        [DataRow("%.%", "%.%", "{object}", true, true, true, true, 5, EntityCacheLevel.L1L2)]
+        [DataRow(null, null, null, null, null, null, null, null, null, "anonymous", EntityActionOperation.Read)]
+        [DataRow("%.%", "%.%", "{object}", true, true, true, false, 5, EntityCacheLevel.L1L2, "anonymous", EntityActionOperation.Read)]
+        [DataRow("books.%", "books.pages.%", "books_{object}", false, false, false, true, 2147483647, EntityCacheLevel.L1, "test-user", EntityActionOperation.Delete)]
+        [DataRow(null, "names.%", "{schema}.{object}", true, false, false, true, 1, null, "second-test-user", EntityActionOperation.All)]
         public void TestAutoEntitiesSerializationDeserialization(
             string[]? include,
             string[]? exclude,
@@ -4303,7 +4304,9 @@ type Planet @model(name:""PlanetAlias"") {
             bool? healthCheckEnabled,
             bool? cacheEnabled,
             int? cacheTTL,
-            EntityCacheLevel? cacheLevel)
+            EntityCacheLevel? cacheLevel,
+            string role,
+            EntityActionOperation entityActionOp)
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
 
@@ -4319,7 +4322,8 @@ type Planet @model(name:""PlanetAlias"") {
                     ),
                     Permissions: new EntityPermission[1]));
 
-            createdAutoentity["test-entity"].Permissions[0] = new EntityPermission("anonymous", new EntityAction[] { new(EntityActionOperation.Read, null, null) });
+            EntityAction[] entityActions = new EntityAction[] { new(entityActionOp, null, null) };
+            createdAutoentity["test-entity"].Permissions[0] = new EntityPermission("anonymous", entityActions);
             RuntimeAutoentities autoentities = new(createdAutoentity);
 
             FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
@@ -4349,8 +4353,11 @@ type Planet @model(name:""PlanetAlias"") {
                 JsonElement root = parsedDocument.RootElement;
                 JsonElement autoentitiesElement = root.GetProperty("autoentities");
 
+                bool entityExists = autoentitiesElement.TryGetProperty("test-entity", out JsonElement entityElement);
+                Assert.AreEqual(expected: true, actual: entityExists);
+
                 // Validate patterns properties and their values exists in autoentities
-                JsonElement patternsElement = autoentitiesElement.GetProperty("patterns");
+                JsonElement patternsElement = entityElement.GetProperty("patterns");
 
                 bool includeExists = patternsElement.TryGetProperty("include", out JsonElement includeElement);
                 Assert.AreEqual(expected: true, actual: includeExists);
@@ -4368,7 +4375,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.AreEqual(expected: name, actual: nameElement.GetString());
 
                 // Validate template properties and their values exists in autoentities
-                JsonElement templateElement = autoentitiesElement.GetProperty("template");
+                JsonElement templateElement = entityElement.GetProperty("template");
 
                 bool restPropertyExists = templateElement.TryGetProperty("rest", out JsonElement restElement);
                 Assert.AreEqual(expected: (restEnabled != null), actual: restPropertyExists);
@@ -4401,7 +4408,7 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.AreEqual(expected: (cacheLevel ?? EntityCacheOptions.DEFAULT_LEVEL).ToString(), actual: cacheLevelElement.GetString());
 
                 // Validate permissions properties and their values exists in autoentities
-                JsonElement permissionsElement = autoentitiesElement.GetProperty("permissions");
+                JsonElement permissionsElement = entityElement.GetProperty("permissions");
 
                 bool roleExists = permissionsElement.TryGetProperty("role", out JsonElement roleElement);
                 Assert.AreEqual(expected: true, actual: roleExists);

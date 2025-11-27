@@ -95,6 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                 Fields: fields,
                 GraphQL: new(entityKey, entityKey.Pluralize()),
                 Rest: new(Enabled: true),
+                Mcp: null,
                 Permissions: new[]
                 {
                     new EntityPermission("anonymous", new EntityAction[] {
@@ -371,3 +372,4 @@ namespace Azure.DataApiBuilder.Service.Tests
         }
     }
 }
+

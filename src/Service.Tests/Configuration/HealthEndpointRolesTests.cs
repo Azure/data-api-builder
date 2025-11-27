@@ -54,6 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Rest: new(Enabled: true),
                 GraphQL: new("book", "books", true),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -139,3 +140,4 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
     }
 }
+

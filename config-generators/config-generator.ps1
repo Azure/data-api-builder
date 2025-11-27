@@ -70,4 +70,19 @@ foreach($databaseType in $databaseTypes){
         $commandToExecute = "dotnet " + $pathToDabDLL + " " + $command;
         Invoke-Expression $commandToExecute;
     }
+
+    # Post-process MsSql and DwSql configs to fix stored procedure GraphQL operations
+    # TODO: This is a workaround until https://github.com/Azure/data-api-builder/issues/XXXX is fixed.
+    # The CLI parameter --graphql.operation does not persist for stored procedures.
+    # We manually set specific procedures to 'query' operations here.
+    if($databaseType -eq "mssql" -or $databaseType -eq "dwsql"){
+        $configContent = Get-Content $configFile -Raw | ConvertFrom-Json;
+        if($configContent.entities.GetBooks){
+            $configContent.entities.GetBooks.graphql.operation = "query";
+        }
+        if($configContent.entities.GetPublisher){
+            $configContent.entities.GetPublisher.graphql.operation = "query";
+        }
+        $configContent | ConvertTo-Json -Depth 100 | Set-Content $configFile -Encoding UTF8;
+    }
 }

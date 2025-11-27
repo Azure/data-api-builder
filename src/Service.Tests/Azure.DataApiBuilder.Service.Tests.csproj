@@ -21,6 +21,7 @@
     <None Remove="dab-config.MsSql.json" />
     <None Remove="dab-config.MySql.json" />
     <None Remove="dab-config.PostgreSql.json" />
+    <None Remove="dab-config.DwSql.json" />
     <None Remove="DatabaseSchema-DwSql.sql" />
     <None Remove="Multidab-config.CosmosDb_NoSql.json" />
     <None Remove="Multidab-config.MsSql.json" />
@@ -77,6 +78,11 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Content Include="dab-config.PostgreSql.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="dab-config.DwSql.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>

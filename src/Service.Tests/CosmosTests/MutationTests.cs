@@ -546,6 +546,7 @@ type Planet @model(name:""Planet"") {
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,
+                                  Mcp: null,
                                   Relationships: null,
                                   Mappings: null);
 
@@ -677,6 +678,7 @@ type Planet @model(name:""Planet"") {
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,
+                                  Mcp: null,
                                   Relationships: null,
                                   Mappings: null);
 
@@ -1116,3 +1118,4 @@ mutation {{
         }
     }
 }
+

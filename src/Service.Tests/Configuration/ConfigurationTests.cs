@@ -4286,6 +4286,140 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
+        /// <summary>
+        /// Test validates that autoentities section can be deserialized and serialized correctly.
+        /// </summary>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(null, null, null, null, null, null, null, null, null, "anonymous", EntityActionOperation.Read)]
+        [DataRow("%.%", "%.%", "{object}", true, true, true, false, 5, EntityCacheLevel.L1L2, "anonymous", EntityActionOperation.Read)]
+        [DataRow("books.%", "books.pages.%", "books_{object}", false, false, false, true, 2147483647, EntityCacheLevel.L1, "test-user", EntityActionOperation.Delete)]
+        [DataRow(null, "names.%", "{schema}.{object}", true, false, false, true, 1, null, "second-test-user", EntityActionOperation.All)]
+        public void TestAutoEntitiesSerializationDeserialization(
+            string[]? include,
+            string[]? exclude,
+            string? name,
+            bool? restEnabled,
+            bool? graphqlEnabled,
+            bool? healthCheckEnabled,
+            bool? cacheEnabled,
+            int? cacheTTL,
+            EntityCacheLevel? cacheLevel,
+            string role,
+            EntityActionOperation entityActionOp)
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            Dictionary<string, Autoentity> createdAutoentity = new();
+            createdAutoentity.Add("test-entity",
+                new Autoentity(
+                    Patterns: new AutoentityPatterns(include, exclude, name),
+                    Template: new AutoentityTemplate(
+                        Rest: restEnabled == null ? null : new EntityRestOptions(Enabled: (bool)restEnabled),
+                        GraphQL: graphqlEnabled == null ? null : new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: (bool)graphqlEnabled),
+                        Health: new EntityHealthCheckConfig(healthCheckEnabled),
+                        Cache: new EntityCacheOptions(Enabled: cacheEnabled, TtlSeconds: cacheTTL, Level: cacheLevel)
+                    ),
+                    Permissions: new EntityPermission[1]));
+
+            EntityAction[] entityActions = new EntityAction[] { new(entityActionOp, null, null) };
+            createdAutoentity["test-entity"].Permissions[0] = new EntityPermission("anonymous", entityActions);
+            RuntimeAutoentities autoentities = new(createdAutoentity);
+
+            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            baseLoader.TryLoadKnownConfig(out RuntimeConfig? baseConfig);
+
+            RuntimeConfig config = new(
+                Schema: baseConfig!.Schema,
+                DataSource: baseConfig.DataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null),
+                    Telemetry: new()
+                ),
+                Entities: baseConfig.Entities,
+                Autoentities: autoentities
+            );
+
+            string configWithCustomJson = config.ToJson();
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configWithCustomJson, out RuntimeConfig? deserializedRuntimeConfig));
+
+            string serializedConfig = deserializedRuntimeConfig.ToJson();
+
+            using (JsonDocument parsedDocument = JsonDocument.Parse(serializedConfig))
+            {
+                JsonElement root = parsedDocument.RootElement;
+                JsonElement autoentitiesElement = root.GetProperty("autoentities");
+
+                bool entityExists = autoentitiesElement.TryGetProperty("test-entity", out JsonElement entityElement);
+                Assert.AreEqual(expected: true, actual: entityExists);
+
+                // Validate patterns properties and their values exists in autoentities
+                JsonElement patternsElement = entityElement.GetProperty("patterns");
+
+                bool includeExists = patternsElement.TryGetProperty("include", out JsonElement includeElement);
+                Assert.AreEqual(expected: true, actual: includeExists);
+                Assert.AreEqual(expected: include, actual: includeElement.EnumerateArray().Select(e => e.GetString()).ToArray());
+
+                bool excludeExists = patternsElement.TryGetProperty("exclude", out JsonElement excludeElement);
+                Assert.AreEqual(expected: (exclude != null), actual: excludeExists);
+                if (excludeExists)
+                {
+                    Assert.AreEqual(expected: exclude, actual: excludeElement.EnumerateArray().Select(e => e.GetString()).ToArray());
+                }
+
+                bool nameExists = patternsElement.TryGetProperty("name", out JsonElement nameElement);
+                Assert.AreEqual(expected: true, actual: nameExists);
+                Assert.AreEqual(expected: name, actual: nameElement.GetString());
+
+                // Validate template properties and their values exists in autoentities
+                JsonElement templateElement = entityElement.GetProperty("template");
+
+                bool restPropertyExists = templateElement.TryGetProperty("rest", out JsonElement restElement);
+                Assert.AreEqual(expected: (restEnabled != null), actual: restPropertyExists);
+                if (restEnabled != null)
+                {
+                    Assert.IsTrue(restElement.TryGetProperty("enabled", out JsonElement restEnabledElement));
+                    Assert.AreEqual(expected: restEnabled, actual: restEnabledElement.GetBoolean());
+                }
+
+                bool graphqlPropertyExists = templateElement.TryGetProperty("graphql", out JsonElement graphqlElement);
+                Assert.AreEqual(expected: (graphqlEnabled != null), actual: graphqlPropertyExists);
+                if (graphqlEnabled != null)
+                {
+                    Assert.IsTrue(graphqlElement.TryGetProperty("enabled", out JsonElement graphqlEnabledElement));
+                    Assert.AreEqual(expected: graphqlEnabled, actual: graphqlEnabledElement.GetBoolean());
+                }
+
+                bool healthPropertyExists = templateElement.TryGetProperty("health", out JsonElement healthElement);
+                Assert.AreEqual(expected: true, actual: healthPropertyExists);
+                Assert.IsTrue(healthElement.TryGetProperty("enabled", out JsonElement healthEnabledElement));
+                Assert.AreEqual(expected: (healthCheckEnabled ?? true), actual: healthEnabledElement.GetBoolean());
+
+                bool cachePropertyExists = templateElement.TryGetProperty("cache", out JsonElement cacheElement);
+                Assert.AreEqual(expected: true, actual: cachePropertyExists);
+                Assert.IsTrue(cacheElement.TryGetProperty("enabled", out JsonElement cacheEnabledElement));
+                Assert.AreEqual(expected: (cacheEnabled ?? false), actual: cacheEnabledElement.GetBoolean());
+                Assert.IsTrue(cacheElement.TryGetProperty("ttl", out JsonElement cacheTtlElement));
+                Assert.AreEqual(expected: (cacheTTL ?? EntityCacheOptions.DEFAULT_TTL_SECONDS), actual: cacheTtlElement.GetInt32());
+                Assert.IsTrue(cacheElement.TryGetProperty("level", out JsonElement cacheLevelElement));
+                Assert.AreEqual(expected: (cacheLevel ?? EntityCacheOptions.DEFAULT_LEVEL).ToString(), actual: cacheLevelElement.GetString());
+
+                // Validate permissions properties and their values exists in autoentities
+                JsonElement permissionsElement = entityElement.GetProperty("permissions");
+
+                bool roleExists = permissionsElement.TryGetProperty("role", out JsonElement roleElement);
+                Assert.AreEqual(expected: true, actual: roleExists);
+                Assert.AreEqual(expected: role, actual: roleElement.GetString());
+
+                bool entityActionsExists = permissionsElement.TryGetProperty("entity-actions", out JsonElement entityActionsElement);
+                Assert.AreEqual(expected: true, actual: entityActionsExists);
+                Assert.AreEqual(expected: entityActions.Select(e => e.ToString()).ToArray(), actual: entityActionsElement.EnumerateArray().Select(e => e.ToString()).ToArray());
+            }
+        }
+
 #nullable disable
 
         /// <summary>

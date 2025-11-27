@@ -78,11 +78,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!IsToolEnabled(runtimeConfig))
                 {
-                    return Task.FromResult(McpResponseBuilder.BuildErrorResult(
-                        toolName,
-                        "ToolDisabled",
-                        $"The {GetToolMetadata().Name} tool is disabled in the configuration.",
-                        logger));
+                    return Task.FromResult(McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger));
                 }
 
                 // Get authorization services to determine current user's role

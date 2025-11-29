@@ -17,6 +17,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
     public class DatabaseObjectConverter : JsonConverter<DatabaseObject>
     {
         private const string TYPE_NAME = "TypeName";
+        private const string DOLLAR_CHAR = "$";
+
+        // ``DAB_ESCAPE$`` is used to escape column names that start with `$` during serialization.
+        // It is chosen to be unique enough to avoid collisions with actual column names.
+        private const string ESCAPED_DOLLARCHAR = "DAB_ESCAPE$";
 
         public override DatabaseObject Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -28,6 +33,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 Type concreteType = GetTypeFromName(typeName);
 
                 DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(document, concreteType, options)!;
+
+                foreach (PropertyInfo prop in objA.GetType().GetProperties().Where(IsSourceDefinitionProperty))
+                {
+                    SourceDefinition? sourceDef = (SourceDefinition?)prop.GetValue(objA);
+                    if (sourceDef is not null)
+                    {
+                        UnescapeDollaredColumns(sourceDef);
+                    }
+                }
 
                 return objA;
             }
@@ -58,10 +72,72 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 }
 
                 writer.WritePropertyName(prop.Name);
-                JsonSerializer.Serialize(writer, prop.GetValue(value), options);
+                object? propVal = prop.GetValue(value);
+                Type propType = prop.PropertyType;
+
+                // Only escape columns for properties whose type is exactly SourceDefinition (not subclasses).
+                // This is because, we do not want unnecessary mutation of subclasses of SourceDefinition unless needed.
+                if (IsSourceDefinitionProperty(prop) && propVal is SourceDefinition sourceDef && propVal.GetType() == typeof(SourceDefinition))
+                {
+                    EscapeDollaredColumns(sourceDef);
+                }
+
+                JsonSerializer.Serialize(writer, propVal, propType, options);
             }
 
             writer.WriteEndObject();
+        }
+
+        private static bool IsSourceDefinitionProperty(PropertyInfo prop)
+        {
+            // Only return true for properties whose type is exactly SourceDefinition (not subclasses)
+            return prop.PropertyType == typeof(SourceDefinition);
+        }
+
+        /// <summary>
+        /// Escapes column keys that start with '$' to '_$' for serialization.
+        /// </summary>
+        private static void EscapeDollaredColumns(SourceDefinition sourceDef)
+        {
+            if (sourceDef.Columns is null || sourceDef.Columns.Count == 0)
+            {
+                return;
+            }
+
+            List<string> keysToEscape = sourceDef.Columns.Keys
+                .Where(k => k.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
+                .ToList();
+
+            foreach (string key in keysToEscape)
+            {
+                ColumnDefinition col = sourceDef.Columns[key];
+                sourceDef.Columns.Remove(key);
+                string newKey = ESCAPED_DOLLARCHAR + key[1..];
+                sourceDef.Columns[newKey] = col;
+            }
+        }
+
+        /// <summary>
+        /// Unescapes column keys that start with '_$' to '$' for deserialization.
+        /// </summary>
+        private static void UnescapeDollaredColumns(SourceDefinition sourceDef)
+        {
+            if (sourceDef.Columns is null || sourceDef.Columns.Count == 0)
+            {
+                return;
+            }
+
+            List<string> keysToUnescape = sourceDef.Columns.Keys
+                .Where(k => k.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
+                .ToList();
+
+            foreach (string key in keysToUnescape)
+            {
+                ColumnDefinition col = sourceDef.Columns[key];
+                sourceDef.Columns.Remove(key);
+                string newKey = DOLLAR_CHAR + key[11..];
+                sourceDef.Columns[newKey] = col;
+            }
         }
 
         private static Type GetTypeFromName(string typeName)

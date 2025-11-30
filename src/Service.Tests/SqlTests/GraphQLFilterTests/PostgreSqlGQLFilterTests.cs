@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// <summary>
         /// Tests various string filters with special characters in SQL queries.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(
             "{ title: { endsWith: \"_CONN\" } }",
             "%\\_CONN",

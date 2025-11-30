@@ -174,14 +174,14 @@ public class RestAuthorizationHandler : IAuthorizationHandler
                         // Find operations with no column filter in the query string will have FieldsToBeReturned == 0.
                         // Then, the "allowed columns" resolved, will be set on FieldsToBeReturned.
                         // When FieldsToBeReturned is originally >=1 column, the field is NOT modified here.
-                        if (restContext.FieldsToBeReturned.Count == 0 && restContext.OperationType == EntityActionOperation.Read)
+                        if (restContext.FieldsToBeReturned.Count == 0 && restContext.HttpMethod == EntityActionOperation.Read)
                         {
                             // Union performed to avoid duplicate field names in FieldsToBeReturned.
                             IEnumerable<string> fieldsReturnedForFind = _authorizationResolver.GetAllowedExposedColumns(entityName, roleName, operation);
                             restContext.UpdateReturnFields(fieldsReturnedForFind);
                         }
                     }
-                    else if (columnsToCheck.Count() == 0 && restContext.OperationType is EntityActionOperation.Read)
+                    else if (columnsToCheck.Count() == 0 && restContext.HttpMethod is EntityActionOperation.Read)
                     {
                         // - Find operations typically return all metadata of a database record.
                         // This check resolves all 'included' columns defined in permissions
@@ -197,7 +197,7 @@ public class RestAuthorizationHandler : IAuthorizationHandler
 
                         restContext.UpdateReturnFields(fieldsReturnedForFind);
                     }
-                    else if (columnsToCheck.Count() == 0 && restContext.OperationType is EntityActionOperation.Insert)
+                    else if (columnsToCheck.Count() == 0 && restContext.HttpMethod is EntityActionOperation.Insert)
                     {
                         // It's possible that a INSERT operation has no columns in the request
                         // body, but the operation is still allowed in cases where the table

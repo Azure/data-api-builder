@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// </summary>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE header specified in request.</param>
         /// <returns></returns>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("Anonymous")]
         [DataRow("Authenticated")]
         [DataRow("Policy_Tester_01")]

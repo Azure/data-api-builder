@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Validates managed identity token issued ONLY when connection string does not specify
         /// User, Password, and Authentication method.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("Server =<>;Database=<>;User=xyz;", false, false,
             DisplayName = "No managed identity access token when connection string specifies User only.")]
         [DataRow("Server =<>;Database=<>;Password=xyz;", false, false,
@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<HttpContext>(),
                 It.IsAny<List<string>>())).CallBase();
 
-            DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
+            DataApiBuilderException ex = await Assert.ThrowsAsync<DataApiBuilderException>(async () =>
             {
                 await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: string.Empty,
@@ -216,7 +216,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // For each attempt logger is invoked once. Currently we have hardcoded the number of attempts.
             // Once we have number of retry attempts specified in config, we will make it dynamic.
-            Assert.AreEqual(maxAttempts, queryExecutorLogger.Invocations.Count);
+            Assert.HasCount(maxAttempts, queryExecutorLogger.Invocations);
         }
 
         /// <summary>
@@ -260,12 +260,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that the parameters are correctly populated with the provided values and database types.
             List<SqlParameter> parametersList = dbCommand.Parameters.OfType<SqlParameter>().ToList();
-            Assert.AreEqual(parametersList[0].Value, "My Awesome book");
-            Assert.AreEqual(parametersList[0].DbType, DbType.AnsiString);
-            Assert.AreEqual(parametersList[0].SqlDbType, SqlDbType.VarChar);
-            Assert.AreEqual(parametersList[1].Value, "Ramen");
-            Assert.AreEqual(parametersList[1].DbType, DbType.String);
-            Assert.AreEqual(parametersList[1].SqlDbType, SqlDbType.NVarChar);
+            Assert.AreEqual("My Awesome book", parametersList[0].Value);
+            Assert.AreEqual(DbType.AnsiString, parametersList[0].DbType);
+            Assert.AreEqual(SqlDbType.VarChar, parametersList[0].SqlDbType);
+            Assert.AreEqual("Ramen", parametersList[1].Value);
+            Assert.AreEqual(DbType.String, parametersList[1].DbType);
+            Assert.AreEqual(SqlDbType.NVarChar, parametersList[1].SqlDbType);
         }
 
         /// <summary>
@@ -333,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // The query fails on the first attempt (log event 1).
             // The query fails on the second attempt/first retry (log event 2).
             // The query succeeds on the third attempt/second retry (log event 3).
-            Assert.AreEqual(3, queryExecutorLogger.Invocations.Count);
+            Assert.HasCount(3, queryExecutorLogger.Invocations);
         }
 
         /// <summary>
@@ -402,7 +402,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             stopwatch.Stop();
 
             Assert.IsTrue(context.Items.ContainsKey(TOTAL_DB_EXECUTION_TIME), "HttpContext object must contain the total db execution time after execution of a query");
-            Assert.IsTrue(stopwatch.ElapsedMilliseconds >= (long)context.Items[TOTAL_DB_EXECUTION_TIME], "The execution time stored in http context must be valid.");
+            Assert.IsGreaterThanOrEqualTo((long)context.Items[TOTAL_DB_EXECUTION_TIME], stopwatch.ElapsedMilliseconds, "The execution time stored in http context must be valid.");
         }
 
         /// <summary>
@@ -436,7 +436,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Delegate[] handlers = eventDelegate.GetInvocationList();
 
-            Assert.IsTrue(handlers.Length != 0);
+            Assert.IsNotEmpty(handlers);
         }
 
         /// <summary>
@@ -500,7 +500,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Based on number of loops, the data read will be 1MB * readDataLoops.Exception should be thrown in test cases where we go above 5MB.
         /// This will be in cases where readDataLoops > 5.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(4, false,
             DisplayName = "Max available size is set to 5MB.4 data read loop iterations * 1MB -> should successfully read 4MB because max-db-response-size-mb is 4MB")]
         [DataRow(5, false,
@@ -560,7 +560,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Max available size is set to 4 MB, getChars and getBytes are moqed to return 1MB per read.
         /// Exception should be thrown in test cases where we go above 4MB.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(4, false,
             DisplayName = "Max available size is set to 4MB.4 data read loop iterations, 4 columns of size 1MB -> should successfully read because max-db-response-size-mb is 4MB")]
         [DataRow(5, true,
@@ -627,7 +627,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Makes sure the stream logic handles cells with empty strings correctly.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         public void ValidateStreamingLogicForEmptyCellsAsync()
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);

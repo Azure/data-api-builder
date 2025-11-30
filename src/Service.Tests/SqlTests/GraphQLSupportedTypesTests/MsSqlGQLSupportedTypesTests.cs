@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
         [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
         [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task MSSQL_real_graphql_single_filter_expectedValues(
             string type,
             string filterOperator,
@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "'false'", "false")]
         [DataRow(STRING_TYPE, "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54.000", "\"1999-01-08 10:23:54.000\"")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task MSSQL_real_graphql_in_filter_expectedValues(
             string type,
             string sqlValue,

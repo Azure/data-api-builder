@@ -10,5 +10,5 @@ namespace Azure.DataApiBuilder.Core.Models;
 /// </summary>
 /// <param name="DatabaseName">Name of the database</param>
 /// <param name="ContainerName">Name of the container</param>
-/// <param name="OperationType">Type of operation to perform</param>
-record CosmosOperationMetadata(string DatabaseName, string ContainerName, EntityActionOperation OperationType);
+/// <param name="HttpMethod">Type of operation to perform</param>
+record CosmosOperationMetadata(string DatabaseName, string ContainerName, EntityActionOperation HttpMethod);

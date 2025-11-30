@@ -352,7 +352,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="primaryKeyRoute">Primary key route to be used in the Location Header</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
-        /// <param name="operationType">Resultant Operation type - Update, Insert, etc.</param>
+        /// <param name="HttpMethod">Resultant Operation type - Update, Insert, etc.</param>
         /// <param name="baseRoute">Base Route configured in the config file</param>
         /// <param name="httpContext">HTTP Context associated with the API request</param>
         public static CreatedResult ConstructCreatedResultResponse(
@@ -361,7 +361,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string primaryKeyRoute,
             bool isReadPermissionConfiguredForRole,
             bool isDatabasePolicyDefinedForReadAction,
-            EntityActionOperation operationType,
+            EntityActionOperation HttpMethod,
             string baseRoute,
             HttpContext httpContext
             )
@@ -379,7 +379,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Location is made up of three parts, the first being constructed from the Host property found in the HttpContext.Request.
             // The second part being the base route configured in the config file.
             // The third part is the computed primary key route.
-            if (operationType is EntityActionOperation.Insert && !string.IsNullOrEmpty(primaryKeyRoute))
+            if (HttpMethod is EntityActionOperation.Insert && !string.IsNullOrEmpty(primaryKeyRoute))
             {
                 locationHeaderURL = UriHelper.BuildAbsolute(
                                         scheme: httpContext.Request.Scheme,

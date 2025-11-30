@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     case EdmPrimitiveTypeKind.Boolean:
                         return bool.Parse(param);
                     case EdmPrimitiveTypeKind.Date:
-                        return Date.Parse(param);
+                        return DateOnly.Parse(param);
                     case EdmPrimitiveTypeKind.DateTimeOffset:
                         return DateTimeOffset.Parse(param);
                     case EdmPrimitiveTypeKind.String:

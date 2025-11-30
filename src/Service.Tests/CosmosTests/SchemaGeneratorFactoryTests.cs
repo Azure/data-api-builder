@@ -147,14 +147,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
                 generatedContainerNames.Split(",")
                     .ToList()
-                    .ForEach(containerName => Assert.IsTrue(schema.Contains($"type {containerName.Trim()}")));
+                    .ForEach(containerName => Assert.Contains($"type {containerName.Trim()}", schema));
 
             }
             catch (System.Exception ex)
             {
                 if (exceptionMessage != null)
                 {
-                    Assert.IsTrue(ex.Message.Contains(exceptionMessage));
+                    Assert.Contains(exceptionMessage, ex.Message);
                     return;
                 }
 

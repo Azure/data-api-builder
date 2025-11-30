@@ -1740,8 +1740,8 @@ query {
             Assert.AreEqual(expected: 1, actual: response.GetProperty("ParentAccountKey").GetInt32());
             Assert.AreEqual(expected: 2, actual: response.GetProperty("child_accounts").GetProperty("items").GetArrayLength());
             List<JsonElement> childAccounts = response.GetProperty("child_accounts").GetProperty("items").EnumerateArray().ToList();
-            Assert.IsTrue(childAccounts[0].GetProperty("AccountKey").GetInt32() == 3);
-            Assert.IsTrue(childAccounts[1].GetProperty("AccountKey").GetInt32() == 4);
+            Assert.AreEqual(3, childAccounts[0].GetProperty("AccountKey").GetInt32());
+            Assert.AreEqual(4, childAccounts[1].GetProperty("AccountKey").GetInt32());
         }
 
         /// <summary>
@@ -2157,8 +2157,8 @@ query {
 
             // Verify the error message indicates that aggregations aren't available
             string errorMessage = message.GetString();
-            Assert.IsTrue(errorMessage.Contains("The field `aggregations` does not exist on the type `DateOnlyTableGroupBy`."),
-                $"Expected error about missing aggregations field, but got: {errorMessage}");
+            Assert.Contains("The field `aggregations` does not exist on the type `DateOnlyTableGroupBy`.",
+errorMessage, $"Expected error about missing aggregations field, but got: {errorMessage}");
         }
 
         #endregion

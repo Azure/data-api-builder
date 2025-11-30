@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// expected port. It handles different URL formats and edge cases, including null or invalid inputs.</remarks>
         /// <param name="aspnetcoreUrls">A string representing the ASP.NET Core URLs to be tested.</param>
         /// <param name="expectedPort">The expected port number that should be resolved.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("http://localhost:5000", 5000)]
         [DataRow("https://localhost:443", 443)]
         [DataRow("http://+:1234", 1234)]
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="aspnetcoreUrls">A string representing the ASP.NET Core URLs to be tested.</param>
         /// <param name="expectedPort">The expected port number that should be resolved.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("http://localhost:5000 https://localhost:443", 5000)] // space invalid, falls back to default
         [DataRow("http://localhost:5000|https://localhost:443", 5000)] // invalid delimiter, falls back to default
         [DataRow("localhost:5000", 5000)] // missing scheme: fallback to default

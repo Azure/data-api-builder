@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         const string REFERENCED_TABLE = "fkTable";
         const string REFD_COLNAME = "fk_col";
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("test", "test")]
         [DataRow("Test", "Test")]
         [DataRow("T_est", "T_est")]
@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// </summary>
         /// <param name="columnName"></param>
         /// <param name="expected"></param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("test", "test")]
         [DataRow("Test", "Test")]
         public void ColumnNameBecomesFieldName(string columnName, string expected)
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// <param name="backingColumnName">Name of database column.</param>
         /// <param name="mappedName">Configured alternative (mapped) name of column to be used in REST/GraphQL endpoints.</param>
         /// <param name="expectMappedName">Whether GraphQL object field name should equal the mapped column name provided.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, "__typename", "typename", true, DisplayName = "Mapped column name fixes GraphQL introspection naming violation. ")]
         [DataRow(false, "typename", "mappedtypename", false, DisplayName = "Mapped column name  ")]
         public void FieldNameMatchesMappedValue(bool setMappings, string backingColumnName, string mappedName, bool expectMappedName)
@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == columnName);
             // Authorization directive implicitly created so actual count should be 1 + {expected number of directives}.
-            Assert.AreEqual(2, field.Directives.Count);
+            Assert.HasCount(2, field.Directives);
             Assert.AreEqual(PrimaryKeyDirectiveType.DirectiveName, field.Directives[0].Name.Value);
         }
 
@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             foreach (FieldDefinitionNode field in od.Fields)
             {
-                Assert.AreEqual(1, field.Directives.Count);
+                Assert.HasCount(1, field.Directives);
                 Assert.AreEqual(PrimaryKeyDirectiveType.DirectiveName, field.Directives[0].Name.Value);
             }
         }
@@ -213,10 +213,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 rolesAllowedForFields: GetFieldToRolesMap(additionalColumns: customColumnCount)
                 );
 
-            Assert.AreEqual(table.Columns.Count, od.Fields.Count);
+            Assert.HasCount(table.Columns.Count, od.Fields);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(typeof(string), STRING_TYPE)]
         [DataRow(typeof(byte), BYTE_TYPE)]
         [DataRow(typeof(short), SHORT_TYPE)]
@@ -314,7 +314,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         public void ForeignKeyGeneratesObjectAndColumnField()
         {
             ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many);
-            Assert.AreEqual(3, od.Fields.Count);
+            Assert.HasCount(3, od.Fields);
         }
 
         [TestMethod]
@@ -335,7 +335,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One);
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
 
-            Assert.AreEqual(1, field.Directives.Count);
+            Assert.HasCount(1, field.Directives);
             Assert.AreEqual(RelationshipDirectiveType.DirectiveName, field.Directives[0].Name.Value);
         }
 
@@ -377,7 +377,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                     rolesAllowedForFields: GetFieldToRolesMap()
                     );
 
-            Assert.AreEqual(2, od.Fields.Count);
+            Assert.HasCount(2, od.Fields);
         }
 
         /// <summary>
@@ -390,7 +390,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// <param name="entityName"></param>
         /// <param name="singular"></param>
         /// <param name="expected"></param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("entityName", "overrideName", "overrideName", DisplayName = "Singular name overrides top-level entity name")]
         [DataRow("my entity", "", "my entity", DisplayName = "Top-level entity name with space is not reformatted.")]
         [DataRow("entityName", null, "entityName", DisplayName = "Null singular name defers to top-level entity name")]
@@ -450,7 +450,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.IsTrue(od.Fields[0].Directives.Any(d => d.Name.Value == AutoGeneratedDirectiveType.DirectiveName));
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow((byte)1, BYTE_TYPE, SyntaxKind.IntValue)]
         [DataRow((short)1, SHORT_TYPE, SyntaxKind.IntValue)]
         [DataRow(1, INT_TYPE, SyntaxKind.IntValue)]
@@ -499,7 +499,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 );
 
             // @authorize directive is implicitly created so the count to compare to is 2
-            Assert.AreEqual(2, od.Fields[0].Directives.Count);
+            Assert.HasCount(2, od.Fields[0].Directives);
             DirectiveNode directive = od.Fields[0].Directives[0];
             ObjectValueNode value = (ObjectValueNode)directive.Arguments[0].Value;
             Assert.AreEqual(fieldName, value.Fields[0].Name.Value);
@@ -515,7 +515,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         ///     field3 - {role3, roleN}
         /// Adds directive @authorize(roles=[role1, role2, role3]).
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { "authenticated" }, DisplayName = "One non-anonymous system role (authenticated) defined for field, @authorize directive added.")]
         [DataRow(new string[] { "authenticated", "role1" }, DisplayName = "Mixed role types (non-anonymous) roles defined for field, @authorize directive added.")]
         [DataRow(new string[] { "role1", "role2", "role3" }, DisplayName = "Multiple non-system roles defined for field, @authorize directive added.")]
@@ -555,7 +555,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         ///     field3 - {role3, roleN}
         /// Adds directive @authorize(roles=[role1, role2, role3]).
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { "anonymous" }, DisplayName = "Anonymous is only role for field")]
         [DataRow(new string[] { "anonymous", "Role1" }, DisplayName = "Anonymous is 1 of many roles for field")]
         [DataRow(new string[] { "authenticated", "anonymous" }, DisplayName = "Anonymous and authenticated are present and randomly ordered, anonymous wins.")]
@@ -595,7 +595,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         ///     {authenticated} -> @authorize directive included with listed roles.
         ///     {role3, roleN} -> @authorize directive included with listed roles.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { "anonymous" }, false, DisplayName = "Anonymous is only role for field, no authorize directive.")]
         [DataRow(new string[] { "anonymous", "role1" }, false, DisplayName = "Anonymous is 1 of many roles for field, no authorize directive.")]
         [DataRow(new string[] { "authenticated", "anonymous" }, false, DisplayName = "Anonymous and authenticated are present and randomly ordered, anonymous wins.")]
@@ -643,7 +643,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// <param name="rolesForFields">Roles allowed for fields.</param>
         /// <param name="authorizeDirectiveExpectedEntity">Directive expected to be present on entity.</param>
         /// <param name="authorizeDirectiveExpectedFields">Directive expected to be present on fields.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { "anonymous" }, new string[] { "anonymous" }, false, false, DisplayName = "No authorize directive on entity or fields.")]
         [DataRow(new string[] { "anonymous", "role1" }, new string[] { "role1" }, false, true, DisplayName = "No authorize directive on entity, but it is on fields.")]
         [DataRow(new string[] { "authenticated", "anonymous" }, new string[] { "anonymous" }, false, false, DisplayName = "No Authorize directive on entity or fields, mixed.")]
@@ -851,7 +851,7 @@ type Book @model(name:""Book"") {
             ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
 
             Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
-            Assert.AreEqual(5, aggregationType.Fields.Count, "Should have max, min, avg, sum, and count operations");
+            Assert.HasCount(5, aggregationType.Fields, "Should have max, min, avg, sum, and count operations");
 
             // Verify all operations exist with correct return types
             Dictionary<string, string> operations = aggregationType.Fields.ToDictionary(f => f.Name.Value, f => f.Type.NamedType().Name.Value);
@@ -863,7 +863,7 @@ type Book @model(name:""Book"") {
 
             // Verify field arguments and their specific filter input types
             FieldDefinitionNode maxField = aggregationType.Fields.First(f => f.Name.Value == "max");
-            Assert.AreEqual(3, maxField.Arguments.Count, "Each operation should have field, having, and distinct arguments");
+            Assert.HasCount(3, maxField.Arguments, "Each operation should have field, having, and distinct arguments");
             Assert.AreEqual("BookNumericAggregateFields", maxField.Arguments[0].Type.NamedType().Name.Value);
             Assert.AreEqual("FloatFilterInput", maxField.Arguments[1].Type.NamedType().Name.Value, "Should use FloatFilterInput for mixed Float/Int fields");
             Assert.AreEqual("Boolean", maxField.Arguments[2].Type.NamedType().Name.Value);
@@ -917,7 +917,7 @@ type Book @model(name:""Book"") {
             ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
 
             Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
-            Assert.AreEqual(0, aggregationType.Fields.Count, "Should have no aggregation operations");
+            Assert.IsEmpty(aggregationType.Fields, "Should have no aggregation operations");
         }
 
         /// <summary>
@@ -944,7 +944,7 @@ type Book @model(name:""Book"") {
             ObjectTypeDefinitionNode aggregationType = SchemaConverter.GenerateAggregationTypeForEntity("Book", node);
 
             Assert.AreEqual("BookAggregations", aggregationType.Name.Value);
-            Assert.AreEqual(5, aggregationType.Fields.Count, "Should have all operations for numeric fields only");
+            Assert.HasCount(5, aggregationType.Fields, "Should have all operations for numeric fields only");
 
             // Verify the field argument only includes numeric fields
             InputValueDefinitionNode fieldArg = aggregationType.Fields.First().Arguments[0];

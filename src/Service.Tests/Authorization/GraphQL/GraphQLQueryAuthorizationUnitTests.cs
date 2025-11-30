@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [DataRow(new string[] { }, "", DisplayName = "No Roles -> Expects no objectTypeDefinition created")]
         [DataRow(new string[] { "role1" }, @"@authorize(roles: [""role1""])", DisplayName = "One Role added to Authorize Directive")]
         [DataRow(new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])", DisplayName = "Two Roles added to Authorize Directive")]
-        [DataTestMethod]
+        [TestMethod]
         public void AuthorizeDirectiveAddedForQuery(string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
         {
             string gql =
@@ -60,7 +60,7 @@ type Foo @model(name: ""Foo""){
             //
             if (rolesDefinedInPermissions.Length == 0)
             {
-                Assert.IsTrue(query.Fields.Count() == 0, message: "GetAll and ByPK FieldDefinitions Generated Unexpectedly.");
+                Assert.AreEqual(0, query.Fields.Count(), message: "GetAll and ByPK FieldDefinitions Generated Unexpectedly.");
             }
             else
             {

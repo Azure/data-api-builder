@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="expectedStatusCode">Response's Http StatusCode.</param>
         /// <returns></returns>
         [TestCategory(TestCategory.MSSQL)]
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("Anonymous", true, HttpStatusCode.Forbidden,
             DisplayName = "Simulator - Anonymous role does not have proper permissions.")]
         [DataRow("Authenticated", true, HttpStatusCode.Forbidden,

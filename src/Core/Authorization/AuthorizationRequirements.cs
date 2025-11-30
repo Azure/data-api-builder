@@ -17,7 +17,7 @@ public class RoleContextPermissionsRequirement : IAuthorizationRequirement { }
 /// <summary>
 /// Instructs the authorization handler to check that:
 ///     - The entity has an entry for the role defined in the client role header.
-///     - The discovered role entry has an entry for the operationtype of the request.
+///     - The discovered role entry has an entry for the HttpMethod of the request.
 /// 
 /// Implements IAuthorizationRequirement, which is an empty marker interface.
 /// https://docs.microsoft.com/aspnet/core/security/authorization/policies#requirements

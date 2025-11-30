@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         /// 3. Root document should be created based on loaded schema.
         /// 4. Input type objects should be created based on entity types and not be duplicated.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         public async Task CosmosSchemaBuilderTestAsync()
         {
             string fileContents = await File.ReadAllTextAsync("Multidab-config.CosmosDb_NoSql.json");
@@ -58,10 +58,10 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 
             Assert.IsNotNull(root);
             Assert.IsNotNull(inputTypeObjects);
-            Assert.AreEqual(9, inputTypeObjects.Count, $"{nameof(InputObjectTypeDefinitionNode)} is invalid. input Type objects have not been created correctly.");
+            Assert.HasCount(9, inputTypeObjects, $"{nameof(InputObjectTypeDefinitionNode)} is invalid. input Type objects have not been created correctly.");
 
             // 11 input types generated for the 3 entity types in the schema.gql. IntFilter,StringFilter etc should not be duplicated.
-            Assert.AreEqual(13, root.Definitions.Count, $"{nameof(DocumentNode)}:Root is invalid. root definitions count does not match expected count.");
+            Assert.HasCount(13, root.Definitions, $"{nameof(DocumentNode)}:Root is invalid. root definitions count does not match expected count.");
         }
     }
 }

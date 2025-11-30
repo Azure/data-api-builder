@@ -419,7 +419,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="queryString">string represents the query string provided in URL</param>
         /// <param name="entityNameOrPath">string represents the name/path of the entity</param>
         /// <param name="sqlQuery">string represents the query to be executed</param>
-        /// <param name="operationType">The operation type to be tested.</param>
+        /// <param name="HttpMethod">The operation type to be tested.</param>
         /// <param name="requestBody">string represents JSON data used in mutation operations</param>
         /// <param name="exceptionExpected">bool represents if we expect an exception</param>
         /// <param name="expectedErrorMessage">string represents the error message in the JsonResponse</param>
@@ -436,7 +436,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string queryString,
             string entityNameOrPath,
             string sqlQuery,
-            EntityActionOperation operationType = EntityActionOperation.Read,
+            EntityActionOperation HttpMethod = EntityActionOperation.Read,
             string restPath = "api",
             IHeaderDictionary headers = null,
             string requestBody = null,
@@ -480,7 +480,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             };
 
             // Get the httpMethod based on the operation to be executed.
-            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(operationType, restHttpVerb);
+            HttpMethod httpMethod = SqlTestHelper.GetHttpMethodFromOperation(HttpMethod, restHttpVerb);
 
             // Create the request to be sent to the engine.
             HttpRequestMessage request;
@@ -522,11 +522,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Initial DELETE request results in 204 no content, no exception thrown.
             // Subsequent DELETE requests result in 404, which result in an exception.
             string expected;
-            if ((operationType is EntityActionOperation.Delete ||
-                 operationType is EntityActionOperation.Upsert ||
-                 operationType is EntityActionOperation.UpsertIncremental ||
-                 operationType is EntityActionOperation.Update ||
-                 operationType is EntityActionOperation.UpdateIncremental)
+            if ((HttpMethod is EntityActionOperation.Delete ||
+                 HttpMethod is EntityActionOperation.Upsert ||
+                 HttpMethod is EntityActionOperation.UpsertIncremental ||
+                 HttpMethod is EntityActionOperation.Update ||
+                 HttpMethod is EntityActionOperation.UpdateIncremental)
                  && response.StatusCode == HttpStatusCode.NoContent
                 )
             {
@@ -553,7 +553,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
                     string dbResult = await GetDatabaseResultAsync(sqlQuery, expectJson);
                     // For FIND requests, null result signifies an empty result set
-                    dbResult = (operationType is EntityActionOperation.Read && dbResult is null) ? "[]" : dbResult;
+                    dbResult = (HttpMethod is EntityActionOperation.Read && dbResult is null) ? "[]" : dbResult;
                     expected = $"{{\"{SqlTestHelper.jsonResultTopLevelKey}\":" +
                         $"{FormatExpectedValue(dbResult)}{ExpectedNextLinkIfAny(paginated, baseUrl, $"{expectedAfterQueryString}")}}}";
                 }

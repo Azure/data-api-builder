@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// <summary>
         /// MsSql Collation Tests to ensure that GraphQL is working properly when there is a change in case sensitivity on the database
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("comics", "title", @"SELECT title FROM comics ORDER BY title ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
         [DataRow("authors", "name", @"SELECT name FROM authors ORDER BY name ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]
         [DataRow("fungi", "habitat", @"SELECT habitat FROM fungi ORDER BY habitat ASC FOR JSON PATH, INCLUDE_NULL_VALUES")]

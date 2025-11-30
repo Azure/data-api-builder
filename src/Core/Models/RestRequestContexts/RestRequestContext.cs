@@ -98,7 +98,7 @@ public abstract class RestRequestContext
     /// <summary>
     /// The database engine operation type this request is.
     /// </summary>
-    public EntityActionOperation OperationType { get; set; }
+    public EntityActionOperation HttpMethod { get; set; }
 
     /// <summary>
     /// A collection of all unique column names present in the request.

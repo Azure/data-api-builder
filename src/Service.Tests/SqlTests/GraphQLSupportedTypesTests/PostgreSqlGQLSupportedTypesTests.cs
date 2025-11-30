@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(SINGLE_TYPE, "lte", "real '.33'", "0.33", "<=")]
         [DataRow(SINGLE_TYPE, "neq", "real '9.2'", "9.2", "!=")]
         [DataRow(SINGLE_TYPE, "eq", "real '0.33'", "0.33", "=")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task PG_real_graphql_single_filter_expectedValues(
             string type,
             string filterOperator,
@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(UUID_TYPE, "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"")]
         [DataRow(BOOLEAN_TYPE, "'false'", "false")]
         [DataRow(STRING_TYPE, "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task PGSQL_real_graphql_in_filter_expectedValues(
             string type,
             string sqlValue,
@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <summary>
         /// Bypass DateTime GQL tests for PostreSql
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [Ignore]
         public new void QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {

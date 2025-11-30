@@ -190,7 +190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <returns>Sample TableDefinition object</returns>
         public static SourceDefinition CreateSampleTable(int columnCount = 4)
         {
-            Assert.IsTrue(columnCount > 0);
+            Assert.IsGreaterThan(0, columnCount);
 
             SourceDefinition tableDefinition = new();
 

@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// which is not accessible.
         /// </summary>
         /// <param name="dbPolicy">Database policy under test.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("@claims.id eq @item.id", DisplayName = "Field id is not accessible")]
         [DataRow("@claims.user_email eq @item.email and @claims.user_name ne @item.name", DisplayName = "Field email is not accessible")]
         public void InaccessibleFieldRequestedByPolicy(string dbPolicy)
@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Test method to validate that only 1 CRUD operation is supported for stored procedure
         /// and every role has that same single operation.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("anonymous", new string[] { "execute" }, null, null, true, false, DisplayName = "Stored-procedure with valid execute permission only")]
         [DataRow("anonymous", new string[] { "*" }, null, null, true, false, DisplayName = "Stored-procedure with valid wildcard permission only, which resolves to execute")]
         [DataRow("anonymous", new string[] { "execute", "read" }, null, null, false, false, DisplayName = "Invalidly define operation in excess of execute")]
@@ -135,11 +135,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             try
             {
                 configValidator.ValidatePermissionsInConfig(runtimeConfig);
-                Assert.AreEqual(true, isValid);
+                Assert.IsTrue(isValid);
             }
             catch (DataApiBuilderException ex)
             {
-                Assert.AreEqual(false, isValid);
+                Assert.IsFalse(isValid);
                 Assert.AreEqual(expected: $"Invalid operation for Entity: {AuthorizationHelpers.TEST_ENTITY}. " +
                             $"Stored procedures can only be configured with the 'execute' operation.", actual: ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="action">The action to be validated.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("@claims.id eq @item.col1", EntityActionOperation.Insert, DisplayName = "Invalid action Insert specified in config")]
         [DataRow("@claims.id eq @item.col2", EntityActionOperation.Upsert, DisplayName = "Invalid action Upsert specified in config")]
         [DataRow("@claims.id eq @item.col3", EntityActionOperation.UpsertIncremental, DisplayName = "Invalid action UpsertIncremental specified in config")]
@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual($"action:{action} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="dbPolicy">Database policy.</param>
         /// <param name="errorExpected">Whether an error is expected.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(DatabaseType.PostgreSQL, "1 eq @item.col1", true, DisplayName = "Database Policy defined for Create fails for PostgreSQL")]
         [DataRow(DatabaseType.PostgreSQL, null, false, DisplayName = "Database Policy set as null for Create passes on PostgreSQL.")]
         [DataRow(DatabaseType.PostgreSQL, "", false, DisplayName = "Database Policy left empty for Create passes for PostgreSQL.")]
@@ -267,7 +267,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual($"Entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -328,7 +328,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual($"Entity: {sampleRelationship.TargetEntity} is disabled for GraphQL.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -350,7 +350,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "sourceFields and LinkingSourceFields are null")]
         [DataRow(new string[] { "sourceField" }, new string[] { "linkingSourceField" }, null, null, "SampleEntity2",
             DisplayName = "targetFields and LinkingTargetFields are null")]
-        [DataTestMethod]
+        [TestMethod]
         public void TestRelationshipWithLinkingObjectNotHavingRequiredFields(
             string[] sourceFields,
             string[] linkingSourceFields,
@@ -415,7 +415,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Exception thrown as foreignKeyPair not found in the DB.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
                 + $" and entity: {relationshipEntity}.", ex.Message);
@@ -497,7 +497,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Exception is thrown as foreignKey pair is not specified in the config, nor defined
             // in the database.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between entities:"
                 + $" SampleEntity1 and SampleEntity2.", ex.Message);
@@ -535,7 +535,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Linking object is null and targetFields exist but sourceFields are null")]
         [DataRow(new[] { "A", "B", "C" }, new[] { "1", "2" }, "Entity: SampleEntity1 has a relationship: rname1, which has 3 source fields defined, but 2 target fields defined.",
             DisplayName = "Linking object is null and sourceFields and targetFields have different length.")]
-        [DataTestMethod]
+        [TestMethod]
         public void TestRelationshipWithoutSourceAndTargetFieldsMatching(
             string[] sourceFields,
             string[] targetFields,
@@ -583,7 +583,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Exception is thrown since sourceFields and targetFields do not match in either their existence,
             // or their length.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -609,7 +609,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             "Entity: SampleEntity1 has a relationship: rname1 with target fields: noBackingColumn " +
                 "that do not exist as columns in entity: SampleEntity2.",
             DisplayName = "targetField does not exist as valid backing column in target entity.")]
-        [DataTestMethod]
+        [TestMethod]
         public void TestRelationshipWithoutSourceAndTargetFieldsAsValidBackingColumns(
             string[] sourceFields,
             string[] targetFields,
@@ -666,7 +666,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Exception is thrown since either source or target field does not exist as a valid backing column in their respective entity.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -736,7 +736,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             "SampleEntity2",
             "Entity: SampleEntity1 has a many-many relationship: rname1 with 3 target fields defined, but 2 linking target fields defined.",
             DisplayName = "Target fields and linking target fields are different length in a many-many relationship.")]
-        [DataTestMethod]
+        [TestMethod]
         public void TestRelationshipWithoutLinkingSourceAndTargetFieldsMatching(
             string[] sourceFields,
             string[] linkingSourceFields,
@@ -788,7 +788,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Exception is thrown since linkingSourceFields and linkingTargetFields do not match in either their existence,
             // or their length.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -800,7 +800,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// one or more empty claimtypes specified in the database policy.
         /// </summary>
         /// <param name="policy"></param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("@claims. eq @item.col1", DisplayName = "Empty claim type test 1")]
         [DataRow("@claims. ne @item.col2", DisplayName = "Empty claim type test 2")]
         public void EmptyClaimTypeSuppliedInPolicy(string dbPolicy)
@@ -816,7 +816,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("ClaimType cannot be empty.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -828,7 +828,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// contains one or more claims with invalid format.
         /// </summary>
         /// <param name="policy">The policy to be parsed.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("@claims.user_email eq @item.col1 and @claims.emp/rating eq @item.col2", DisplayName = "/ in claimType")]
         [DataRow("@claims.user$email eq @item.col1 and @claims.emp_rating eq @item.col2", DisplayName = "$ in claimType")]
         [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemp%loyee or @claims.name eq 'Aaron')"
@@ -849,9 +849,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidatePermissionsInConfig(runtimeConfig));
-            Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
+            Assert.StartsWith("Invalid format for claim type", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
@@ -864,7 +864,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="dbPolicy">Database policy defined for action.</param>
         /// <param name="action">The action for which database policy is defined.</param>
         /// <param name="errorExpected">Boolean value indicating whether an exception is expected or not.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("StaticWebApps", "@claims.userId eq @item.col2", EntityActionOperation.Read, false, DisplayName = "SWA- Database Policy defined for Read passes")]
         [DataRow("staticwebapps", "@claims.userDetails eq @item.col3", EntityActionOperation.Update, false, DisplayName = "SWA- Database Policy defined for Update passes")]
         [DataRow("StaticWebAPPs", "@claims.email eq @item.col3", EntityActionOperation.Delete, true, DisplayName = "SWA- Database Policy defined for Delete fails")]
@@ -916,7 +916,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Test to validate that no other field can be present in included set if wildcard is present
         /// in it.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(EntityActionOperation.Create, DisplayName = "Wildcard Field with another field in included set and create action")]
         [DataRow(EntityActionOperation.Update, DisplayName = "Wildcard Field with another field in included set and update action")]
         public void WildCardAndOtherFieldsPresentInIncludeSet(EntityActionOperation actionOp)
@@ -931,7 +931,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
@@ -940,7 +940,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(EntityActionOperation.Create, DisplayName = "Wildcard Field with another field in excluded set and create action")]
         [DataRow(EntityActionOperation.Update, DisplayName = "Wildcard Field with another field in excluded set and update action")]
         public void WildCardAndOtherFieldsPresentInExcludeSet(EntityActionOperation actionOp)
@@ -955,7 +955,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
@@ -971,7 +971,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="operationName">Name of the operation configured.</param>
         /// <param name="exceptionExpected">Boolean variable which indicates whether the relevant method call
         /// is expected to return an exception.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("CREATE", false, DisplayName = "Valid operation name CREATE specified for action")]
         [DataRow("rEAd", false, DisplayName = "Valid operation name rEAd specified for action")]
         [DataRow("UPDate", false, DisplayName = "Valid operation name UPDate specified for action")]
@@ -1033,7 +1033,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidatePermissionsInConfig(runtimeConfig));
 
                 // Assert that the exception returned is the one we expected.
@@ -1052,7 +1052,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// validates the exception's status and substatus codes.
         /// </summary>
         /// <param name="entityNameFromConfig"></param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("entityname", false, DisplayName = "Valid lower case letter as first character")]
         [DataRow("Entityname", false, DisplayName = "Valid upper case letter as first character")]
         [DataRow("Entity_name", false, DisplayName = "Valid _ in body")]
@@ -1103,7 +1103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             if (expectsException)
             {
-                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                DataApiBuilderException dabException = Assert.Throws<DataApiBuilderException>(
                     action: () => configValidator.ValidateEntityConfiguration(runtimeConfig),
                     message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
 
@@ -1453,7 +1453,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="restConfiguredPath">REST global path</param>
         /// <param name="mcpConfiguredPath">MCP global path</param>
         /// <param name="expectError">Exception expected</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("/graphql", "/graphql", "/mcp", true, DisplayName = "GraphQL and REST conflict (same path).")]
         [DataRow("/api", "/api", "/mcp", true, DisplayName = "REST and GraphQL conflict (same path).")]
         [DataRow("/graphql", "/api", "/mcp", false, DisplayName = "GraphQL, REST, and MCP distinct.")]
@@ -1506,7 +1506,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, DatabaseType databaseType)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+            DataApiBuilderException dabException = Assert.Throws<DataApiBuilderException>(
                action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
             Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
@@ -1628,7 +1628,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="apiPathPrefix">API path prefix</param>
         /// <param name="expectedErrorMessage">Expected error message in case an exception is thrown.</param>
         /// <param name="expectError">Exception expected</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("/.", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
             DisplayName = "REST path prefix containing reserved character .")]
         [DataRow("/:", $"REST path {RuntimeConfigValidatorUtil.URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG}", ApiType.REST, true,
@@ -1718,7 +1718,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             if (expectError)
             {
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(() =>
                 configValidator.ValidateGlobalEndpointRouteConfig(configuration));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -1745,7 +1745,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, true, false, false, DisplayName = "REST disabled, GraphQL enabled, and MCP disabled.")]
         [DataRow(false, false, true, false, DisplayName = "REST and GraphQL disabled, MCP enabled.")]
         [DataRow(false, false, false, true, DisplayName = "REST, GraphQL, and MCP disabled.")]
-        [DataTestMethod]
+        [TestMethod]
         public void EnsureFailureWhenRestAndGraphQLAndMcpAreDisabled(
             bool restEnabled,
             bool graphqlEnabled,
@@ -1796,7 +1796,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="includedFields">Fields that are accessible to user for the role/action combination.</param>
         /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
         /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(@"""@item.id ne 140""", true, "[]", @"[ ""name"" ]", true,
             DisplayName = "Empty array for included fields and db policy referencing some field.")]
         [DataRow(@"""""", true, "[]", @"[ ""name"" ]", false,
@@ -1885,7 +1885,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                    Assert.Throws<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
                 Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -1905,7 +1905,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="excludedFields">Fields that are inaccessible to user for the role/action combination.</param>
         /// <param name="exceptionExpected">Whether an exception is expected (true when validation fails).</param>
         /// <param name="misconfiguredColumnSet">Name of the misconfigured column set (included/excluded).</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[ ""name"" ]", true, "included",
             DisplayName = "Included fields containing wildcard and another field.")]
         [DataRow(@"""@item.id ne 140""", @"[ ""*"", ""id"" ]", @"[ ""*"", ""name"" ]", true, "excluded",
@@ -1981,7 +1981,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
+                    Assert.Throws<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
                 Assert.AreEqual($"No other field can be present with wildcard in the {misconfiguredColumnSet} " +
                     $"set for: entity:Publisher, role:anonymous, action:Read", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -2001,7 +2001,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="methods">Value of the rest methods property configured for the entity.</param>
         /// <param name="exceptionExpected">Boolean value representing whether an exception is expected or not.</param>
         /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(EntitySourceType.Table, new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, true,
             DisplayName = "Tables with REST Methods configured - Engine logs a warning during startup")]
         [DataRow(EntitySourceType.StoredProcedure, new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, false,
@@ -2063,7 +2063,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="exceptionExpected">Whether an exception is expected as a result of test run.</param>
         /// <param name="restPathForEntity">Custom rest path to be configured for the first entity.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, "EntityA", "", true, "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
         [DataRow(true, "EntityA", "entity?RestPath", true, "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
@@ -2114,7 +2114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
+                    Assert.Throws<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
@@ -2132,7 +2132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="restPathForFirstEntity">Custom rest path to be configured for the first entity.</param>
         /// <param name="restPathForSecondEntity">Custom rest path to be configured for the second entity.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, "restPathA", "restPathB", true, true, DisplayName = "Unique rest paths configured for entities pass config validation.")]
         [DataRow(true, "restPath", "restPath", true, true, "The rest path: restPath specified for entity: EntityB is already used by another entity.",
             DisplayName = "Duplicate rest paths configured for entities fail config validation.")]
@@ -2185,7 +2185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
+                    Assert.Throws<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
@@ -2204,7 +2204,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="authenticationProvider">The authentication provider configured.</param>
         /// <param name="isExceptionExpected">Whether an exception is expected as a result of test run.</param>
         /// <param name="expectedExceptionMessage">The expected exception message.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("/base-route", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured as '/base-route' for Static Web Apps.")]
         [DataRow("/", "StaticWebApps", false, DisplayName = "Runtime base-route correctly configured as '/' for Static Web Apps.")]
         [DataRow(null, "AppService", false,
@@ -2251,7 +2251,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             else
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig));
+                    Assert.Throws<DataApiBuilderException>(() => configValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
@@ -2270,7 +2270,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="useAbsolutePath"></param>
         /// <param name="environmentFile"></param>
         /// <param name="finalConfigFilePath"></param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("my-config.json", "", false, null, "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is not set")]
         [DataRow("test-configs/my-config.json", "", false, null, "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is not set")]
         [DataRow("my-config.json", "Test", false, "my-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set")]
@@ -2401,7 +2401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="expectedExceptionMessage">expected exception message in case there is exception.</param>
         /// <param name="expectedDefaultPageSize">expected default page size from config.</param>
         /// <param name="expectedMaxPageSize">expected max page size from config.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, null, null, "", (int)PaginationOptions.DEFAULT_PAGE_SIZE, (int)PaginationOptions.MAX_PAGE_SIZE,
             DisplayName = "MaxPageSize should be 100,000 and DefaultPageSize should be 100 when no value provided in config.")]
         [DataRow(false, 1000, 10000, "", 1000, 10000,
@@ -2472,7 +2472,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="maxDbResponseSizeMB">maxResponse size input</param>
         /// <param name="expectedExceptionMessage">expected exception message in case there is exception.</param>
         /// <param name="expectedMaxResponseSize">expected value in config.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, 158, false, "",
             DisplayName = $"{nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} should be 158MB when no value provided in config.")]
         [DataRow(64, 64, false, "",

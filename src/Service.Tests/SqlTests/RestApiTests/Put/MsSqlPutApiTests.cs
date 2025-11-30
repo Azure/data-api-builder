@@ -330,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneUpdateWithRowversionFieldMissingFromRequestBody"),
-                    operationType: EntityActionOperation.Upsert,
+                    HttpMethod: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -351,7 +351,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneInsertWithRowversionFieldMissingFromRequestBody"),
-                    operationType: EntityActionOperation.Upsert,
+                    HttpMethod: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: string.Empty
@@ -379,7 +379,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
@@ -401,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
@@ -433,7 +433,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _autogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("PutOneUpdateInTableWithAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
             );
@@ -453,7 +453,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _nonAutogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("PutOneUpdateInTableWithNonAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
             );
@@ -482,7 +482,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 queryString: null,
                 entityNameOrPath: _nonAutogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("PutOneInsertInTableWithNonAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: string.Empty
@@ -525,7 +525,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     queryString: null,
                     entityNameOrPath: _entityWithSecurityPolicy,
                     sqlQuery: GetQuery("PutOneUpdateAccessibleRowWithSecPolicy"),
-                    operationType: EntityActionOperation.Upsert,
+                    HttpMethod: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );

@@ -989,7 +989,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+            Assert.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, errorMessage);
         }
 
         /// <summary>
@@ -1015,7 +1015,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 
-            Assert.AreEqual(response.GetProperty("items")[0].GetProperty("name").ToString(), "Earth");
+            Assert.AreEqual("Earth", response.GetProperty("items")[0].GetProperty("name").ToString());
         }
 
         /// <summary>
@@ -1074,7 +1074,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+            Assert.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, errorMessage);
         }
 
         /// <summary>
@@ -1105,7 +1105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+            Assert.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, errorMessage);
         }
 
         /// <summary>
@@ -1139,7 +1139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains("The current user is not authorized to access this resource."));
+            Assert.Contains("The current user is not authorized to access this resource.", errorMessage);
         }
 
         /// <summary>
@@ -1195,7 +1195,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+            Assert.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, errorMessage);
 
         }
 

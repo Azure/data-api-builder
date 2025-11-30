@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                     );
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [TestCategory("Query Generation")]
         [TestCategory("Single item access")]
         [DataRow(new string[] { "authenticated" }, true,
@@ -113,14 +113,14 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"foo_by_pk");
             IReadOnlyList<InputValueDefinitionNode> args = field.Arguments;
 
-            Assert.AreEqual(2, args.Count);
+            Assert.HasCount(2, args);
             Assert.IsTrue(args.Any(a => a.Name.Value == "id"));
             Assert.AreEqual("ID", args.First(a => a.Name.Value == "id").Type.InnerType().NamedType().Name.Value);
             Assert.IsTrue(args.Any(a => a.Name.Value == "_partitionKeyValue"));
             Assert.AreEqual("String", args.First(a => a.Name.Value == "_partitionKeyValue").Type.InnerType().NamedType().Name.Value);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [TestCategory("Query Generation")]
         [TestCategory("Collection access")]
         [DataRow(new string[] { "authenticated" }, true,
@@ -292,7 +292,7 @@ type Table @model(name: ""table"") {
             Assert.AreNotEqual(node, updatedNode);
 
             FieldDefinitionNode field = updatedNode.Fields[0];
-            Assert.AreEqual(NUMBER_OF_ARGUMENTS, field.Arguments.Count, $"Query fields should have {NUMBER_OF_ARGUMENTS} arguments");
+            Assert.HasCount(NUMBER_OF_ARGUMENTS, field.Arguments, $"Query fields should have {NUMBER_OF_ARGUMENTS} arguments");
             Assert.AreEqual(QueryBuilder.PAGE_START_ARGUMENT_NAME, field.Arguments[0].Name.Value, "First argument should be the page start");
             Assert.AreEqual(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, field.Arguments[1].Name.Value, "Second argument is pagination token");
             Assert.AreEqual(QueryBuilder.FILTER_FIELD_NAME, field.Arguments[2].Name.Value, "Third argument is typed filter field");
@@ -323,7 +323,7 @@ type Table @model(name: ""table"") {
             Assert.AreEqual(node, updatedNode);
 
             FieldDefinitionNode field = updatedNode.Fields[0];
-            Assert.AreEqual(0, field.Arguments.Count, "No query fields on cardinality of One relationshop");
+            Assert.IsEmpty(field.Arguments, "No query fields on cardinality of One relationshop");
         }
 
         /// <summary>
@@ -342,7 +342,7 @@ type Table @model(name: ""table"") {
         /// <param name="expectedQueryNamesForPK"> Expected names for the primary key query</param>
         /// <param name="expectedQueryNamesForList"> Expected names for the query to fetch all items </param>
         /// <param name="expectedNameInDescription">Expected names in the description for both the queries</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(GraphQLTestHelpers.BOOK_GQL, new string[] { "Book" }, null, null, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "Book" },
             DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
         [DataRow(GraphQLTestHelpers.BOOK_GQL, new string[] { "Book" }, new string[] { "book" }, new string[] { "books" }, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "book" },
@@ -401,7 +401,7 @@ type Table @model(name: ""table"") {
 
             // Two queries - 1) Query for an item using PK 2) Query for all items should be created.
             // Check to validate the count of queries created.
-            Assert.AreEqual(2 * entityNames.Length, query.Fields.Count);
+            Assert.HasCount(2 * entityNames.Length, query.Fields);
 
             for (int i = 0; i < entityNames.Length; i++)
             {
@@ -427,7 +427,7 @@ type Table @model(name: ""table"") {
         /// <param name="operations">CRUD + Execute -> for EntityPermissionsMap </param>
         /// <param name="permissionOperations">CRUD + Execute -> for Entity.Permissions</param>
         /// <param name="expectsQueryField">Whether QueryBuilder will generate a query field for the GraphQL schema.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(GraphQLOperation.Query, new[] { EntityActionOperation.Execute }, new[] { "execute" }, true, DisplayName = "Query field generated since all metadata is valid")]
         [DataRow(null, new[] { EntityActionOperation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated since default operation is mutation.")]
         [DataRow(GraphQLOperation.Query, new[] { EntityActionOperation.Read }, new[] { "read" }, false, DisplayName = "Query field not generated because invalid permissions were supplied")]

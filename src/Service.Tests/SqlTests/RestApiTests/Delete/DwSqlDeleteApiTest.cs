@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
                     queryString: null,
                     entityNameOrPath: _integrationProcedureDeleteOne_EntityName,
                     sqlQuery: GetQuery(nameof(DeleteOneWithStoredProcedureTest)),
-                    operationType: EntityActionOperation.Execute,
+                    HttpMethod: EntityActionOperation.Execute,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent,
                     expectJson: false

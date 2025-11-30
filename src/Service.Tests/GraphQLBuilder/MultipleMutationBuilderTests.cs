@@ -195,23 +195,23 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
             {
                 // Assert that the input type for the entity contains a field for the relationship.
-                Assert.AreEqual(true, inputFieldNames.Contains(relationshipName));
+                Assert.IsTrue(inputFieldNames.Contains(relationshipName));
 
                 int indexOfRelationshipField = inputFields.FindIndex(field => field.Name.Value.Equals(relationshipName));
                 InputValueDefinitionNode inputValueDefinitionNode = inputFields[indexOfRelationshipField];
 
                 // Assert that the field should be of nullable type as providing input for relationship fields is optional.
-                Assert.AreEqual(true, !inputValueDefinitionNode.Type.IsNonNullType());
+                Assert.IsTrue(!inputValueDefinitionNode.Type.IsNonNullType());
                 if (relationship.Cardinality is Cardinality.Many)
                 {
                     // For relationship with cardinality as 'Many', assert that we create a list input type.
-                    Assert.AreEqual(true, inputValueDefinitionNode.Type.IsListType());
+                    Assert.IsTrue(inputValueDefinitionNode.Type.IsListType());
                 }
                 else
                 {
                     // For relationship with cardinality as 'One', assert that we don't create a list type,
                     // but an object type.
-                    Assert.AreEqual(false, inputValueDefinitionNode.Type.IsListType());
+                    Assert.IsFalse(inputValueDefinitionNode.Type.IsListType());
                 }
             }
         }
@@ -275,12 +275,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             // Assert that all the fields from the target input definition are present in the source->target linking input definition.
             foreach (InputValueDefinitionNode targetInputValueField in targetInputObjectTypeDefinitionNode.Fields)
             {
-                Assert.AreEqual(true, inputFieldNamesInSourceTargetLinkingInput.Contains(targetInputValueField.Name.Value));
+                Assert.IsTrue(inputFieldNamesInSourceTargetLinkingInput.Contains(targetInputValueField.Name.Value));
             }
 
             // Assert that the fields ('royalty_percentage') from linking object (i.e. book_author_link) is also
             // present in the input fields for the source>target linking input definition.
-            Assert.AreEqual(true, inputFieldNamesInSourceTargetLinkingInput.Contains(linkingObjectFieldName));
+            Assert.IsTrue(inputFieldNamesInSourceTargetLinkingInput.Contains(linkingObjectFieldName));
         }
 
         /// <summary>
@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 InputValueDefinitionNode inputValueDefinitionNode = inputFields[indexOfReferencingColumn];
 
                 // The field should be of nullable type as providing input for referencing fields is optional.
-                Assert.AreEqual(true, !inputValueDefinitionNode.Type.IsNonNullType());
+                Assert.IsTrue(!inputValueDefinitionNode.Type.IsNonNullType());
             }
         }
         #endregion

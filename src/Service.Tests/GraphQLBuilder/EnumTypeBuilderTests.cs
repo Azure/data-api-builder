@@ -42,13 +42,13 @@ type Foo @model(name:""Foo"") {
             Assert.IsTrue(enumTypes.ContainsKey(expectedEnumName), "Numeric aggregation enum type should be created");
 
             EnumTypeDefinitionNode numericEnum = enumTypes[expectedEnumName];
-            Assert.AreEqual(3, numericEnum.Values.Count, "Should have enum values for count, price, and rating");
+            Assert.HasCount(3, numericEnum.Values, "Should have enum values for count, price, and rating");
 
             // Verify field names are present
             HashSet<string> fieldNames = new(numericEnum.Values.Select(f => f.Name.Value));
-            Assert.IsTrue(fieldNames.Contains("count"));
-            Assert.IsTrue(fieldNames.Contains("price"));
-            Assert.IsTrue(fieldNames.Contains("rating"));
+            Assert.Contains("count", fieldNames);
+            Assert.Contains("price", fieldNames);
+            Assert.Contains("rating", fieldNames);
         }
 
         /// <summary>
@@ -104,16 +104,16 @@ type Foo @model(name:""Foo"") {
             Assert.IsTrue(enumTypes.ContainsKey(expectedEnumName), "Scalar fields enum type should be created");
 
             EnumTypeDefinitionNode scalarEnum = enumTypes[expectedEnumName];
-            Assert.AreEqual(5, scalarEnum.Values.Count, "Should have enum values for id, name, count, price, and isActive");
+            Assert.HasCount(5, scalarEnum.Values, "Should have enum values for id, name, count, price, and isActive");
 
             // Verify field names are present
             HashSet<string> fieldNames = new(scalarEnum.Values.Select(f => f.Name.Value));
-            Assert.IsTrue(fieldNames.Contains("id"));
-            Assert.IsTrue(fieldNames.Contains("name"));
-            Assert.IsTrue(fieldNames.Contains("count"));
-            Assert.IsTrue(fieldNames.Contains("price"));
-            Assert.IsTrue(fieldNames.Contains("isActive"));
-            Assert.IsFalse(fieldNames.Contains("related"), "Non-scalar field should not be included");
+            Assert.Contains("id", fieldNames);
+            Assert.Contains("name", fieldNames);
+            Assert.Contains("count", fieldNames);
+            Assert.Contains("price", fieldNames);
+            Assert.Contains("isActive", fieldNames);
+            Assert.DoesNotContain("related", fieldNames, "Non-scalar field should not be included");
         }
 
         /// <summary>

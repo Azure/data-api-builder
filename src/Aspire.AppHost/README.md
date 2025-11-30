@@ -3,7 +3,7 @@
 This project allows you to run DAB in debug mode using [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview).
 
 ## Prerequisites
-- [.NET SDK](https://dotnet.microsoft.com/download) (8.0 or later)
+- [.NET SDK](https://dotnet.microsoft.com/download) (9.0 or later)
 - [Docker](https://www.docker.com/products/docker-desktop) (optional, for containerized development)
 
 ## Database Configuration

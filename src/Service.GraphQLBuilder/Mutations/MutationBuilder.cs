@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// </summary>
         /// <param name="inputTypeName">Mutation name</param>
         /// <returns>Operation</returns>
-        public static EntityActionOperation DetermineMutationOperationTypeBasedOnInputType(string inputTypeName)
+        public static EntityActionOperation DetermineMutationHttpMethodBasedOnInputType(string inputTypeName)
         {
             return inputTypeName switch
             {

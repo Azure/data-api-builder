@@ -99,7 +99,7 @@ public class AzureLogAnalyticsTests
     /// <summary>
     /// Tests if the logs are flushed correctly when Azure Log Analytics is enabled.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("Information Test Message", LogLevel.Information)]
     [DataRow("Trace Test Message", LogLevel.Trace)]
     [DataRow("Warning Test Message", LogLevel.Warning)]

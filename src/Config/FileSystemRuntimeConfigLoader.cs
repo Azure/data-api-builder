@@ -160,13 +160,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// function is called and handles the hot reload logic when appropriate,
     /// ie: in a local development scenario.
     /// </summary>
-    private void OnNewFileContentsDetected(object? sender, EventArgs e)
+    private async void OnNewFileContentsDetected(object? sender, EventArgs e)
     {
         try
         {
             if (RuntimeConfig is not null)
             {
-                HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
+                await HotReloadConfigAsync(RuntimeConfig.IsDevelopmentMode()).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -301,18 +301,20 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, uses default settings with environment variable replacement disabled.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
+    public override Task<RuntimeConfig?> LoadKnownConfigAsync(bool replaceEnvVar = false, CancellationToken cancellationToken = default)
     {
+        _ = cancellationToken;
         // Convert legacy replaceEnvVar parameter to replacement settings for backward compatibility
         DeserializationVariableReplacementSettings? replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: replaceEnvVar);
-        return TryLoadConfig(ConfigFilePath, out config, replacementSettings: replacementSettings);
+        bool loaded = TryLoadConfig(ConfigFilePath, out RuntimeConfig? config, replacementSettings: replacementSettings);
+        return Task.FromResult(loaded ? config : null);
     }
 
     /// <summary>
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
+    private Task HotReloadConfigAsync(bool isDevMode, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
 
@@ -332,6 +334,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         SignalConfigChanged();
 
         logger?.LogInformation("Hot-reload process finished.");
+        return Task.CompletedTask;
     }
 
     /// <summary>

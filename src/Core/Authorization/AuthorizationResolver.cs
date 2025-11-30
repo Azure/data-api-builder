@@ -802,7 +802,7 @@ public class AuthorizationResolver : IAuthorizationResolver
 
     /// <summary>
     /// Creates new key value map of
-    /// Key: operationType
+    /// Key: HttpMethod
     /// Value: Collection of role names.
     /// There are only five possible operations
     /// </summary>

@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
 
             Tuple<JsonDocument?, IMetadata?>? result = null;
-            EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+            EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationHttpMethodBasedOnInputType(graphqlMutationName);
             string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
 
             // If authorization fails, an exception will be thrown and request execution halts.
@@ -389,7 +389,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // of the DbDataReader. For example, we can't enforce that an UPDATE command outputs a result set using an OUTPUT
             // clause. As such, for this iteration we are just returning the success condition of the operation type that maps
             // to each action, with data always from the first result set, as there may be arbitrarily many.
-            switch (context.OperationType)
+            switch (context.HttpMethod)
             {
                 case EntityActionOperation.Delete:
                     // Returns a 204 No Content so long as the stored procedure executes without error
@@ -470,7 +470,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Dictionary<string, object?> parameters = PrepareParameters(context);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-            if (context.OperationType is EntityActionOperation.Delete)
+            if (context.HttpMethod is EntityActionOperation.Delete)
             {
                 Dictionary<string, object>? resultProperties = null;
 
@@ -539,7 +539,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 try
                 {
-                    if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                    if (context.HttpMethod is EntityActionOperation.Upsert || context.HttpMethod is EntityActionOperation.UpsertIncremental)
                     {
                         DbResultSet? upsertOperationResult;
                         DbResultSetRow upsertOperationResultSetRow;
@@ -634,7 +634,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
                             // would not be available in the URL and needs to be appended. Since, this is a PUT or PATCH request that has resulted in the creation of
                             // a new item, the URL already contains the primary key and hence, an empty string is passed as the primary key route.
-                            return SqlResponseHelpers.ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.HttpMethod, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
                         }
 
                         // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
@@ -653,13 +653,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 mutationResultRow =
                                         await PerformMutationOperation(
                                             entityName: context.EntityName,
-                                            operationType: context.OperationType,
+                                            HttpMethod: context.HttpMethod,
                                             parameters: parameters,
                                             sqlMetadataProvider: sqlMetadataProvider);
 
                                 if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                                 {
-                                    if (context.OperationType is EntityActionOperation.Insert)
+                                    if (context.HttpMethod is EntityActionOperation.Insert)
                                     {
                                         if (mutationResultRow is null)
                                         {
@@ -746,15 +746,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
                                                                                                     : string.Empty;
 
-                        if (context.OperationType is EntityActionOperation.Insert)
+                        if (context.HttpMethod is EntityActionOperation.Insert)
                         {
                             // Location Header is made up of the Base URL of the request and the primary key of the item created.
                             // For POST requests, the primary key info would not be available in the URL and needs to be appended. So, the primary key of the newly created item
                             // which is stored in the primaryKeyRoute is used to construct the Location Header.
-                            return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.HttpMethod, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
                         }
 
-                        if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
+                        if (context.HttpMethod is EntityActionOperation.Update || context.HttpMethod is EntityActionOperation.UpdateIncremental)
                         {
                             return SqlResponseHelpers.ConstructOkMutationResponse(mutationResultRow!.Columns, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                         }
@@ -823,7 +823,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// on the source backing the given entity.
         /// </summary>
         /// <param name="entityName">The name of the entity on which mutation is to be performed.</param>
-        /// <param name="operationType">The type of mutation operation.
+        /// <param name="HttpMethod">The type of mutation operation.
         /// This cannot be Delete, Upsert or UpsertIncremental since those operations have dedicated functions.</param>
         /// <param name="parameters">The parameters of the mutation query.</param>
         /// <param name="context">In the case of GraphQL, the HotChocolate library's middleware context.</param>
@@ -831,7 +831,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private async Task<DbResultSetRow?>
             PerformMutationOperation(
                 string entityName,
-                EntityActionOperation operationType,
+                EntityActionOperation HttpMethod,
                 IDictionary<string, object?> parameters,
                 ISqlMetadataProvider sqlMetadataProvider,
                 IMiddlewareContext? context = null)
@@ -842,7 +842,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
-            switch (operationType)
+            switch (HttpMethod)
             {
                 case EntityActionOperation.Insert:
                 case EntityActionOperation.Create:
@@ -908,7 +908,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     queryParameters = updateGraphQLStructure.Parameters;
                     break;
                 default:
-                    throw new NotSupportedException($"Unexpected mutation operation \" {operationType}\" requested.");
+                    throw new NotSupportedException($"Unexpected mutation operation \" {HttpMethod}\" requested.");
             }
 
             DbResultSet? dbResultSet;
@@ -951,7 +951,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0 && dbResultSet!.ResultProperties.TryGetValue("RecordsAffected", out object? recordsAffected) && (int)recordsAffected <= 0)
                 {
                     // For GraphQL, insert operation corresponds to Create action.
-                    if (operationType is EntityActionOperation.Create)
+                    if (HttpMethod is EntityActionOperation.Create)
                     {
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
@@ -1937,13 +1937,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
-            EntityActionOperation operationType = context.OperationType;
+            EntityActionOperation HttpMethod = context.HttpMethod;
             string entityName = context.EntityName;
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
             string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
 
-            if (operationType is EntityActionOperation.Upsert)
+            if (HttpMethod is EntityActionOperation.Upsert)
             {
                 SqlUpsertQueryStructure upsertStructure = new(
                     entityName,
@@ -1987,7 +1987,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             Dictionary<string, object?> parameters;
 
-            switch (context.OperationType)
+            switch (context.HttpMethod)
             {
                 case EntityActionOperation.Delete:
                     // DeleteOne based off primary key in request.

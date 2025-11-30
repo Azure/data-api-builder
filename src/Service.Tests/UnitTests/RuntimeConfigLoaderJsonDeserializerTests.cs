@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="repKeys">Replacement used as key to get environment variable.</param>
         /// <param name="repValues">Replacement value.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(
             new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
             new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// MySQL, PgSql, and DwSql db types are unaffected by replaceEnvVar because those db's don't support options.
         /// </summary>
         /// <param name="replaceEnvVar">A boolean indicating whether to replace environment variables in the configuration.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, "mssql", DisplayName = "Do not replace environment variables containing boolean values.")]
         [DataRow(true, "mssql", DisplayName = "Replace environment variables containing boolean values.")]
         [DataRow(false, "cosmosdb_nosql", DisplayName = "Do not replace environment variables containing string values.")]
@@ -137,26 +137,26 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             switch (databaseType)
             {
                 case "mssql":
-                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.MSSQL);
+                    Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
                     Assert.AreEqual(runtimeConfig.DataSource.Options["set-session-context"].ToString().ToLower(), GetExpectedPropertyValue("MSSQL_SET_SESSION_CONTEXT", replaceEnvVar).ToLower());
                     break;
                 case "cosmosdb_nosql":
-                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
+                    Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType);
                     Assert.AreEqual(runtimeConfig.DataSource.Options["database"].ToString(), GetExpectedPropertyValue("DATABASE_NAME", replaceEnvVar));
                     Assert.AreEqual(runtimeConfig.DataSource.Options["container"].ToString(), GetExpectedPropertyValue("DATABASE_CONTAINER", replaceEnvVar));
                     Assert.AreEqual(runtimeConfig.DataSource.Options["schema"].ToString(), GetExpectedPropertyValue("GRAPHQL_SCHEMA_PATH", replaceEnvVar));
                     break;
                 case "mysql":
-                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.MySQL);
-                    Assert.AreEqual(runtimeConfig.DataSource.Options.Count, 0);
+                    Assert.AreEqual(DatabaseType.MySQL, runtimeConfig.DataSource.DatabaseType);
+                    Assert.AreEqual(0, runtimeConfig.DataSource.Options.Count);
                     break;
                 case "postgresql":
-                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.PostgreSQL);
-                    Assert.AreEqual(runtimeConfig.DataSource.Options, null);
+                    Assert.AreEqual(DatabaseType.PostgreSQL, runtimeConfig.DataSource.DatabaseType);
+                    Assert.AreEqual(null, runtimeConfig.DataSource.Options);
                     break;
                 case "dwsql":
-                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.DWSQL);
-                    Assert.AreEqual(runtimeConfig.DataSource.Options, null);
+                    Assert.AreEqual(DatabaseType.DWSQL, runtimeConfig.DataSource.DatabaseType);
+                    Assert.AreEqual(null, runtimeConfig.DataSource.Options);
                     break;
             }
 
@@ -182,10 +182,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert
             Assert.IsTrue(isParsingSuccessful);
-            Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
+            Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType);
             Assert.IsNull(runtimeConfig.DataSource.Options["database"]);
             Assert.IsFalse(runtimeConfig.DataSource.Options.ContainsKey("container"));
-            Assert.AreEqual(runtimeConfig.DataSource.Options["schema"].ToString(), "");
+            Assert.AreEqual("", runtimeConfig.DataSource.Options["schema"].ToString());
 
             // Cleanup
             ClearEnvironmentVariablesFromDictionary(_environmentFileContentDict);
@@ -289,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// These tests verify this happens correctly.
         /// </summary>
         /// <param name="invalidEnvVarName">A match that is not a valid environment variable name.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("")]
         [DataRow("fooBARbaz")]
         // extra single quote added to environment variable
@@ -305,14 +305,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             StringJsonConverterFactory stringConverterFactory = new(new(doReplaceEnvVar: true, envFailureMode: EnvironmentVariableReplacementFailureMode.Throw));
             JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
             options.Converters.Add(stringConverterFactory);
-            Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
+            Assert.Throws<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
         }
 
         [DataRow("\"notsupporteddb\"", "",
             DisplayName = "Tests that a database type which will not deserialize correctly fails.")]
         [DataRow("\"mssql\"", "\"notsupportedconnectionstring\"",
             DisplayName = "Tests that a malformed connection string fails during post-processing.")]
-        [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
+        [TestMethod(DisplayName = "Validates that JSON deserialization failures are gracefully caught.")]
         public void TestDataSourceDeserializationFailures(string dbType, string connectionString)
         {
             string configJson = @"
@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("NonExistentConfigFile.json", typeof(FileNotFoundException),
             "Requested configuration file 'NonExistentConfigFile.json' does not exist.",
             DisplayName = "Non existent configuration file name.")]
-        [TestMethod("Validates that loading of runtime config value can handle failures gracefully.")]
+        [TestMethod(DisplayName = "Validates that loading of runtime config value can handle failures gracefully.")]
         public void TestLoadRuntimeConfigFailures(
             string configFileName,
             Type exceptionType,
@@ -369,7 +369,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""entities"":{ }
                                 }";
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig runtimeConfig), "Should parse the data-source-files correctly.");
-            Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 1);
+            Assert.AreEqual(1, runtimeConfig.ListAllDataSources().Count());
         }
 
         #endregion Negative Tests

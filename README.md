@@ -49,7 +49,7 @@ https://get.dot.net
 > [!NOTE]
 > You may already have .NET installed!
 
-The Data API builder (DAB) command line requires the .NET runtime version 8 or later.
+The Data API builder (DAB) command line requires the .NET runtime version 9 or later.
 
 #### Validate your installation
 

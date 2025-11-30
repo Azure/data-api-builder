@@ -29,10 +29,10 @@ jobs:
   # Per Microsoft Learn Docs, "Selecting the .NET SDK version is independent from 
   # specifying the runtime version a project targets."
   - task: UseDotNet@2
-    displayName: Setup .NET SDK v8.0.x
+    displayName: Setup .NET SDK v9.0.x
     inputs:
       packageType: sdk
-      version: 8.0.x
+      version: 9.0.x
 
   - task: NuGetToolInstaller@1
 

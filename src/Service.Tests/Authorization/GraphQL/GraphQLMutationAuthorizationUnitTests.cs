@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// Ensures the authorize directive is present on the ObjectTypeDefinition
         /// with the expected collection of roles resolved from the EntityPermissionsMap.
         /// </summary>
-        /// <param name="operationType"></param>
+        /// <param name="HttpMethod"></param>
         /// <param name="rolesDefinedInPermissions"></param>
         /// <param name="expectedAuthorizeDirective"></param>
         [DataRow(EntityActionOperation.Create, new string[] { }, "",
@@ -29,8 +29,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             DisplayName = "One Role added to Authorize Directive")]
         [DataRow(EntityActionOperation.Create, new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])",
             DisplayName = "Two Roles added to Authorize Directive")]
-        [DataTestMethod]
-        public void AuthorizeDirectiveAddedForMutation(EntityActionOperation operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
+        [TestMethod]
+        public void AuthorizeDirectiveAddedForMutation(EntityActionOperation HttpMethod, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
         {
             string entityName = "Foo";
 
@@ -53,13 +53,13 @@ type Foo @model(name: ""Foo""){
                 entities: new(new Dictionary<string, Entity> { { entityName, GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { entityName },
-                    operations: new EntityActionOperation[] { operationType },
+                    operations: new EntityActionOperation[] { HttpMethod },
                     roles: rolesDefinedInPermissions)
                 );
 
             if (rolesDefinedInPermissions.Length > 0)
             {
-                Assert.IsTrue(mutationRoot.Definitions.Count() > 0);
+                Assert.IsGreaterThan(0, mutationRoot.Definitions.Count());
                 ObjectTypeDefinitionNode mutation = MutationBuilderTests.GetMutationNode(mutationRoot);
                 // Iterate over the mutations created by MutationBuilder.Build()
                 //

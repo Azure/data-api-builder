@@ -1180,7 +1180,7 @@ FROM (
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             if (result[0].TryGetProperty("message", out JsonElement message))
             {
-                Assert.IsTrue(message.ToString() == "Cannot have both groupBy and items in the same query", "Requesting groupby and items in same query should fail.");
+                Assert.AreEqual("Cannot have both groupBy and items in the same query", message.ToString(), "Requesting groupby and items in same query should fail.");
             }
         }
 
@@ -1212,7 +1212,7 @@ FROM (
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             if (result[0].TryGetProperty("message", out JsonElement message))
             {
-                Assert.IsTrue(message.ToString() == "Groupby fields in selection must match the fields in the groupby argument.");
+                Assert.AreEqual("Groupby fields in selection must match the fields in the groupby argument.", message.ToString());
             }
         }
 

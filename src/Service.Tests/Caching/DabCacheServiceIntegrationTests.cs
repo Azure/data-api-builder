@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Act and Assert
             int cacheEntryTtlInSeconds = 1;
             EntityCacheLevel cacheEntryLevel = EntityCacheLevel.L1L2;
-            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
+            await Assert.ThrowsAsync<DataApiBuilderException>(
                 async () => await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel),
                 message: "Expected an exception to be thrown.");
         }
@@ -350,7 +350,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
-            Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
+            Assert.IsLessThanOrEqualTo(1, mockExecuteQuery.Invocations.Count, message: "Expected a cache hit, but observed cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
@@ -422,7 +422,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
-            Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
+            Assert.IsLessThanOrEqualTo(1, mockExecuteQuery.Invocations.Count, message: "Expected a cache hit, but observed cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
@@ -465,8 +465,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtlInSeconds, cacheEntryLevel: cacheEntryLevel);
 
             // Assert
-            Assert.IsFalse(mockExecuteQuery.Invocations.Count < 2, message: "QueryExecutor invocation count too low. A cache hit shouldn't have occurred since the entry should have expired.");
-            Assert.IsFalse(mockExecuteQuery.Invocations.Count > 2, message: "Unexpected cache misses. The cache entry was never used as the factory method was called on every cache access attempt.");
+            Assert.IsGreaterThanOrEqualTo(2, mockExecuteQuery.Invocations.Count, message: "QueryExecutor invocation count too low. A cache hit shouldn't have occurred since the entry should have expired.");
+            Assert.IsLessThanOrEqualTo(2, mockExecuteQuery.Invocations.Count, message: "Unexpected cache misses. The cache entry was never used as the factory method was called on every cache access attempt.");
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
 

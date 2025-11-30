@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Role is in ClaimsPrincipal.Roles -> VALID
         /// Role is NOT in ClaimsPrincipal.Roles -> INVALID
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("Reader", true, true)]
         [DataRow("Reader", false, false)]
         public void ValidRoleContext_Simple(string clientRoleHeaderValue, bool userIsInRole, bool expected)
@@ -52,10 +52,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User.IsInRole(clientRoleHeaderValue)).Returns(userIsInRole);
             context.Setup(x => x.User.Identity!.IsAuthenticated).Returns(true);
 
-            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
+            Assert.AreEqual(expected, authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("Role header has no value")]
+        [TestMethod(DisplayName = "Role header has no value")]
         public void RoleHeaderEmpty()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig();
@@ -65,10 +65,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
             bool expected = false;
 
-            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
+            Assert.AreEqual(expected, authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("Role header has multiple values")]
+        [TestMethod(DisplayName = "Role header has multiple values")]
         public void RoleHeaderDuplicated()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig();
@@ -79,10 +79,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(multipleValuesForHeader);
             context.Setup(x => x.User.IsInRole("Reader")).Returns(true);
             bool expected = false;
-            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
+            Assert.AreEqual(expected, authZResolver.IsValidRoleContext(context.Object));
         }
 
-        [TestMethod("Role header is missing")]
+        [TestMethod(DisplayName = "Role header is missing")]
         public void NoRoleHeader_RoleContextTest()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig();
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.SetupGet(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(StringValues.Empty);
             bool expected = false;
 
-            Assert.AreEqual(authZResolver.IsValidRoleContext(context.Object), expected);
+            Assert.AreEqual(expected, authZResolver.IsValidRoleContext(context.Object));
         }
         #endregion
 
@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         ///     Ensures method short circuits in circumstances role is not defined -> INVALID
         /// Request operation does not match an operation defined for role (role has >=1 defined operation) -> INVALID
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("Writer", EntityActionOperation.Create, "Writer", EntityActionOperation.Create, true)]
         [DataRow("Reader", EntityActionOperation.Create, "Reader", EntityActionOperation.None, false)]
         [DataRow("Writer", EntityActionOperation.Create, "Writer", EntityActionOperation.Update, false)]
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Test that wildcard operation are expanded to explicit operations.
         /// Verifies that internal data structure are created correctly.
         /// </summary>
-        [TestMethod("Wildcard operation is expanded to all valid operations")]
+        [TestMethod(DisplayName = "Wildcard operation is expanded to all valid operations")]
         public void TestWildcardOperation()
         {
             List<string> expectedRoles = new() { AuthorizationHelpers.TEST_ROLE };
@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="configRole">The role configured on the entity.</param>
         /// <param name="operation">The operation configured for the configRole.</param>
         /// <param name="roleNameToCheck">The roleName which is to be checked for the permission.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("Writer", EntityActionOperation.Create, "wRiTeR", DisplayName = "role wRiTeR checked against Writer")]
         [DataRow("Reader", EntityActionOperation.Read, "READER", DisplayName = "role READER checked against Reader")]
         [DataRow("Writer", EntityActionOperation.Create, "WrIter", DisplayName = "role WrIter checked against Writer")]
@@ -516,7 +516,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Wildcard included and/or excluded columns handling
         /// and assumes request validation has already occurred
         /// </summary>
-        [TestMethod("Explicit include columns with no exclusion")]
+        [TestMethod(DisplayName = "Explicit include columns with no exclusion")]
         public void ExplicitIncludeColumn()
         {
             HashSet<string> includedColumns = new() { "col1", "col2", "col3" };
@@ -561,7 +561,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// would pass if the operation is one among create, read, update, delete and the columns are accessible.
         /// Similarly if the column is in accessible, then we should not have access.
         /// </summary>
-        [TestMethod("Explicit include and exclude columns")]
+        [TestMethod(DisplayName = "Explicit include and exclude columns")]
         public void ExplicitIncludeAndExcludeColumns()
         {
             HashSet<string> includeColumns = new() { "col1", "col2" };
@@ -608,7 +608,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Exclusion has precedence over inclusion. So for this test case,
         /// col1 will be excluded even if it is in the inclusion list.
         /// </summary>
-        [TestMethod("Same column in exclusion and inclusion list")]
+        [TestMethod(DisplayName = "Same column in exclusion and inclusion list")]
         public void ColumnExclusionWithSameColumnInclusion()
         {
             HashSet<string> includedColumns = new() { "col1", "col2" };
@@ -649,7 +649,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <summary>
         /// Test that wildcard inclusion will include all the columns in the table.
         /// </summary>
-        [TestMethod("Wildcard included columns")]
+        [TestMethod(DisplayName = "Wildcard included columns")]
         public void WildcardColumnInclusion()
         {
             RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
@@ -673,7 +673,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// Test that wildcard inclusion will include all column except column specify in exclusion.
         /// Exclusion has priority over inclusion.
         /// </summary>
-        [TestMethod("Wildcard include columns with some column exclusion")]
+        [TestMethod(DisplayName = "Wildcard include columns with some column exclusion")]
         public void WildcardColumnInclusionWithExplicitExclusion()
         {
             List<string> includedColumns = new() { "col1", "col2" };
@@ -703,7 +703,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <summary>
         /// Test that all columns should be excluded if the exclusion contains wildcard character.
         /// </summary>
-        [TestMethod("Wildcard column exclusion")]
+        [TestMethod(DisplayName = "Wildcard column exclusion")]
         public void WildcardColumnExclusion()
         {
             HashSet<string> excludedColumns = new() { "col1", "col2", "col3", "col4" };
@@ -727,7 +727,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// For this test, exclusion has precedence over inclusion. So all columns will be excluded
         /// because wildcard is specified in the exclusion list.
         /// </summary>
-        [TestMethod("Wildcard column exclusion with some explicit columns inclusion")]
+        [TestMethod(DisplayName = "Wildcard column exclusion with some explicit columns inclusion")]
         public void WildcardColumnExclusionWithExplicitColumnInclusion()
         {
             HashSet<string> includedColumns = new() { "col1", "col2" };
@@ -759,7 +759,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// would pass if the operation is one among create, read, update, delete and the columns are accessible.
         /// Similarly if the column is in accessible, then we should not have access.
         /// </summary>
-        [TestMethod("Explicit include and exclude columns with wildcard operation")]
+        [TestMethod(DisplayName = "Explicit include and exclude columns with wildcard operation")]
         public void CheckIncludeAndExcludeColumnForWildcardOperation()
         {
             HashSet<string> includeColumns = new() { "col1", "col2" };
@@ -797,7 +797,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// the table are treated as accessible. Since we are not explicitly specifying the includeCols/excludedCols
         /// parameters when initializing the RuntimeConfig, Field will be nullified.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, "col1", "col2", DisplayName = "Accessible fields col1,col2")]
         [DataRow(true, "col3", "col4", DisplayName = "Accessible fields col3,col4")]
         [DataRow(false, "col5", DisplayName = "Inaccessible field col5")]
@@ -830,7 +830,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             new string[] { "col1", "col4" }, false, DisplayName = "fields in exclude check")]
         [DataRow(new string[] { "col1" }, new string[] { "col2" },
             new string[] { "col2" }, false, DisplayName = "fields in include/exclude mix check")]
-        [DataTestMethod]
+        [TestMethod]
         public void TestAuthenticatedRoleForColumnPermissionsWhenAnonymousRoleIsDefined(
             string[] includeCols,
             string[] excludeCols,
@@ -867,7 +867,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="roleName">The roleName to be tested, differs in casing with configRole.</param>
         /// <param name="columnsToCheck">Columns to be checked for access.</param>
         /// <param name="expected">Expected boolean result for the relevant method call.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(EntityActionOperation.All, "Writer", new string[] { "col1", "col2" }, new string[] { "col3" }, "WRITER",
             new string[] { "col1", "col2" }, true, DisplayName = "Case insensitive role writer")]
         [DataRow(EntityActionOperation.Read, "Reader", new string[] { "col1", "col3", "col4" }, new string[] { "col3" }, "reADeR",
@@ -913,7 +913,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// </summary>
         /// <param name="policy">The policy to be parsed.</param>
         /// <param name="expectedParsedPolicy">The policy which is expected to be generated after parsing.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("@claims.user_email ne @item.col1 and @claims.contact_no eq @item.col2 and not(@claims.name eq @item.col3)",
             "'xyz@microsoft.com' ne col1 and 1234 eq col2 and not('Aaron' eq col3)",
             DisplayName = "Valid policy parsing test for string and int64 claimvaluetypes.")]
@@ -947,7 +947,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
-            Assert.AreEqual(parsedPolicy, expectedParsedPolicy);
+            Assert.AreEqual(expectedParsedPolicy, parsedPolicy);
         }
 
         /// <summary>
@@ -960,7 +960,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <seealso cref="https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/9ddad8fc51ed2732622323612acad83f6629d5ba/src/Microsoft.IdentityModel.JsonWebTokens/Json/JsonClaimSet.cs#L76-L124"/>
         /// <seealso cref="https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/59d1307a260829c0f8609a183a962aceaeffba89/src/Microsoft.IdentityModel.Tokens/TokenUtilities.cs#L82-L112"/>
         #pragma warning disable format
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(ClaimValueTypes.String,        "StringLiteral",                      true, DisplayName = "string")]
         [DataRow(ClaimValueTypes.Boolean,       "true",                               true, DisplayName = "bool")]
         [DataRow(ClaimValueTypes.Integer,       "65535",                              true, DisplayName = "short")]
@@ -1026,7 +1026,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// lacks a claim required by the policy.
         /// </summary>
         /// <param name="policy">The policy to be parsed.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("@claims.user_email eq @item.col1 and @claims.emprating eq @item.rating",
             DisplayName = "'emprating' claim missing from request")]
         [DataRow("@claims.user_email eq @item.col1 and not ( true eq @claims.isemployee or @claims.name eq 'Aaron')",
@@ -1121,7 +1121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         // then no policy is found for the provided entity, role, and operation combination, therefore,
         // no predicates need to be added to the database query generated for the request.
         // When a value is returned as a result, the execution behaved as expected.
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("anonymous", "anonymous", EntityActionOperation.Read, EntityActionOperation.Read, "id eq 1", true,
             DisplayName = "Fetch Policy for existing system role - anonymous")]
         [DataRow("authenticated", "authenticated", EntityActionOperation.Update, EntityActionOperation.Update, "id eq 1", true,
@@ -1205,9 +1205,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             // Assert that only the role claim corresponding to clientRoleHeader is added to the claims dictionary.
             // Assert
-            Assert.AreEqual(resolvedClaims.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), true, message: "Only the claim, roles, should be present.");
-            Assert.AreEqual(resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].Count, 1, message: "Only one claim should be present to represent the client role header context.");
-            Assert.AreEqual(resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].First().Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+            Assert.AreEqual(true, resolvedClaims.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), message: "Only the claim, roles, should be present.");
+            Assert.AreEqual(1, resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].Count, message: "Only one claim should be present to represent the client role header context.");
+            Assert.AreEqual(TEST_ROLE, resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].First().Value, message: "The roles claim should have the value:" + TEST_ROLE);
         }
 
         /// <summary>
@@ -1315,7 +1315,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.AreEqual(expected: "openid", actual: claimsInRequestContext["scp"], message: "Expected the scp claim to be present.");
             Assert.AreEqual(expected: "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY", actual: claimsInRequestContext["sub"], message: "Expected the sub claim to be present.");
             Assert.AreEqual(expected: "55296aad-ea7f-4c44-9a4c-bb1e8d43a005", actual: claimsInRequestContext["oid"], message: "Expected the oid claim to be present.");
-            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE], actual: TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+            Assert.AreEqual(TEST_ROLE, actual: claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE], message: "The roles claim should have the value:" + TEST_ROLE);
             Assert.AreEqual(expected: "[\"" + TEST_ROLE + "\",\"ROLE2\",\"ROLE3\"]", actual: claimsInRequestContext[AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE], message: "Original roles should be preserved in a new context");
         }
 

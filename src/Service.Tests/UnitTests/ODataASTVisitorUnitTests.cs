@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="resolvedAuthZPolicyText">Filter parser input, the processed authorization policy</param>
         /// <param name="errorExpected">Whether an OData Filter parser error is expected</param>
         /// <seealso cref="https://learn.microsoft.com/dotnet/framework/data/adonet/sql/linq/sql-clr-type-mapping"/>
-        [DataTestMethod]
+        [TestMethod]
         // Constant on left side and OData EDM object on right side of binary operator. (L->R)
         [DataRow("'1' eq int_types", false, DisplayName = "L->R: Cast token claim of type string to integer")]
         [DataRow("12.24 eq float_types", false, DisplayName = "L->R: Cast token claim of type single to type double (CLR) which maps to (SQL) float")]
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (Exception e) when (e is DataApiBuilderException || e is ODataException)
             {
                 Assert.IsTrue(errorExpected, message: "Filter clause creation was not expected to fail.");
-                Assert.IsTrue(e.Message.Contains(expectedErrorMessageFragment), message: e.Message);
+                Assert.Contains(expectedErrorMessageFragment, e.Message, message: e.Message);
             }
         }
         #endregion
@@ -200,19 +200,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Geography);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
-            Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(nodeIn));
+            Assert.Throws<NotSupportedException>(() => visitor.Visit(nodeIn));
         }
 
         /// <summary>
         /// Tests that we throw an exception when trying to use an invalid
         /// Time with negative value or time > 24 hours.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("time_types eq 25:23:54.9999999", DisplayName = "Exception thrown with invalid time>24 hrs.")]
         [DataRow("time_types eq -13:23:54.9999999", DisplayName = "Exception thrown with invalid time>24 hrs.")]
         public void InvalidTimeTypeODataFilterTest(string filterExp)
         {
-            Assert.ThrowsException<DataApiBuilderException>(() => PerformVisitorTest(
+            Assert.Throws<DataApiBuilderException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             ConstantNode nodeIn = CreateConstantNode(constantValue: string.Empty, literalText: "text", EdmPrimitiveTypeKind.Int32);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
-            Assert.ThrowsException<ArgumentException>(() => visitor.Visit(nodeIn));
+            Assert.Throws<ArgumentException>(() => visitor.Visit(nodeIn));
         }
 
         /// <summary>
@@ -246,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             BinaryOperatorNode binaryNode = CreateBinaryNode(constantNode, constantNode, BinaryOperatorKind.And);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
-            Assert.ThrowsException<NotSupportedException>(() => visitor.Visit(binaryNode));
+            Assert.Throws<NotSupportedException>(() => visitor.Visit(binaryNode));
         }
 
         /// <summary>
@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ConstantNode constantNode = CreateConstantNode(constantValue: "null", literalText: "null", EdmPrimitiveTypeKind.None, isNull: true);
             UnaryOperatorNode binaryNode = CreateUnaryNode(constantNode, UnaryOperatorKind.Negate);
             ODataASTVisitor visitor = CreateVisitor(DEFAULT_ENTITY, DEFAULT_SCHEMA_NAME, DEFAULT_TABLE_NAME);
-            Assert.ThrowsException<ArgumentException>(() => visitor.Visit(binaryNode));
+            Assert.Throws<ArgumentException>(() => visitor.Visit(binaryNode));
         }
 
         /// <summary>
@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void InvalidComparisonTypeBoolTest()
         {
-            Assert.ThrowsException<DataApiBuilderException>(() => PerformVisitorTest(
+            Assert.Throws<DataApiBuilderException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
@@ -286,7 +286,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void InvalidBinaryOpTest()
         {
-            Assert.ThrowsException<ArgumentException>(() => PerformVisitorTest(
+            Assert.Throws<ArgumentException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,
@@ -303,7 +303,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void InvalidNullBinaryOpTest()
         {
-            Assert.ThrowsException<DataApiBuilderException>(() => PerformVisitorTest(
+            Assert.Throws<DataApiBuilderException>(() => PerformVisitorTest(
                 entityName: DEFAULT_ENTITY,
                 schemaName: DEFAULT_SCHEMA_NAME,
                 tableName: DEFAULT_TABLE_NAME,

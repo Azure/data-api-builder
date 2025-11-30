@@ -115,13 +115,12 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Returns RuntimeConfig.
+    /// Loads the runtime configuration known to the loader.
     /// </summary>
-    /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
+    /// <param name="replaceEnvVar">Whether to replace environment variable references while deserializing.</param>
+    /// <param name="cancellationToken">Cancellation token for the load operation.</param>
+    /// <returns>The loaded <c>RuntimeConfig</c>, or null if none was loaded.</returns>
+    public abstract Task<RuntimeConfig?> LoadKnownConfigAsync(bool replaceEnvVar = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -362,8 +361,11 @@ public abstract class RuntimeConfigLoader
         }
         catch (Exception ex)
         {
+            // Mask sensitive parts of connection string for logging
+            string maskedConnectionString = MaskConnectionString(connectionString);
+            
             throw new DataApiBuilderException(
-                message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                message: $"{DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE} Invalid SQL Server connection string format. Connection string preview (masked): '{maskedConnectionString}'. Error: {ex.Message}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
@@ -414,8 +416,11 @@ public abstract class RuntimeConfigLoader
         }
         catch (Exception ex)
         {
+            // Mask sensitive parts of connection string for logging
+            string maskedConnectionString = MaskConnectionString(connectionString);
+            
             throw new DataApiBuilderException(
-                message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                message: $"{DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE} Invalid PostgreSQL connection string format. Connection string preview (masked): '{maskedConnectionString}'. Error: {ex.Message}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
                 innerException: ex);
@@ -435,6 +440,38 @@ public abstract class RuntimeConfigLoader
 
         // Return the updated connection string.
         return connectionStringBuilder.ConnectionString;
+    }
+
+    /// <summary>
+    /// Masks sensitive parts of a connection string for safe logging.
+    /// Shows first 50 characters and basic structure without exposing passwords.
+    /// </summary>
+    private static string MaskConnectionString(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return "[empty or whitespace]";
+        }
+
+        // If it looks like an unreplaced variable reference, show it
+        if (connectionString.Contains("@env(") || connectionString.Contains("@akv("))
+        {
+            return connectionString; // Show unreplaced references as-is
+        }
+
+        // Show first 50 chars, mask the rest, and show length
+        int previewLength = Math.Min(50, connectionString.Length);
+        string preview = connectionString.Substring(0, previewLength);
+        
+        // Basic masking of password-like patterns
+        preview = System.Text.RegularExpressions.Regex.Replace(
+            preview, 
+            @"(password|pwd|pass)=([^;]+)", 
+            "$1=***", 
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        
+        string suffix = connectionString.Length > 50 ? $"... (total length: {connectionString.Length})" : "";
+        return $"{preview}{suffix}";
     }
 
     public bool DoesConfigNeedValidation()

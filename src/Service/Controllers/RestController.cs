@@ -188,10 +188,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// Handle the given operation.
         /// </summary>
         /// <param name="route">The entire route.</param>
-        /// <param name="operationType">The kind of operation to handle.</param>
+        /// <param name="HttpMethod">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
             string route,
-            EntityActionOperation operationType)
+            EntityActionOperation HttpMethod)
         {
             if (route.Equals(REDIRECTED_ROUTE))
             {
@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     activity.TrackMainControllerActivityStarted(
                         Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true),
                         HttpContext.Request.Headers["User-Agent"].ToString(),
-                        operationType.ToString(),
+                        HttpMethod.ToString(),
                         route,
                         HttpContext.Request.QueryString.ToString(),
                         HttpContext.Request.Headers["X-MS-API-ROLE"].FirstOrDefault() ?? HttpContext.User.FindFirst("role")?.Value,
@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 // This activity tracks the query execution. This will create a new activity nested under the REST request activity.
                 using Activity? queryActivity = TelemetryTracesHelper.DABActivitySource.StartActivity($"QUERY {entityName}");
-                IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
+                IActionResult? result = await _restService.ExecuteAsync(entityName, HttpMethod, primaryKeyRoute);
 
                 RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
                 string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);

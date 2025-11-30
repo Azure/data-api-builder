@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 [TestClass]
 public class LoadConfigViaEndpointTests
 {
-    [TestMethod("Testing that missing environment variables won't cause runtime failure."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [TestMethod(DisplayName = "Testing that missing environment variables won't cause runtime failure."), TestCategory(TestCategory.COSMOSDBNOSQL)]
     [DataRow(CONFIGURATION_ENDPOINT)]
     [DataRow(CONFIGURATION_ENDPOINT_V2)]
     public async Task CanLoadConfigWithMissingEnvironmentVariables(string configurationEndpoint)
@@ -39,7 +39,7 @@ public class LoadConfigViaEndpointTests
         Assert.AreEqual(config.Schema, loadedConfig.Schema);
     }
 
-    [TestMethod("Testing that environment variables can be replaced at runtime not only when config is loaded."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [TestMethod(DisplayName = "Testing that environment variables can be replaced at runtime not only when config is loaded."), TestCategory(TestCategory.COSMOSDBNOSQL)]
     [DataRow(CONFIGURATION_ENDPOINT)]
     [DataRow(CONFIGURATION_ENDPOINT_V2)]
     [Ignore("We don't want to environment variable substitution in late configuration, but test is left in for if this changes.")]

@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
 
             // Assert that the create mutation fails to insert the record into the table and that the select query returns no result.
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, dbResponseJson.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -227,7 +227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string currentDbResponse = await GetDatabaseResultAsync(dbQuery);
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
-            Assert.AreEqual(currentResult.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, currentResult.RootElement.GetProperty("count").GetInt64());
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
             // Stored Procedure didn't return anything
@@ -236,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             // check to verify new element is inserted
             string updatedDbResponse = await GetDatabaseResultAsync(dbQuery);
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
-            Assert.AreEqual(updatedResult.RootElement.GetProperty("count").GetInt64(), 1);
+            Assert.AreEqual(1, updatedResult.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string currentDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument currentResult = JsonDocument.Parse(currentDbResponse);
-            Assert.AreEqual(currentResult.RootElement.GetProperty("maxId").GetInt64(), 21);
+            Assert.AreEqual(21, currentResult.RootElement.GetProperty("maxId").GetInt64());
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
             // Stored Procedure didn't return anything
@@ -266,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             // check to verify new element is inserted
             string updatedDbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             JsonDocument updatedResult = JsonDocument.Parse(updatedDbResponse);
-            Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 20);
+            Assert.AreEqual(20, updatedResult.RootElement.GetProperty("maxId").GetInt64());
         }
 
         public async Task InsertMutationOnTableWithTriggerWithNonAutoGenPK(string dbQuery)
@@ -616,7 +616,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string dbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, result.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -637,7 +637,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 1);
+            Assert.AreEqual(1, result.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -843,7 +843,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string dbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, result.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -936,7 +936,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             string dbResponse = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, result.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -1203,7 +1203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, dbResponseJson.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -1232,7 +1232,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
             using JsonDocument dbResponseJson = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(dbResponseJson.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, dbResponseJson.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>

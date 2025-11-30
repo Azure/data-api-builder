@@ -37,10 +37,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         /// <param name="expectedAuthorizationResult"></param>
         /// <param name="isValidRoleContext"></param>
         /// <returns></returns>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, true, DisplayName = "Valid Role Context Succeeds Authorization")]
         [DataRow(false, false, DisplayName = "Invalid Role Context Fails Authorization")]
-        [TestMethod]
         public async Task RoleContextPermissionsRequirementTest(bool expectedAuthorizationResult, bool isValidRoleContext)
         {
             Mock<IAuthorizationResolver> authorizationResolver = new();
@@ -61,13 +60,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         /// Tests that a user role with operations specified as ["*"] will be authorized for all http methods
         /// </summary>
         /// <param name="httpMethod"> the http method that we are checking if the client is authorized to use </param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(HttpConstants.GET)]
         [DataRow(HttpConstants.POST)]
         [DataRow(HttpConstants.PUT)]
         [DataRow(HttpConstants.PATCH)]
         [DataRow(HttpConstants.DELETE)]
-        [TestMethod]
         public async Task TestWildcardResolvesAsAllOperations(string httpMethod)
         {
             AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardOperation();
@@ -87,13 +85,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         /// (ensure we bypass dictionary lookup OperationToColumnMap[operation] for the passed in CRUD operation)
         /// Expect an empty string to be returned as the policy associated with a wildcard
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(HttpConstants.GET)]
         [DataRow(HttpConstants.POST)]
         [DataRow(HttpConstants.PUT)]
         [DataRow(HttpConstants.PATCH)]
         [DataRow(HttpConstants.DELETE)]
-        [TestMethod]
         public void TestWildcardPolicyResolvesToEmpty(string httpMethod)
         {
             AuthorizationResolver authorizationResolver = SetupAuthResolverWithWildcardOperation();
@@ -120,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         /// <param name="isValidUpdateRoleOperation">Whether Role/Operation pair is allowed per authorization config.</param>
         /// <param name="isValidDeleteRoleOperation">Whether Role/Operation pair is allowed per authorization config.</param>
         /// <returns></returns>
-        [DataTestMethod]
+        [TestMethod]
         // Positive Tests
         [DataRow(HttpConstants.POST, true, true, false, false, false, DisplayName = "POST Operation with Create Permissions")]
         [DataRow(HttpConstants.PATCH, true, true, false, true, false, DisplayName = "PATCH Operation with Create,Update permissions")]
@@ -137,7 +134,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         [DataRow(HttpConstants.DELETE, false, false, false, false, false, DisplayName = "DELETE Operation with no permissions")]
         [DataRow(HttpConstants.GET, false, false, false, false, false, DisplayName = "GET Operation with create permissions")]
         [DataRow(HttpConstants.POST, false, false, false, false, false, DisplayName = "POST Operation with update permissions")]
-        [TestMethod]
         public async Task EntityRoleOperationPermissionsRequirementTest(
             string httpMethod,
             bool expectedAuthorizationResult,
@@ -196,7 +192,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
                 httpContext: httpContext
             );
 
-            Assert.AreEqual(false, actualAuthorizationResult);
+            Assert.IsFalse(actualAuthorizationResult);
 
             bool actualExceptionThrown = false;
             try
@@ -213,7 +209,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
                 actualExceptionThrown = true;
             }
 
-            Assert.AreEqual(true, actualExceptionThrown);
+            Assert.IsTrue(actualExceptionThrown);
         }
 
         /// <summary>
@@ -227,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         /// </summary>
         /// <param name="columnsRequestedInput">List of columns that appear in a request {URL, QueryString, Body}</param>
         # pragma warning disable format
-        [DataTestMethod]
+        [TestMethod]
         // Positive Tests where authorization succeeds for Find requests with no $f filter query string parameter
         [DataRow(new string[] { "col1", "col2", "col3", "col4" }, DisplayName = "Find - Request all of Allowed Columns")]
         [DataRow(new string[] { "col1", "col2", "col3"         }, DisplayName = "Find - Request 3/4 subset of Allowed Columns")]
@@ -239,7 +235,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.REST
         [DataRow(new string[] { "col1", "col5", "col6", "col7", "col9" }, DisplayName = "Find - Request 1 allowed + > 1 disallowed column(s)")]
         [DataRow(new string[] { }, false, false, DisplayName = "Find - Request on entity with no included columns. The request url contains no key,select,orderby,filter.")]
         #pragma warning restore format
-        [TestMethod]
         public async Task FindColumnPermissionsTests(string[] columnsRequestedInput,
             bool areAllowedExposedColumns = true,
             bool expectedAuthorizationResult = true)

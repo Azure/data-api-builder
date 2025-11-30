@@ -57,10 +57,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// JWT is valid as it contains no errors caught by negative tests
         /// library(Microsoft.AspNetCore.Authentication.JwtBearer) validation methods
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, DisplayName = "Authenticated role - X-MS-API-ROLE is not sent")]
         [DataRow("author", DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
-        [TestMethod]
         public async Task TestValidToken(string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
@@ -92,10 +91,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// the jwt token is missing.
         /// </summary>
         /// <returns></returns>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, DisplayName = "Anonymous role - X-MS-API-ROLE is not sent")]
         [DataRow("author", DisplayName = "Anonymous role - existing X-MS-API-ROLE is not honored")]
-        [TestMethod]
         public async Task TestMissingJwtToken(string clientRoleHeader)
         {
             RsaSecurityKey key = new(RSA.Create(2048));
@@ -221,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// If this test fails, check the console output for the error:
         /// "Bearer was not authenticated. Failure message: IDX10503: Signature validation failed."
         /// </summary>
-        [TestMethod("JWT signed with unrecognized/unconfigured key, results in signature key not found")]
+        [TestMethod(DisplayName = "JWT signed with unrecognized/unconfigured key, results in signature key not found")]
         public async Task TestInvalidToken_InvalidSignature()
         {
             // Arrange
@@ -266,14 +264,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
-            Assert.IsTrue(headerValue[0].Contains("invalid_token"));
+            Assert.Contains("invalid_token", headerValue[0]);
         }
 
         /// <summary>
         /// JWT token striped of signature should fail (401) even if all other validation passes.
         /// Challenge header (WWW-Authenticate) only states invalid_token here.
         /// </summary>
-        [TestMethod("JWT with no signature should result in 401")]
+        [TestMethod(DisplayName = "JWT with no signature should result in 401")]
         public async Task TestInvalidToken_NoSignature()
         {
             RsaSecurityKey key = new(RSA.Create(2048));
@@ -284,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
-            Assert.IsTrue(headerValue[0].Contains("invalid_token"));
+            Assert.Contains("invalid_token", headerValue[0]);
         }
         #endregion
 

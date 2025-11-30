@@ -508,7 +508,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <inheritdoc />
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, null, 1113, "Real Madrid", DisplayName = "No Overriding of existing relationship fields in DB.")]
         [DataRow(new string[] { "new_club_id" }, new string[] { "id" }, 1111, "Manchester United", DisplayName = "Overriding existing relationship fields in DB.")]
         public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
@@ -785,7 +785,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             if (result[0].TryGetProperty("message", out JsonElement message))
             {
-                Assert.IsTrue(message.ToString() == "Cannot have both groupBy and items in the same query", "Requesting groupby and items in same query should fail.");
+                Assert.AreEqual("Cannot have both groupBy and items in the same query", message.ToString(), "Requesting groupby and items in same query should fail.");
             }
         }
 

@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Note: On Addition of property make sure it is added in following object creation _databaseTable and include in serialization
             // and deserialization test.
             int fields = typeof(DatabaseTable).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 6);
+            Assert.AreEqual(6, fields);
 
             string serializedDatabaseTable = JsonSerializer.Serialize(_databaseTable, _options);
             DatabaseTable deserializedDatabaseTable = JsonSerializer.Deserialize<DatabaseTable>(serializedDatabaseTable, _options)!;
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Note: On Addition of property make sure it is added in following object creation _databaseView and include in serialization
             // and deserialization test.
             int fields = typeof(DatabaseView).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 6);
+            Assert.AreEqual(6, fields);
 
             string serializedDatabaseView = JsonSerializer.Serialize(_databaseView, _options);
             DatabaseView deserializedDatabaseView = JsonSerializer.Deserialize<DatabaseView>(serializedDatabaseView, _options)!;
@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Note: On Addition of property make sure it is added in following object creation _databaseStoredProcedure and include in serialization
             // and deserialization test.
             int fields = typeof(DatabaseStoredProcedure).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 6);
+            Assert.AreEqual(6, fields);
 
             string serializedDatabaseSP = JsonSerializer.Serialize(_databaseStoredProcedure, _options);
             DatabaseStoredProcedure deserializedDatabaseSP = JsonSerializer.Deserialize<DatabaseStoredProcedure>(serializedDatabaseSP, _options)!;
@@ -190,7 +190,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // In serialization options we need  ReferenceHandler = ReferenceHandler.Preserve, or else it does not serialize objects with cycle references
             // SourceDefinition -> RelationShipMetadata -> ForeignKeyDefinition RelationshipPair ->DatabaseTable -> SourceDefinition
-            Assert.ThrowsException<JsonException>(() =>
+            Assert.Throws<JsonException>(() =>
             {
                 JsonSerializer.Serialize(_sourceDefinition, _options);
             });
@@ -239,7 +239,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             // test to check if TypeConverter is not passed then we cannot serialize System.Type
-            Assert.ThrowsException<NotSupportedException>(() =>
+            Assert.Throws<NotSupportedException>(() =>
             {
                 JsonSerializer.Serialize(_columnDefinition, _options);
             });
@@ -376,13 +376,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     string[] typeNameSplitParts = typeName.Split(',');
 
                     string namespaceString = typeNameSplitParts[0].Trim();
-                    Assert.IsTrue(namespaceString.Contains("Azure.DataApiBuilder.Config.DatabasePrimitives"));
+                    Assert.Contains("Azure.DataApiBuilder.Config.DatabasePrimitives", namespaceString);
                     Assert.AreEqual(namespaceString, "Azure.DataApiBuilder.Config.DatabasePrimitives." + objectName);
 
                     string projectNameString = typeNameSplitParts[1].Trim();
-                    Assert.AreEqual(projectNameString, "Azure.DataApiBuilder.Config");
+                    Assert.AreEqual("Azure.DataApiBuilder.Config", projectNameString);
 
-                    Assert.AreEqual(typeNameSplitParts.Length, 2);
+                    Assert.AreEqual(2, typeNameSplitParts.Length);
                 }
                 else
                 {
@@ -399,13 +399,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // test number of properties/fields defined in Source Definition
             int fields = typeof(SourceDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 5);
+            Assert.AreEqual(5, fields);
 
             // test values
             Assert.AreEqual(expectedSourceDefinition.IsInsertDMLTriggerEnabled, deserializedSourceDefinition.IsInsertDMLTriggerEnabled);
             Assert.AreEqual(expectedSourceDefinition.IsUpdateDMLTriggerEnabled, deserializedSourceDefinition.IsUpdateDMLTriggerEnabled);
-            Assert.AreEqual(expectedSourceDefinition.PrimaryKey.Count, deserializedSourceDefinition.PrimaryKey.Count);
-            Assert.AreEqual(expectedSourceDefinition.Columns.Count, deserializedSourceDefinition.Columns.Count);
+            Assert.HasCount(expectedSourceDefinition.PrimaryKey.Count, deserializedSourceDefinition.PrimaryKey);
+            Assert.HasCount(expectedSourceDefinition.Columns.Count, deserializedSourceDefinition.Columns);
             VerifyColumnDefinitionSerializationDeserialization(expectedSourceDefinition.Columns.GetValueOrDefault(columnValue), deserializedSourceDefinition.Columns.GetValueOrDefault(columnValue));
 
             if (isStoredProcedure)
@@ -419,7 +419,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // test number of properties/fields defined in Column Definition
             int fields = typeof(ColumnDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 8);
+            Assert.AreEqual(8, fields);
 
             // test values
             expectedColumnDefinition.Equals(deserializedColumnDefinition);
@@ -429,7 +429,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // test number of properties/fields defined in Column Definition
             int fields = typeof(ParameterDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 9);
+            Assert.AreEqual(9, fields);
             // test values
             expectedParameterDefinition.Equals(deserializedParameterDefinition);
         }

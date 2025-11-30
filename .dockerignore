@@ -1,0 +1,55 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.pipelines
+.devcontainer
+.vscode
+
+# Documentation
+*.md
+docs/
+samples/
+templates/
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/TestResults/
+
+# Node modules
+**/node_modules/
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Aspire
+.aspire/
+
+# Docker
+docker-compose*.yml
+.dockerignore
+
+# Config (will be mounted or env vars)
+**/dab-config*.json
+!config/dab-config.template.json
+
+# Scripts
+scripts/
+config-generators/
+
+# External
+external_licenses/

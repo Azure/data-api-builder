@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="schemaTable">Schema and table name to be parsed.</param>
         /// <param name="schema">Expected parsed schema.</param>
         /// <param name="table">Expected parsed table.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("table", "", "table")]
         [DataRow("schema.table", "schema", "table")]
         [DataRow("[schema].table", "schema", "table")]
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// invalid schema and table formats.
         /// </summary>
         /// <param name="schemaTable">An invalid schema and table name.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("abc.abc[abc]")]
         [DataRow("abc.abc]")]
         [DataRow("[abc.abc")]
@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("ab[c].fda")]
         public void ParseInvalidSchemaAndTableNames(string schemaTable)
         {
-            Assert.ThrowsException<DataApiBuilderException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
+            Assert.Throws<DataApiBuilderException>(() => EntitySourceNamesParser.ParseSchemaAndTable(schemaTable));
         }
 
         #endregion

@@ -26,11 +26,11 @@ public class StoredProcedureRequestContext : RestRequestContext
         string entityName,
         DatabaseObject dbo,
         JsonElement? requestPayloadRoot,
-        EntityActionOperation operationType)
+        EntityActionOperation HttpMethod)
         : base(entityName, dbo)
     {
+        this.HttpMethod = HttpMethod;
         FieldsToBeReturned = new();
-        OperationType = operationType;
 
         PopulateFieldValuePairsInBody(requestPayloadRoot);
     }
@@ -42,7 +42,7 @@ public class StoredProcedureRequestContext : RestRequestContext
     /// </summary>
     public void PopulateResolvedParameters()
     {
-        if (OperationType is EntityActionOperation.Read)
+        if (HttpMethod is EntityActionOperation.Read)
         {
             // Query string may have malformed/null keys, if so just ignore them
             ResolvedParameters = ParsedQueryString.Cast<string>()

@@ -406,7 +406,7 @@ namespace Cli.Tests
         /// <summary>
         /// Update Entity with new Policy and Field properties
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
         [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
@@ -434,7 +434,7 @@ namespace Cli.Tests
         /// <summary>
         /// Simple test to verify success on updating a source from string to source object for valid fields.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("s001.book", null, new string[] { "anonymous", "*" }, null, null, "UpdateSourceName", DisplayName = "Updating sourceName with no change in parameters or keyfields.")]
         [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
         [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
@@ -505,7 +505,7 @@ namespace Cli.Tests
         /// of table/view, and stored-procedure respectively.
         /// Updating Table with all supported CRUD action to Stored-Procedure should fail.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
             null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, true,
             DisplayName = "PASS - Convert table to stored-procedure with valid parameters.")]
@@ -586,7 +586,7 @@ namespace Cli.Tests
         /// 1. Updating a stored-procedure with WILDCARD/CRUD action should fail.
         /// 2. Adding a new role/Updating an existing role with execute action should succeeed.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("anonymous", "*", true, DisplayName = "PASS: Stored-Procedure updated with wildcard operation")]
         [DataRow("anonymous", "execute", true, DisplayName = "PASS: Stored-Procedure updated with execute operation")]
         [DataRow("anonymous", "create,read", false, DisplayName = "FAIL: Stored-Procedure updated with CRUD action.")]
@@ -743,7 +743,7 @@ namespace Cli.Tests
         /// <param name="restRoute">REST Path configured for the entity</param>
         /// <param name="graphQLType">GraphQL Type configured for the entity</param>
         /// <param name="testType">Scenario that is tested. It is also used to construct the expected JSON.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "Entity Update - REST enabled without any methods explicitly configured")]
         [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Entity Update - Custom REST path defined without any methods explicitly configured")]
         [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "Entity Update - REST methods defined without REST Path explicitly configured")]
@@ -789,7 +789,7 @@ namespace Cli.Tests
         /// <param name="graphQLOperation"></param>
         /// <param name="restRoute"></param>
         /// <param name="graphQLType"></param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations during update - GraphQL operation specified but entity is disabled for GraphQL")]
         [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations during update - REST methods specified but entity is disabled for REST")]
         public void TestUpdateStoredProcedureWithConflictingRestGraphQLOptions(
@@ -850,7 +850,7 @@ namespace Cli.Tests
         /// <summary>
         /// Simple test to verify failure on updating source of an entity with invalid fields.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, new string[] { "param1:value1" }, new string[] { "col1", "col2" }, "anonymous", "*", DisplayName = "Both KeyFields and Parameters provided for source")]
         [DataRow("stored-procedure", null, new string[] { "col1", "col2" }, "anonymous", "create", DisplayName = "KeyFields incorrectly used with stored procedure")]
         [DataRow("stored-procedure", new string[] { "param1:value1,param1:223" }, null, "anonymous", "read", DisplayName = "Parameters with duplicate keys for stored procedure")]
@@ -921,7 +921,7 @@ namespace Cli.Tests
         /// <summary>
         /// Test to Update Entity with Invalid mappings
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("id:identity:id,name:Company Name", DisplayName = "Invalid format for mappings value, required: 2, provided: 3.")]
         [DataRow("id:identity:id,name:", DisplayName = "Invalid format for mappings value, required: 2, provided: 1.")]
         public void TestUpdateEntityWithInvalidMappings(string mappings)
@@ -955,7 +955,7 @@ namespace Cli.Tests
         /// <summary>
         /// Test to validate that Permissions is mandatory when using options --fields.include or --fields.exclude
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { }, new string[] { "field" }, new string[] { }, DisplayName = "Invalid command with fieldsToInclude but no permissions")]
         [DataRow(new string[] { }, new string[] { }, new string[] { "field1,field2" }, DisplayName = "Invalid command with fieldsToExclude but no permissions")]
         public void TestUpdateEntityWithInvalidPermissionAndFields(
@@ -993,7 +993,7 @@ namespace Cli.Tests
         /// <summary>
         /// Test to verify Invalid inputs to create a relationship
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("CosmosDB_NoSQL", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
         [DataRow("mssql", null, "MyEntity", DisplayName = "Cardinality should not be null")]
         [DataRow("mssql", "manyx", "MyEntity", DisplayName = "Cardinality should be one/many")]

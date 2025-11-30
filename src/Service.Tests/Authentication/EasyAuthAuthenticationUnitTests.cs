@@ -34,10 +34,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// When EasyAuth is configured and an authorization header is sent, the authorization header should be ignored
         /// and zero token validation errors should be observed.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Valid AppService EasyAuth payload - 200")]
         [DataRow(true, DisplayName = "Valid AppService EasyAuth header and authorization header - 200")]
-        [TestMethod]
         public async Task TestValidAppServiceEasyAuthToken(bool sendAuthorizationHeader)
         {
             string generatedToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
@@ -65,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="nameClaimType">Defines the ClaimType of the claim used for the return value of Identity.Name </param>
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.name"/>
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.nameclaimtype"/>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("NameShortClaimType", "unique_name", DisplayName = "Identity.Name from custom claim name type")]
         [DataRow("NameUriClaimType", ClaimTypes.Name, DisplayName = "Identity.Name from URI claim name type")]
         [DataRow("NameUriClaimType", null, DisplayName = "Identity.Name from default URI claim name type")]
@@ -96,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="roleClaimType">Defines the ClaimType of the claim used for the return value of ClaimsPrincpal.IsInRole(roleName)</param>
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsidentity.roleclaimtype"/>
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole"/>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, "RoleShortClaimType", "roles")]
         [DataRow(false, "RoleUriClaimType", "roles")]
         [DataRow(false, "RoleShortClaimType", ClaimTypes.Role)]
@@ -121,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <summary>
         /// Invalid AppService EasyAuth payloads elicit a 401 Unauthorized response, indicating failed authentication.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("", DisplayName = "Empty JSON not serializable to AppServiceClientPrincipal")]
         [DataRow("eyJtZXNzYWdlIjogImhlbGxvIHdvcmxkIn0=", DisplayName = "JSON not serializable to AppServiceClientPrincipal")]
         [DataRow("aGVsbG8sIHdvcmxkIQ==", DisplayName = "Non-JSON Base64 encoded string not serializable to AppServiceClientPrincipal")]
@@ -143,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// will contain an EasyAuth header.
         /// </summary>
         /// <param name="easyAuthType">AppService/StaticWebApps</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(EasyAuthType.AppService)]
         [DataRow(EasyAuthType.StaticWebApps)]
         public async Task TestMissingEasyAuthHeader(EasyAuthType easyAuthType)
@@ -161,10 +160,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// When an authorization header is sent, it contains an invalid value, if the runtime returns an error
         /// then there is improper JWT validation occurring.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, true, DisplayName = "Valid StaticWebApps EasyAuth header only")]
         [DataRow(true, true, DisplayName = "Valid StaticWebApps EasyAuth header and authorization header")]
-        [TestMethod]
         public async Task TestValidStaticWebAppsEasyAuthToken(bool sendAuthorizationHeader, bool addAuthenticated)
         {
             string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
@@ -227,7 +225,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="claimValue">string representation of claim value</param>
         /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.type"/>
         /// <seealso cref="https://docs.microsoft.com/dotnet/api/system.security.claims.claim.value"/>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, null, false, DisplayName = "Claim type/value null - not processed")]
         [DataRow("tid", null, false, DisplayName = "Claim value null -  not processed")]
         [DataRow(null, "8f902aef-2c06-42c9-a3d0-bc31f04a3dca", false, DisplayName = "Claim type null - not processed")]
@@ -269,7 +267,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// <param name="userId">SWA userId property value.</param>
         /// <param name="userDetails">SWA userDetails property value.</param>
         /// <param name="expectClaim">Whether claim matching property should be present on ClaimsIdentity object.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("1337", "UserDetailsString", true, DisplayName = "UserId and UserDetails Claims Match SWA User Payload")]
         [DataRow("", "", false, DisplayName = "Empty properties in SWA User Payload -> No Matching Claims")]
         [DataRow(null, null, false, DisplayName = "Null properties in SWA User Payload -> No Matching Claims")]
@@ -320,12 +318,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// is a member of the role authenticated. Otherwise, ensure the X-MS-API-ROLE header is
         /// set as 'anonymous'
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, "author",
             DisplayName = "Anonymous role - X-MS-API-ROLE is not honored")]
         [DataRow(true, "author",
             DisplayName = "Authenticated role - existing X-MS-API-ROLE is honored")]
-        [TestMethod]
         public async Task TestClientRoleHeaderPresence(bool addAuthenticated, string clientRoleHeader)
         {
             string generatedToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(addAuthenticated);
@@ -352,14 +349,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         /// when the runtime is configured for EasyAuth authentication.
         /// </summary>
         /// <param name="easyAuthPayload">EasyAuth header value</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("", DisplayName = "No EasyAuth payload -> 401 Unauthorized")]
         [DataRow("ey==", DisplayName = "Invalid EasyAuth payload -> 401 Unauthorized")]
         [DataRow(null, DisplayName = "No EasyAuth header provided -> 200 OK, Anonymous request")]
         [DataRow("", true, DisplayName = "No EasyAuth payload, include authorization header")]
         [DataRow("ey==", true, DisplayName = "Corrupt EasyAuth header value provided, include authorization header")]
         [DataRow(null, true, DisplayName = "No EasyAuth header provided, include authorization header -> 200 OK, Anonymous request")]
-        [TestMethod]
         public async Task TestInvalidStaticWebAppsEasyAuthToken(string easyAuthPayload, bool sendAuthorizationHeader = false)
         {
             HttpContext postMiddlewareContext =

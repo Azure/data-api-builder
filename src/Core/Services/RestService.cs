@@ -58,11 +58,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// and executes the given operation.
         /// </summary>
         /// <param name="entityName">The entity name.</param>
-        /// <param name="operationType">The kind of operation to execute.</param>
+        /// <param name="HttpMethod">The kind of operation to execute.</param>
         /// <param name="primaryKeyRoute">The primary key route. e.g. customerName/Xyz/saleOrderId/123</param>
         public async Task<IActionResult?> ExecuteAsync(
             string entityName,
-            EntityActionOperation operationType,
+            EntityActionOperation HttpMethod,
             string? primaryKeyRoute)
         {
             _requestValidator.ValidateEntity(entityName);
@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
 
                 PopulateStoredProcedureContext(
-                    operationType,
+                    HttpMethod,
                     dbObject,
                     entityName,
                     queryString,
@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                switch (operationType)
+                switch (HttpMethod)
                 {
                     case EntityActionOperation.Read:
                         context = new FindRequestContext(
@@ -121,13 +121,13 @@ namespace Azure.DataApiBuilder.Core.Services
                             isList: string.IsNullOrEmpty(primaryKeyRoute));
                         break;
                     case EntityActionOperation.Insert:
-                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute, queryString);
+                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(HttpMethod, primaryKeyRoute, queryString);
                         JsonElement insertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new InsertRequestContext(
                             entityName,
                             dbo: dbObject,
                             insertPayloadRoot,
-                            operationType);
+                            HttpMethod);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
                             _requestValidator.ValidateInsertRequestContext((InsertRequestContext)context);
@@ -135,7 +135,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                         break;
                     case EntityActionOperation.Delete:
-                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(HttpMethod, primaryKeyRoute);
                         context = new DeleteRequestContext(entityName,
                                                            dbo: dbObject,
                                                            isList: false);
@@ -144,13 +144,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     case EntityActionOperation.UpdateIncremental:
                     case EntityActionOperation.Upsert:
                     case EntityActionOperation.UpsertIncremental:
-                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(operationType, primaryKeyRoute);
+                        RequestValidator.ValidatePrimaryKeyRouteAndQueryStringInURL(HttpMethod, primaryKeyRoute);
                         JsonElement upsertPayloadRoot = RequestValidator.ValidateAndParseRequestBody(requestBody);
                         context = new UpsertRequestContext(
                             entityName,
                             dbo: dbObject,
                             upsertPayloadRoot,
-                            operationType);
+                            HttpMethod);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
                             _requestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context);
@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 await AuthorizationCheckForRequirementAsync(resource: context, requirement: new ColumnsPermissionsRequirement());
             }
 
-            switch (operationType)
+            switch (HttpMethod)
             {
                 case EntityActionOperation.Read:
                     return await DispatchQuery(context, sqlMetadataProvider.GetDatabaseType());
@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// than for requests on non-stored procedure entities.
         /// </summary>
         private void PopulateStoredProcedureContext(
-            EntityActionOperation operationType,
+            EntityActionOperation HttpMethod,
             DatabaseObject dbObject,
             string entityName,
             string queryString,
@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string requestBody,
             out RestRequestContext context)
         {
-            switch (operationType)
+            switch (HttpMethod)
             {
 
                 case EntityActionOperation.Read:
@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         entityName,
                         dbo: dbObject,
                         requestPayloadRoot: null,
-                        operationType);
+                        HttpMethod);
 
                     // Don't want to use RequestParser.ParseQueryString here since for all non-sp requests,
                     // arbitrary keys shouldn't be allowed/recognized in the querystring.
@@ -295,7 +295,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         entityName,
                         dbo: dbObject,
                         requestPayloadRoot,
-                        operationType);
+                        HttpMethod);
                     break;
                 default:
                     throw new DataApiBuilderException(

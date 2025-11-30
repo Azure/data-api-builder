@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null,
-            EntityActionOperation operationType = EntityActionOperation.None,
+            EntityActionOperation HttpMethod = EntityActionOperation.None,
             bool isLinkingEntity = false
             )
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (httpContext is not null && !isLinkingEntity)
             {
                 AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                operationType,
+                HttpMethod,
                 this,
                 httpContext,
                 authorizationResolver,

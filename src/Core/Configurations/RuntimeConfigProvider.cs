@@ -124,7 +124,12 @@ public class RuntimeConfigProvider
         }
 
         // While loading the config file, replace all the environment variables with their values.
-        if (!_configLoader.TryLoadKnownConfig(out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
+        RuntimeConfig? runtimeConfig = _configLoader.LoadKnownConfigAsync(replaceEnvVar: true)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+
+        if (runtimeConfig is null)
         {
             throw new DataApiBuilderException(
                 message: "Runtime config isn't setup.",
@@ -145,7 +150,10 @@ public class RuntimeConfigProvider
         RuntimeConfig? config = _configLoader.RuntimeConfig;
         if (config is null)
         {
-            _configLoader.TryLoadKnownConfig(out config, replaceEnvVar: true);
+            config = _configLoader.LoadKnownConfigAsync(replaceEnvVar: true)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
         }
 
         runtimeConfig = config;

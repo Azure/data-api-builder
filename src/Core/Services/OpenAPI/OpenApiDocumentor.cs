@@ -16,9 +16,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
-using Microsoft.OpenApi.Writers;
+using Microsoft.OpenApi;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -135,7 +133,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
                 OpenApiComponents components = new()
                 {
-                    Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName)
+                    Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName).ToDictionary(kvp => kvp.Key, kvp => (IOpenApiSchema)kvp.Value)
                 };
 
                 // Collect all entity tags and their descriptions for the top-level tags array
@@ -164,7 +162,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     },
                     Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName),
                     Components = components,
-                    Tags = globalTags
+                    Tags = new HashSet<OpenApiTag>(globalTags)
                 };
                 _openApiDocument = doc;
             }
@@ -241,11 +239,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     openApiTag
                 };
 
-                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject);
+                Dictionary<HttpMethod, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject);
 
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
-                    Dictionary<OperationType, OpenApiOperation> operations = CreateStoredProcedureOperations(
+                    Dictionary<HttpMethod, OpenApiOperation> operations = CreateStoredProcedureOperations(
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         configuredRestOperations: configuredRestOperations,
@@ -262,7 +260,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // Create operations for SourceType.Table and SourceType.View
                     // Operations including primary key
-                    Dictionary<OperationType, OpenApiOperation> pkOperations = CreateOperations(
+                    Dictionary<HttpMethod, OpenApiOperation> pkOperations = CreateOperations(
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: true,
@@ -275,13 +273,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     OpenApiPathItem openApiPkPathItem = new()
                     {
                         Operations = pkOperations,
-                        Parameters = pkComponents.Item2
+                        Parameters = pkComponents.Item2?.Cast<IOpenApiParameter>().ToList() ?? new List<IOpenApiParameter>()
                     };
 
                     pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
 
                     // Operations excluding primary key
-                    Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
+                    Dictionary<HttpMethod, OpenApiOperation> operations = CreateOperations(
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: false,
@@ -311,13 +309,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="tags">Tags denoting how the operations should be categorized.
         /// Typically one tag value, the entity's REST path.</param>
         /// <returns>Collection of operation types and associated definitions.</returns>
-        private Dictionary<OperationType, OpenApiOperation> CreateOperations(
+        private Dictionary<HttpMethod, OpenApiOperation> CreateOperations(
             string entityName,
             SourceDefinition sourceDefinition,
             bool includePrimaryKeyPathComponent,
             List<OpenApiTag> tags)
         {
-            Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
+            Dictionary<HttpMethod, OpenApiOperation> openApiPathItemOperations = new();
 
             if (includePrimaryKeyPathComponent)
             {
@@ -326,9 +324,14 @@ namespace Azure.DataApiBuilder.Core.Services
                 // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
                 // It will only contain $select query parameter to allow the user to specify which fields to return.
                 OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
-                AddQueryParameters(getOperation.Parameters);
+                if (getOperation.Parameters != null)
+                {
+                    AddQueryParameters(getOperation.Parameters);
+                }
+
+                getOperation.Responses ??= new OpenApiResponses();
                 getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Get, getOperation);
+                openApiPathItemOperations.Add(HttpMethod.Get, getOperation);
 
                 // PUT and PATCH requests have the same criteria for decided whether a request body is required.
                 bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
@@ -337,21 +340,24 @@ namespace Azure.DataApiBuilder.Core.Services
                 // independent of whether the PK(s) are autogenerated.
                 OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
                 putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                putOperation.Responses ??= new OpenApiResponses();
                 putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                 putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Put, putOperation);
+                openApiPathItemOperations.Add(HttpMethod.Put, putOperation);
 
                 // PATCH requests must include the primary key(s) in the URI path and exclude from the request body,
                 // independent of whether the PK(s) are autogenerated.
                 OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
                 patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                patchOperation.Responses ??= new OpenApiResponses();
                 patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                 patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                openApiPathItemOperations.Add(new HttpMethod("PATCH"), patchOperation);
 
                 OpenApiOperation deleteOperation = CreateBaseOperation(description: DELETE_DESCRIPTION, tags: tags);
+                deleteOperation.Responses ??= new OpenApiResponses();
                 deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
-                openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
+                openApiPathItemOperations.Add(HttpMethod.Delete, deleteOperation);
 
                 return openApiPathItemOperations;
             }
@@ -359,11 +365,16 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // Primary key(s) are not included in the URI paths of the GET (all) and POST operations.
                 OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
-                AddQueryParameters(getAllOperation.Parameters);
+                if (getAllOperation.Parameters != null)
+                {
+                    AddQueryParameters(getAllOperation.Parameters);
+                }
+
+                getAllOperation.Responses ??= new OpenApiResponses();
                 getAllOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
-                openApiPathItemOperations.Add(OperationType.Get, getAllOperation);
+                openApiPathItemOperations.Add(HttpMethod.Get, getAllOperation);
 
                 // The POST body must include fields for primary key(s) which are not autogenerated because a value must be supplied
                 // for those fields. {entityName}_NoAutoPK represents the schema component which has all fields except for autogenerated primary keys.
@@ -373,9 +384,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
                 postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
+                postOperation.Responses ??= new OpenApiResponses();
                 postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
                 postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
-                openApiPathItemOperations.Add(OperationType.Post, postOperation);
+                openApiPathItemOperations.Add(HttpMethod.Post, postOperation);
 
                 return openApiPathItemOperations;
             }
@@ -385,7 +397,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Helper method to add query parameters like $select, $first, $orderby etc. to get and getAll operations for tables/views.
         /// </summary>
         /// <param name="parameters">List of parameters for the operation.</param>
-        private static void AddQueryParameters(IList<OpenApiParameter> parameters)
+        private static void AddQueryParameters(IList<IOpenApiParameter> parameters)
         {
             foreach (OpenApiParameter openApiParameter in _tableAndViewQueryParameters)
             {
@@ -402,67 +414,72 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="tags">Tags denoting how the operations should be categorized.
         /// Typically one tag value, the entity's REST path.</param>
         /// <returns>Collection of operation types and associated definitions.</returns>
-        private Dictionary<OperationType, OpenApiOperation> CreateStoredProcedureOperations(
+        private Dictionary<HttpMethod, OpenApiOperation> CreateStoredProcedureOperations(
             string entityName,
             SourceDefinition sourceDefinition,
-            Dictionary<OperationType, bool> configuredRestOperations,
+            Dictionary<HttpMethod, bool> configuredRestOperations,
             List<OpenApiTag> tags)
         {
-            Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
+            Dictionary<HttpMethod, OpenApiOperation> openApiPathItemOperations = new();
             string spRequestObjectSchemaName = entityName + SP_REQUEST_SUFFIX;
             string spResponseObjectSchemaName = entityName + SP_RESPONSE_SUFFIX;
 
-            if (configuredRestOperations[OperationType.Get])
+            if (configuredRestOperations[HttpMethod.Get])
             {
                 OpenApiOperation getOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
                 AddStoredProcedureInputParameters(getOperation, (StoredProcedureDefinition)sourceDefinition);
+                getOperation.Responses ??= new OpenApiResponses();
                 getOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(
                         description: nameof(HttpStatusCode.OK),
                         responseObjectSchemaName: spResponseObjectSchemaName,
                         includeNextLink: false));
-                openApiPathItemOperations.Add(OperationType.Get, getOperation);
+                openApiPathItemOperations.Add(HttpMethod.Get, getOperation);
             }
 
-            if (configuredRestOperations[OperationType.Post])
+            if (configuredRestOperations[HttpMethod.Post])
             {
                 // POST requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation postOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
                 postOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true, isStoredProcedure: true));
+                postOperation.Responses ??= new OpenApiResponses();
                 postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
                 postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
-                openApiPathItemOperations.Add(OperationType.Post, postOperation);
+                openApiPathItemOperations.Add(HttpMethod.Post, postOperation);
             }
 
             // PUT and PATCH requests have the same criteria for deciding whether a request body is required.
             bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false, isStoredProcedure: true);
 
-            if (configuredRestOperations[OperationType.Put])
+            if (configuredRestOperations[HttpMethod.Put])
             {
                 // PUT requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation putOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
                 putOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
+                putOperation.Responses ??= new OpenApiResponses();
                 putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
                 putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
-                openApiPathItemOperations.Add(OperationType.Put, putOperation);
+                openApiPathItemOperations.Add(HttpMethod.Put, putOperation);
             }
 
-            if (configuredRestOperations[OperationType.Patch])
+            if (configuredRestOperations[new HttpMethod("PATCH")])
             {
                 // PATCH requests for stored procedure entities must include primary key(s) in request body
                 OpenApiOperation patchOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
                 patchOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
+                patchOperation.Responses ??= new OpenApiResponses();
                 patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
                 patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
-                openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                openApiPathItemOperations.Add(new HttpMethod("PATCH"), patchOperation);
             }
 
-            if (configuredRestOperations[OperationType.Delete])
+            if (configuredRestOperations[HttpMethod.Delete])
             {
                 OpenApiOperation deleteOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                deleteOperation.Responses ??= new OpenApiResponses();
                 deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
-                openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
+                openApiPathItemOperations.Add(HttpMethod.Delete, deleteOperation);
             }
 
             return openApiPathItemOperations;
@@ -480,8 +497,9 @@ namespace Azure.DataApiBuilder.Core.Services
             OpenApiOperation operation = new()
             {
                 Description = description,
-                Tags = tags,
-                Responses = new(_defaultOpenApiResponses)
+                Tags = tags.Where(t => t.Name is not null).Select(t => new OpenApiTagReference(t.Name!, null, null)).ToHashSet<OpenApiTagReference>(),
+                Responses = new(_defaultOpenApiResponses),
+                Parameters = new List<IOpenApiParameter>()
             };
 
             // Add custom headers for operation.
@@ -497,7 +515,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             OpenApiSchema stringParamSchema = new()
             {
-                Type = JsonDataType.String.ToString().ToLower()
+                Type = JsonSchemaType.String
             };
 
             // Add parameter for X-MS-API-ROLE header.
@@ -508,6 +526,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 Name = AuthorizationResolver.CLIENT_ROLE_HEADER,
                 Schema = stringParamSchema
             };
+            operation.Parameters ??= new List<IOpenApiParameter>();
             operation.Parameters.Add(paramForClientHeader);
 
             // Add parameter for Authorization header.
@@ -527,6 +546,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private static void AddStoredProcedureInputParameters(OpenApiOperation operation, StoredProcedureDefinition spDefinition)
         {
+            operation.Parameters ??= new List<IOpenApiParameter>();
             foreach ((string paramKey, ParameterDefinition parameterDefinition) in spDefinition.Parameters)
             {
                 operation.Parameters.Add(
@@ -612,29 +632,64 @@ namespace Azure.DataApiBuilder.Core.Services
                 Required = required,
                 Schema = new OpenApiSchema
                 {
-                    Type = type
+                    Type = ConvertToJsonSchemaType(type)
                 }
             };
         }
 
         /// <summary>
-        /// Returns collection of OpenAPI OperationTypes and associated flag indicating whether they are enabled
+        /// Converts string type to JsonSchemaType enum for OpenAPI.NET 2.0
+        /// </summary>
+        private static JsonSchemaType ConvertToJsonSchemaType(string type)
+        {
+            return type.ToLowerInvariant() switch
+            {
+                "string" => JsonSchemaType.String,
+                "number" => JsonSchemaType.Number,
+                "integer" => JsonSchemaType.Integer,
+                "boolean" => JsonSchemaType.Boolean,
+                "array" => JsonSchemaType.Array,
+                "object" => JsonSchemaType.Object,
+                "null" => JsonSchemaType.Null,
+                _ => JsonSchemaType.String
+            };
+        }
+
+        /// <summary>
+        /// Converts JsonDataType enum to JsonSchemaType for OpenAPI.NET 2.0
+        /// </summary>
+        private static JsonSchemaType ConvertJsonDataTypeToSchemaType(JsonDataType jsonType)
+        {
+            return jsonType switch
+            {
+                JsonDataType.String => JsonSchemaType.String,
+                JsonDataType.Number => JsonSchemaType.Number,
+                JsonDataType.Boolean => JsonSchemaType.Boolean,
+                JsonDataType.Array => JsonSchemaType.Array,
+                JsonDataType.Object => JsonSchemaType.Object,
+                JsonDataType.Null => JsonSchemaType.Null,
+                _ => JsonSchemaType.String
+            };
+        }
+
+        /// <summary>
+        /// Returns collection of OpenAPI HttpMethods and associated flag indicating whether they are enabled
         /// for the engine's REST endpoint.
         /// Acts as a helper for stored procedures where the runtime config can denote any combination of REST verbs
         /// to enable.
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
-        /// <returns>Collection of OpenAPI OperationTypes and whether they should be created.</returns>
-        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity entity, DatabaseObject dbObject)
+        /// <returns>Collection of OpenAPI HttpMethods and whether they should be created.</returns>
+        private static Dictionary<HttpMethod, bool> GetConfiguredRestOperations(Entity entity, DatabaseObject dbObject)
         {
-            Dictionary<OperationType, bool> configuredOperations = new()
+            Dictionary<HttpMethod, bool> configuredOperations = new()
             {
-                [OperationType.Get] = false,
-                [OperationType.Post] = false,
-                [OperationType.Put] = false,
-                [OperationType.Patch] = false,
-                [OperationType.Delete] = false
+                [HttpMethod.Get] = false,
+                [HttpMethod.Post] = false,
+                [HttpMethod.Put] = false,
+                [new HttpMethod("PATCH")] = false,
+                [HttpMethod.Delete] = false
             };
 
             if (dbObject.SourceType == EntitySourceType.StoredProcedure && entity is not null)
@@ -659,19 +714,19 @@ namespace Azure.DataApiBuilder.Core.Services
                     switch (restMethod)
                     {
                         case SupportedHttpVerb.Get:
-                            configuredOperations[OperationType.Get] = true;
+                            configuredOperations[HttpMethod.Get] = true;
                             break;
                         case SupportedHttpVerb.Post:
-                            configuredOperations[OperationType.Post] = true;
+                            configuredOperations[HttpMethod.Post] = true;
                             break;
                         case SupportedHttpVerb.Put:
-                            configuredOperations[OperationType.Put] = true;
+                            configuredOperations[HttpMethod.Put] = true;
                             break;
                         case SupportedHttpVerb.Patch:
-                            configuredOperations[OperationType.Patch] = true;
+                            configuredOperations[new HttpMethod("PATCH")] = true;
                             break;
                         case SupportedHttpVerb.Delete:
-                            configuredOperations[OperationType.Delete] = true;
+                            configuredOperations[HttpMethod.Delete] = true;
                             break;
                         default:
                             break;
@@ -680,11 +735,11 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                configuredOperations[OperationType.Get] = true;
-                configuredOperations[OperationType.Post] = true;
-                configuredOperations[OperationType.Put] = true;
-                configuredOperations[OperationType.Patch] = true;
-                configuredOperations[OperationType.Delete] = true;
+                configuredOperations[HttpMethod.Get] = true;
+                configuredOperations[HttpMethod.Post] = true;
+                configuredOperations[HttpMethod.Put] = true;
+                configuredOperations[new HttpMethod("PATCH")] = true;
+                configuredOperations[HttpMethod.Delete] = true;
             }
 
             return configuredOperations;
@@ -703,20 +758,13 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             OpenApiRequestBody requestBody = new()
             {
-                Content = new Dictionary<string, OpenApiMediaType>()
+                Content = new Dictionary<string, IOpenApiMediaType>()
                 {
                     {
                         MediaTypeNames.Application.Json,
-                        new()
+                        new OpenApiMediaType()
                         {
-                            Schema = new OpenApiSchema()
-                            {
-                                Reference = new OpenApiReference()
-                                {
-                                    Type = ReferenceType.Schema,
-                                    Id = schemaReferenceId
-                                }
-                            }
+                            Schema = new OpenApiSchemaReference(schemaReferenceId, null, null)
                         }
                     }
                 },
@@ -754,7 +802,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     OpenApiSchema parameterSchema = new()
                     {
-                        Type = columnDef is not null ? TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower() : string.Empty
+                        Type = columnDef is not null ? ConvertJsonDataTypeToSchemaType(TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType)) : JsonSchemaType.String
                     };
 
                     OpenApiParameter openApiParameter = new()
@@ -896,7 +944,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // the entityname references the schema of the response object.
             if (!string.IsNullOrEmpty(responseObjectSchemaName))
             {
-                Dictionary<string, OpenApiMediaType> contentDictionary = new()
+                Dictionary<string, IOpenApiMediaType> contentDictionary = new()
                 {
                     {
                         MediaTypeNames.Application.Json,
@@ -924,23 +972,16 @@ namespace Azure.DataApiBuilder.Core.Services
         private static OpenApiMediaType CreateResponseContainer(string responseObjectSchemaName, bool includeNextLink)
         {
             // schema for the response's collection of result records
-            OpenApiSchema resultCollectionSchema = new()
-            {
-                Reference = new OpenApiReference()
-                {
-                    Type = ReferenceType.Schema,
-                    Id = $"{responseObjectSchemaName}"
-                }
-            };
+            IOpenApiSchema resultCollectionSchema = new OpenApiSchemaReference(responseObjectSchemaName, null, null);
 
             // Schema for the response's root property "value"
             OpenApiSchema responseRootSchema = new()
             {
-                Type = RESPONSE_ARRAY_PROPERTY,
+                Type = JsonSchemaType.Array,
                 Items = resultCollectionSchema
             };
 
-            Dictionary<string, OpenApiSchema> responseBodyProperties = new()
+            Dictionary<string, IOpenApiSchema> responseBodyProperties = new()
             {
                 {
                     OpenApiConstants.Value,
@@ -952,16 +993,16 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 OpenApiSchema nextLinkSchema = new()
                 {
-                    Type = "string"
+                    Type = JsonSchemaType.String
                 };
                 responseBodyProperties.Add("nextLink", nextLinkSchema);
             }
 
             OpenApiMediaType responsePayload = new()
             {
-                Schema = new()
+                Schema = new OpenApiSchema()
                 {
-                    Type = SCHEMA_OBJECT_TYPE,
+                    Type = JsonSchemaType.Object,
                     Properties = responseBodyProperties
                 }
             };
@@ -1078,13 +1119,13 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 string parameter = kvp.Key;
                 ParameterDefinition def = kvp.Value;
-                string typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(def.SystemType).ToString().ToLower();
+                JsonSchemaType typeMetadata = ConvertJsonDataTypeToSchemaType(TypeHelper.GetJsonDataTypeFromSystemType(def.SystemType));
 
                 properties.Add(parameter, new OpenApiSchema()
                 {
                     Type = typeMetadata,
                     Description = def.Description,
-                    Default = def.Default is not null ? new OpenApiString(def.Default) : null
+                    Default = def.Default is not null ? System.Text.Json.JsonSerializer.SerializeToNode(def.Default) : null
                 });
 
                 if (def.Required == true)
@@ -1095,8 +1136,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             OpenApiSchema schema = new()
             {
-                Type = SCHEMA_OBJECT_TYPE,
-                Properties = properties,
+                Type = JsonSchemaType.Object,
+                Properties = properties.ToDictionary(kvp => kvp.Key, kvp => (IOpenApiSchema)kvp.Value),
                 Required = required
             };
 
@@ -1138,13 +1179,13 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 if (metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
                 {
-                    string typeMetadata = string.Empty;
+                    JsonSchemaType typeMetadata = JsonSchemaType.String;
                     string formatMetadata = string.Empty;
                     string? fieldDescription = null;
 
                     if (dbObject.SourceDefinition.Columns.TryGetValue(backingColumnValue, out ColumnDefinition? columnDef))
                     {
-                        typeMetadata = TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType).ToString().ToLower();
+                        typeMetadata = ConvertJsonDataTypeToSchemaType(TypeHelper.GetJsonDataTypeFromSystemType(columnDef.SystemType));
                     }
 
                     if (entityConfig?.Fields != null)
@@ -1164,8 +1205,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             OpenApiSchema schema = new()
             {
-                Type = SCHEMA_OBJECT_TYPE,
-                Properties = properties,
+                Type = JsonSchemaType.Object,
+                Properties = properties.ToDictionary(kvp => kvp.Key, kvp => (IOpenApiSchema)kvp.Value),
                 Description = entityConfig?.Description
             };
 

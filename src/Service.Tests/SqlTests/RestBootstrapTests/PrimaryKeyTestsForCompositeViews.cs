@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
             string[] customEntity = { _compositeViewName, _compositeViewName, "" };
             if (isExceptionExpected)
             {
-                DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() =>
+                DataApiBuilderException ex = await Assert.ThrowsAsync<DataApiBuilderException>(() =>
                 InitializeTestFixture(
                     new List<string> { compositeDbViewquery },
                     new List<string[]> { customEntity }));

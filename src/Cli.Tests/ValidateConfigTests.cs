@@ -78,7 +78,7 @@ public class ValidateConfigTests
         string errorMessage = writer.ToString();
 
         // Assert
-        Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
+        Assert.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE, errorMessage);
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public class ValidateConfigTests
     /// <summary>
     /// This Test is used to verify that the validate command is able to catch invalid values for the depth-limit property.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("null", true, DisplayName = "Invalid Value: 'null'. Only integer values are allowed.")]
     [DataRow("20", true, DisplayName = "Invalid Value: '20'. Integer values provided as strings are not allowed.")]
     [DataRow(0, false, DisplayName = "Invalid Value: 0. Only values between 1 and 2147483647 are allowed along with -1.")]
@@ -152,7 +152,7 @@ public class ValidateConfigTests
     /// <summary>
     /// This Test is used to verify that DAB fails when the JWT properties are missing for OAuth based providers
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("AzureAD")]
     [DataRow("EntraID")]
     [DataRow("Custom")]
@@ -268,11 +268,9 @@ public class ValidateConfigTests
 
         // Assert
         string loggerOutput = writer.ToString();
-        Assert.IsFalse(
-            condition: loggerOutput.Contains("Failed to validate config against schema due to"),
+        Assert.DoesNotContain("Failed to validate config against schema due to", loggerOutput,
             message: "Unexpected errors encountered when validating config schema in RuntimeConfigValidator::ValidateConfigSchema(...).");
-        Assert.IsTrue(
-            condition: loggerOutput.Contains("The config satisfies the schema requirements."),
+        Assert.Contains("The config satisfies the schema requirements.", loggerOutput,
             message: "RuntimeConfigValidator::ValidateConfigSchema(...) didn't communicate successful config schema validation.");
     }
 
@@ -340,7 +338,7 @@ public class ValidateConfigTests
     {
         _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
         Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader);
+        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader!);
         RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
         Mock<ILoggerFactory> mockLoggerFactory = new();

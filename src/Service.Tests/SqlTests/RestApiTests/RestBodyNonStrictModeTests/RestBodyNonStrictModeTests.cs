@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("InsertOneWithExtraneousFieldsInRequestBody"),
-                    operationType: EntityActionOperation.Insert,
+                    HttpMethod: EntityActionOperation.Insert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: "categoryid/3/pieceid/1"
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 queryString: null,
                 entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: GetQuery("InsertOneWithReadOnlyFieldsInRequestBody"),
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOneWithExtraneousFieldsInRequestBody"),
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
                 );
@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOneWithExtraneousFieldsInRequestBody"),
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
                 );
@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneUpdateWithComputedFieldInRequestBody"),
-                    operationType: EntityActionOperation.Upsert,
+                    HttpMethod: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneInsertWithComputedFieldInRequestBody"),
-                    operationType: EntityActionOperation.Upsert,
+                    HttpMethod: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: string.Empty
@@ -183,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOneWithExtraneousFieldsInRequestBody"),
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: GetQuery("PatchOneWithExtraneousFieldsInRequestBody"),
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldInRequestBody"),
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -242,7 +242,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithComputedFieldInRequestBody"),
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: string.Empty
@@ -271,7 +271,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: null,
-                operationType: EntityActionOperation.Upsert,
+                HttpMethod: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
@@ -289,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: null,
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: null,
-                    operationType: EntityActionOperation.Delete,
+                    HttpMethod: EntityActionOperation.Delete,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",

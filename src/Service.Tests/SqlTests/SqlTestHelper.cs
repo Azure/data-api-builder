@@ -191,18 +191,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             if (message is not null)
             {
                 Console.WriteLine(response);
-                Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error {response}");
+                Assert.Contains(message, response, $"Message \"{message}\" not found in error {response}");
             }
 
             if (statusCode != null)
             {
-                Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code \"{statusCode}\" not found in error {response}");
+                Assert.Contains($"\"code\":\"{statusCode}\"", response, $"Status code \"{statusCode}\" not found in error {response}");
             }
 
             if (path is not null)
             {
                 Console.WriteLine(response);
-                Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error {response}");
+                Assert.Contains(path, response, $"Path \"{path}\" not found in error {response}");
             }
         }
 
@@ -487,10 +487,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <summary>
         /// Helper method to get the HttpMethod based on the operation type.
         /// </summary>
-        /// <param name="operationType">The operation to be executed on the entity.</param>
-        /// <returns>HttpMethod representing the passed in operationType.</returns>
+        /// <param name="HttpMethod">The operation to be executed on the entity.</param>
+        /// <returns>HttpMethod representing the passed in HttpMethod.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation operationType, SupportedHttpVerb? restMethod = null) => operationType switch
+        public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation HttpMethod, SupportedHttpVerb? restMethod = null) => HttpMethod switch
         {
             EntityActionOperation.Read => HttpMethod.Get,
             EntityActionOperation.Insert => HttpMethod.Post,

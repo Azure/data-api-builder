@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// schema correctly when it is of various relevant
         /// formats.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("", "Host=localhost;Database=graphql;SearchPath=\"\"")]
         [DataRow("", "Host=localhost;Database=graphql;SearchPath=")]
         [DataRow("foobar", "Host=localhost;Database=graphql;SearchPath=foobar")]
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// according to data row.
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MSSQL as the database.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(";;;;;fooBarBAZ", true)]
         [DataRow("!&^%*&$$%#$%@$%#@()", true)]
         [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// [model].[TrainedModel], and any other form would be incorrect.
         /// <code>Check: </code> Making sure table name with prefix matches expected name with prefix.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("", "", "[]")]
         [DataRow("model", "TrainedModel", "[model].[TrainedModel]")]
         [DataRow("", "TestTable", "[TestTable]")]
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// according to data row.
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MySQL as the database.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MYSQL)]
+        [TestMethod, TestCategory(TestCategory.MYSQL)]
         [DataRow(";;;;;fooBarBAZ")]
         [DataRow("!&^%*&$$%#$%@$%#@()")]
         [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// according to data row.
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with PostgreSQL as the database.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.POSTGRESQL)]
+        [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
         [DataRow(";;;;;fooBarBAZ")]
         [DataRow("!&^%*&$$%#$%@$%#@()")]
         [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 // may contain the connection string errors this function expects to exist.
                 string consoleMessages = sw is not null ? sw.ToString() : string.Empty;
                 string allErrorMessages = ex.Message + " " + consoleMessages;
-                Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
+                Assert.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE, allErrorMessages);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             }
@@ -285,7 +285,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow("/mygql", "/graphql", true, DisplayName = "Entity Rest path conflicts with default path /graphql")]
         [DataRow("/mygql", "/mygql", true, DisplayName = "Entity Rest path conflicts with configured GraphQL path")]
         [DataRow("/mygql", "mygql", true, DisplayName = "Entity Name mygql conflicts with configured GraphQL path")]
@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="dbColumnName">Database column name.</param>
         /// <param name="mappedName">Column name mapped value (alias), if configured.</param>
         /// <param name="expectsError">True/False</param>
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow("__typename", null, true, DisplayName = "Database column name, no mapped value, that violates GraphQL name rules.")]
         [DataRow("__typename", "typeName", false, DisplayName = "Database column name (name violation) with rule conforming mapped value.")]
         [DataRow("__typename", "__typeName2", true, DisplayName = "Database column name and mapped value violate GraphQL name rules")]
@@ -408,7 +408,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Data-driven test to validate that DataApiBuilderException is thrown for various invalid resultFieldName values
         /// during stored procedure result set definition population.
         /// </summary>
-        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(null, DisplayName = "Null result field name")]
         [DataRow("", DisplayName = "Empty result field name")]
         [DataRow("   ", DisplayName = "Multiple spaces result field name")]
@@ -493,7 +493,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-                Assert.IsTrue(ex.Message.Contains("returns a column without a name"));
+                Assert.Contains("returns a column without a name", ex.Message);
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();

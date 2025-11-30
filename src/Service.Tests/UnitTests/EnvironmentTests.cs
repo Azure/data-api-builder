@@ -49,7 +49,7 @@ public class EnvironmentTests
     /// <summary>
     /// Tests the `ValidateAspNetCoreUrls` method with various inputs to ensure it correctly validates URLs.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(null, true, DisplayName = "null input")]
     [DataRow("", true, DisplayName = "empty string")]
     [DataRow(" ", false, DisplayName = "whitespace only")]

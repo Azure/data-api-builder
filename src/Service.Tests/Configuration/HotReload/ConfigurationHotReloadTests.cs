@@ -230,7 +230,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
-    [TestMethod("Hot-reload runtime paths.")]
+    [TestMethod(DisplayName = "Hot-reload runtime paths.")]
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
     {
         // Arrange
@@ -280,7 +280,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
-    [TestMethod("Hot-reload rest enabled.")]
+    [TestMethod(DisplayName = "Hot-reload rest enabled.")]
     public async Task HotReloadConfigRuntimeRestEnabledEndToEndTest()
     {
         // Arrange
@@ -305,7 +305,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
-    [TestMethod("Hot-reload gql enabled.")]
+    [TestMethod(DisplayName = "Hot-reload gql enabled.")]
     public async Task HotReloadConfigRuntimeGQLEnabledEndToEndTest()
     {
         // Arrange
@@ -336,7 +336,7 @@ public class ConfigurationHotReloadTests
     /// the hot reload since no such entity exist in the query.
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
-    [TestMethod("Hot-reload gql disabled at entity level.")]
+    [TestMethod(DisplayName = "Hot-reload gql disabled at entity level.")]
     [Ignore]
     public async Task HotReloadEntityGQLEnabledFlag()
     {
@@ -367,7 +367,7 @@ public class ConfigurationHotReloadTests
         // Assert
         Assert.AreEqual(HttpStatusCode.BadRequest, gQLResult.StatusCode);
         string errorContent = await gQLResult.Content.ReadAsStringAsync();
-        Assert.IsTrue(errorContent.Contains("The field `book_by_pk` does not exist on the type `Query`."));
+        Assert.Contains("The field `book_by_pk` does not exist on the type `Query`.", errorContent);
     }
 
     /// <summary>
@@ -431,7 +431,7 @@ public class ConfigurationHotReloadTests
         // Assert
         Assert.AreEqual(HttpStatusCode.BadRequest, gQLResultWithOldEntity.StatusCode);
         string errorContent = await gQLResultWithOldEntity.Content.ReadAsStringAsync();
-        Assert.IsTrue(errorContent.Contains("The field `books` does not exist on the type `Query`."));
+        Assert.Contains("The field `books` does not exist on the type `Query`.", errorContent);
 
         Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewEntity.StatusCode);
         string responseContent = await gQLResultWithNewEntity.Content.ReadAsStringAsync();
@@ -501,7 +501,7 @@ public class ConfigurationHotReloadTests
         // Assert
         Assert.AreEqual(HttpStatusCode.BadRequest, gQLResultWithOldMapping.StatusCode);
         string errorContent = await gQLResultWithOldMapping.Content.ReadAsStringAsync();
-        Assert.IsTrue(errorContent.Contains("The field `title` does not exist on the type `book`."));
+        Assert.Contains("The field `title` does not exist on the type `book`.", errorContent);
 
         Assert.AreEqual(HttpStatusCode.OK, gQLResultWithNewMapping.StatusCode);
         string responseContent = await gQLResultWithNewMapping.Content.ReadAsStringAsync();
@@ -552,7 +552,7 @@ public class ConfigurationHotReloadTests
 
         // Assert
         Assert.AreNotEqual(previousSessionContext, actualSessionContext);
-        Assert.AreEqual(false, actualSessionContext.SetSessionContext);
+        Assert.IsFalse(actualSessionContext.SetSessionContext);
         SqlTestHelper.PerformTestEqualJsonStrings(_bookDBOContents, reloadGQLContents.GetProperty("items").ToString());
     }
 
@@ -630,8 +630,8 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
-        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
-        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.Contains(failedKeyWord, failedConfigLog);
+        Assert.Contains(succeedKeyWord, succeedConfigLog);
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 
@@ -684,8 +684,8 @@ public class ConfigurationHotReloadTests
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
         // Assert
-        Assert.IsTrue(failedConfigLog.Contains(failedKeyWord));
-        Assert.IsTrue(succeedConfigLog.Contains(succeedKeyWord));
+        Assert.Contains(failedKeyWord, failedConfigLog);
+        Assert.Contains(succeedKeyWord, succeedConfigLog);
         Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
     }
 

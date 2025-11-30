@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLCollationTests
         /// <summary>
         /// Postgres Collation Tests to ensure that GraphQL is working properly when there is a change in case sensitivity on the database
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("comics", "title", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT title FROM comics ORDER BY title asc) as table0")]
         [DataRow("authors", "name", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT name FROM authors ORDER BY name asc) as table0")]
         [DataRow("fungi", "habitat", @"SELECT json_agg(to_jsonb(table0)) FROM (SELECT habitat FROM fungi ORDER BY habitat asc) as table0")]

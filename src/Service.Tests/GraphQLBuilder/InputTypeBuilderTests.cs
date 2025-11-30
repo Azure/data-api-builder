@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
     [TestClass]
     public class InputTypeBuilderTests
     {
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("ID", "IdFilterInput")]
         [DataRow("Int", "IntFilterInput")]
         [DataRow("String", "StringFilterInput")]
@@ -64,7 +64,7 @@ type Publisher @model(name:""Publisher"") {
             InputObjectTypeDefinitionNode publisherFilterInput = inputTypes["PublisherFilterInput"];
 
             CollectionAssert.AreEquivalent(new[] { "Int", "BookFilterInput", "PublisherFilterInput" }, inputTypes.Keys);
-            Assert.AreEqual(4, publisherFilterInput.Fields.Count);
+            Assert.HasCount(4, publisherFilterInput.Fields);
             Assert.IsTrue(publisherFilterInput.Fields.Any(f => f.Type.NamedType().Name.Value == "BookFilterInput"), "No field found for BookFilterInput");
         }
     }

@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 sqlQuery: GetQuery("FindManyStoredProcedureTest"),
                 expectJson: false
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: string.Empty,
                 queryString: "?id=1",
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 sqlQuery: GetQuery("FindOneStoredProcedureTestUsingParameter"),
                 expectJson: false
@@ -1468,7 +1468,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key route not supported for this entity.",
@@ -1497,7 +1497,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 requestBody: requestBody,
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: "Procedure or function 'get_book_by_id' expects parameter '@id', which was not supplied.",
@@ -1518,7 +1518,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: "Procedure or function 'get_book_by_id' expects parameter '@id', which was not supplied.",
@@ -1540,7 +1540,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?param=value",
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Contained unexpected fields: param for entity: {_integrationProcedureFindMany_EntityName}",
@@ -1553,7 +1553,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?id=1&param=value",
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Contained unexpected fields: param for entity: {_integrationProcedureFindOne_EntityName}",
@@ -1605,7 +1605,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// we throw a DataApiBuilder exception with the correct
         /// error response.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("startswith", "(title, 'Awesome')", "eq true")]
         [DataRow("endswith", "(title, 'book')", "eq true")]
         [DataRow("indexof", "(title, 'Awe')", "eq 0")]
@@ -1969,7 +1969,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// </summary>
         /// <param name="queryString"></param>
         /// <returns></returns>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("?$", DisplayName = "Null key, value $ present")]
         [DataRow("?$key", DisplayName = "Null key, value $key present")]
         [DataRow("?=12", DisplayName = "Empty string key, value 12 present")]
@@ -2011,7 +2011,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Tests the REST Api for FindById operation with attempts at
         /// Sql Injection in the primary key route.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(" WHERE 1=1/*", true)]
         [DataRow("id WHERE 1=1/*", true)]
         [DataRow(" UNION SELECT * FROM books/*", true)]
@@ -2049,7 +2049,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Tests the REST Api for FindById operation with attempts at
         /// Sql Injection in the query string.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(" WHERE 1=1/*")]
         [DataRow(" WHERE 1=1--")]
         [DataRow("id WHERE 1=1/*")]
@@ -2084,7 +2084,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Tests the REST Api for Find operation with attempts at
         /// Sql Injection in the query string.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(" WHERE 1=1/*")]
         [DataRow(" WHERE 1=1--")]
         [DataRow("id WHERE 1=1/*")]

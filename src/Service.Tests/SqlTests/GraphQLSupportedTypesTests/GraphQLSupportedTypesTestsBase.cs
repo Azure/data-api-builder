@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     {
         #region Tests
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(BYTE_TYPE, 1, DisplayName = "Query by PK test selecting only byte_types with typeid = 1.")]
         [DataRow(BYTE_TYPE, 2, DisplayName = "Query by PK test selecting only byte_types with typeid = 2.")]
         [DataRow(BYTE_TYPE, 3, DisplayName = "Query by PK test selecting only byte_types with typeid = 3.")]
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(BYTE_TYPE, "gt", "0", "0", ">")]
         [DataRow(BYTE_TYPE, "gte", "0", "0", ">=")]
         [DataRow(BYTE_TYPE, "lt", "1", "1", "<")]
@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// The method constructs a GraphQL query to filter and order the datetime column based on the given parameters.
         /// The test checks various datetime data types such as datetime, datetimeoffset, and time.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(DATETIME_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", " = ",
             DisplayName = "datetime type filter and orderby test with eq operator and specific value '1999-01-08'.")]
         [DataRow(DATETIME_TYPE, "lt", "'1753-01-01'", "\"1753-01-01\"", " < ",
@@ -261,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <summary>
         /// Validates that usage of LocalTime values with comparison operators in GraphQL filters results in the expected filtered result set.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(TIME_TYPE, "gt", "'00:00:00.000'", "\"00:00:00.000\"", " > ")]
         [DataRow(TIME_TYPE, "gte", "'10:13:14.123'", "\"10:13:14.123\"", " >= ")]
         [DataRow(TIME_TYPE, "lt", "'23:59:59.999'", "\"23:59:59.999\"", " < ")]
@@ -279,7 +279,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// not return result with only 3 decimal places i.e. 10:23:54.999 != 10:23:54.9999999
         /// In the Database only one row exists with value 23:59:59.9999999
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("23:59:59.9999999", DisplayName = "TimeType Precision Check with 7 decimal places")]
         [DataRow("23:59:59.999", DisplayName = "TimeType Precision Check with 3 decimal places")]
         public async Task TestTimeTypePrecisionCheck(string gqlInput)
@@ -337,7 +337,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// This test executes a GraphQL insert mutation for each data row's {value} of GraphQL data type {type}
         /// to validate that the DAB engine supports inserting different types into the database.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(BYTE_TYPE, "255")]
         [DataRow(BYTE_TYPE, "0")]
         [DataRow(BYTE_TYPE, "null")]
@@ -420,7 +420,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <summary>
         /// Test case for invalid time, such as negative values or hours>24 or minutes/seconds>60.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(TIME_TYPE, "\"32:59:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"22:67:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"14:12:99.9999999\"")]
@@ -440,10 +440,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             JsonElement response = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string responseMessage = Regex.Unescape(JsonSerializer.Serialize(response));
-            Assert.IsTrue(responseMessage.Contains($"{value} cannot be resolved as column \"{field}\" with type \"TimeSpan\"."));
+            Assert.Contains($"{value} cannot be resolved as column \"{field}\" with type \"TimeSpan\".", responseMessage);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(BYTE_TYPE, 255)]
         [DataRow(SHORT_TYPE, 30000)]
         [DataRow(INT_TYPE, 9999)]
@@ -485,7 +485,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             PerformTestEqualsForExtendedTypes(type, expectedResult, actual.ToString());
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(BYTE_TYPE, "255")]
         [DataRow(BYTE_TYPE, "0")]
         [DataRow(BYTE_TYPE, "null")]
@@ -549,7 +549,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(BYTE_TYPE, 255)]
         [DataRow(SHORT_TYPE, 30000)]
         [DataRow(INT_TYPE, 9999)]
@@ -849,7 +849,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 Guid actualValue = Guid.Parse(actualElement.ToString());
                 Guid expectedValue = Guid.Parse(expectedElement.ToString());
-                Assert.AreEqual(actualValue, expectedValue);
+                Assert.AreEqual(expectedValue, actualValue);
             }
             else
             {

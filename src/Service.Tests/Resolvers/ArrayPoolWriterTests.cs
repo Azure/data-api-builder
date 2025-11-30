@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             Memory<byte> memory = writer.GetMemory(10);
 
             // Assert
-            Assert.IsTrue(memory.Length >= 10);
+            Assert.IsGreaterThanOrEqualTo(10, memory.Length);
         }
 
         [TestMethod]
@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             Span<byte> span = writer.GetSpan(10);
 
             // Assert
-            Assert.IsTrue(span.Length >= 10);
+            Assert.IsGreaterThanOrEqualTo(10, span.Length);
         }
 
         [TestMethod]
@@ -96,9 +96,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             writer.Dispose();
 
             // Assert
-            Assert.ThrowsException<ObjectDisposedException>(() => writer.GetMemory());
-            Assert.ThrowsException<ObjectDisposedException>(() => writer.GetSpan());
-            Assert.ThrowsException<ObjectDisposedException>(() => writer.Advance(0));
+            Assert.Throws<ObjectDisposedException>(() => writer.GetMemory());
+            Assert.Throws<ObjectDisposedException>(() => writer.GetSpan());
+            Assert.Throws<ObjectDisposedException>(() => writer.Advance(0));
         }
 
         [TestMethod]
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             writer.Dispose();
 
             // Act & Assert
-            Assert.ThrowsException<ObjectDisposedException>(() => writer.Advance(0));
+            Assert.Throws<ObjectDisposedException>(() => writer.Advance(0));
         }
 
         [TestMethod]
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             using ArrayPoolWriter writer = new();
 
             // Act & Assert
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => writer.Advance(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => writer.Advance(-1));
         }
 
         [TestMethod]
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             using ArrayPoolWriter writer = new();
 
             // Act & Assert
-            Assert.ThrowsException<ArgumentOutOfRangeException>(
+            Assert.Throws<ArgumentOutOfRangeException>(
                 () => writer.Advance(1024));
         }
 
@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             writer.Dispose();
 
             // Act & Assert
-            Assert.ThrowsException<ObjectDisposedException>(() => writer.GetMemory());
+            Assert.Throws<ObjectDisposedException>(() => writer.GetMemory());
         }
 
         [TestMethod]
@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             using ArrayPoolWriter writer = new();
 
             // Act & Assert
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => writer.GetMemory(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => writer.GetMemory(-1));
         }
 
         [TestMethod]
@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             writer.Dispose();
 
             // Act & Assert
-            Assert.ThrowsException<ObjectDisposedException>(() => writer.GetSpan());
+            Assert.Throws<ObjectDisposedException>(() => writer.GetSpan());
         }
 
         [TestMethod]
@@ -172,7 +172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             using ArrayPoolWriter writer = new();
 
             // Act & Assert
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => writer.GetSpan(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => writer.GetSpan(-1));
         }
 
         [TestMethod]
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
             // Assert
             Assert.AreEqual(1024, writer.GetWrittenSpan().Length);
             ReadOnlySpan<byte> writtenSpan = writer.GetWrittenSpan();
-            Assert.AreEqual(true, testData.SequenceEqual(writtenSpan.ToArray()));
+            Assert.IsTrue(testData.SequenceEqual(writtenSpan.ToArray()));
         }
     }
 }

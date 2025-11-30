@@ -477,7 +477,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Validate value of 'status' property in response.
             if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
             {
-                Assert.IsTrue(statusValue.ValueKind == JsonValueKind.String, "Unexpected or missing status value as string.");
+                Assert.AreEqual(JsonValueKind.String, statusValue.ValueKind, "Unexpected or missing status value as string.");
             }
             else
             {

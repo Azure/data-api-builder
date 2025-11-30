@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// <param name="systemType">Denotes system value type of stored procedure parameter.</param>
         /// <param name="expectedGraphQLType">Target GraphQL type of parameter.</param>
         /// <param name="configParamValue">Explicit parameter default value set in runtime configuration.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(typeof(byte), BYTE_TYPE, 64, false, DisplayName = "Byte")]
         [DataRow(typeof(short), SHORT_TYPE, 32767, false, DisplayName = "Short")]
         [DataRow(typeof(int), INT_TYPE, 2147483647, false, DisplayName = "Int")]

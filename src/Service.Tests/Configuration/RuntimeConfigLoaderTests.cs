@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 [TestClass]
 public class RuntimeConfigLoaderTests
 {
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("dab-config.CosmosDb_NoSql.json")]
     [DataRow("dab-config.MsSql.json")]
     [DataRow("dab-config.MySql.json")]
@@ -37,7 +37,7 @@ public class RuntimeConfigLoaderTests
     /// <summary>
     /// Test validates that when child files are present all datasources are loaded correctly.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("Multidab-config.CosmosDb_NoSql.json", new string[] { "Multidab-config.MsSql.json", "Multidab-config.MySql.json", "Multidab-config.PostgreSql.json" })]
     public async Task CanLoadValidMultiSourceConfig(string configPath, IEnumerable<string> dataSourceFiles)
     {
@@ -60,7 +60,7 @@ public class RuntimeConfigLoaderTests
         FileSystemRuntimeConfigLoader loader = new(fs);
 
         Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig), "Should successfully load config");
-        Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 4, "Should have 4 data sources");
+        Assert.AreEqual(4, runtimeConfig.ListAllDataSources().Count(), "Should have 4 data sources");
         Assert.IsTrue(runtimeConfig.CosmosDataSourceUsed, "Should have CosmosDb data source");
         Assert.IsTrue(runtimeConfig.SqlDataSourceUsed, "Should have Sql data source");
         Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType, "Default datasource should be of root file database type.");
@@ -70,7 +70,7 @@ public class RuntimeConfigLoaderTests
     /// Test validates that load fails when datasource files have duplicate entities.
     /// Example: Publisher entity present in the 3 sql.json files.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("dab-config.CosmosDb_NoSql.json", new string[] { "dab-config.MsSql.json", "dab-config.MySql.json", "dab-config.PostgreSql.json" })]
     public async Task FailLoadMultiDataSourceConfigDuplicateEntities(string configPath, IEnumerable<string> dataSourceFiles)
     {
@@ -98,7 +98,7 @@ public class RuntimeConfigLoaderTests
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
         string error = sw.ToString();
 
-        Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
-        Assert.IsTrue(error.Contains("An item with the same key has already been added."));
+        Assert.StartsWith("Deserialization of the configuration file failed during a post-processing step.", error);
+        Assert.Contains("An item with the same key has already been added.", error);
     }
 }

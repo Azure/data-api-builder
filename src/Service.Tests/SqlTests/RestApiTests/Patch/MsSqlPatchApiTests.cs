@@ -27,8 +27,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
             },
             {
                 "PatchOne_Insert_UniqueCharacters_Test",
-                $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
-                $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] " +
+                $"SELECT [NoteNum] AS [â”¬â”€â”¬ãƒŽ( Âº _ ÂºãƒŽ)], [DetailAssessmentAndPlanning] AS [å§‹è¨ˆ], " +
+                $"[WagingWar] AS [ä½œæˆ°], [StrategicAttack] AS [è¬€æ”»] " +
                 $"FROM { _integrationUniqueCharactersTable } " +
                 $"WHERE [NoteNum] = 2 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
@@ -284,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithRowversionFieldMissingFromRequestBody"),
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
@@ -305,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithRowversionFieldMissingFromRequestBody"),
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: string.Empty
@@ -330,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.UpsertIncremental,
+                HttpMethod: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
@@ -349,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.UpsertIncremental,
+                HttpMethod: EntityActionOperation.UpsertIncremental,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
@@ -379,7 +379,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: null,
                 entityNameOrPath: _autogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("PatchOneUpdateInTableWithAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.UpsertIncremental,
+                HttpMethod: EntityActionOperation.UpsertIncremental,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
             );
@@ -398,7 +398,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: null,
                 entityNameOrPath: _nonAutogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("PatchOneUpdateInTableWithNonAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.UpsertIncremental,
+                HttpMethod: EntityActionOperation.UpsertIncremental,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
             );
@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 queryString: null,
                 entityNameOrPath: _nonAutogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("PatchOneInsertInTableWithNonAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.UpsertIncremental,
+                HttpMethod: EntityActionOperation.UpsertIncremental,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: string.Empty
@@ -455,7 +455,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     queryString: null,
                     entityNameOrPath: _entityWithSecurityPolicy,
                     sqlQuery: GetQuery("PatchOneUpdateAccessibleRowWithSecPolicy"),
-                    operationType: EntityActionOperation.UpsertIncremental,
+                    HttpMethod: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );

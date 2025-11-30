@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify password
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("Server =<>;Database=<>;Username=xyz;", false, false,
             DisplayName = "No managed identity access token even when connection string specifies Username only.")]
         [DataRow("Server =<>;Database=<>;Username=xyz;", true, false,

@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     entityName: entityName,
                     dbo: dbObject,
                     insertPayloadRoot: upsertPayloadRoot,
-                    operationType: EntityActionOperation.UpdateIncremental);
+                    HttpMethod: EntityActionOperation.UpdateIncremental);
 
                 foreach (KeyValuePair<string, object?> kvp in keys)
                 {

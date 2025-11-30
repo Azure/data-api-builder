@@ -26,7 +26,7 @@ namespace Cli.Tests
         /// Testing to check telemetry options are correctly added to the config.
         /// Verifying scenarios such as enabling/disabling telemetry and providing a valid/empty connection string.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(CliBool.True, "", false, DisplayName = "Fail to add telemetry with empty app-insights connection string.")]
         [DataRow(CliBool.True, "InstrumentationKey=00000000-0000-0000-0000-000000000000", true, DisplayName = "Successfully adds telemetry with valid connection string")]
         [DataRow(CliBool.False, "InstrumentationKey=00000000-0000-0000-0000-000000000000", true, DisplayName = "Successfully adds telemetry but disabled")]
@@ -70,7 +70,7 @@ namespace Cli.Tests
         /// It should add application insights telemetry if telemetry section is empty
         /// or overwrite the existing app insights telemetry with the given app insights telemetry options.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, DisplayName = "Add AppInsights Telemetry when telemetry section is empty.")]
         [DataRow(false, DisplayName = "Overwrite AppInsights Telemetry when telemetry section already exists.")]
         public void TestAddAppInsightsTelemetryWhenTelemetryAlreadyExists(bool isEmptyTelemetry)
@@ -95,7 +95,7 @@ namespace Cli.Tests
             else
             {
                 Assert.IsNotNull(config.Runtime.Telemetry.ApplicationInsights);
-                Assert.AreEqual(true, config.Runtime.Telemetry.ApplicationInsights.Enabled);
+                Assert.IsTrue(config.Runtime.Telemetry.ApplicationInsights.Enabled);
                 Assert.AreEqual("InstrumentationKey=00000000-0000-0000-0000-000000000000", config.Runtime.Telemetry.ApplicationInsights.ConnectionString);
             }
 

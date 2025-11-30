@@ -58,7 +58,7 @@ public class UtilsTests
         Assert.AreEqual("/customPath", options.Path);
         Assert.IsTrue(options.Enabled);
         Assert.IsNotNull(options.Methods);
-        Assert.AreEqual(2, options.Methods.Length);
+        Assert.HasCount(2, options.Methods);
         Assert.IsTrue(options.Methods.Contains(SupportedHttpVerb.Get));
         Assert.IsTrue(options.Methods.Contains(SupportedHttpVerb.Post));
     }
@@ -105,7 +105,7 @@ public class UtilsTests
     /// <summary>
     /// Test to check the precedence logic for config file in CLI
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was not set.")]
     [DataRow("Test", "my-config.json", "my-config.json", DisplayName = "user provided the config file and environment variable was set.")]
     [DataRow("Test", null, $"{CONFIGFILE_NAME}.Test{CONFIG_EXTENSION}", DisplayName = "config not provided, but environment variable was set.")]
@@ -142,7 +142,7 @@ public class UtilsTests
         Assert.AreEqual(123, Convert.ToInt32(sourceParameters.First(p => p.Name == "param1").Default));
         Assert.AreEqual(-243, Convert.ToInt32(sourceParameters.First(p => p.Name == "param2").Default));
         Assert.AreEqual(220.12, Convert.ToDouble(sourceParameters.First(p => p.Name == "param3").Default));
-        Assert.AreEqual(true, Convert.ToBoolean(sourceParameters.First(p => p.Name == "param4").Default));
+        Assert.IsTrue(Convert.ToBoolean(sourceParameters.First(p => p.Name == "param4").Default));
         Assert.AreEqual("dab", Convert.ToString(sourceParameters.First(p => p.Name == "param5").Default));
     }
 
@@ -152,7 +152,7 @@ public class UtilsTests
     /// <param name="operations">CRUD + Execute + *</param>
     /// <param name="entitySourceType">Table, StoredProcedure, View</param>
     /// <param name="isSuccess">True/False</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(new string[] { "*" }, EntitySourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with wildcard CRUD operation.")]
     [DataRow(new string[] { "execute" }, EntitySourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with execute operation only.")]
     [DataRow(new string[] { "create", "read" }, EntitySourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
@@ -174,7 +174,7 @@ public class UtilsTests
     /// <summary>
     /// Test to verify that CLI is able to figure out if the api path prefix for rest/graphql contains invalid characters.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("/", true, DisplayName = "Only forward slash as api path")]
     [DataRow("/$%^", false, DisplayName = "Api path containing only reserved characters.")]
     [DataRow("/rest-api", true, DisplayName = "Valid api path")]
@@ -190,7 +190,7 @@ public class UtilsTests
     /// neither EasyAuthType or Simulator. If Authentication Provider is either EasyAuth or Simulator
     /// audience and issuer are ignored.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("StaticWebApps", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: Audience and Issuer ignored with StaticWebApps.")]
     [DataRow("StaticWebApps", null, "issuer-xxx", true, DisplayName = "PASS: Issuer ignored with StaticWebApps.")]
     [DataRow("StaticWebApps", "aud-xxx", null, true, DisplayName = "PASS: Audience ignored with StaticWebApps.")]
@@ -252,7 +252,7 @@ public class UtilsTests
         Environment.SetEnvironmentVariable(RUNTIME_ENVIRONMENT_VAR_NAME, "Test");
 
         Assert.IsTrue(ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, new StringLogger(), out string? mergedConfig), "Failed to merge config files");
-        Assert.AreEqual(mergedConfig, "dab-config.Test.merged.json");
+        Assert.AreEqual("dab-config.Test.merged.json", mergedConfig);
         Assert.IsTrue(fileSystem.File.Exists(mergedConfig));
         Assert.IsTrue(JToken.DeepEquals(JObject.Parse(MERGED_CONFIG), JObject.Parse(fileSystem.File.ReadAllText(mergedConfig))));
     }
@@ -264,7 +264,7 @@ public class UtilsTests
     /// In all other cases, the TryMergeConfigsIfAvailable method should return false
     /// and out param for the mergedConfigFile should be null.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("", false, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
     [DataRow("", false, true, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]
     [DataRow("", true, false, null, false, DisplayName = "If environment value is not set, merged config file is not generated.")]

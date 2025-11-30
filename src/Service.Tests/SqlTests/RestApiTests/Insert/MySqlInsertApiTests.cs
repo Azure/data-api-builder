@@ -53,9 +53,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             {
                 "InsertOneUniqueCharactersTest",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('┬─┬ノ( º _ ºノ)', NoteNum,
-                  '始計', DetailAssessmentAndPlanning, '作戰', WagingWar,
-                  '謀攻', StrategicAttack)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('â”¬â”€â”¬ãƒŽ( Âº _ ÂºãƒŽ)', NoteNum,
+                  'å§‹è¨ˆ', DetailAssessmentAndPlanning, 'ä½œæˆ°', WagingWar,
+                  'è¬€æ”»', StrategicAttack)) AS data
                   FROM (
                       SELECT *
                       FROM " + _integrationUniqueCharactersTable + @"
@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithDefaultValues,
                 sqlQuery: GetQuery(nameof(InsertOneWithDefaultValuesAndEmptyRequestBody)),
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 exceptionExpected: false,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created
@@ -285,7 +285,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,

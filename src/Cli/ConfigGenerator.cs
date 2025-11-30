@@ -2306,15 +2306,18 @@ namespace Cli
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
+            RuntimeConfig? deserializedRuntimeConfig = loader.LoadKnownConfigAsync(replaceEnvVar: true)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
+
+            if (deserializedRuntimeConfig is null)
             {
                 _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
-            else
-            {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
-            }
+
+            _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))
             {
@@ -2356,10 +2359,10 @@ namespace Cli
             // This will add args to disable automatic redirects to https if specified by user
             if (options.IsHttpsRedirectionDisabled)
             {
-                args.Add(Startup.NO_HTTPS_REDIRECT_FLAG);
+                args.Add(StartupConfiguration.NO_HTTPS_REDIRECT_FLAG);
             }
 
-            return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+            return global::Program.StartEngine(args.ToArray());
         }
 
         /// <summary>

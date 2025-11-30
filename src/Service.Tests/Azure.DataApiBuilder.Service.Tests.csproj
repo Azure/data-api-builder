@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <Nullable>disable</Nullable>
     <OutputPath>$(BaseOutputPath)\tests</OutputPath>
-    <NoWarn>NU1603</NoWarn>
+    <NoWarn>NU1603;MSTEST0001;MSTEST0014;MSTEST0023;MSTEST0032;MSTEST0036;MSTEST0037;MSTEST0040;MSTEST0042;MSTEST0052;ASPDEPR008</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

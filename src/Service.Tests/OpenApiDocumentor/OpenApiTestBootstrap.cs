@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Microsoft.OpenApi.Readers;
 
 namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
@@ -36,7 +37,11 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             TestHelper.SetupDatabaseEnvironment(databaseEnvironment);
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            loader.TryLoadKnownConfig(out RuntimeConfig config);
+            RuntimeConfig config = loader.LoadKnownConfigAsync()
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult()
+                ?? throw new InvalidOperationException("Failed to load runtime configuration for OpenAPI bootstrap.");
 
             RuntimeConfig configWithCustomHostMode = config with
             {

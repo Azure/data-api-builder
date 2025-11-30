@@ -1,0 +1,84 @@
+name: Build and Publish DAB to GitHub Container Registry
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  IMAGE_NAME: 'wellbeing-os-data-api'
+
+jobs:
+  build-and-publish-dab:
+    name: Build and Push DAB to GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Aspire CLI
+        shell: pwsh
+        run: |
+          iex "& { $(irm https://aspire.dev/install.ps1) }"
+
+      - name: Setup CI config files
+        run: |
+          # Use CI-specific configs for GitHub Actions
+          cp .github/nuget.config nuget.config || echo "Using existing nuget.config"
+
+      - name: Build Data API Builder with Aspire
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASPIRE_DATABASE_TYPE: mssql
+        run: |
+          aspire build --project src/Aspire.AppHost/Aspire.AppHost.csproj
+
+      - name: Tag built image as latest
+        run: |
+          # Find the mssql-service image that was just built and tag it
+          IMAGE_WITH_HASH=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "mssql-service" | head -n 1)
+          if [ -z "$IMAGE_WITH_HASH" ]; then
+            echo "Error: Could not find mssql-service image"
+            docker images
+            exit 1
+          fi
+          docker tag $IMAGE_WITH_HASH wellbeing-os-data-api:latest
+          echo "Tagged $IMAGE_WITH_HASH as wellbeing-os-data-api:latest"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and Push to GHCR
+        run: |
+          # Convert repository owner to lowercase for Docker registry compatibility
+          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          LOCAL_IMAGE="wellbeing-os-data-api:latest"
+          TARGET_IMAGE="${{ env.IMAGE_NAME }}"
+          GHCR_REPO="ghcr.io/${REPO_OWNER_LOWER}/${TARGET_IMAGE}"
+          IMAGE_TAG="${{ github.sha }}"
+          
+          echo "Tagging and pushing ${TARGET_IMAGE}:$IMAGE_TAG to GHCR..."
+          docker tag ${LOCAL_IMAGE} $GHCR_REPO:$IMAGE_TAG
+          docker tag ${LOCAL_IMAGE} $GHCR_REPO:latest
+          docker push $GHCR_REPO:$IMAGE_TAG
+          docker push $GHCR_REPO:latest
+          
+          echo "✅ Successfully published Data API Builder to GitHub Container Registry"
+          echo "Image: $GHCR_REPO:$IMAGE_TAG"
+          echo "Pull with: docker pull $GHCR_REPO:latest"

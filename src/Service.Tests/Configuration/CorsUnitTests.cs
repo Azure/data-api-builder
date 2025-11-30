@@ -64,7 +64,7 @@ public class CorsUnitTests
     /// DataRow 2: valid because specific host present in origins list
     /// DataRow 3: valid because specific host present in origins list (wildcard ignored - expected behavior, see https://docs.microsoft.com/en-us/cli/azure/webapp/cors?view=azure-cli-latest)
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(new string[] { "*" }, DisplayName = "Test allow origin with wildcard")]
     [DataRow(new string[] { "http://localhost:3000" }, DisplayName = "Test allow specific origin")]
     [DataRow(new string[] { "http://localhost:3000", "*", "invalid host" }, DisplayName = "Test allow specific origin with wilcard")]
@@ -115,7 +115,7 @@ public class CorsUnitTests
     /// DataRow 2: invalid because of mismatched scheme (http vs https)
     /// DataRow 3: invalid because specific host is not present (* does not resolve to all origins if it is not the sole value supplied - expected, see https://docs.microsoft.com/en-us/cli/azure/webapp/cors?view=azure-cli-latest)
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(new string[] { "" }, DisplayName = "Test invalid origin empty origins")]
     [DataRow(new string[] { "https://localhost:3000" }, DisplayName = "Test invalid origin mismatch scheme")]
     [DataRow(new string[] { "*", "" }, DisplayName = "Test invalid origin ignored wildcard")]

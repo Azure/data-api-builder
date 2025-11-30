@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             _runtimeConfigValidator = new RuntimeConfigValidator(_runtimeConfigProvider, _mockFileSystem, logger.Object);
         }
 
-        [TestMethod("AuthN config passes validation with EasyAuth as default Provider")]
+        [TestMethod(DisplayName = "AuthN config passes validation with EasyAuth as default Provider")]
         public void ValidateEasyAuthConfig()
         {
             RuntimeConfig config =
@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [DataTestMethod("AuthN validation passes when all values are provided when provider not EasyAuth")]
+        [TestMethod(DisplayName = "AuthN validation passes when all values are provided when provider not EasyAuth")]
         [DataRow("AzureAD")]
         [DataRow("EntraID")]
         public void ValidateJwtConfigParamsSet(string authenticationProvider)
@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [TestMethod("AuthN validation passes when no authN section in the config.")]
+        [TestMethod(DisplayName = "AuthN validation passes when no authN section in the config.")]
         public void ValidateAuthNSectionNotNecessary()
         {
             RuntimeConfig config = CreateRuntimeConfigWithOptionalAuthN();
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        [DataTestMethod("AuthN validation fails when either Issuer or Audience not provided not EasyAuth")]
+        [TestMethod(DisplayName = "AuthN validation fails when either Issuer or Audience not provided not EasyAuth")]
         [DataRow("AzureAD")]
         [DataRow("EntraID")]
         public void ValidateFailureWithIncompleteJwtConfig(string authenticationProvider)
@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
 
-            Assert.ThrowsException<NotSupportedException>(() =>
+            Assert.Throws<NotSupportedException>(() =>
             {
                 _runtimeConfigValidator.ValidateConfigProperties();
             });
@@ -144,13 +144,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Jwt: jwt);
             config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
-            Assert.ThrowsException<NotSupportedException>(() =>
+            Assert.Throws<NotSupportedException>(() =>
             {
                 _runtimeConfigValidator.ValidateConfigProperties();
             });
         }
 
-        [TestMethod("AuthN validation fails when either Issuer or Audience are provided for EasyAuth")]
+        [TestMethod(DisplayName = "AuthN validation fails when either Issuer or Audience are provided for EasyAuth")]
         public void ValidateFailureWithUnneededEasyAuthConfig()
         {
             JwtOptions jwt = new(
@@ -166,7 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
 
-            Assert.ThrowsException<NotSupportedException>(() =>
+            Assert.Throws<NotSupportedException>(() =>
             {
                 _runtimeConfigValidator.ValidateConfigProperties();
             });
@@ -177,7 +177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             authNConfig = new(Provider: "EasyAuth", Jwt: jwt);
             config = CreateRuntimeConfigWithOptionalAuthN(authNConfig);
 
-            Assert.ThrowsException<NotSupportedException>(() =>
+            Assert.Throws<NotSupportedException>(() =>
             {
                 _runtimeConfigValidator.ValidateConfigProperties();
             });

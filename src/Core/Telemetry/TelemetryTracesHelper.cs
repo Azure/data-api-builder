@@ -4,7 +4,6 @@
 using System.Diagnostics;
 using System.Net;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using OpenTelemetry.Trace;
 using Kestral = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
 namespace Azure.DataApiBuilder.Core.Telemetry
@@ -31,7 +30,7 @@ namespace Azure.DataApiBuilder.Core.Telemetry
             this Activity activity,
             Kestral httpMethod,
             string userAgent,
-            string actionType, // CRUD(EntityActionOperation) for REST, Query|Mutation(OperationType) for GraphQL
+            string actionType, // CRUD(EntityActionOperation) for REST, Query|Mutation(HttpMethod) for GraphQL
             string httpURL,
             string? queryString,
             string? userRole,
@@ -104,8 +103,8 @@ namespace Azure.DataApiBuilder.Core.Telemetry
         {
             if (activity.IsAllDataRequested)
             {
-                activity.SetStatus(Status.Error.WithDescription(ex.Message));
-                activity.RecordException(ex);
+                activity.SetStatus(ActivityStatusCode.Error, ex.Message);
+                activity.AddException(ex);
                 activity.SetTag("error.type", ex.GetType().Name);
                 activity.SetTag("error.message", ex.Message);
                 activity.SetTag("status.code", statusCode);

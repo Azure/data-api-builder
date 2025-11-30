@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         [DataRow("entity", "customEntityPath", "/customEntityPath", DisplayName = "Entity REST path has no leading slash(es) - REST path override used.")]
         [DataRow("entity", "", "/entity", DisplayName = "Entity REST path is an emtpy string - top level entity name used.")]
         [DataRow("entity", null, "/entity", DisplayName = "Entity REST path is null - top level entity name used.")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task ValidateEntityRestPath(string entityName, string configuredRestPath, string expectedOpenApiPath)
         {
             Entity entity = new(

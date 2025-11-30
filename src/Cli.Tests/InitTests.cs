@@ -130,7 +130,7 @@ namespace Cli.Tests
         /// </summary>
         [DataRow("no-schema.gql", false, DisplayName = "FAIL: GraphQL Schema file not available.")]
         [DataRow(TEST_SCHEMA_FILE, true, DisplayName = "PASS: GraphQL Schema file available.")]
-        [DataTestMethod]
+        [TestMethod]
         public void VerifyGraphQLSchemaFileAvailabilityForCosmosDB(
             string schemaFileName,
             bool expectSuccess
@@ -167,7 +167,7 @@ namespace Cli.Tests
         [DataRow("testDatabase", "testcontainer", "", true, DisplayName = "database is provided, Schema is null.")]
         [DataRow("testDatabase", null, "", true, DisplayName = "database is provided, container and Schema is null/empty.")]
         [DataRow("testDatabase", null, TEST_SCHEMA_FILE, true, DisplayName = "database and schema provided, container is null/empty.")]
-        [DataTestMethod]
+        [TestMethod]
         public void VerifyRequiredOptionsForCosmosDbNoSqlDatabase(
             string? cosmosDatabase,
             string? cosmosContainer,
@@ -202,7 +202,7 @@ namespace Cli.Tests
         [DataRow(CliBool.False, CliBool.True, true, DisplayName = "REST disabled, and GraphQL enabled.")]
         [DataRow(CliBool.True, CliBool.False, true, DisplayName = "REST enabled, and GraphQL disabled.")]
         [DataRow(CliBool.True, CliBool.True, true, DisplayName = "Both REST and GraphQL are enabled.")]
-        [DataTestMethod]
+        [TestMethod]
         public void EnsureFailureWhenBothRestAndGraphQLAreDisabled(
             CliBool restEnabled,
             CliBool graphQLEnabled,
@@ -271,11 +271,11 @@ namespace Cli.Tests
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             // Config generated successfully for the first time.
-            Assert.AreEqual(true, TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
             // Error is thrown because the config file with the same name
             // already exists.
-            Assert.AreEqual(false, TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsFalse(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
         }
 
         /// <summary>
@@ -297,7 +297,7 @@ namespace Cli.Tests
         ///      }
         /// }
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
         [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
         [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
@@ -349,7 +349,7 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
-            Assert.AreEqual(true, TryGenerateConfig(initOptionsWithAllLowerCaseFileName, _runtimeConfigLoader!, _fileSystem!));
+            Assert.IsTrue(TryGenerateConfig(initOptionsWithAllLowerCaseFileName, _runtimeConfigLoader!, _fileSystem!));
 
             // same file with all uppercase letters
             InitOptions initOptionsWithAllUpperCaseFileName = new(
@@ -429,7 +429,7 @@ namespace Cli.Tests
         ///           - In this case, fields related to multiple mutation and multiple create operations will NOT be written to the config file.
         ///
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSQL database type")]
         [DataRow(DatabaseType.MSSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MsSQL database type")]
         [DataRow(DatabaseType.MSSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MsSQL database type")]

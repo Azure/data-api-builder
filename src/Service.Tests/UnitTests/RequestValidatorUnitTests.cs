@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="requestBody">Request Body string</param>
         /// <param name="expectsException">true/false</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(@"{""title"":""Hello, World""}", false, DisplayName = "Request body is valid json")]
         [DataRow("", false, DisplayName = "Request body is empty, does not fail parser")]
         [DataRow(null, false, DisplayName = "Request body null, does not fail parser")]
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             if (expectsException)
             {
-                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                DataApiBuilderException dabException = Assert.Throws<DataApiBuilderException>(
                     action: () => RequestValidator.ValidateAndParseRequestBody(requestBody),
                     message: RequestValidator.REQUEST_BODY_INVALID_JSON_ERR_MESSAGE);
 

@@ -118,7 +118,9 @@ type PlanetAgain @model {
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 
     private HttpClient _client;
+#pragma warning disable CS0618 // Type or member is obsolete
     internal WebApplicationFactory<Startup> _application;
+#pragma warning restore CS0618
     internal string _containerName = Guid.NewGuid().ToString();
 
     [TestInitialize]
@@ -129,15 +131,18 @@ type PlanetAgain @model {
         _client = _application.CreateClient();
     }
 
+#pragma warning disable CS0618 // Type or member is obsolete
     protected WebApplicationFactory<Startup> SetupTestApplicationFactory()
+#pragma warning restore CS0618
     {
         // Read the base config from the file system
         TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
         FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
-        if (!baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig))
-        {
-            throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
-        }
+        RuntimeConfig baseConfig = baseLoader.LoadKnownConfigAsync()
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult()
+            ?? throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
 
         Dictionary<string, object> updatedOptions = baseConfig.DataSource.Options;
         updatedOptions["container"] = JsonDocument.Parse($"\"{_containerName}\"").RootElement;

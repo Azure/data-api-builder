@@ -21,7 +21,7 @@ if ($isReleaseBuild -eq 'true')
 }
 
 # Generating hash for DAB packages
-$dotnetTargetFrameworks = "net8.0"
+$dotnetTargetFrameworks = "net10.0"
 $RIDs = "win-x64", "linux-x64", "osx-x64"
 [hashtable]$frameworkPlatformDownloadMetadata = @{}
 [hashtable]$frameworkPlatformFileHashMetadata = @{}
@@ -56,16 +56,16 @@ $latestBlock = @'
     "releaseDate": "${releaseDate}",
     "files": {
         "linux-x64":{
-            "url": "$($frameworkPlatformDownloadMetadata["net8.0_linux-x64"])",
-            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_linux-x64"])"
+            "url": "$($frameworkPlatformDownloadMetadata["net10.0_linux-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net10.0_linux-x64"])"
         },
         "win-x64":{
-            "url": "$($frameworkPlatformDownloadMetadata["net8.0_win-x64"])",
-            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_win-x64"])"
+            "url": "$($frameworkPlatformDownloadMetadata["net10.0_win-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net10.0_win-x64"])"
         },
         "osx-x64":{
-            "url": "$($frameworkPlatformDownloadMetadata["net8.0_osx-x64"])",
-            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_osx-x64"])"
+            "url": "$($frameworkPlatformDownloadMetadata["net10.0_osx-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net10.0_osx-x64"])"
         },
         "nuget": {
             "url": "${download_url_nuget}",

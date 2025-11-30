@@ -222,7 +222,7 @@ namespace Cli.Tests
         /// <summary>
         /// Add Entity with Policy and Field properties
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", DisplayName = "Check adding new Entity with both Policy and Fields")]
         [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab2'", "@claims.id eq @item.id", DisplayName = "Check adding new Entity with Policy")]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, DisplayName = "Check adding new Entity with fieldsToInclude and FieldsToExclude")]
@@ -263,7 +263,7 @@ namespace Cli.Tests
 
             // Create VerifySettings and add all arguments to the method as parameters
             VerifySettings verifySettings = new();
-            verifySettings.UseHashedParameters(fieldsToExclude, fieldsToInclude, policyDatabase, policyRequest);
+            verifySettings.UseParameters(fieldsToExclude, fieldsToInclude, policyDatabase, policyRequest);
             return ExecuteVerifyTest(options, settings: verifySettings);
         }
 
@@ -388,7 +388,7 @@ namespace Cli.Tests
         /// <summary>
         /// Simple test to verify success on adding a new entity with source object for valid fields.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, null, null, "*", true, DisplayName = "Both KeyFields and Parameters not provided for source")]
         [DataRow("stored-procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "SourceParameters correctly included with stored procedure")]
         [DataRow("Stored-Procedure", new string[] { "param1:value1" }, null, "execute", true, DisplayName = "Stored procedure type check for Case Insensitivity")]
@@ -457,7 +457,7 @@ namespace Cli.Tests
         /// <param name="graphQLOperation">Explicitly configured GraphQL operation for stored procedure (Query/Mutation).</param>
         /// <param name="restRoute">Custom REST route</param>
         /// <param name="graphQLType">Whether GraphQL is explicitly enabled/disabled on the entity.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, null, null, null, DisplayName = "Default Case without any customization")]
         [DataRow(null, null, "true", null, DisplayName = "REST enabled without any methods explicitly configured")]
         [DataRow(null, null, "book", null, DisplayName = "Custom REST path defined without any methods explicitly configured")]
@@ -514,7 +514,7 @@ namespace Cli.Tests
             return ExecuteVerifyTest(options, settings: settings);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations - GraphQL operation specified but entity is disabled for GraphQL")]
         [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations - REST methods specified but entity is disabled for REST")]
         public void TestAddStoredProcedureWithConflictingRestGraphQLOptions(
@@ -561,7 +561,7 @@ namespace Cli.Tests
         /// <summary>
         /// Check failure when adding an entity with permission containing invalid operations
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(new string[] { "anonymous", "*,create,read" }, DisplayName = "Permission With Wildcard And Other CRUD operations")]
         [DataRow(new string[] { "anonymous", "create,create,read" }, DisplayName = "Permission With duplicate CRUD operations")]
         [DataRow(new string[] { "anonymous", "fetch" }, DisplayName = "Invalid CRUD operation: fetch")]

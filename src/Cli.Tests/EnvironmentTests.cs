@@ -46,7 +46,7 @@ public class EnvironmentTests
         string jsonWithEnvVariable = @"{""envValue"": ""@env('DAB_TEST_ENVIRONMENT')""}";
 
         // No environment File, No environment variable set in the system
-        Assert.AreEqual(null, Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
+        Assert.IsNull(Environment.GetEnvironmentVariable(TEST_ENV_VARIABLE));
 
         // Configuring environment variable in the system
         Environment.SetEnvironmentVariable(TEST_ENV_VARIABLE, "TEST");
@@ -57,7 +57,7 @@ public class EnvironmentTests
 
         // removing Environment variable from the System
         Environment.SetEnvironmentVariable(TEST_ENV_VARIABLE, null);
-        Assert.ThrowsException<DataApiBuilderException>(() =>
+        Assert.Throws<DataApiBuilderException>(() =>
             JsonSerializer.Deserialize<TestObject>(jsonWithEnvVariable, _options),
             $"Environmental Variable, {TEST_ENV_VARIABLE}, not found.");
     }

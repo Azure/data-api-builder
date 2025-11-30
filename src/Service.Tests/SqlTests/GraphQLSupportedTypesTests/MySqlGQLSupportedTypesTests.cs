@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         // Only date
         [DataRow("9999-12-31", "9999-12-31T00:00:00.000Z", DisplayName = "Max date for datetime column stored with zeroed out time.")]
         [DataRow("1000-01-01", "1000-01-01T00:00:00.000Z", DisplayName = "Min date for datetime column stored with zeroed out time.")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
         {
             // Arrange
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow("23:59:59.499999", "23:59:59.000Z", DisplayName = "hh:mm::ss.ffffff for datetime column stored with zeroed out date and rounded down fractional seconds.")]
         [DataRow("23:59:59", "23:59:59.000Z", DisplayName = "hh:mm:ss for datetime column stored with zeroed out date.")]
         [DataRow("23:59", "23:59:00.000Z", DisplayName = "hh:mm for datetime column stored with zeroed out date and seconds.")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task InsertMutationInput_DateTimeTypes_TimeOnly_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
         {
             // Arrange
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
         [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
         [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task MySql_real_graphql_single_filter_expectedValues(
             string graphqlDataType,
             string filterOperator,
@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "'false'", "false")]
         [DataRow(STRING_TYPE, "lksa;jdflasdf;alsdflksdfkldj", "\"lksa;jdflasdf;alsdflksdfkldj\"")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54.000", "\"1999-01-08 10:23:54.000\"")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task MySQL_real_graphql_in_filter_expectedValues(
             string type,
             string sqlValue,

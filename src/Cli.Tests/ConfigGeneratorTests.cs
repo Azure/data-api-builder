@@ -37,7 +37,7 @@ public class ConfigGeneratorTests
     /// <summary>
     /// Tests that user provided config file is successfully generated when that file is not already present.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(true, false, DisplayName = "Failed to generate config file when user provided config file is present.")]
     [DataRow(false, true, DisplayName = "Successfully generated config file when user provided config file is not present.")]
     public void TryGenerateConfig_WithUserProvidedConfig(
@@ -79,7 +79,7 @@ public class ConfigGeneratorTests
     /// Tests that environment config file is successfully generated when that file is not already present.
     /// When environment variable is not set, it should generate the default config file.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(true, false, "Test", "dab-config.Test.json", DisplayName = "Failed to generate the config file when environment config file is present.")]
     [DataRow(false, true, "Test", "dab-config.Test.json", DisplayName = "Successfully generated the config file when environment config file is not present.")]
     [DataRow(false, true, "", "dab-config.json", DisplayName = "Successfully generated the config file when environment config file is not present and environment variable is set as empty.")]

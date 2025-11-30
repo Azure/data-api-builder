@@ -34,7 +34,7 @@ namespace Cli.Tests
         /// if { "depth-limit" : null } is provided in the config, it should not be removed.
         /// Also, if { "depth-limit" : -1 } is provided in the config, it should not be removed.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(null, false, DisplayName = "Config: 'depth-limit' property not defined, should not be added.")]
         [DataRow(null, true, DisplayName = "Config: 'depth-limit' is null. It should not be removed.")]
         [DataRow(-1, true, DisplayName = "Config: 'depth-limit' is -1, should remain as is without change.")]
@@ -72,7 +72,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             if (isDepthLimitProvidedInConfig)
             {
-                Assert.IsTrue(updatedConfig.Contains(depthLimitSection));
+                Assert.Contains(depthLimitSection, updatedConfig);
             }
             else
             {
@@ -181,7 +181,7 @@ namespace Cli.Tests
             Assert.IsNotNull(config.Runtime);
             Assert.IsNotNull(config.Runtime.Telemetry);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics);
-            Assert.AreEqual(true, config.Runtime.Telemetry.AzureLogAnalytics.Enabled);
+            Assert.IsTrue(config.Runtime.Telemetry.AzureLogAnalytics.Enabled);
             Assert.AreEqual("dab-identifier-test", config.Runtime.Telemetry.AzureLogAnalytics.DabIdentifier);
             Assert.AreEqual(1, config.Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds);
             Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics.Auth);
@@ -226,7 +226,7 @@ namespace Cli.Tests
             Assert.IsNotNull(config.Runtime);
             Assert.IsNotNull(config.Runtime.Telemetry);
             Assert.IsNotNull(config.Runtime.Telemetry.File);
-            Assert.AreEqual(true, config.Runtime.Telemetry.File.Enabled);
+            Assert.IsTrue(config.Runtime.Telemetry.File.Enabled);
             Assert.AreEqual(fileSinkPath, config.Runtime.Telemetry.File.Path);
             Assert.AreEqual(fileSinkRollingInterval.ToString(), config.Runtime.Telemetry.File.RollingInterval);
             Assert.AreEqual(fileSinkRetainedFileCountLimit, config.Runtime.Telemetry.File.RetainedFileCountLimit);
@@ -237,7 +237,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.graphql.enabled" on a config with various values results
         /// in runtime. Takes in updated value for graphql.enabled and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Update GraphQL.Enabled to false.")]
         [DataRow(true, DisplayName = "Validate GraphQL.Enabled to remain true.")]
         public void TestUpdateEnabledForGraphQLSettings(bool updatedEnabledValue)
@@ -264,7 +264,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.graphql.path" on a config with various values results
         /// in runtime config update. Takes in updated value for graphql.path and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("/updatedPath", DisplayName = "Update path to /updatedPath for GraphQL.")]
         [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in GraphQL path name.")]
         [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in GraphQL path name.")]
@@ -293,7 +293,7 @@ namespace Cli.Tests
         /// config with various values results in runtime config update.
         /// Takes in updated value for graphql.allow-introspection and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Update GraphQL.AllowIntrospection to be false.")]
         [DataRow(true, DisplayName = "Validate GraphQL.AllowIntrospection to remain true.")]
         public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedAllowIntrospectionValue)
@@ -321,7 +321,7 @@ namespace Cli.Tests
         /// on a config with various values results in runtime config update. 
         /// Takes in updated value for multiple mutations.create.enabled and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Update GraphQL.MultipleMutation.Create.Enabled to be false.")]
         [DataRow(true, DisplayName = "Validate GraphQL.MultipleMutation.Create.Enabled to remain true.")]
         public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedMultipleMutationsCreateEnabledValue)
@@ -379,7 +379,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.rest.enabled {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for rest.enabled and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Update Rest.Enabled to false.")]
         [DataRow(true, DisplayName = "Validate if Rest.Enabled remains true.")]
         public void TestUpdateEnabledForRestSettings(bool updatedEnabledValue)
@@ -406,7 +406,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.rest.path {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for rest.path and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("/updatedPath", DisplayName = "Update REST path to /updatedPath.")]
         [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in REST path.")]
         [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in REST path.")]
@@ -434,7 +434,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.rest.request-body-strict" on a config with various values results
         /// in runtime config update. Takes in updated value for rest.request-body-strict and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Update Rest.Request-Body-Strict to false.")]
         [DataRow(true, DisplayName = "Validate if Rest.Request-body-Strict remains true.")]
         public void TestUpdateRequestBodyStrictForRestSettings(bool updatedRequestBodyStrictValue)
@@ -462,7 +462,7 @@ namespace Cli.Tests
         /// on a config with various values results in runtime config update. 
         /// Takes in updated value for enabled and path and further 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, "/updatedPath", DisplayName = "Update enabled flag and path in Rest runtime settings.")]
         public void TestUpdateMultipleParametersRestSettings(bool updatedEnabledValue, string updatedPathValue)
         {
@@ -491,7 +491,7 @@ namespace Cli.Tests
         /// Validates that running "dab configure --runtime.cache.enabled" on a config with various values results
         /// in runtime config update. Takes in updated value for cache.enabled and 
         /// validates whether the runtime config reflects those updated values.
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Update Cache.Enabled to false.")]
         [DataRow(true, DisplayName = "Validate if Cache.Enabled remains true.")]
         public void TestUpdateEnabledForCacheSettings(bool updatedEnabledValue)
@@ -518,7 +518,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.cache.ttl-seconds" on a config with various values results
         /// in runtime config update. Takes in updated value for cache.ttl-seconds and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(4, DisplayName = "Update global cache TTL to 4.")]
         public void TestUpdateTTLForCacheSettings(int updatedTtlValue)
         {
@@ -544,7 +544,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.host.mode {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.mode and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("production", DisplayName = "Update mode to production for Host.")]
         [DataRow("Production", DisplayName = "Update mode to Production for Host.")]
         [DataRow("development", DisplayName = "Ensure mode is retained to development for Host.")]
@@ -574,7 +574,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.host.cors.origins {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.cors.origins and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("https://localhost, https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with comma.")]
         [DataRow("https://localhost https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with space.")]
         public void TestUpdateCorsOriginsForHostSettings(string inputValue)
@@ -603,7 +603,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.host.cors.allow-credentials {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.cors.allow-credentials and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, DisplayName = "Update cors.allow-credentials to false for Host.")]
         [DataRow(true, DisplayName = "Update cors.allow-credentials to true for Host.")]
         public void TestUpdateCorsAllowCredentialsHostSettings(bool allowCredentialsValue)
@@ -630,7 +630,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.host.authentication.provider {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.authentication.provider and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("staticWebApps", DisplayName = "Update authentication.provider to StaticWebApps for Host.")]
         [DataRow("Appservice", DisplayName = "Update authentication.provider to AppService for Host.")]
         [DataRow("azuread", DisplayName = "Update authentication.provider to AzureAD for Host.")]
@@ -659,7 +659,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.host.authentication.jwt.audience {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.authentication.jwt.audience and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("updatedAudience", DisplayName = "Update authentication.jwt.audience to 'updatedAudience' for Host.")]
         public void TestUpdateAuthenticationJwtAudienceHostSettings(string updatedJwtAudienceValue)
         {
@@ -685,7 +685,7 @@ namespace Cli.Tests
         /// Tests that running "dab configure --runtime.host.authentication.jwt.issuer {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.authentication.jwt.issuer and 
         /// validates whether the runtime config reflects those updated values
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("updatedIssuer", DisplayName = "Update authentication.jwt.issuer to 'updatedIssuer' for Host.")]
         public void TestUpdateAuthenticationJwtIssuerHostSettings(string updatedJwtIssuerValue)
         {
@@ -712,7 +712,7 @@ namespace Cli.Tests
         /// When runtime.graphql.depth-limit has an initial value of 8.
         /// validates that "dab configure --runtime.graphql.depth-limit {value}" sets the expected depth limit.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(20, DisplayName = "Update current depth limit for GraphQL.")]
         [DataRow(-1, DisplayName = "Remove depth limit from GraphQL by setting depth limit to -1.")]
         public void TestUpdateDepthLimitForGraphQL(int? newDepthLimit)
@@ -756,7 +756,7 @@ namespace Cli.Tests
         /// This method verifies that the database type can be updated to various valid values, including different cases,
         /// and ensures that the config file is correctly modified and parsed after the update.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("mssql", DisplayName = "Update the database type to MSSQL")]
         [DataRow("MSSql", DisplayName = "Update the database type to MSSQL with different case")]
         [DataRow("postgresql", DisplayName = "Update the database type to PostgreSQL")]
@@ -811,8 +811,8 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.MSSQL);
-            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("set-session-context", false), true);
+            Assert.AreEqual(DatabaseType.MSSQL, config.DataSource.DatabaseType);
+            Assert.IsTrue((bool?)config.DataSource.Options!.GetValueOrDefault("set-session-context", false));
             Assert.IsFalse(config.DataSource.Options!.ContainsKey("database"));
             Assert.IsFalse(config.DataSource.Options!.ContainsKey("container"));
             Assert.IsFalse(config.DataSource.Options!.ContainsKey("schema"));
@@ -847,10 +847,10 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
-            Assert.AreEqual(config.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
-            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("database"), "testdb");
-            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("container"), "testcontainer");
-            Assert.AreEqual(config.DataSource.Options!.GetValueOrDefault("schema"), "testschema.gql");
+            Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, config.DataSource.DatabaseType);
+            Assert.AreEqual("testdb", config.DataSource.Options!.GetValueOrDefault("database"));
+            Assert.AreEqual("testcontainer", config.DataSource.Options!.GetValueOrDefault("container"));
+            Assert.AreEqual("testschema.gql", config.DataSource.Options!.GetValueOrDefault("schema"));
         }
 
         /// <summary>

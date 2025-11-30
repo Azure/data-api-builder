@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="isDeveloperMode">true for developer mode, false otherwise.</param>
         /// <param name="expected">Expected error message.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, "Development Mode Error Message.")]
         [DataRow(false, "While processing your request the database ran into an error.")]
         public void VerifyCorrectErrorMessage(bool isDeveloperMode, string expected)
@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="expected">boolean value indicating if exception is expected to be transient or not.</param>
         /// <param name="number">number to be populated in SqlException.Number field</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, 121, DisplayName = "Transient exception error code #1")]
         [DataRow(true, 8628, DisplayName = "Transient exception error code #2")]
         [DataRow(true, 926, DisplayName = "Transient exception error code #3")]

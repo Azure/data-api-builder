@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation insert should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation insert should be successful");
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "title", "My New Book" }, { "publisher_id", 1234 } });
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation insert with variables should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation insert with variables should be successful");
         }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation update should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation update should be successful");
         }
 
         /// <summary>
@@ -217,12 +217,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             // query the table before deletion is performed
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation update should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation update should be successful");
 
             string dbResponse = await GetDatabaseResultAsync(msSqlQueryToVerifyDeletion);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, result.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -241,7 +241,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation with explicit null should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation with explicit null should be successful");
         }
 
         /// <summary>
@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation with implicit null should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation with implicit null should be successful");
         }
 
         /// <summary>
@@ -279,7 +279,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation update to null should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation update to null should be successful");
         }
 
         /// <summary>
@@ -298,7 +298,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation missing column should not update to null");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation missing column should not update to null");
         }
 
         /// <summary>
@@ -318,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation insert into view should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation insert into view should be successful");
         }
 
         /// <summary>
@@ -338,7 +338,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql mutation update view should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql mutation update view should be successful");
         }
 
         [TestMethod]
@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 2 }, { "col2Value", "My New Value" } });
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql insert mutation with variables and mappings should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql insert mutation with variables and mappings should be successful");
         }
 
         /// <summary>
@@ -374,7 +374,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 3 }, { "col2Value", "Updated Value of Mapped Column" } });
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql insert mutation with variables and mappings should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql insert mutation with variables and mappings should be successful");
         }
 
         /// <summary>
@@ -431,12 +431,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, new() { { "id", 4 } });
 
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql delete with variables and mappings should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql delete with variables and mappings should be successful");
 
             string dbResponse = await GetDatabaseResultAsync(msSqlQueryToVerifyDeletion);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, result.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -466,13 +466,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
-            Assert.IsTrue(actual.ToString().Contains("success"), "DwSql delete from view should be successful");
+            Assert.Contains("success", actual.ToString(), "DwSql delete from view should be successful");
 
             // check if entry is actually deleted
             string dbResponse = await GetDatabaseResultAsync(msSqlQueryToVerifyDeletion);
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
-            Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+            Assert.AreEqual(0, result.RootElement.GetProperty("count").GetInt64());
         }
 
         /// <summary>
@@ -535,7 +535,7 @@ SELECT CASE
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string insertedValue = "{\"id\":1,\"title\":\"Orange Tomato\"}";
             string expected = await GetDatabaseResultAsync(dbQuery);
-            Assert.IsTrue(actual.ToString().Contains(insertedValue));
+            Assert.Contains(insertedValue, actual.ToString());
             Assert.IsTrue(expected.ToString().Equals("True"));
         }
 
@@ -568,7 +568,7 @@ SELECT CASE
             ";
 
             string currentDbResponse = await GetDatabaseResultAsync(msSqlQuery);
-            Assert.AreEqual(currentDbResponse, "False", "Entry should not exist in the db before insertion");
+            Assert.AreEqual("False", currentDbResponse, "Entry should not exist in the db before insertion");
             JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
             // Stored Procedure didn't return anything
@@ -576,7 +576,7 @@ SELECT CASE
 
             // check to verify new element is inserted
             string updatedDbResponse = await GetDatabaseResultAsync(msSqlQuery);
-            Assert.AreEqual(updatedDbResponse, "True", "Entry should be inserted into db.");
+            Assert.AreEqual("True", updatedDbResponse, "Entry should be inserted into db.");
         }
 
         /// <summary>
@@ -613,7 +613,7 @@ SELECT CASE
             string updatedValueExists = await GetDatabaseResultAsync(dbQuery);
             string insertedValue = "{\"id\":14,\"title\":\"Before Midnight\"}";
             Assert.IsTrue(updatedValueExists.Equals("True"), "Title should be updated for given book id.");
-            Assert.IsTrue(graphQLResponse.ToString().Contains(insertedValue), "GraphQL response should contain the updated entry");
+            Assert.Contains(insertedValue, graphQLResponse.ToString(), "GraphQL response should contain the updated entry");
         }
 
         /// <summary>

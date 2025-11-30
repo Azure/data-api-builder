@@ -190,7 +190,18 @@ namespace Azure.DataApiBuilder.Config
                 clientOptions.Retry.NetworkTimeout = TimeSpan.FromSeconds(options.RetryPolicy.NetworkTimeoutSeconds ?? AKVRetryPolicyOptions.DEFAULT_NETWORK_TIMEOUT_SECONDS);
             }
 
-            return new SecretClient(new Uri(options.Endpoint), new DefaultAzureCredential(), clientOptions);
+            try
+            {
+                return new SecretClient(new Uri(options.Endpoint), new DefaultAzureCredential(), clientOptions);
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    $"Failed to create Azure Key Vault client for endpoint '{options.Endpoint}'. Error: {ex.Message}",
+                    System.Net.HttpStatusCode.InternalServerError,
+                    DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
+            }
         }
 
         private string? GetAkvVariable(string name)
@@ -202,11 +213,57 @@ namespace Azure.DataApiBuilder.Config
 
             try
             {
-                return _akvClient.GetSecret(name).Value.Value;
+                string secretValue = _akvClient.GetSecret(name).Value.Value;
+                
+                // Log secret retrieval success (do not log the actual secret value)
+                Console.WriteLine($"[AKV] Successfully retrieved secret '{name}' from Azure Key Vault. Length: {secretValue?.Length ?? 0} characters.");
+                
+                return secretValue;
             }
             catch (Azure.RequestFailedException ex) when (ex.Status == 404)
             {
+                Console.WriteLine($"[AKV] Secret '{name}' not found in Azure Key Vault (404).");
                 return null;
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 401)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Failed to authenticate to Azure Key Vault. Ensure the application has proper authentication configured (Managed Identity, Service Principal, or Azure CLI). Secret name: '{name}'. Error: {ex.Message}",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
+            }
+            catch (Azure.RequestFailedException ex) when (ex.Status == 403)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Access denied to Azure Key Vault secret '{name}'. Ensure the application identity has 'Key Vault Secrets User' or 'Key Vault Reader' role on the vault. Error: {ex.Message}",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Failed to retrieve secret '{name}' from Azure Key Vault. Status: {ex.Status}, Error: {ex.Message}",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
+            }
+            catch (Azure.Identity.AuthenticationFailedException ex)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Authentication to Azure Key Vault failed. Ensure proper credentials are configured. In Kubernetes, verify the workload identity or service account is correctly set up. Error: {ex.Message}",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Unexpected error retrieving secret '{name}' from Azure Key Vault: {ex.GetType().Name}: {ex.Message}",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
             }
         }
     }

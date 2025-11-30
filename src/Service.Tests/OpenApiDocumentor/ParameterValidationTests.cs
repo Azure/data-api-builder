@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
@@ -34,7 +34,7 @@ public class ParameterValidationTests
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="objectName">The name of the database object.</param>
     /// <param name="entitySourceType">The source type of the entity.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Table with path parameter id")]
     [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "View with path parameter id")]
     public async Task TestPathParametersForTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
@@ -71,7 +71,7 @@ public class ParameterValidationTests
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="objectName">The name of the database object.</param>
     /// <param name="entitySourceType">The source type of the entity.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Table with query parameters")]
     [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "View with query parameters")]
     public async Task TestQueryParametersAddedForGEToperationOnTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
@@ -101,7 +101,7 @@ public class ParameterValidationTests
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="objectName">The name of the database object.</param>
     /// <param name="entitySourceType">The source type of the entity.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Table with query parameters")]
     [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "View with query parameters")]
     public async Task TestQueryParametersExcludedFromNonReadOperationsOnTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
@@ -192,7 +192,7 @@ public class ParameterValidationTests
     /// Validates that input query parameters are not generated for Stored Procedures irrespective of whether the operation is a GET operation
     /// or any other supported http REST operation.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("CountBooks", "count_books", new SupportedHttpVerb[] { SupportedHttpVerb.Get }, DisplayName = "StoredProcudure with no input parameters results in 0 created input query params.")]
     [DataRow("InsertBook", "insert_book", new SupportedHttpVerb[] { SupportedHttpVerb.Post }, DisplayName = "StoredProcedure without GET operations will results in 0 created input query params.")]
     public async Task TestStoredProcedureForNoQueryParameters(string entityName, string objectName, SupportedHttpVerb[] supportedHttpVerbs)
@@ -261,7 +261,7 @@ public class ParameterValidationTests
     /// <param name="objectName">Name of the database object backing the entity.</param>
     /// <param name="entitySourceType">Sourcetype of the entity.</param>
     /// <returns></returns>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Assert custom header presence in header parameters for table.")]
     [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "Assert custom header presence in header parameters for view.")]
     [DataRow("UpdateBookTitle", "update_book_title", EntitySourceType.StoredProcedure, DisplayName = "Assert custom header presence in header parameters for stored procedure.")]

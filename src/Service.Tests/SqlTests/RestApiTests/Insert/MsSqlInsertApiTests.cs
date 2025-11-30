@@ -61,8 +61,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
-                $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
-                $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] FROM { _integrationUniqueCharactersTable } " +
+                $"SELECT [NoteNum] AS [â”¬â”€â”¬ãƒŽ( Âº _ ÂºãƒŽ)], [DetailAssessmentAndPlanning] AS [å§‹è¨ˆ], " +
+                $"[WagingWar] AS [ä½œæˆ°], [StrategicAttack] AS [è¬€æ”»] FROM { _integrationUniqueCharactersTable } " +
                 $"WHERE [NoteNum] = 2 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
@@ -246,7 +246,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
@@ -334,7 +334,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("InsertOneWithRowversionFieldMissingFromRequestBody"),
-                    operationType: EntityActionOperation.Insert,
+                    HttpMethod: EntityActionOperation.Insert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
@@ -363,7 +363,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithReadOnlyFields,
                 sqlQuery: string.Empty,
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Field 'row_version' cannot be included in the request body.",
@@ -390,7 +390,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithDefaultValues,
                 sqlQuery: GetQuery(nameof(InsertOneWithDefaultValuesAndEmptyRequestBody)),
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 exceptionExpected: false,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created
@@ -413,7 +413,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// </summary>
         [DataRow("The First Publisher", "InsertOneAndReturnSingleRowWithStoredProcedureTest", true, DisplayName = "Test Single row result")]
         [DataRow("Big Company", "InsertOneAndReturnMultipleRowsWithStoredProcedureTest", false, DisplayName = "Test multiple row result")]
-        [DataTestMethod]
+        [TestMethod]
         public async Task InsertOneAndVerifyReturnedRowsWithStoredProcedureTest(
             string publisherName,
             string queryName,
@@ -430,7 +430,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
                 sqlQuery: GetQuery(queryName),
-                operationType: EntityActionOperation.Execute,
+                HttpMethod: EntityActionOperation.Execute,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: string.Empty,
@@ -461,7 +461,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _autogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("InsertOneInTableWithAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -483,7 +483,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _nonAutogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("InsertOneInTableWithNonAutoGenPKAndTrigger"),
-                operationType: EntityActionOperation.Insert,
+                HttpMethod: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader

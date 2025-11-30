@@ -1,231 +1,428 @@
 {
+  "$schema": "https://dataapibuilder.azureedge.net/schemas/v1.5.0/dab.draft.schema.json",
   "data-source": {
-    "database-type": "@env('db-type')",
-    "connection-string": "@env('ConnectionStrings__Database')",
-    "options": {
-      "set-session-context": false
+    "database-type": "postgresql",
+    "connection-string": "@akv('pg-wellbeing-os')"
+  },
+  "azure-key-vault": {
+    "endpoint": "https://wellbeing-os-keyvault.vault.azure.net/",
+    "retry-policy": {
+      "mode": "exponential",
+      "max-count": 5,
+      "delay-seconds": 2,
+      "max-delay-seconds": 30,
+      "network-timeout-seconds": 45
     }
   },
-    "runtime": {
-      "rest": {
-        "enabled": true,
-        "path": "/api",
-        "request-body-strict": true
-      },
-      "graphql": {
-        "enabled": true,
-        "path": "/graphql",
-        "allow-introspection": true
-      },
-      "host": {
-        "authentication": {
-          "provider": "StaticWebApps"
-        },
-        "cors": {
-          "origins": [],
-          "allow-credentials": false
-        },
-        "mode": "development"
-      },
-      "telemetry": {
-        "open-telemetry": {
-          "enabled": true,
-          "endpoint": "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
-          "headers": "@env('OTEL_EXPORTER_OTLP_HEADERS')",
-          "exporter-protocol": "@env('OTEL_EXPORTER_OTLP_PROTOCOL')",
-          "service-name": "@env('OTEL_SERVICE_NAME')"
-        }
-      },
-      "cache": {
-        "enabled": true,
-        "ttl-seconds": 60
-      }
+  "runtime": {
+    "rest": {
+      "path": "/",
+      "enabled": true
     },
-    "entities": {
-      "Actor": {
-        "source": {
-          "object": "Actor",
-          "type": "table"
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "Actor",
-            "plural": "Actors"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              "*"
-            ]
-          }
-        ],
-        "relationships": {
-          "character": {
-            "cardinality": "many",
-            "target.entity": "Character",
-            "source.fields": [
-              "Id"
-            ],
-            "target.fields": [
-              "ActorId"
-            ],
-            "linking.source.fields": [],
-            "linking.target.fields": []
-          }
-        }
+    "graphql": {
+      "enabled": false
+    }
+  },
+  "entities": {
+    "dashboard-overview": {
+      "source": {
+        "type": "view",
+        "object": "whanau_ora.mv_dashboard_overview_daily",
+        "key-fields": [
+          "org_sk",
+          "date_id"
+        ]
       },
-      "Character": {
-        "source": {
-          "object": "Character",
-          "type": "table"
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "Character",
-            "plural": "Characters"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "*"
-              }
-            ]
-          }
-        ],
-        "relationships": {
-          "actor": {
-            "cardinality": "one",
-            "target.entity": "Actor",
-            "source.fields": [
-              "ActorId"
-            ],
-            "target.fields": [
-              "Id"
-            ],
-            "linking.source.fields": [],
-            "linking.target.fields": []
-          },
-          "series": {
-            "cardinality": "many",
-            "target.entity": "Series",
-            "source.fields": [
-              "Id"
-            ],
-            "target.fields": [
-              "Id"
-            ],
-            "linking.object": "series_character",
-            "linking.source.fields": [
-              "CharacterId"
-            ],
-            "linking.target.fields": [
-              "SeriesId"
-            ]
-          }
-        }
+      "rest": {
+        "methods": [
+          "get"
+        ]
       },
-      "Series": {
-        "source": {
-          "object": "Series",
-          "type": "table"
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "Series",
-            "plural": "Series"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "*"
-              }
-            ]
-          }
-        ],
-        "relationships": {
-          "character": {
-            "cardinality": "many",
-            "target.entity": "Character",
-            "source.fields": [
-              "Id"
-            ],
-            "target.fields": [
-              "Id"
-            ],
-            "linking.object": "series_character",
-            "linking.source.fields": [
-              "SeriesId"
-            ],
-            "linking.target.fields": [
-              "CharacterId"
-            ]
-          }
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
         }
+      ]
+    },
+    "dashboard-goals": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.fact_goals_snapshot",
+        "key-fields": [
+          "org_sk",
+          "goal_id"
+        ]
       },
-      "Species": {
-        "source": {
-          "object": "Species",
-          "type": "table"
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "Species",
-            "plural": "Species"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "*"
-              }
-            ]
-          }
-        ],
-        "relationships": {
-          "character": {
-            "cardinality": "many",
-            "target.entity": "Character",
-            "source.fields": [
-              "Id"
-            ],
-            "target.fields": [
-              "Id"
-            ],
-            "linking.object": "character_species",
-            "linking.source.fields": [
-              "SpeciesId"
-            ],
-            "linking.target.fields": [
-              "CharacterId"
-            ]
-          }
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
         }
-      }
+      ]
+    },
+    "dashboard-referrals": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.fact_referrals_daily",
+        "key-fields": [
+          "org_sk",
+          "date_id",
+          "client_sk",
+          "service_sk",
+          "provider_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-date": {
+      "source": {
+        "type": "view",
+        "object": "whanau_ora.v_dim_date",
+        "key-fields": [
+          "date_id"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-org": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_org",
+        "key-fields": [
+          "org_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-client": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_client",
+        "key-fields": [
+          "client_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-whanau": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_whanau",
+        "key-fields": [
+          "whanau_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-domain": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_domain",
+        "key-fields": [
+          "domain_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-outcome-area": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_outcome_area",
+        "key-fields": [
+          "outcome_area_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-service": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_service",
+        "key-fields": [
+          "service_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-provider": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_provider",
+        "key-fields": [
+          "provider_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-locality": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_locality",
+        "key-fields": [
+          "locality_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-user": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.dim_user",
+        "key-fields": [
+          "user_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "dim-client-demographics": {
+      "source": {
+        "type": "view",
+        "object": "whanau_ora.dim_client_demographics",
+        "key-fields": [
+          "client_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "fact-actions": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.fact_actions",
+        "key-fields": [
+          "org_sk",
+          "action_id"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "fact-reviews": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.fact_reviews",
+        "key-fields": [
+          "org_sk",
+          "review_id"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
+    },
+    "fact-user-performance": {
+      "source": {
+        "type": "table",
+        "object": "whanau_ora.fact_user_performance",
+        "key-fields": [
+          "org_sk",
+          "user_sk"
+        ]
+      },
+      "rest": {
+        "methods": [
+          "get"
+        ]
+      },
+      "graphql": false,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read"
+          ]
+        }
+      ]
     }
   }
+}

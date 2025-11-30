@@ -155,7 +155,7 @@ mutation {{
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
             string errorMessage = response[0].GetProperty("message").ToString();
-            Assert.IsTrue(errorMessage.Contains("The argument `item` is required."), $"The actual error is {errorMessage}");
+            Assert.Contains("The argument `item` is required.", errorMessage, $"The actual error is {errorMessage}");
         }
 
         [TestMethod]
@@ -290,7 +290,7 @@ mutation {{
             {
                 // Validate the result contains the GraphQL authorization error code.
                 string errorMessage = response.ToString();
-                Assert.IsTrue(errorMessage.Contains(expectedErrorMessage));
+                Assert.Contains(expectedErrorMessage, errorMessage);
             }
         }
 
@@ -356,7 +356,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetAgainInput!)
             {
                 // Validate the result contains the GraphQL authorization error code.
                 string errorMessage = response.ToString();
-                Assert.IsTrue(errorMessage.Contains(expectedErrorMessage));
+                Assert.Contains(expectedErrorMessage, errorMessage);
             }
         }
 
@@ -416,7 +416,7 @@ mutation ($id: ID!, $partitionKeyValue: String!) {
             {
                 // Validate the result contains the GraphQL authorization error code.
                 string errorMessage = response.ToString();
-                Assert.IsTrue(errorMessage.Contains(expectedErrorMessage));
+                Assert.Contains(expectedErrorMessage, errorMessage);
             }
         }
 
@@ -586,7 +586,7 @@ type Planet @model(name:""Planet"") {
                         clientRoleHeader: null
                         );
 
-                    Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation createPlanet was successful but the current user is unauthorized to view the response due to lack of read permissions"));
+                    Assert.Contains("The mutation operation createPlanet was successful but the current user is unauthorized to view the response due to lack of read permissions", mutationResponse.ToString());
 
                     // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
                     // resulted in the creation of a new record in the database.

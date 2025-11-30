@@ -191,7 +191,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     entityName: entity,
                     dbo: dbObject,
                     requestPayloadRoot: requestPayloadRoot,
-                    operationType: EntityActionOperation.Execute);
+                    HttpMethod: EntityActionOperation.Execute);
 
                 // First, add user-provided parameters to the context
                 if (requestPayloadRoot != null)

@@ -91,7 +91,7 @@ public class TelemetryTests
         using (TestServer server = new(Program.CreateWebHostBuilder(args)))
         {
             await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
-            Assert.IsTrue(server.Services.GetService<TelemetryClient>() is not null);
+            Assert.IsNotNull(server.Services.GetService<TelemetryClient>());
         }
 
         List<ITelemetry> telemetryItems = ((CustomTelemetryChannel)telemetryChannel).GetTelemetryItems();
@@ -141,7 +141,7 @@ public class TelemetryTests
     /// </summary>
     /// <param name="isTelemetryEnabled">Whether telemetry is enabled or not.</param>
     /// <param name="telemetryConnectionString">Telemetry connection string.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(false, "", DisplayName = "Configuration without a connection string and with Application Insights disabled.")]
     [DataRow(true, "", DisplayName = "Configuration without a connection string, but with Application Insights enabled.")]
     [DataRow(false, TEST_APP_INSIGHTS_CONN_STRING, DisplayName = "Configuration with a connection string, but with Application Insights disabled.")]

@@ -161,7 +161,7 @@ public class EndToEndTests
     ///    When used with true/false, CLI interprets the value as CliBool.True/CliBool.False respectively.
     /// </param>
     /// <param name="expectedValueForMultipleCreateEnabledFlag"> Expected value for the multiple create enabled flag in the config file.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(CliBool.True, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSql database type")]
     [DataRow(CliBool.False, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MsSql database type")]
     [DataRow(CliBool.None, "mssql", DatabaseType.MSSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MsSql database type")]
@@ -249,16 +249,16 @@ public class EndToEndTests
         Assert.AreEqual("/todo", entity.Rest.Path);
         Assert.AreEqual("todo", entity.GraphQL.Singular);
         Assert.AreEqual("todos", entity.GraphQL.Plural);
-        Assert.AreEqual(1, entity.Permissions.Length);
+        Assert.HasCount(1, entity.Permissions);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
-        Assert.AreEqual(1, entity.Permissions[0].Actions.Length);
+        Assert.HasCount(1, entity.Permissions[0].Actions);
         Assert.AreEqual(EntityActionOperation.All, entity.Permissions[0].Actions[0].Action);
     }
 
     /// <summary>
     /// Test to verify telemetry details are added to the config.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("true", "InstrumentationKey=00000000", DisplayName = "Add Telemetry with connection string and enabled")]
     [DataRow("false", "InstrumentationKey=00000000", DisplayName = "Add Telemetry with connection string and disabled")]
     [DataRow(null, "InstrumentationKey=00000000", DisplayName = "Add Telemetry with connection string without enabled flag should default to enabled")]
@@ -302,7 +302,7 @@ public class EndToEndTests
     /// This test checks behavior of executing `dab configure --runtime.graphql.depth-limit {value}`.
     /// Valid values are [1, INT32.MAX_VALUE], and -1 to remove depth limit.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("8", true, DisplayName = "Successful update with a valid value for depth limit")]
     [DataRow("0", false, DisplayName = "Failure as depth limit cannot be set to 0.")]
     [DataRow("-1", true, DisplayName = "Successful update to to remove depth limit using -1.")]
@@ -334,7 +334,7 @@ public class EndToEndTests
     /// Ensures that invalid characters provided for path result in failed engine startup 
     /// due to validation failure.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("/updatedPath", true, DisplayName = "Success in updated GraphQL Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Success in updated GraphQL Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Success in updated GraphQL Path to /updated_Path.")]
@@ -368,7 +368,7 @@ public class EndToEndTests
     /// due to validation failure.
     /// </summary>
     [Ignore]
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("http://locahost1 https://localhost2", true, DisplayName = "Success in updating Host.Cors.Origins.")]
     public void TestUpdateHostCorsOriginsRuntimeSettings(string path, bool isSuccess)
     {
@@ -396,7 +396,7 @@ public class EndToEndTests
     /// Ensures that invalid characters provided for path result in failed engine startup 
     /// due to validation failure.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("/updatedPath", true, DisplayName = "Successfully updated Rest Path to /updatedPath.")]
     [DataRow("/updated-Path", true, DisplayName = "Successfully updated Rest Path to /updated-Path.")]
     [DataRow("/updated_Path", true, DisplayName = "Successfully updated Rest Path to /updated_Path.")]
@@ -430,7 +430,7 @@ public class EndToEndTests
     /// due to validation failure.
     /// Valid values are [1, INT32.MAX_VALUE] Integer values.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("2", true, DisplayName = "Success in updating Cache TTL to 2.")]
     [DataRow("10", true, DisplayName = "Success in updating Cache TTL to 10.")]
     [DataRow("-2", false, DisplayName = "Failure to update cache ttl as value is negative.")]
@@ -461,7 +461,7 @@ public class EndToEndTests
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("AzureAD")]
     [DataRow("EntraID")]
     public void TestVerifyAuthenticationOptions(string authenticationProvider)
@@ -484,7 +484,7 @@ public class EndToEndTests
     /// Test to verify that --host-mode is case insensitive.
     /// Short forms are not supported.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("production", HostMode.Production, true)]
     [DataRow("Production", HostMode.Production, true)]
     [DataRow("development", HostMode.Development, true)]
@@ -533,9 +533,9 @@ public class EndToEndTests
         Entity entity = addRuntimeConfig.Entities["book"];
         Assert.IsTrue(entity.Rest.Enabled, "REST expected be to enabled");
         Assert.IsTrue(entity.GraphQL.Enabled, "GraphQL expected to be enabled");
-        Assert.AreEqual(1, entity.Permissions.Length);
+        Assert.HasCount(1, entity.Permissions);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
-        Assert.AreEqual(1, entity.Permissions[0].Actions.Length);
+        Assert.HasCount(1, entity.Permissions[0].Actions);
         Assert.AreEqual(EntityActionOperation.All, entity.Permissions[0].Actions[0].Action);
         Assert.IsNull(entity.Mappings);
         Assert.IsNull(entity.Relationships);
@@ -733,10 +733,10 @@ public class EndToEndTests
         Assert.IsNotNull(entity.GraphQL);
         Assert.IsTrue(entity.GraphQL.Enabled);
         //The value in entity.GraphQL is true/false, we expect the serialization to be a string.
-        Assert.AreEqual(true, entity.GraphQL.Enabled);
-        Assert.AreEqual(1, entity.Permissions.Length);
+        Assert.IsTrue(entity.GraphQL.Enabled);
+        Assert.HasCount(1, entity.Permissions);
         Assert.AreEqual("anonymous", entity.Permissions[0].Role);
-        Assert.AreEqual(4, entity.Permissions[0].Actions.Length);
+        Assert.HasCount(4, entity.Permissions[0].Actions);
         //Only create and delete are updated.
         EntityAction action = entity.Permissions[0].Actions.First(a => a.Action == EntityActionOperation.Create);
         Assert.AreEqual(2, action.Fields?.Include?.Count);
@@ -764,7 +764,7 @@ public class EndToEndTests
 
         Assert.IsTrue(entity.Relationships!.ContainsKey("r1"));
         EntityRelationship relationship = entity.Relationships["r1"];
-        Assert.AreEqual(1, entity.Relationships.Count);
+        Assert.HasCount(1, entity.Relationships);
         Assert.AreEqual(Cardinality.One, relationship.Cardinality);
         Assert.AreEqual("books", relationship.TargetEntity);
         Assert.AreEqual("todo_books", relationship.LinkingObject);
@@ -774,9 +774,9 @@ public class EndToEndTests
         CollectionAssert.AreEqual(new string[] { "id" }, relationship.LinkingTargetFields);
 
         Assert.IsNotNull(entity.Fields);
-        Assert.AreEqual(2, entity.Fields.Count);
-        Assert.AreEqual(entity.Fields[0].Alias, "identity");
-        Assert.AreEqual(entity.Fields[1].Alias, "Company Name");
+        Assert.HasCount(2, entity.Fields);
+        Assert.AreEqual("identity", entity.Fields[0].Alias);
+        Assert.AreEqual("Company Name", entity.Fields[1].Alias);
         Assert.IsNull(entity.Mappings);
     }
 
@@ -814,7 +814,7 @@ public class EndToEndTests
     /// This test does not validate whether the engine logs messages at the specified log level
     /// </summary>
     /// <param name="logLevelOption">Log level options</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("", DisplayName = "No logging from command line.")]
     [DataRow("--verbose", DisplayName = "Verbose logging from command line.")]
     [DataRow("--LogLevel 0", DisplayName = "LogLevel 0 from command line.")]
@@ -863,7 +863,7 @@ public class EndToEndTests
     /// Verifies that non-explicitly implemented DAB CLI options `--help` and `--version` produce exit code 0.
     /// init --config "dab-config.MsSql.json" --database-type mssql --connection-string "InvalidConnectionString"
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(new string[] { "--version" }, DisplayName = "Checking version.")]
     [DataRow(new string[] { "--help" }, DisplayName = "Valid verbs with help.")]
     [DataRow(new string[] { "add", "--help" }, DisplayName = "Valid options with help.")]
@@ -877,7 +877,7 @@ public class EndToEndTests
     /// Validates that invalid verbs and options produce exit code -1 (CliReturnCode.GENERAL_ERROR).
     /// </summary>
     /// <param name="cliArguments">cli verbs, options, and option values</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(new string[] { "--remove-telemetry" }, DisplayName = "Usage of non-existent verb remove-telemetry")]
     [DataRow(new string[] { "--initialize" }, DisplayName = "Usage of invalid verb (longform of init not supported) initialize")]
     [DataRow(new string[] { "init", "--database-name", "mssql" }, DisplayName = "Invalid init options database-name")]
@@ -892,7 +892,7 @@ public class EndToEndTests
     /// - DAB engine failure.
     /// </summary>
     /// <param name="cliArguments">cli verbs, options, and option values</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(new string[] { "init", "--config", "dab-config-empty.json", "--database-type", "mssql", "--connection-string", "SampleValue" },
  DisplayName = "Config file value used already exists on the file system and results in init failure.")]
     [DataRow(new string[] { "start", "--config", "dab-config-empty.json" }, DisplayName = "Config file value used is empty and engine startup fails")]
@@ -911,7 +911,7 @@ public class EndToEndTests
     [DataRow("add", "MyEntity", "-s my_entity --permissions anonymous:create", true)]
     [DataRow("update", "", "-s my_entity --permissions authenticate:*", false)]
     [DataRow("update", "MyEntity", "-s my_entity --permissions authenticate:*", true)]
-    [DataTestMethod]
+    [TestMethod]
     public void TestMissingEntityFromCommand(
         string command,
         string entityName,
@@ -937,7 +937,7 @@ public class EndToEndTests
     /// Test to verify that help writer window generates output on the console.
     /// Every test here validates that the first line of the output contains the product name and version.
     /// </summary>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
     [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
@@ -977,7 +977,7 @@ public class EndToEndTests
 
         // Check that the build hash is returned as part of the version number.
         string[] versionParts = output.Split('+');
-        Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
+        Assert.HasCount(2, versionParts, "Build hash not returned as part of version number.");
         Assert.AreEqual(40, versionParts[1].Length, "Build hash is not of expected length.");
 
         process.Kill();
@@ -991,7 +991,7 @@ public class EndToEndTests
     [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
     [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
     [DataRow("start", "", DisplayName = "Version printed with valid command start.")]
-    [DataTestMethod]
+    [TestMethod]
     public void ValidCliVerbsAndOptions_DisplayVersionAndConfigFileName(
         string command,
         string options)
@@ -1026,7 +1026,7 @@ public class EndToEndTests
     [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
     [DataRow("", "--help", DisplayName = "Checking version through --help option.")]
     [DataRow("edit", "--new-option", DisplayName = "Version printed with invalid command edit.")]
-    [DataTestMethod]
+    [TestMethod]
     public void InvalidCliVerbsAndOptions_DisplayVersionWithCommitHashAndConfigFileName(
         string command,
         string options)
@@ -1058,7 +1058,7 @@ public class EndToEndTests
     /// </summary>
     [DataRow(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE, true, DisplayName = "Correct Config")]
     [DataRow(INITIAL_CONFIG, SINGLE_ENTITY_WITH_INVALID_GRAPHQL_TYPE, false, DisplayName = "Invalid GraphQL type for entity")]
-    [DataTestMethod, Ignore]
+    [TestMethod, Ignore]
     public async Task TestExitOfRuntimeEngineWithInvalidConfig(
         string initialConfig,
         string entityDetails,
@@ -1116,7 +1116,7 @@ public class EndToEndTests
     /// </summary>
     /// <param name="authProvider">Authentication provider specified for the runtime.</param>
     /// <param name="isExceptionExpected">Whether an exception is expected as a result of test run.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("StaticWebApps", false)]
     [DataRow("AppService", true)]
     [DataRow("AzureAD", true)]
@@ -1148,7 +1148,7 @@ public class EndToEndTests
         }
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(ApiType.REST, false, false, true, true, DisplayName = "Validate that REST endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
     [DataRow(ApiType.REST, false, true, true, true, DisplayName = "Validate that REST endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
     [DataRow(ApiType.REST, true, false, true, false, DisplayName = "Validate that REST endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
@@ -1220,7 +1220,7 @@ public class EndToEndTests
     /// </summary>
     /// <param name="includeRestRequestBodyStrictFlag">Whether or not to include --rest.request-body-strict option in the init command.</param>
     /// <param name="isRequestBodyStrict">Value of the rest.request-body-strict option in the init command.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
     [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]
     [DataRow(false, true, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body doesn't allow extraneous fields.")]
@@ -1249,7 +1249,7 @@ public class EndToEndTests
     /// </summary>
     /// <param name="dbType">The database type to be set in the configuration.</param>
     /// <param name="isSuccess">Expected success or failure of the operation.</param>
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("mysql", true, DisplayName = "Successful update with a valid value for database type")]
     [DataRow("msql", false, DisplayName = "Failure as invalid value for database type")]
     [DataRow("postgres", false, DisplayName = "Failure as invalid value for database type for PostgreSQL")]

@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 Mappings: new());
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [TestCategory("Mutation Builder - Create")]
         [TestCategory("Schema Builder - Simple Type")]
         [DataRow(new string[] { "authenticated" }, true,
@@ -117,7 +117,7 @@ type Foo @model(name:""Foo"") {
                 { "Foo", DatabaseType.CosmosDB_NoSQL }
             };
 
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+            DataApiBuilderException ex = Assert.Throws<DataApiBuilderException>(
                 () => MutationBuilder.Build(root,
                     entityNameToDatabasetype,
                     new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
@@ -188,10 +188,10 @@ type Foo @model(name:""Foo"") {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
-            Assert.AreEqual(1, field.Arguments.Count);
+            Assert.HasCount(1, field.Arguments);
 
             InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
-            Assert.AreEqual(1, argType.Fields.Count);
+            Assert.HasCount(1, argType.Fields);
             Assert.AreEqual("bar", argType.Fields[0].Name.Value);
         }
 
@@ -225,9 +225,9 @@ type Foo @model(name:""Foo"") {
             List<String> fieldNames = query.Fields.Select(f => f.Name.Value).ToList();
 
             // Assert that "createFoo" and "updateFoo" are not present
-            Assert.IsFalse(fieldNames.Contains("createFoo"), "createFoo should not be present");
-            Assert.IsFalse(fieldNames.Contains("updateFoo"), "updateFoo should not be present");
-            Assert.IsTrue(fieldNames.Contains("deleteFoo"), "deleteFoo should be present");
+            Assert.DoesNotContain("createFoo", fieldNames, "createFoo should not be present");
+            Assert.DoesNotContain("updateFoo", fieldNames, "updateFoo should not be present");
+            Assert.Contains("deleteFoo", fieldNames, "deleteFoo should be present");
         }
 
         [TestMethod]
@@ -258,10 +258,10 @@ type Foo @model(name:""Foo"") {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
-            Assert.AreEqual(1, field.Arguments.Count);
+            Assert.HasCount(1, field.Arguments);
 
             InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
-            Assert.AreEqual(2, argType.Fields.Count);
+            Assert.HasCount(2, argType.Fields);
             Assert.AreEqual("id", argType.Fields[0].Name.Value);
             Assert.AreEqual("bar", argType.Fields[1].Name.Value);
         }
@@ -328,7 +328,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(3, inputObj.Fields.Count);
+            Assert.HasCount(3, inputObj.Fields);
         }
 
         [TestMethod]
@@ -403,7 +403,7 @@ type Bar @model(name:""Bar""){
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
 
             Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
@@ -450,7 +450,7 @@ type Bar @model(name:""Bar""){
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
 
             Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
@@ -497,7 +497,7 @@ type Bar @model(name:""Bar"") {
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
 
             Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
@@ -546,7 +546,7 @@ type Bar @model(name:""Bar""){
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
 
             Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
@@ -595,7 +595,7 @@ type Bar @model(name:""Bar""){
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
 
             Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
@@ -639,7 +639,7 @@ type Foo @model(name:""Foo"") {
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
 
-            Assert.AreEqual(1, inputObj.Fields.Count);
+            Assert.HasCount(1, inputObj.Fields);
             Assert.AreEqual("bar", inputObj.Fields[0].Name.Value);
         }
 
@@ -673,7 +673,7 @@ type Foo @model(name:""Foo"") {
             InputValueDefinitionNode inputArg = field.Arguments[0];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
 
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
             Assert.AreEqual("primaryKey", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("bar", inputObj.Fields[1].Name.Value);
         }
@@ -706,7 +706,7 @@ type Foo @model(name:""Foo"") {
             Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == $"deleteFoo"));
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [TestCategory("Mutation Builder - Delete")]
         [TestCategory("Schema Builder - Simple Type")]
         [DataRow(new string[] { "authenticated" }, true,
@@ -745,7 +745,7 @@ type Foo @model(name:""Foo"") {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"deleteFoo");
-            Assert.AreEqual(2, field.Arguments.Count);
+            Assert.HasCount(2, field.Arguments);
             Assert.AreEqual("id", field.Arguments[0].Name.Value);
             Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
@@ -816,15 +816,15 @@ type Foo @model(name:""Foo"") {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
-            Assert.AreEqual(3, field.Arguments.Count);
+            Assert.HasCount(3, field.Arguments);
 
             InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[2].Type.NamedType().Name);
-            Assert.AreEqual(2, argType.Fields.Count);
+            Assert.HasCount(2, argType.Fields);
             Assert.AreEqual("id", argType.Fields[0].Name.Value);
             Assert.AreEqual("bar", argType.Fields[1].Name.Value);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [TestCategory("Mutation Builder - Update")]
         [TestCategory("Schema Builder - Simple Type")]
         [DataRow(new string[] { "authenticated" }, true,
@@ -864,7 +864,7 @@ type Foo @model(name:""Foo"") {
 
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"updateFoo");
-            Assert.AreEqual(3, field.Arguments.Count);
+            Assert.HasCount(3, field.Arguments);
             Assert.AreEqual("id", field.Arguments[0].Name.Value);
             Assert.AreEqual("ID", field.Arguments[0].Type.NamedType().Name.Value);
             Assert.IsTrue(field.Arguments[0].Type.IsNonNullType());
@@ -898,7 +898,7 @@ type Bar @model(name:""Bar""){
             (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
             InputValueDefinitionNode inputArg = field.Arguments[2];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
 
             Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
@@ -931,7 +931,7 @@ type Bar @model(name:""Bar""){
             (DocumentNode mutationRoot, FieldDefinitionNode field) = GenerateTestMutationFieldNodes(gql);
             InputValueDefinitionNode inputArg = field.Arguments[2];
             InputObjectTypeDefinitionNode inputObj = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is InputObjectTypeDefinitionNode node && node.Name == inputArg.Type.NamedType().Name);
-            Assert.AreEqual(2, inputObj.Fields.Count);
+            Assert.HasCount(2, inputObj.Fields);
 
             Assert.AreEqual("id", inputObj.Fields[0].Name.Value);
             Assert.AreEqual("ID", inputObj.Fields[0].Type.NamedType().Name.Value);
@@ -975,15 +975,15 @@ type Baz @model(name:""Baz""){
                     );
             ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
             FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
-            Assert.AreEqual(1, field.Arguments.Count);
+            Assert.HasCount(1, field.Arguments);
 
             InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
-            Assert.AreEqual(2, argType.Fields.Count);
+            Assert.HasCount(2, argType.Fields);
             Assert.AreEqual("id", argType.Fields[0].Name.Value);
             Assert.AreEqual("baz", argType.Fields[1].Name.Value);
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(1, "int", "Int")]
         [DataRow("test", "string", "String")]
         [DataRow(true, "boolean", "Boolean")]
@@ -1058,7 +1058,7 @@ type Foo @model(name:""Foo"") {{
         /// <param name="singularName">Singular name provided by the user</param>
         /// <param name="pluralName">Plural name provided by the user</param>
         /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, null, null, new string[] { "People" },
             DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation disabled")]
         [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" },
@@ -1119,7 +1119,7 @@ type Foo @model(name:""Foo"") {{
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
             Assert.IsNotNull(mutation);
 
-            Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
+            Assert.HasCount(totalExpectedMutations, mutation.Fields);
 
             for (int i = 0; i < entityNames.Length; i++)
             {
@@ -1172,7 +1172,7 @@ type Foo @model(name:""Foo"") {{
         /// <param name="singularName">Singular name provided by the user</param>
         /// <param name="pluralName">Plural name provided by the user</param>
         /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, null, null, new string[] { "People" }, new string[] { "Peoples" },
             DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation enabled")]
         [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" },
@@ -1228,7 +1228,7 @@ type Foo @model(name:""Foo"") {{
             // 2. 1 Update mutation
             // 3. 1 Delete mutation
             int totalExpectedMutations = 4 * entityNames.Length;
-            Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
+            Assert.HasCount(totalExpectedMutations, mutation.Fields);
 
             for (int i = 0; i < entityNames.Length; i++)
             {
@@ -1275,7 +1275,7 @@ type Foo @model(name:""Foo"") {{
         /// <param name="operations">Collection of operations denoted by their enum value, for CreateStubEntityPermissionsMap() </param>
         /// <param name="permissionOperations">Collection of operations denoted by their string value, for GenerateStoredProcedureEntity()</param>
         /// <param name="expectsMutationField">Whether MutationBuilder will generate a mutation field for the GraphQL schema.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(GraphQLOperation.Mutation, new[] { EntityActionOperation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since all metadata is valid")]
         [DataRow(null, new[] { EntityActionOperation.Execute }, new[] { "execute" }, true, DisplayName = "Mutation field generated since default operation is mutation.")]
         [DataRow(GraphQLOperation.Mutation, new[] { EntityActionOperation.Read }, new[] { "read" }, false, DisplayName = "Mutation field not generated because invalid permissions were supplied")]
@@ -1344,7 +1344,7 @@ type Foo @model(name:""Foo"") {{
                 }
                 else
                 {
-                    Assert.IsTrue(mutationRoot.Definitions.Count == 0, message: FIELDNOTFOUND_ERROR);
+                    Assert.IsEmpty(mutationRoot.Definitions, message: FIELDNOTFOUND_ERROR);
                 }
             }
         }

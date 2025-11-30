@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/Configs/">
+    <File Path="../schemas/dab.draft.schema.json" />
+    <File Path="Service.Tests/schema.gql" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Project Path="Aspire.AppHost/Aspire.AppHost.csproj" />
+  <Project Path="Auth/Azure.DataApiBuilder.Auth.csproj" />
+  <Project Path="Azure.DataApiBuilder.Mcp/Azure.DataApiBuilder.Mcp.csproj" />
+  <Project Path="Cli.Tests/Cli.Tests.csproj" />
+  <Project Path="Cli/Cli.csproj" />
+  <Project Path="Config/Azure.DataApiBuilder.Config.csproj" />
+  <Project Path="Core/Azure.DataApiBuilder.Core.csproj" />
+  <Project Path="Product/Azure.DataApiBuilder.Product.csproj" />
+  <Project Path="Service.GraphQLBuilder/Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
+  <Project Path="Service.Tests/Azure.DataApiBuilder.Service.Tests.csproj" />
+  <Project Path="Service/Azure.DataApiBuilder.Service.csproj" />
+</Solution>

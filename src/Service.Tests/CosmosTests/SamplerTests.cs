@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// maximum days are not specified. It checks that the sampling logic correctly handles the specified count and optionally applies
         /// date-based filtering based on the <c>maxDays</c> parameter.
         /// </remarks>
-        [TestMethod(displayName: "TopNExtractor Scenarios")]
+        [TestMethod(DisplayName = "TopNExtractor Scenarios")]
         [DataRow(1, 0, 1, DisplayName = "Retrieve 1 record when max days are not specified as count is set as 1.")]
         [DataRow(5, null, 5, DisplayName = "Retrieve 5 records when max days are null as count is set as 5")]
         [DataRow(5, 2, 3, DisplayName = "Retrieve 3 records when max days configured as 2 as we should get 2 records from last 2 days and 1 record from today. Hence 3 records")]
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// This test case ensures that the <c>EligibleDataSampler</c> handles partition-based sampling correctly with various configurations.
         /// It verifies that the sampler correctly applies partition key paths, record limits per partition, and date-based filters as specified.
         /// </remarks>
-        [TestMethod(displayName: "EligibleDataSampler Scenarios")]
+        [TestMethod(DisplayName = "EligibleDataSampler Scenarios")]
         [DataRow("/name", 1, 0, 9, DisplayName = "Retrieve 1 record per partition, ignoring day-based filtering. It will return total 9 records because we have 9 partitions")]
         [DataRow("/name", 2, 0, 15, DisplayName = "Retrieve 2 records per partition, ignoring day-based filtering. It will return 15 records i.e. total number of records available")] // calculation wise, it should have returned 18 (i.e. 2 * 9 partitions) records but we have total 15 records available, hence returning that.
         [DataRow("/name", 2, 1, 2, DisplayName = "Retrieve 2 records per partition, filtering for 1 day old records.It will return 2 records from 2 partitions")]
@@ -172,13 +172,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             if (partitionKeyPath == "anotherPojo/anotherProp")
             {
-                Assert.AreEqual(2, result.Count);
+                Assert.HasCount(2, result);
                 Assert.AreEqual("anotherPojo", result[0]);
                 Assert.AreEqual("anotherProp", result[1]);
             }
             else
             {
-                Assert.AreEqual(1, result.Count);
+                Assert.HasCount(1, result);
                 Assert.AreEqual(partitionKeyPath, result[0]);
             }
 
@@ -194,10 +194,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <param name="expectedResultCount">The expected number of records returned by the sampler.</param>
         /// <remarks>
         /// This test case ensures that the <c>TimePartitionedSampler</c> accurately handles various configurations for time-based sampling. 
-        /// It verifies the sampler’s ability to manage different group counts and record limits, as well as its handling of optional day-based filtering. 
+        /// It verifies the samplerâ€™s ability to manage different group counts and record limits, as well as its handling of optional day-based filtering. 
         /// The test cases also include scenarios where records are not evenly distributed across time-based groups.
         /// </remarks>
-        [TestMethod(displayName: "TimePartitionedSampler Scenarios")]
+        [TestMethod(DisplayName = "TimePartitionedSampler Scenarios")]
         [DataRow(5, 1, 0, 5, DisplayName = "Retrieve 1 record, if it is allowed to fetch 1 item from a group and there are 5 groups (or time range)")]
         [DataRow(1, 10, 0, 10, DisplayName = "Retrieve 10 records, if it is allowed to fetch 10 item from a group and there is only 1 group.")]
         [DataRow(null, 1, 0, 10, DisplayName = "Retrieve 10 records, if 1 item is allowed to fetch from each group and number of groups is 10 (i.e default)")]

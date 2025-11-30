@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         }
 
         /// <inheritdoc />
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("typeid", 1, 3, "", "", false,
             DisplayName = "Test after token for primary key with mapped name.")]
         [DataRow("typeid", 4, 6, "", "", true,
@@ -71,7 +71,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for bytearray values.")]
         [DataRow("bytearray_types", "\"q83vASM=\"", "", 1, "", true,
             DisplayName = "Test after token for bytearray values for last page.")]
-        [TestMethod]
         public override async Task RequestAfterTokenOnly(
             string exposedFieldName,
             object afterValue,
@@ -90,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         }
 
         /// <inheritdoc />
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(1, DisplayName = "1 item per page")]
         [DataRow(2, DisplayName = "2 items per page")]
         [DataRow(19, DisplayName = "19 items per page")]

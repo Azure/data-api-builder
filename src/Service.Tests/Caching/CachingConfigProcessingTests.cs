@@ -41,7 +41,7 @@ public class CachingConfigProcessingTests
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 5 }", true, DEFAULT_CACHE_TTL_SECONDS, true, DisplayName = "EntityCacheOptions provided: provided values used and userdefined flag set to true")]
     [DataRow(@",""cache"": { ""enabled"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "EntityCacheOptions.Enabled set to null results in (default) disabled entity cache.")]
     [DataRow(@",""cache"": { ""enabled"": false, ""ttl-seconds"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "EntityCacheOptions.TtlSeconds set to null results in (default) ttl value.")]
-    [DataTestMethod]
+    [TestMethod]
     public void EntityCacheOptionsDeserialization_ValidJson(
         string entityCacheConfig,
         bool expectCacheEnabled,
@@ -89,7 +89,7 @@ public class CachingConfigProcessingTests
     [DataRow(@",""cache"": 0", DisplayName = "EntityCacheOptions property set to 0 should fail because it's not a JSON object.")]
     [DataRow(@",""cache"": true", DisplayName = "EntityCacheOptions property set to true should fail because it's not a JSON object.")]
     [DataRow(@",""cache"": false", DisplayName = "EntityCacheOptions property set to false should fail because it's not a JSON object.")]
-    [DataTestMethod]
+    [TestMethod]
     public void EntityCacheOptionsDeserialization_InvalidValues(string entityCacheConfig)
     {
         // Arrange
@@ -120,7 +120,7 @@ public class CachingConfigProcessingTests
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 5 }", true, DEFAULT_CACHE_TTL_SECONDS, true, DisplayName = "GlobalCacheOptions provided: provided values used and userdefined flag set to true")]
     [DataRow(@",""cache"": { ""enabled"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions.Enabled set to null results in (default) disabled entity cache.")]
     [DataRow(@",""cache"": { ""enabled"": false, ""ttl-seconds"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions.TtlSeconds set to null results in (default) ttl value.")]
-    [DataTestMethod]
+    [TestMethod]
     public void GlobalCacheOptionsDeserialization_ValidValues(
         string globalCacheConfig,
         bool expectCacheEnabled,
@@ -167,7 +167,7 @@ public class CachingConfigProcessingTests
     [DataRow(@",""cache"": 0", DisplayName = "EntityCacheOptions property set to 0 should fail because it's not a JSON object.")]
     [DataRow(@",""cache"": true", DisplayName = "EntityCacheOptions property set to true should fail because it's not a JSON object.")]
     [DataRow(@",""cache"": false", DisplayName = "EntityCacheOptions property set to false should fail because it's not a JSON object.")]
-    [DataTestMethod]
+    [TestMethod]
     public void GlobalCacheOptionsDeserialization_InvalidValues(string globalCacheConfig)
     {
         // Arrange
@@ -193,7 +193,7 @@ public class CachingConfigProcessingTests
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 15 }", @",""cache"": { ""enabled"": true }", 15, 5, DisplayName = "GlobalTTL not yet honored over unset entity ttl. This behavior will be in runtime behavior and not in config (de)serialization.")]
     [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", DEFAULT_CACHE_TTL_SECONDS, 10, DisplayName = "EntityCacheTTL honored over unset global ttl.")]
     [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": true }", DEFAULT_CACHE_TTL_SECONDS, DEFAULT_CACHE_TTL_SECONDS, DisplayName = "Default ttl honored for both global and entity cache config ttl.")]
-    [DataTestMethod]
+    [TestMethod]
     public void GlobalCacheOptionsOverridesEntityCacheOptions(string globalCacheConfig, string entityCacheConfig, int expectedGlobalCacheTtl, int expectedEntityCacheTtl)
     {
         // Arrange
@@ -227,7 +227,7 @@ public class CachingConfigProcessingTests
     /// <param name="userDefinedTtl">Expected number of seconds defined for ttl-seconds.</param>
     [DataRow(true, 10, DisplayName = "TTL explicitly set to non-default value and should be serialized.")]
     [DataRow(true, 5, DisplayName = "TTL explicitly set to default value and should be serialized.")]
-    [DataTestMethod]
+    [TestMethod]
     public void UserDefinedTtlWrittenToSerializedJsonConfigFile(bool expectIsUserDefinedTtl, int userDefinedTtl)
     {
         // Arrange
@@ -312,7 +312,7 @@ public class CachingConfigProcessingTests
     /// <param name="cacheConfig">JSON cache configuration. Can be left empty to indicate no caching config.</param>
     [DataRow(@",""cache"": { }", DisplayName = "Empty cache object should be serialized to config file with default enabled:false and no ttl-seconds property/value.")]
     [DataRow(@",""cache"": { ""enabled"": true }", DisplayName = "Cache object with no users defined ttl should be serialized to config file without ttl-seconds property/value.")]
-    [DataTestMethod]
+    [TestMethod]
     public void DefaultTtlNotWrittenToSerializedJsonConfigFile(string cacheConfig)
     {
         // Arrange

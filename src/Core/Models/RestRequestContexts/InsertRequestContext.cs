@@ -20,12 +20,12 @@ public class InsertRequestContext : RestRequestContext
         string entityName,
         DatabaseObject dbo,
         JsonElement insertPayloadRoot,
-        EntityActionOperation operationType)
+        EntityActionOperation HttpMethod)
         : base(entityName, dbo)
     {
+        this.HttpMethod = HttpMethod;
         FieldsToBeReturned = new();
         PrimaryKeyValuePairs = new();
-        OperationType = operationType;
 
         PopulateFieldValuePairsInBody(insertPayloadRoot);
         // We don't support InsertMany as yet.

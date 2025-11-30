@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -92,7 +93,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
 
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>())).Returns(true);
+            mockLoader
+                .Setup(x => x.LoadKnownConfigAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(mockConfig1);
 
             RuntimeConfigProvider provider = new(mockLoader.Object);
 
@@ -114,8 +117,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // client is mapped as belonging to the sql data source.
             // customer is mapped as belonging to the cosmos data source.
-            Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should be invoked for multi-source query as an entity belongs to sql db.");
-            Assert.AreEqual(1, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should be invoked for multi-source query as an entity belongs to cosmos db.");
+            Assert.HasCount(1, sqlQueryEngine.Invocations, "Sql query engine should be invoked for multi-source query as an entity belongs to sql db.");
+            Assert.HasCount(1, cosmosQueryEngine.Invocations, "Cosmos query engine should be invoked for multi-source query as an entity belongs to cosmos db.");
 
             OperationResult singleResult = result.ExpectOperationResult();
             Assert.IsNull(singleResult.Errors, "There should be no errors in processing of multisource query.");
@@ -161,7 +164,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
 
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>())).Returns(true);
+            mockLoader
+                .Setup(x => x.LoadKnownConfigAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(mockConfig1);
 
             RuntimeConfigProvider provider = new(mockLoader.Object);
 
@@ -215,13 +220,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // customer is mapped as belonging to the cosmos data source.
             await restService.ExecuteAsync(ENTITY_NAME_1, EntityActionOperation.Read, null);
 
-            Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should be invoked for multi-source query as entity belongs to sql db.");
-            Assert.AreEqual(0, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should not be invoked for multi-source query as entity belongs to sql db.");
+            Assert.HasCount(1, sqlQueryEngine.Invocations, "Sql query engine should be invoked for multi-source query as entity belongs to sql db.");
+            Assert.IsEmpty(cosmosQueryEngine.Invocations, "Cosmos query engine should not be invoked for multi-source query as entity belongs to sql db.");
             sqlQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITY_NAME_1)), Times.Once);
 
             IActionResult result = await restService.ExecuteAsync(ENTITY_NAME_2, EntityActionOperation.Read, null);
-            Assert.AreEqual(1, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should be invoked for multi-source query as entity belongs to cosmos db.");
-            Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should not be invoked again for multi-source query as entity2 belongs to cosmos db.");
+            Assert.HasCount(1, cosmosQueryEngine.Invocations, "Cosmos query engine should be invoked for multi-source query as entity belongs to cosmos db.");
+            Assert.HasCount(1, sqlQueryEngine.Invocations, "Sql query engine should not be invoked again for multi-source query as entity2 belongs to cosmos db.");
             cosmosQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITY_NAME_2)), Times.Once);
         }
 
@@ -261,7 +266,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                );
 
             Mock<RuntimeConfigLoader> mockLoader = new(null, null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig, It.IsAny<bool>())).Returns(true);
+            mockLoader
+                .Setup(x => x.LoadKnownConfigAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(mockConfig);
             mockLoader.Object.RuntimeConfig = mockConfig;
 
             RuntimeConfigProvider provider = new(mockLoader.Object);

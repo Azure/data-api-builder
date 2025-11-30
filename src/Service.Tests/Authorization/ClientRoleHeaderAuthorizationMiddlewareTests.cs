@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="clientRoleHeader">Role name to include in client role header.</param>
         /// <param name="expectAuthorized">Expect HTTP 200 vs. 403 response code.</param>
         /// <returns></returns>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(false, "", "Anonymous", true,
             DisplayName = "Anonymous Request w/ 'anonymous client role header -> 200")]
         [DataRow(false, "", "PrivateRole", true,

@@ -110,7 +110,7 @@ query ($id: ID, $partitionKeyValue: String) {
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(AuthorizationHelpers.GRAPHQL_AUTHORIZATION_ERROR));
+            Assert.Contains(AuthorizationHelpers.GRAPHQL_AUTHORIZATION_ERROR, errorMessage);
         }
 
         [TestMethod]
@@ -125,7 +125,7 @@ query ($id: ID, $partitionKeyValue: String) {
 }", new() { { "id", id }, { "partitionKeyValue", id } });
 
             string[] tags = response.GetProperty("tags").Deserialize<string[]>();
-            Assert.AreEqual(2, tags.Length);
+            Assert.HasCount(2, tags);
             CollectionAssert.AreEqual(new[] { "tag1", "tag2" }, tags);
         }
 
@@ -543,7 +543,7 @@ mutation {{
                                    );
 
                 // Asserting cached data is returned
-                Assert.IsTrue(secondQueryResponse.GetProperty("name").GetString() == name, "Query didn't return cached value");
+                Assert.AreEqual(name, secondQueryResponse.GetProperty("name").GetString(), "Query didn't return cached value");
             }
         }
 
@@ -592,8 +592,8 @@ mutation {{
                 JObject lastItemFromSecondQuery = await ExecutePaginatedQueryAndReturnLastPage(server, client);
 
                 // Assert data returned from First query with second cached query
-                Assert.IsTrue(lastItemFromFirstQuery.GetValue("id").ToString() == lastItemFromSecondQuery.GetValue("id").ToString(), "Same Page sequence not returned from cached response");
-                Assert.IsTrue(lastItemFromFirstQuery.GetValue("name").ToString() == lastItemFromSecondQuery.GetValue("name").ToString(), "Cached value not returned from second request");
+                Assert.AreEqual(lastItemFromSecondQuery.GetValue("id").ToString(), lastItemFromFirstQuery.GetValue("id").ToString(), "Same Page sequence not returned from cached response");
+                Assert.AreEqual(lastItemFromSecondQuery.GetValue("name").ToString(), lastItemFromFirstQuery.GetValue("name").ToString(), "Cached value not returned from second request");
             }
         }
 

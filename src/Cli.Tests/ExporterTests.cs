@@ -119,7 +119,7 @@ public class ExporterTests
 
         // Act & Assert
         // Verify that the method throws an exception when both endpoints fail
-        Exception exception = Assert.ThrowsException<Exception>(() =>
+        Exception exception = Assert.Throws<Exception>(() =>
             mockExporter.Object.ExportGraphQLFromDabService(runtimeConfig, mockLogger.Object));
 
         Assert.AreEqual("Both HTTP and HTTPS endpoint failed", exception.Message);

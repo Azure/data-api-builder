@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
               httpContext: httpContext,
-              operationType: EntityActionOperation.Update)
+              HttpMethod: EntityActionOperation.Update)
         {
             UpdateOperations = new();
             OutputColumns = GenerateOutputColumns();
@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   gQLFilterParser: gQLFilterParser,
                   entityName: entityName,
                   httpContext: httpContext,
-                  operationType: EntityActionOperation.Update)
+                  HttpMethod: EntityActionOperation.Update)
         {
             UpdateOperations = new();
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();

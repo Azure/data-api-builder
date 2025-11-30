@@ -24,7 +24,7 @@ namespace Cli.Tests
         /// Testing to check OpenTelemetry options are correctly added to the config.
         /// Verifying scenarios such as enabling/disabling OpenTelemetry and providing a valid/empty endpoint.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(CliBool.True, "", false, DisplayName = "Fail to add OpenTelemetry with empty endpoint.")]
         [DataRow(CliBool.True, "http://localhost:4317", true, DisplayName = "Successfully adds OpenTelemetry with valid endpoint")]
         [DataRow(CliBool.False, "http://localhost:4317", true, DisplayName = "Successfully adds OpenTelemetry but disabled")]
@@ -68,7 +68,7 @@ namespace Cli.Tests
         /// It should add OpenTelemetry if telemetry section is empty
         /// or overwrite the existing OpenTelemetry with the given OpenTelemetry options.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow(true, DisplayName = "Add OpenTelemetry when telemetry section is empty.")]
         [DataRow(false, DisplayName = "Overwrite OpenTelemetry when telemetry section already exists.")]
         public void TestAddOpenTelemetryWhenTelemetryAlreadyExists(bool isEmptyTelemetry)
@@ -93,7 +93,7 @@ namespace Cli.Tests
             else
             {
                 Assert.IsNotNull(config.Runtime.Telemetry.OpenTelemetry);
-                Assert.AreEqual(true, config.Runtime.Telemetry.OpenTelemetry.Enabled);
+                Assert.IsTrue(config.Runtime.Telemetry.OpenTelemetry.Enabled);
                 Assert.AreEqual("http://localhost:4317", config.Runtime.Telemetry.OpenTelemetry.Endpoint);
             }
 

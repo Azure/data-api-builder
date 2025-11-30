@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// from route.</param>
         /// <param name="expectedPrimaryKeyRoute">The primary key route we
         /// expect to parse from route.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("rest-api/Book/id/1", "/rest-api", "Book", "id/1")]
         [DataRow("rest api/Book/id/1", "/rest api", "Book", "id/1")]
         [DataRow(" rest_api/commodities/categoryid/1/pieceid/1", "/ rest_api", "commodities", "categoryid/1/pieceid/1")]
@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="route">The route to be parsed.</param>
         /// <param name="path">An invalid path for the given route.</param>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow("/foo/bar", "foo")]
         [DataRow("food/Book", "foo")]
         [DataRow("\"foo\"", "foo")]
@@ -89,8 +89,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException e)
             {
                 Assert.AreEqual(e.Message, $"Invalid Path for route: {route}.");
-                Assert.AreEqual(e.StatusCode, HttpStatusCode.BadRequest);
-                Assert.AreEqual(e.SubStatusCode, DataApiBuilderException.SubStatusCodes.BadRequest);
+                Assert.AreEqual(HttpStatusCode.BadRequest, e.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.BadRequest, e.SubStatusCode);
             }
             catch
             {

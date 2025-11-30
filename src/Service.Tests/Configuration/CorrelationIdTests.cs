@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <summary>
         /// Verify correct passed back correlation id in response if request headers pass in one
         /// </summary>
-        [TestMethod("Response header returns correlation Id if request headers pass in one.")]
+        [TestMethod(DisplayName = "Response header returns correlation Id if request headers pass in one.")]
         public async Task TestResponseReturnsCorrelationIdFromRequest()
         {
             Guid exptectedCorrelationId = Guid.NewGuid();
@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <summary>
         /// Verify correct generated a correlation id in response if request headers doesn't pass in one
         /// </summary>
-        [TestMethod("Response header returns a generated correlation Id if request headers doesn't have one.")]
+        [TestMethod(DisplayName = "Response header returns a generated correlation Id if request headers doesn't have one.")]
         public async Task TestResponseReturnsCorrelationIdIfNonePasses()
         {
             IHost host = await CreateCorrelationIdConfiguredWebHost();
@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <summary>
         /// Verify correct generated a correlation id if request headers passed in an invalid one
         /// </summary>
-        [TestMethod("Response header returns a generated correlation Id if request headers passed in invalid guid.")]
+        [TestMethod(DisplayName = "Response header returns a generated correlation Id if request headers passed in invalid guid.")]
         public async Task TestResponseReturnsCorrelationIdIfInvalidGuidPassed()
         {
             IHost host = await CreateCorrelationIdConfiguredWebHost();

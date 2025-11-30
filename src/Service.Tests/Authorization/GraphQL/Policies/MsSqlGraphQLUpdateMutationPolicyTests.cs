@@ -53,7 +53,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL.Policies.Muta
         /// <param name="resultsExpected"></param>
         /// <returns></returns>
         [TestMethod]
-        [DataTestMethod]
         [DataRow("policy_tester_noupdate", true, "Could not find item with", false, DisplayName = "Update Mutation Prohibited by Policy")]
         [DataRow("policy_tester_update_noread", true, "The current user is not authorized to access this resource", true, DisplayName = "Update Mutation Succeeds, Disallowed Post-Update READ")]
         public async Task UpdateMutation_ErrorMessage_Policy(string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete)
@@ -81,7 +80,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL.Policies.Muta
         /// <param name="resultsExpected"></param>
         /// <returns></returns>
         [TestMethod]
-        [DataTestMethod]
         [DataRow("anonymous", false, null, true, 1, DisplayName = "Anonymous Update Mutation Succeeds, Disallowed Post-Update READ")]
         [DataRow("anonymous", false, null, true, 2, DisplayName = "Anonymous Update Mutation Succeeds, Allowed Post-Update READ")]
         public async Task UpdateMutation_Anonymous_Policy(string roleName, bool isAuthenticated, string expectedErrorMessage, bool mutationShouldComplete, int id)

@@ -239,7 +239,49 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             Assert.IsTrue(supersetDoc.Components.Schemas["book"].Properties.ContainsKey("title"), "Superset should have 'title' from writer");
         }
 
-        private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions)
+        /// <summary>
+        /// Validates that when request-body-strict is true (default), request body schemas
+        /// have additionalProperties set to false.
+        /// </summary>
+        [TestMethod]
+        public async Task RequestBodyStrict_True_DisallowsExtraFields()
+        {
+            OpenApiDocument doc = await GenerateDocumentWithPermissions(
+                OpenApiTestBootstrap.CreateBasicPermissions(),
+                requestBodyStrict: true);
+
+            // Request body schemas should have additionalProperties = false
+            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book_NoAutoPK"), "POST request body schema should exist");
+            Assert.IsFalse(doc.Components.Schemas["book_NoAutoPK"].AdditionalPropertiesAllowed, "POST request body should not allow extra fields in strict mode");
+
+            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book_NoPK"), "PUT/PATCH request body schema should exist");
+            Assert.IsFalse(doc.Components.Schemas["book_NoPK"].AdditionalPropertiesAllowed, "PUT/PATCH request body should not allow extra fields in strict mode");
+
+            // Response body schema should allow extra fields (not a request body)
+            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book"), "Response body schema should exist");
+            Assert.IsTrue(doc.Components.Schemas["book"].AdditionalPropertiesAllowed, "Response body should allow extra fields");
+        }
+
+        /// <summary>
+        /// Validates that when request-body-strict is false, request body schemas
+        /// have additionalProperties set to true.
+        /// </summary>
+        [TestMethod]
+        public async Task RequestBodyStrict_False_AllowsExtraFields()
+        {
+            OpenApiDocument doc = await GenerateDocumentWithPermissions(
+                OpenApiTestBootstrap.CreateBasicPermissions(),
+                requestBodyStrict: false);
+
+            // Request body schemas should have additionalProperties = true
+            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book_NoAutoPK"), "POST request body schema should exist");
+            Assert.IsTrue(doc.Components.Schemas["book_NoAutoPK"].AdditionalPropertiesAllowed, "POST request body should allow extra fields in non-strict mode");
+
+            Assert.IsTrue(doc.Components.Schemas.ContainsKey("book_NoPK"), "PUT/PATCH request body schema should exist");
+            Assert.IsTrue(doc.Components.Schemas["book_NoPK"].AdditionalPropertiesAllowed, "PUT/PATCH request body should allow extra fields in non-strict mode");
+        }
+
+        private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions, bool? requestBodyStrict = null)
         {
             Entity entity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
@@ -251,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 Relationships: null);
 
             RuntimeEntities entities = new(new Dictionary<string, Entity> { { "book", entity } });
-            return await OpenApiTestBootstrap.GenerateOpenApiDocumentAsync(entities, CONFIG_FILE, DB_ENV);
+            return await OpenApiTestBootstrap.GenerateOpenApiDocumentAsync(entities, CONFIG_FILE, DB_ENV, requestBodyStrict);
         }
     }
 }

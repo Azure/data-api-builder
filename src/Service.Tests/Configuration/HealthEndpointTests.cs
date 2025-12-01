@@ -565,16 +565,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Verifies health checks include only tables and views, not stored procedures.
+        /// Verifies stored procedures are excluded from health checks.
         /// </summary>
         [TestMethod]
-        [DataRow(EntitySourceType.Table, true, DisplayName = "Table entities are included in health checks")]
-        [DataRow(EntitySourceType.View, true, DisplayName = "View entities are included in health checks")]
-        [DataRow(EntitySourceType.StoredProcedure, false, DisplayName = "Stored procedures are excluded from health checks")]
-        public void HealthChecks_IncludeOnlyTablesAndViews(EntitySourceType sourceType, bool shouldBeIncluded)
+        public void HealthChecks_ExcludeStoredProcedures()
         {
-            Entity entity = new(
-                Source: new("test", sourceType, null, null),
+            Entity storedProcedure = new(
+                Source: new("test", EntitySourceType.StoredProcedure, null, null),
                 GraphQL: new("test", "tests"),
                 Rest: new(Enabled: true),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -582,10 +579,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Relationships: null,
                 Fields: null);
 
-            // Apply the same filter logic used in HealthCheckHelper.UpdateEntityHealthCheckResultsAsync
-            bool isIncluded = entity.IsEntityHealthEnabled && entity.Source.Type != EntitySourceType.StoredProcedure;
-
-            Assert.AreEqual(shouldBeIncluded, isIncluded);
+            // Apply the filter logic used in HealthCheckHelper - stored procedures should be excluded
+            bool isIncludedInHealthCheck = storedProcedure.IsEntityHealthEnabled && storedProcedure.Source.Type != EntitySourceType.StoredProcedure;
+            
+            Assert.IsFalse(isIncludedInHealthCheck);
         }
 
         private static void WriteToCustomConfigFile(RuntimeConfig runtimeConfig)

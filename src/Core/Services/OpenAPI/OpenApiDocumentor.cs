@@ -266,33 +266,43 @@ namespace Azure.DataApiBuilder.Core.Services
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: true,
+                        configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
                     Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
                     string pkPathComponents = pkComponents.Item1;
                     string fullPathComponent = entityBasePathComponent + pkPathComponents;
 
-                    OpenApiPathItem openApiPkPathItem = new()
+                    // Only add path if there are operations available
+                    if (pkOperations.Count > 0)
                     {
-                        Operations = pkOperations,
-                        Parameters = pkComponents.Item2
-                    };
+                        OpenApiPathItem openApiPkPathItem = new()
+                        {
+                            Operations = pkOperations,
+                            Parameters = pkComponents.Item2
+                        };
 
-                    pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                        pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                    }
 
                     // Operations excluding primary key
                     Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: false,
+                        configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
-                    OpenApiPathItem openApiPathItem = new()
+                    // Only add path if there are operations available
+                    if (operations.Count > 0)
                     {
-                        Operations = operations
-                    };
+                        OpenApiPathItem openApiPathItem = new()
+                        {
+                            Operations = operations
+                        };
 
-                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    }
                 }
             }
 
@@ -308,6 +318,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// a path containing primary key parameters.
         /// TRUE: GET (one), PUT, PATCH, DELETE
         /// FALSE: GET (Many), POST</param>
+        /// <param name="configuredRestOperations">Dictionary indicating which operations are available based on permissions.</param>
         /// <param name="tags">Tags denoting how the operations should be categorized.
         /// Typically one tag value, the entity's REST path.</param>
         /// <returns>Collection of operation types and associated definitions.</returns>
@@ -315,6 +326,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityName,
             SourceDefinition sourceDefinition,
             bool includePrimaryKeyPathComponent,
+            Dictionary<OperationType, bool> configuredRestOperations,
             List<OpenApiTag> tags)
         {
             Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
@@ -325,57 +337,75 @@ namespace Azure.DataApiBuilder.Core.Services
                 // which is returned when using Enum.ToString("D").
                 // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
                 // It will only contain $select query parameter to allow the user to specify which fields to return.
-                OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
-                AddQueryParameters(getOperation.Parameters);
-                getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Get, getOperation);
+                if (configuredRestOperations[OperationType.Get])
+                {
+                    OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
+                    AddQueryParameters(getOperation.Parameters);
+                    getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                    openApiPathItemOperations.Add(OperationType.Get, getOperation);
+                }
 
                 // PUT and PATCH requests have the same criteria for decided whether a request body is required.
                 bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
 
                 // PUT requests must include the primary key(s) in the URI path and exclude from the request body,
                 // independent of whether the PK(s) are autogenerated.
-                OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
-                putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
-                putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Put, putOperation);
+                if (configuredRestOperations[OperationType.Put])
+                {
+                    OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
+                    putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                    putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                    putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                    openApiPathItemOperations.Add(OperationType.Put, putOperation);
+                }
 
                 // PATCH requests must include the primary key(s) in the URI path and exclude from the request body,
                 // independent of whether the PK(s) are autogenerated.
-                OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
-                patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
-                patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                if (configuredRestOperations[OperationType.Patch])
+                {
+                    OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
+                    patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                    patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                    patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                    openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                }
 
-                OpenApiOperation deleteOperation = CreateBaseOperation(description: DELETE_DESCRIPTION, tags: tags);
-                deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
-                openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
+                if (configuredRestOperations[OperationType.Delete])
+                {
+                    OpenApiOperation deleteOperation = CreateBaseOperation(description: DELETE_DESCRIPTION, tags: tags);
+                    deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
+                    openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
+                }
 
                 return openApiPathItemOperations;
             }
             else
             {
                 // Primary key(s) are not included in the URI paths of the GET (all) and POST operations.
-                OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
-                AddQueryParameters(getAllOperation.Parameters);
-                getAllOperation.Responses.Add(
-                    HttpStatusCode.OK.ToString("D"),
-                    CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
-                openApiPathItemOperations.Add(OperationType.Get, getAllOperation);
+                if (configuredRestOperations[OperationType.Get])
+                {
+                    OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
+                    AddQueryParameters(getAllOperation.Parameters);
+                    getAllOperation.Responses.Add(
+                        HttpStatusCode.OK.ToString("D"),
+                        CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
+                    openApiPathItemOperations.Add(OperationType.Get, getAllOperation);
+                }
 
-                // The POST body must include fields for primary key(s) which are not autogenerated because a value must be supplied
-                // for those fields. {entityName}_NoAutoPK represents the schema component which has all fields except for autogenerated primary keys.
-                // When no autogenerated primary keys exist, then all fields can be included in the POST body which is represented by the schema
-                // component: {entityName}.
-                string postBodySchemaReferenceId = DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
+                if (configuredRestOperations[OperationType.Post])
+                {
+                    // The POST body must include fields for primary key(s) which are not autogenerated because a value must be supplied
+                    // for those fields. {entityName}_NoAutoPK represents the schema component which has all fields except for autogenerated primary keys.
+                    // When no autogenerated primary keys exist, then all fields can be included in the POST body which is represented by the schema
+                    // component: {entityName}.
+                    string postBodySchemaReferenceId = DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
 
-                OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
-                postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
-                postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
-                openApiPathItemOperations.Add(OperationType.Post, postOperation);
+                    OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
+                    postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
+                    postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                    postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
+                    openApiPathItemOperations.Add(OperationType.Post, postOperation);
+                }
 
                 return openApiPathItemOperations;
             }
@@ -620,8 +650,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Returns collection of OpenAPI OperationTypes and associated flag indicating whether they are enabled
         /// for the engine's REST endpoint.
-        /// Acts as a helper for stored procedures where the runtime config can denote any combination of REST verbs
-        /// to enable.
+        /// For stored procedures, the available REST methods are determined by entity.Rest.Methods.
+        /// For tables and views, the available REST methods are determined by checking the entity's permissions
+        /// across all roles. Only operations that are available to at least one role are enabled.
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
@@ -680,14 +711,60 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                configuredOperations[OperationType.Get] = true;
-                configuredOperations[OperationType.Post] = true;
-                configuredOperations[OperationType.Put] = true;
-                configuredOperations[OperationType.Patch] = true;
-                configuredOperations[OperationType.Delete] = true;
+                // For tables and views, determine available operations based on permissions across all roles.
+                // An operation is available if at least one role has permission for it.
+                HashSet<EntityActionOperation> availableOperations = GetAvailableOperationsFromPermissions(entity!);
+
+                // Map permission operations to REST operations:
+                // Read -> GET, Create -> POST, Update -> PUT/PATCH, Delete -> DELETE
+                configuredOperations[OperationType.Get] = availableOperations.Contains(EntityActionOperation.Read);
+                configuredOperations[OperationType.Post] = availableOperations.Contains(EntityActionOperation.Create);
+                configuredOperations[OperationType.Put] = availableOperations.Contains(EntityActionOperation.Update);
+                configuredOperations[OperationType.Patch] = availableOperations.Contains(EntityActionOperation.Update);
+                configuredOperations[OperationType.Delete] = availableOperations.Contains(EntityActionOperation.Delete);
             }
 
             return configuredOperations;
+        }
+
+        /// <summary>
+        /// Returns the set of available operations for an entity by examining all permissions across all roles.
+        /// An operation is considered available if at least one role has permission for it.
+        /// The wildcard operation (*) expands to Create, Read, Update, and Delete.
+        /// </summary>
+        /// <param name="entity">The entity to examine permissions for.</param>
+        /// <returns>Set of available EntityActionOperations.</returns>
+        private static HashSet<EntityActionOperation> GetAvailableOperationsFromPermissions(Entity entity)
+        {
+            HashSet<EntityActionOperation> availableOperations = new();
+
+            if (entity?.Permissions is null)
+            {
+                return availableOperations;
+            }
+
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                if (permission.Actions is null)
+                {
+                    continue;
+                }
+
+                foreach (EntityAction action in permission.Actions)
+                {
+                    if (action.Action == EntityActionOperation.All)
+                    {
+                        // Wildcard (*) represents Create, Read, Update, Delete for tables/views
+                        availableOperations.UnionWith(EntityAction.ValidPermissionOperations);
+                    }
+                    else if (EntityAction.ValidPermissionOperations.Contains(action.Action))
+                    {
+                        availableOperations.Add(action.Action);
+                    }
+                }
+            }
+
+            return availableOperations;
         }
 
         /// <summary>

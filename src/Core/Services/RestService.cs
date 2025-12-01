@@ -438,6 +438,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// as the substring following the '/'.
         /// For example, a request route should be of the form
         /// {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+        /// or {SubDir}/.../{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// </summary>
         /// <param name="routeAfterPathBase">The request route (no '/' prefix) containing the entity path
         /// (and optionally primary key).</param>
@@ -448,26 +449,27 @@ namespace Azure.DataApiBuilder.Core.Services
 
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
-            // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
-            // this means we have a non-empty primary key route which we save. Otherwise, save
-            // primary key route as empty string. Entity Path will always be the element at index 0.
-            // ie: {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
-            // splits into [{EntityPath}] when there is an empty primary key route and into
-            // [{EntityPath}, {Primarykeyroute}] when there is a non-empty primary key route.
-            int maxNumberOfElementsFromSplit = 2;
-            string[] entityPathAndPKRoute = routeAfterPathBase.Split(new[] { '/' }, maxNumberOfElementsFromSplit);
-            string entityPath = entityPathAndPKRoute[0];
-            string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
+            // Split routeAfterPath to extract segments
+            string[] segments = routeAfterPathBase.Split('/');
 
-            if (!runtimeConfig.TryGetEntityNameFromPath(entityPath, out string? entityName))
+            // Try progressively longer paths until we find a match
+            // Start with the first segment, then first two, etc.
+            for (int i = 1; i <= segments.Length; i++)
             {
-                throw new DataApiBuilderException(
-                    message: $"Invalid Entity path: {entityPath}.",
-                    statusCode: HttpStatusCode.NotFound,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                string entityPath = string.Join("/", segments.Take(i));
+                if (runtimeConfig.TryGetEntityNameFromPath(entityPath, out string? entityName))
+                {
+                    // Found entity
+                    string primaryKeyRoute = i < segments.Length ? string.Join("/", segments.Skip(i)) : string.Empty;
+                    return (entityName!, primaryKeyRoute);
+                }
             }
 
-            return (entityName!, primaryKeyRoute);
+            // No entity found
+            throw new DataApiBuilderException(
+                message: $"Invalid Entity path: {segments[0]}.",
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
         /// <summary>

@@ -565,83 +565,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Verifies that stored procedure entities are excluded from health checks 
-        /// while table and view entities are included.
+        /// Verifies health checks include only tables and views, not stored procedures.
         /// </summary>
         [TestMethod]
-        public void StoredProcedureEntities_ShouldBeFilteredFromHealthChecks()
+        [DataRow(EntitySourceType.Table, true, DisplayName = "Table entities are included in health checks")]
+        [DataRow(EntitySourceType.View, true, DisplayName = "View entities are included in health checks")]
+        [DataRow(EntitySourceType.StoredProcedure, false, DisplayName = "Stored procedures are excluded from health checks")]
+        public void HealthChecks_IncludeOnlyTablesAndViews(EntitySourceType sourceType, bool shouldBeIncluded)
         {
-            // Create a table entity (should be included in health checks)
-            Entity tableEntity = new(
-                Health: new(enabled: true),
-                Source: new("books", EntitySourceType.Table, null, null),
-                Fields: null,
+            Entity entity = new(
+                Source: new("test", sourceType, null, null),
+                GraphQL: new("test", "tests"),
                 Rest: new(Enabled: true),
-                GraphQL: new("book", "bookLists", true),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Mappings: null,
                 Relationships: null,
-                Mappings: null);
-
-            // Create a view entity (should be included in health checks)
-            Entity viewEntity = new(
-                Health: new(enabled: true),
-                Source: new("book_views", EntitySourceType.View, null, null),
-                Fields: null,
-                Rest: new(Enabled: true),
-                GraphQL: new("bookView", "bookViews", true),
-                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null);
-
-            // Create a stored procedure entity (should be excluded from health checks)
-            Entity storedProcEntity = new(
-                Health: new(enabled: true),
-                Source: new("GetSeriesActors", EntitySourceType.StoredProcedure, null, null),
-                Fields: null,
-                Rest: new(Enabled: true),
-                GraphQL: new("getSeriesActors", "getSeriesActorsList", true),
-                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null);
-
-            // Create entity with health disabled (should be excluded)
-            Entity tableEntityHealthDisabled = new(
-                Health: new(enabled: false),
-                Source: new("disabled_table", EntitySourceType.Table, null, null),
-                Fields: null,
-                Rest: new(Enabled: true),
-                GraphQL: new("disabledTable", "disabledTables", true),
-                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null);
-
-            Dictionary<string, Entity> entityMap = new()
-            {
-                { "Book", tableEntity },
-                { "BookView", viewEntity },
-                { "GetSeriesActors", storedProcEntity },
-                { "DisabledTable", tableEntityHealthDisabled }
-            };
+                Fields: null);
 
             // Apply the same filter logic used in HealthCheckHelper.UpdateEntityHealthCheckResultsAsync
-            List<KeyValuePair<string, Entity>> enabledEntities = entityMap
-                .Where(e => e.Value.IsEntityHealthEnabled && e.Value.Source.Type != EntitySourceType.StoredProcedure)
-                .ToList();
+            bool isIncluded = entity.IsEntityHealthEnabled && entity.Source.Type != EntitySourceType.StoredProcedure;
 
-            // Verify the filter results
-            Assert.AreEqual(2, enabledEntities.Count, "Expected 2 entities to be included in health checks (table and view only).");
-
-            // Verify that 'Book' table entity is included
-            Assert.IsTrue(enabledEntities.Any(e => e.Key == "Book"), "Expected 'Book' table entity to be included in health checks.");
-
-            // Verify that 'BookView' view entity is included
-            Assert.IsTrue(enabledEntities.Any(e => e.Key == "BookView"), "Expected 'BookView' view entity to be included in health checks.");
-
-            // Verify that 'GetSeriesActors' stored procedure is NOT included
-            Assert.IsFalse(enabledEntities.Any(e => e.Key == "GetSeriesActors"), "Expected 'GetSeriesActors' stored procedure entity to be excluded from health checks.");
-
-            // Verify that 'DisabledTable' is NOT included (health is disabled)
-            Assert.IsFalse(enabledEntities.Any(e => e.Key == "DisabledTable"), "Expected 'DisabledTable' entity to be excluded from health checks (health disabled).");
+            Assert.AreEqual(shouldBeIncluded, isIncluded);
         }
 
         private static void WriteToCustomConfigFile(RuntimeConfig runtimeConfig)

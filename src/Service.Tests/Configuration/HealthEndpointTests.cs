@@ -565,9 +565,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Validates that stored procedure entities can be identified and filtered correctly.
-        /// This unit test validates the logic that stored procedures should be excluded from 
-        /// health checks because they require parameters and are not guaranteed to be deterministic.
+        /// Verifies that stored procedure entities are excluded from health checks 
+        /// while table and view entities are included.
         /// </summary>
         [TestMethod]
         public void StoredProcedureEntities_ShouldBeFilteredFromHealthChecks()

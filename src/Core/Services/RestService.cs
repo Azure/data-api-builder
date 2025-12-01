@@ -439,6 +439,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// For example, a request route should be of the form
         /// {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// or {SubDir}/.../{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+        /// 
+        /// Note: Uses shortest-prefix matching. When multiple entity paths could match,
+        /// the shortest matching path takes precedence. For example, if both "api" and
+        /// "api/books" are valid entity paths, a request to "/api/books/id/1" will match
+        /// "api" with primaryKeyRoute "books/id/1". Configure unique, non-overlapping
+        /// paths to avoid ambiguity.
         /// </summary>
         /// <param name="routeAfterPathBase">The request route (no '/' prefix) containing the entity path
         /// (and optionally primary key).</param>

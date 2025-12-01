@@ -124,9 +124,7 @@ public static class RuntimeConfigValidatorUtil
 
             if (_reservedUriCharsRgx.IsMatch(segment))
             {
-                errorMessage = "contains characters that are not allowed in URL paths. " +
-                    "Valid paths contain only alphanumeric characters, hyphens (-), and underscores (_), " +
-                    "with forward slashes (/) as path separators.";
+                errorMessage = "contains reserved characters that are not allowed in URL paths.";
                 return false;
             }
         }

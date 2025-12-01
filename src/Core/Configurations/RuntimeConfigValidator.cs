@@ -676,7 +676,7 @@ public class RuntimeConfigValidator : IConfigValidator
         if (!RuntimeConfigValidatorUtil.TryValidateEntityRestPath(pathForEntity, out string? errorMessage))
         {
             throw new DataApiBuilderException(
-                message: $"The rest path: {pathForEntity} for entity: {entityName} {errorMessage}",
+                message: $"The rest path: {pathForEntity} for entity: {entityName} {errorMessage ?? "contains invalid characters."}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                 );

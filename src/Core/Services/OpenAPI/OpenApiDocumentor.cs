@@ -139,10 +139,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 };
 
                 // Collect all entity tags and their descriptions for the top-level tags array
+                // Only include entities that have REST enabled and at least one available operation
                 List<OpenApiTag> globalTags = new();
                 foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
                 {
                     Entity entity = kvp.Value;
+                    if (!entity.Rest.Enabled || !HasAnyAvailableOperations(entity))
+                    {
+                        continue;
+                    }
+
                     string restPath = entity.Rest?.Path ?? kvp.Key;
                     globalTags.Add(new OpenApiTag
                     {
@@ -243,6 +249,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject);
 
+                // Skip entities with no available operations
+                if (!configuredRestOperations.ContainsValue(true))
+                {
+                    continue;
+                }
+
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
                     Dictionary<OperationType, OpenApiOperation> operations = CreateStoredProcedureOperations(
@@ -251,12 +263,15 @@ namespace Azure.DataApiBuilder.Core.Services
                         configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
-                    OpenApiPathItem openApiPathItem = new()
+                    if (operations.Count > 0)
                     {
-                        Operations = operations
-                    };
+                        OpenApiPathItem openApiPathItem = new()
+                        {
+                            Operations = operations
+                        };
 
-                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    }
                 }
                 else
                 {
@@ -269,13 +284,12 @@ namespace Azure.DataApiBuilder.Core.Services
                         configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
-                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
-                    string pkPathComponents = pkComponents.Item1;
-                    string fullPathComponent = entityBasePathComponent + pkPathComponents;
-
-                    // Only add path if there are operations available
                     if (pkOperations.Count > 0)
                     {
+                        Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
+                        string pkPathComponents = pkComponents.Item1;
+                        string fullPathComponent = entityBasePathComponent + pkPathComponents;
+
                         OpenApiPathItem openApiPkPathItem = new()
                         {
                             Operations = pkOperations,
@@ -293,7 +307,6 @@ namespace Azure.DataApiBuilder.Core.Services
                         configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
-                    // Only add path if there are operations available
                     if (operations.Count > 0)
                     {
                         OpenApiPathItem openApiPathItem = new()
@@ -318,7 +331,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// a path containing primary key parameters.
         /// TRUE: GET (one), PUT, PATCH, DELETE
         /// FALSE: GET (Many), POST</param>
-        /// <param name="configuredRestOperations">Dictionary indicating which operations are available based on permissions.</param>
+        /// <param name="configuredRestOperations">Operations available based on permissions.</param>
         /// <param name="tags">Tags denoting how the operations should be categorized.
         /// Typically one tag value, the entity's REST path.</param>
         /// <returns>Collection of operation types and associated definitions.</returns>
@@ -333,10 +346,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (includePrimaryKeyPathComponent)
             {
-                // The OpenApiResponses dictionary key represents the integer value of the HttpStatusCode,
-                // which is returned when using Enum.ToString("D").
-                // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
-                // It will only contain $select query parameter to allow the user to specify which fields to return.
                 if (configuredRestOperations[OperationType.Get])
                 {
                     OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
@@ -345,11 +354,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     openApiPathItemOperations.Add(OperationType.Get, getOperation);
                 }
 
-                // PUT and PATCH requests have the same criteria for decided whether a request body is required.
                 bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
 
-                // PUT requests must include the primary key(s) in the URI path and exclude from the request body,
-                // independent of whether the PK(s) are autogenerated.
                 if (configuredRestOperations[OperationType.Put])
                 {
                     OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
@@ -359,8 +365,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     openApiPathItemOperations.Add(OperationType.Put, putOperation);
                 }
 
-                // PATCH requests must include the primary key(s) in the URI path and exclude from the request body,
-                // independent of whether the PK(s) are autogenerated.
                 if (configuredRestOperations[OperationType.Patch])
                 {
                     OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
@@ -381,7 +385,6 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                // Primary key(s) are not included in the URI paths of the GET (all) and POST operations.
                 if (configuredRestOperations[OperationType.Get])
                 {
                     OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
@@ -394,12 +397,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (configuredRestOperations[OperationType.Post])
                 {
-                    // The POST body must include fields for primary key(s) which are not autogenerated because a value must be supplied
-                    // for those fields. {entityName}_NoAutoPK represents the schema component which has all fields except for autogenerated primary keys.
-                    // When no autogenerated primary keys exist, then all fields can be included in the POST body which is represented by the schema
-                    // component: {entityName}.
                     string postBodySchemaReferenceId = DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
-
                     OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
                     postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
                     postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
@@ -650,9 +648,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Returns collection of OpenAPI OperationTypes and associated flag indicating whether they are enabled
         /// for the engine's REST endpoint.
-        /// For stored procedures, the available REST methods are determined by entity.Rest.Methods.
-        /// For tables and views, the available REST methods are determined by checking the entity's permissions
-        /// across all roles. Only operations that are available to at least one role are enabled.
+        /// Acts as a helper for stored procedures where the runtime config can denote any combination of REST verbs
+        /// to enable.
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
@@ -711,60 +708,72 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                // For tables and views, determine available operations based on permissions across all roles.
-                // An operation is available if at least one role has permission for it.
-                HashSet<EntityActionOperation> availableOperations = GetAvailableOperationsFromPermissions(entity!);
+                // For tables/views, determine available operations from permissions (superset of all roles)
+                if (entity?.Permissions is not null)
+                {
+                    foreach (EntityPermission permission in entity.Permissions)
+                    {
+                        if (permission.Actions is null)
+                        {
+                            continue;
+                        }
 
-                // Map permission operations to REST operations:
-                // Read -> GET, Create -> POST, Update -> PUT/PATCH, Delete -> DELETE
-                configuredOperations[OperationType.Get] = availableOperations.Contains(EntityActionOperation.Read);
-                configuredOperations[OperationType.Post] = availableOperations.Contains(EntityActionOperation.Create);
-                configuredOperations[OperationType.Put] = availableOperations.Contains(EntityActionOperation.Update);
-                configuredOperations[OperationType.Patch] = availableOperations.Contains(EntityActionOperation.Update);
-                configuredOperations[OperationType.Delete] = availableOperations.Contains(EntityActionOperation.Delete);
+                        foreach (EntityAction action in permission.Actions)
+                        {
+                        if (action.Action == EntityActionOperation.All)
+                        {
+                            configuredOperations[OperationType.Get] = true;
+                            configuredOperations[OperationType.Post] = true;
+                            configuredOperations[OperationType.Put] = true;
+                            configuredOperations[OperationType.Patch] = true;
+                            configuredOperations[OperationType.Delete] = true;
+                        }
+                        else
+                        {
+                            switch (action.Action)
+                            {
+                                case EntityActionOperation.Read:
+                                    configuredOperations[OperationType.Get] = true;
+                                    break;
+                                case EntityActionOperation.Create:
+                                    configuredOperations[OperationType.Post] = true;
+                                    break;
+                                case EntityActionOperation.Update:
+                                    configuredOperations[OperationType.Put] = true;
+                                    configuredOperations[OperationType.Patch] = true;
+                                    break;
+                                case EntityActionOperation.Delete:
+                                    configuredOperations[OperationType.Delete] = true;
+                                    break;
+                            }
+                        }
+                    }
+                }
+                }
             }
 
             return configuredOperations;
         }
 
         /// <summary>
-        /// Returns the set of available operations for an entity by examining all permissions across all roles.
-        /// An operation is considered available if at least one role has permission for it.
-        /// The wildcard operation (*) expands to Create, Read, Update, and Delete.
+        /// Checks if an entity has any available REST operations based on its permissions.
         /// </summary>
-        /// <param name="entity">The entity to examine permissions for.</param>
-        /// <returns>Set of available EntityActionOperations.</returns>
-        private static HashSet<EntityActionOperation> GetAvailableOperationsFromPermissions(Entity entity)
+        private static bool HasAnyAvailableOperations(Entity entity)
         {
-            HashSet<EntityActionOperation> availableOperations = new();
-
-            if (entity?.Permissions is null)
+            if (entity?.Permissions is null || entity.Permissions.Length == 0)
             {
-                return availableOperations;
+                return false;
             }
 
             foreach (EntityPermission permission in entity.Permissions)
             {
-                if (permission.Actions is null)
+                if (permission.Actions?.Length > 0)
                 {
-                    continue;
-                }
-
-                foreach (EntityAction action in permission.Actions)
-                {
-                    if (action.Action == EntityActionOperation.All)
-                    {
-                        // Wildcard (*) represents Create, Read, Update, Delete for tables/views
-                        availableOperations.UnionWith(EntityAction.ValidPermissionOperations);
-                    }
-                    else if (EntityAction.ValidPermissionOperations.Contains(action.Action))
-                    {
-                        availableOperations.Add(action.Action);
-                    }
+                    return true;
                 }
             }
 
-            return availableOperations;
+            return false;
         }
 
         /// <summary>
@@ -1068,11 +1077,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
+                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled || !HasAnyAvailableOperations(entity))
                 {
                     // Don't create component schemas for:
                     // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.
                     // 2. Entity for which REST endpoint is disabled.
+                    // 3. Entity with no available operations based on permissions.
                     continue;
                 }
 

@@ -102,6 +102,104 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Attempts to return a role-specific OpenAPI description document.
+        /// </summary>
+        /// <param name="role">The role name to filter permissions (case-insensitive).</param>
+        /// <param name="document">String representation of JSON OpenAPI description document.</param>
+        /// <returns>True if role exists and document generated. False if role not found.</returns>
+        public bool TryGetDocumentForRole(string role, [NotNullWhen(true)] out string? document)
+        {
+            document = null;
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+
+            // Check if the role exists in any entity's permissions
+            bool roleExists = false;
+            foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
+            {
+                if (kvp.Value.Permissions?.Any(p => string.Equals(p.Role, role, StringComparison.OrdinalIgnoreCase)) == true)
+                {
+                    roleExists = true;
+                    break;
+                }
+            }
+
+            if (!roleExists)
+            {
+                return false;
+            }
+
+            try
+            {
+                OpenApiDocument? roleDoc = GenerateDocumentForRole(runtimeConfig, role);
+                if (roleDoc is null)
+                {
+                    return false;
+                }
+
+                using (StringWriter textWriter = new(CultureInfo.InvariantCulture))
+                {
+                    OpenApiJsonWriter jsonWriter = new(textWriter);
+                    roleDoc.SerializeAsV3(jsonWriter);
+                    document = textWriter.ToString();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Generates an OpenAPI document filtered for a specific role.
+        /// </summary>
+        private OpenApiDocument? GenerateDocumentForRole(RuntimeConfig runtimeConfig, string role)
+        {
+            string restEndpointPath = runtimeConfig.RestPath;
+            string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
+            string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
+
+            OpenApiComponents components = new()
+            {
+                Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, role)
+            };
+
+            List<OpenApiTag> globalTags = new();
+            foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
+            {
+                Entity entity = kvp.Value;
+                if (!entity.Rest.Enabled || !HasAnyAvailableOperations(entity, role))
+                {
+                    continue;
+                }
+
+                string restPath = entity.Rest?.Path ?? kvp.Key;
+                globalTags.Add(new OpenApiTag
+                {
+                    Name = restPath,
+                    Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
+                });
+            }
+
+            return new OpenApiDocument()
+            {
+                Info = new OpenApiInfo
+                {
+                    Version = ProductInfo.GetProductVersion(),
+                    // Use the role name directly since it was already validated to exist in permissions
+                    Title = $"{DOCUMENTOR_UI_TITLE} - {role}"
+                },
+                Servers = new List<OpenApiServer>
+                {
+                    new() { Url = url }
+                },
+                Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, role),
+                Components = components,
+                Tags = globalTags
+            };
+        }
+
+        /// <summary>
         /// Creates an OpenAPI description document using OpenAPI.NET.
         /// Document compliant with patches of OpenAPI V3.0 spec 3.0.0 and 3.0.1,
         /// aligned with specification support provided by Microsoft.OpenApi.
@@ -198,8 +296,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// A path with no primary key nor parameter representing the primary key value:
         /// "/EntityName"
         /// </example>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName)
+        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, string? role = null)
         {
             OpenApiPaths pathsCollection = new();
 
@@ -247,7 +346,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     openApiTag
                 };
 
-                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject);
+                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject, role);
 
                 // Skip entities with no available operations
                 if (!configuredRestOperations.ContainsValue(true))
@@ -1154,8 +1253,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// 3) {EntityName}_NoPK -> No primary keys present in schema, used for POST requests where PK is autogenerated and GET (all).
         /// Schema objects can be referenced elsewhere in the OpenAPI document with the intent to reduce document verbosity.
         /// </summary>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>Collection of schemas for entities defined in the runtime configuration.</returns>
-        private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeEntities entities, string defaultDataSourceName)
+        private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeEntities entities, string defaultDataSourceName, string? role = null)
         {
             Dictionary<string, OpenApiSchema> schemas = new();
             // for rest scenario we need the default datasource name.
@@ -1168,7 +1268,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled || !HasAnyAvailableOperations(entity))
+                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled || !HasAnyAvailableOperations(entity, role))
                 {
                     // Don't create component schemas for:
                     // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.
@@ -1180,8 +1280,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
                 HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList(), metadataProvider);
 
-                // Filter fields based on the superset of permissions across all roles
-                exposedColumnNames = FilterFieldsByPermissions(entity, exposedColumnNames);
+                // Filter fields based on the superset of permissions across all roles (or specific role)
+                exposedColumnNames = FilterFieldsByPermissions(entity, exposedColumnNames, role);
 
                 HashSet<string> nonAutoGeneratedPKColumnNames = new();
 

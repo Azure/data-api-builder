@@ -465,9 +465,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            // No entity found
+            // No entity found - show the full path for better debugging
             throw new DataApiBuilderException(
-                message: $"Invalid Entity path: {segments[0]}.",
+                message: $"Invalid Entity path: {routeAfterPathBase}.",
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }

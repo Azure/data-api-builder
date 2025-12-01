@@ -653,8 +653,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>Collection of OpenAPI OperationTypes and whether they should be created.</returns>
-        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity entity, DatabaseObject dbObject)
+        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity entity, DatabaseObject dbObject, string? role = null)
         {
             Dictionary<OperationType, bool> configuredOperations = new()
             {
@@ -708,11 +709,18 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                // For tables/views, determine available operations from permissions (superset of all roles)
+                // For tables/views, determine available operations from permissions
+                // If role is specified, filter to that role only; otherwise, get superset of all roles
                 if (entity?.Permissions is not null)
                 {
                     foreach (EntityPermission permission in entity.Permissions)
                     {
+                        // Skip permissions for other roles if a specific role is requested
+                        if (role is not null && !string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
                         if (permission.Actions is null)
                         {
                             continue;
@@ -720,35 +728,35 @@ namespace Azure.DataApiBuilder.Core.Services
 
                         foreach (EntityAction action in permission.Actions)
                         {
-                        if (action.Action == EntityActionOperation.All)
-                        {
-                            configuredOperations[OperationType.Get] = true;
-                            configuredOperations[OperationType.Post] = true;
-                            configuredOperations[OperationType.Put] = true;
-                            configuredOperations[OperationType.Patch] = true;
-                            configuredOperations[OperationType.Delete] = true;
-                        }
-                        else
-                        {
-                            switch (action.Action)
+                            if (action.Action == EntityActionOperation.All)
                             {
-                                case EntityActionOperation.Read:
-                                    configuredOperations[OperationType.Get] = true;
-                                    break;
-                                case EntityActionOperation.Create:
-                                    configuredOperations[OperationType.Post] = true;
-                                    break;
-                                case EntityActionOperation.Update:
-                                    configuredOperations[OperationType.Put] = true;
-                                    configuredOperations[OperationType.Patch] = true;
-                                    break;
-                                case EntityActionOperation.Delete:
-                                    configuredOperations[OperationType.Delete] = true;
-                                    break;
+                                configuredOperations[OperationType.Get] = true;
+                                configuredOperations[OperationType.Post] = true;
+                                configuredOperations[OperationType.Put] = true;
+                                configuredOperations[OperationType.Patch] = true;
+                                configuredOperations[OperationType.Delete] = true;
+                            }
+                            else
+                            {
+                                switch (action.Action)
+                                {
+                                    case EntityActionOperation.Read:
+                                        configuredOperations[OperationType.Get] = true;
+                                        break;
+                                    case EntityActionOperation.Create:
+                                        configuredOperations[OperationType.Post] = true;
+                                        break;
+                                    case EntityActionOperation.Update:
+                                        configuredOperations[OperationType.Put] = true;
+                                        configuredOperations[OperationType.Patch] = true;
+                                        break;
+                                    case EntityActionOperation.Delete:
+                                        configuredOperations[OperationType.Delete] = true;
+                                        break;
+                                }
                             }
                         }
                     }
-                }
                 }
             }
 
@@ -758,7 +766,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Checks if an entity has any available REST operations based on its permissions.
         /// </summary>
-        private static bool HasAnyAvailableOperations(Entity entity)
+        /// <param name="entity">The entity to check.</param>
+        /// <param name="role">Optional role to filter permissions. If null, checks all roles.</param>
+        /// <returns>True if the entity has any available operations.</returns>
+        private static bool HasAnyAvailableOperations(Entity entity, string? role = null)
         {
             if (entity?.Permissions is null || entity.Permissions.Length == 0)
             {
@@ -767,6 +778,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
             foreach (EntityPermission permission in entity.Permissions)
             {
+                // Skip permissions for other roles if a specific role is requested
+                if (role is not null && !string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 if (permission.Actions?.Length > 0)
                 {
                     return true;
@@ -777,13 +794,14 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Filters the exposed column names based on the superset of available fields across all role permissions.
-        /// A field is included if at least one role has access to it (through include/exclude settings).
+        /// Filters the exposed column names based on the superset of available fields across role permissions.
+        /// A field is included if at least one role (or the specified role) has access to it.
         /// </summary>
         /// <param name="entity">The entity to check permissions for.</param>
         /// <param name="exposedColumnNames">All exposed column names from the database.</param>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>Filtered set of column names that are available based on permissions.</returns>
-        private static HashSet<string> FilterFieldsByPermissions(Entity entity, HashSet<string> exposedColumnNames)
+        private static HashSet<string> FilterFieldsByPermissions(Entity entity, HashSet<string> exposedColumnNames, string? role = null)
         {
             if (entity?.Permissions is null || entity.Permissions.Length == 0)
             {
@@ -794,6 +812,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
             foreach (EntityPermission permission in entity.Permissions)
             {
+                // Skip permissions for other roles if a specific role is requested
+                if (role is not null && !string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
                 if (permission.Actions is null)
                 {
                     continue;

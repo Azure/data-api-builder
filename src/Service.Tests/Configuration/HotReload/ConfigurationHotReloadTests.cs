@@ -27,8 +27,7 @@ public class ConfigurationHotReloadTests
     private static RuntimeConfigProvider _configProvider;
     private static StringWriter _writer;
     private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
-#nullable enable
-    private static string? _watchedConfigPath;
+    private static string _watchedConfigPath;
     private const string GQL_QUERY_NAME = "books";
 
     private const string GQL_QUERY = @"{
@@ -63,7 +62,6 @@ public class ConfigurationHotReloadTests
         string entityExposedName = "title",
         string configFileName = CONFIG_FILE_NAME)
     {
-        // Minimal change: write to the exact path the provider is watching (if available)
         string targetPath = _watchedConfigPath ?? Path.GetFullPath(configFileName);
 
         File.WriteAllText(targetPath, @"

@@ -228,7 +228,6 @@ public class ConfigurationHotReloadTests
     /// Hot reload the configuration by saving a new file with different rest and graphQL paths.
     /// Validate that the response is correct when making a request with the newly hot-reloaded paths.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload runtime paths.")]
     public async Task HotReloadConfigRuntimePathsEndToEndTest()
@@ -250,7 +249,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restPath: restPath,
             gQLPath: gQLPath);
-        System.Threading.Thread.Sleep(2000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage badPathRestResult = await _testClient.GetAsync($"rest/Book");
@@ -278,7 +277,6 @@ public class ConfigurationHotReloadTests
     /// set to false. Validate that the response from the server is NOT FOUND when making a request after
     /// the hot reload.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload rest enabled.")]
     public async Task HotReloadConfigRuntimeRestEnabledEndToEndTest()
@@ -289,7 +287,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: restEnabled);
-        System.Threading.Thread.Sleep(2000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Book");
@@ -303,7 +301,6 @@ public class ConfigurationHotReloadTests
     /// set to false. Validate that the response from the server is NOT FOUND when making a request after
     /// the hot reload.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload gql enabled.")]
     public async Task HotReloadConfigRuntimeGQLEnabledEndToEndTest()
@@ -321,7 +318,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEnabled: gQLEnabled);
-        System.Threading.Thread.Sleep(2000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
@@ -337,7 +334,6 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload gql disabled at entity level.")]
-    [Ignore]
     public async Task HotReloadEntityGQLEnabledFlag()
     {
         // Arrange
@@ -359,7 +355,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEntityEnabled: gQLEntityEnabled);
-        System.Threading.Thread.Sleep(2000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
@@ -376,7 +372,6 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [Ignore]
     public async Task HotReloadConfigAddEntity()
     {
         // Arrange
@@ -391,7 +386,7 @@ public class ConfigurationHotReloadTests
             sourceObject: newEntitySource,
             gQLEntitySingular: newEntityGQLSingular,
             gQLEntityPlural: newEntityGQLPlural);
-        System.Threading.Thread.Sleep(2000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         // Act
         string queryWithOldEntity = @"{
@@ -453,7 +448,6 @@ public class ConfigurationHotReloadTests
     /// results in bad request, while the new mappings results in a correct response as "title" field is no longer valid.
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [Ignore]
     public async Task HotReloadConfigUpdateMappings()
     {
         // Arrange
@@ -463,7 +457,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             entityBackingColumn: "title",
             entityExposedName: newMappingFieldName);
-        System.Threading.Thread.Sleep(2000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         // Act
         string queryWithOldMapping = @"{
@@ -524,7 +518,6 @@ public class ConfigurationHotReloadTests
     /// By asserting that hot reload worked properly for the session-context it also implies that
     /// the new connection string with additional parameters is also valid.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigDataSource()
@@ -540,7 +533,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             sessionContext: "false",
             connectionString: expectedConnectionString);
-        System.Threading.Thread.Sleep(3000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
@@ -561,10 +554,9 @@ public class ConfigurationHotReloadTests
     /// Then we assert that the log-level property is properly updated by ensuring it is 
     /// not the same as the previous log-level and asserting it is the expected log-level.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public void HotReloadLogLevel()
+    public async Task HotReloadLogLevel()
     {
         // Arange
         LogLevel expectedLogLevel = LogLevel.Trace;
@@ -576,7 +568,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             logFilter: expectedFilter);
-        System.Threading.Thread.Sleep(3000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         LogLevel actualLogLevel = updatedRuntimeConfig.GetConfiguredLogLevel();
@@ -591,7 +583,6 @@ public class ConfigurationHotReloadTests
     /// to an invalid connection string, then it hot reloads once more to the original
     /// connection string. Lastly, we assert that the first reload fails while the second one succeeds.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigConnectionString()
@@ -643,7 +634,6 @@ public class ConfigurationHotReloadTests
     /// Then it hot reloads once more to the original database type. We assert that the
     /// first reload fails while the second one succeeds.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     public async Task HotReloadConfigDatabaseType()
@@ -698,10 +688,9 @@ public class ConfigurationHotReloadTests
     /// Invalid change that was added is a schema file that is not complete, which should be
     /// catched by the validator.
     /// </summary>
-    [Ignore]
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public void HotReloadValidationFail()
+    public async Task HotReloadValidationFail()
     {
         // Arrange
         string schemaName = "hot-reload.draft.schema.json";
@@ -723,7 +712,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "false",
             gQLEnabled: "false");
-        System.Threading.Thread.Sleep(10000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
@@ -746,7 +735,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    public void HotReloadParsingFail()
+    public async Task HotReloadParsingFail()
     {
         // Arrange
         RuntimeConfig lkgRuntimeConfig = _configProvider.GetConfig();
@@ -757,7 +746,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "invalid",
             gQLEnabled: "invalid");
-        System.Threading.Thread.Sleep(5000);
+        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
 
@@ -771,17 +760,53 @@ public class ConfigurationHotReloadTests
     /// </summary>
     private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
     {
-        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        while (stopwatch.Elapsed < timeout)
+        // Use RuntimeConfigProvider change token to deterministically wait for a hot-reload signal.
+        // This avoids brittle sleeps and races with FileSystemWatcher duplicate events.
+        if (_configProvider is null)
         {
-            if (condition())
-            {
-                return;
-            }
-
-            await Task.Delay(pollingInterval);
+            throw new InvalidOperationException("RuntimeConfigProvider is not initialized.");
         }
 
-        throw new TimeoutException("The condition was not met within the timeout period.");
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cts = new System.Threading.CancellationTokenSource(timeout);
+
+        // Register for the next change signal
+        var changeToken = _configProvider.GetChangeToken();
+        using var registration = changeToken.RegisterChangeCallback(_ =>
+        {
+            // Optional additional predicate: only complete if the supplied condition passes
+            try
+            {
+                if (condition())
+                {
+                    tcs.TrySetResult(true);
+                }
+                else
+                {
+                    // If condition not met yet, poll until timeout
+                    _ = Task.Run(async () =>
+                    {
+                        while (!cts.IsCancellationRequested)
+                        {
+                            await Task.Delay(pollingInterval, cts.Token).ConfigureAwait(false);
+                            if (condition())
+                            {
+                                tcs.TrySetResult(true);
+                                break;
+                            }
+                        }
+                    });
+                }
+            }
+            catch
+            {
+                tcs.TrySetResult(true);
+            }
+        }, state: null);
+
+        using (cts.Token.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false))
+        {
+            await tcs.Task.ConfigureAwait(false);
+        }
     }
 }

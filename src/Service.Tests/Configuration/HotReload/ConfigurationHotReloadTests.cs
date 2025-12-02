@@ -27,6 +27,8 @@ public class ConfigurationHotReloadTests
     private static RuntimeConfigProvider _configProvider;
     private static StringWriter _writer;
     private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
+#nullable enable
+    private static string? _watchedConfigPath;
     private const string GQL_QUERY_NAME = "books";
 
     private const string GQL_QUERY = @"{
@@ -61,7 +63,10 @@ public class ConfigurationHotReloadTests
         string entityExposedName = "title",
         string configFileName = CONFIG_FILE_NAME)
     {
-        File.WriteAllText(configFileName, @"
+        // Minimal change: write to the exact path the provider is watching (if available)
+        string targetPath = _watchedConfigPath ?? Path.GetFullPath(configFileName);
+
+        File.WriteAllText(targetPath, @"
               {
                 ""$schema"": """ + schema + @""",
                     ""data-source"": {
@@ -185,6 +190,7 @@ public class ConfigurationHotReloadTests
     public static async Task ClassInitializeAsync(TestContext context)
     {
         // Arrange
+        _watchedConfigPath = _configProvider.ConfigFilePath;
         GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
         _testClient = _testServer.CreateClient();
@@ -215,9 +221,10 @@ public class ConfigurationHotReloadTests
     [ClassCleanup]
     public static void ClassCleanup()
     {
-        if (File.Exists(CONFIG_FILE_NAME))
+        string targetPath = _watchedConfigPath ?? Path.GetFullPath(CONFIG_FILE_NAME);
+        if (File.Exists(targetPath))
         {
-            File.Delete(CONFIG_FILE_NAME);
+            File.Delete(targetPath);
         }
 
         _testServer.Dispose();
@@ -249,7 +256,15 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restPath: restPath,
             gQLPath: gQLPath);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                // Wait until the provider reflects new paths
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                return cfg.RestPath == "/" + restPath && (cfg.Runtime?.GraphQL?.Path == gQLPath);
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage badPathRestResult = await _testClient.GetAsync($"rest/Book");
@@ -287,7 +302,14 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: restEnabled);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                return cfg.IsRestEnabled == false;
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage restResult = await _testClient.GetAsync($"rest/Book");
@@ -318,7 +340,14 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEnabled: gQLEnabled);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                return cfg.IsGraphQLEnabled == false;
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
@@ -355,7 +384,14 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEntityEnabled: gQLEntityEnabled);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                return cfg.Entities.TryGetValue("Book", out var entity) && entity.GraphQL?.Enabled == false;
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         // Act
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
@@ -386,7 +422,17 @@ public class ConfigurationHotReloadTests
             sourceObject: newEntitySource,
             gQLEntitySingular: newEntityGQLSingular,
             gQLEntityPlural: newEntityGQLPlural);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                // New entity present and old entity removed
+                bool hasNew = cfg.Entities.ContainsKey("Author");
+                bool missingOld = !cfg.Entities.ContainsKey("Book");
+                return hasNew && missingOld;
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         // Act
         string queryWithOldEntity = @"{
@@ -457,7 +503,15 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             entityBackingColumn: "title",
             entityExposedName: newMappingFieldName);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                var book = cfg.Entities["Book"];
+                return book.Mappings is not null && book.Mappings.TryGetValue("title", out var exposed) && exposed == newMappingFieldName;
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         // Act
         string queryWithOldMapping = @"{
@@ -533,7 +587,15 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             sessionContext: "false",
             connectionString: expectedConnectionString);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                var options = cfg.DataSource.GetTypedOptions<MsSqlOptions>();
+                return options.SetSessionContext == false && cfg.DataSource.ConnectionString.Contains("Trusted_Connection=True;");
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         MsSqlOptions actualSessionContext = updatedRuntimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
@@ -568,7 +630,14 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             logFilter: expectedFilter);
-        await WaitForConditionAsync(() => true, TimeSpan.FromSeconds(12), TimeSpan.FromMilliseconds(250));
+        await WaitForConditionAsync(
+            () =>
+            {
+                RuntimeConfig cfg = _configProvider.GetConfig();
+                return cfg.GetConfiguredLogLevel() == LogLevel.Trace;
+            },
+            TimeSpan.FromSeconds(20),
+            TimeSpan.FromMilliseconds(250));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
         LogLevel actualLogLevel = updatedRuntimeConfig.GetConfiguredLogLevel();
@@ -806,7 +875,15 @@ public class ConfigurationHotReloadTests
 
         using (cts.Token.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false))
         {
-            await tcs.Task.ConfigureAwait(false);
+            try
+            {
+                await tcs.Task.ConfigureAwait(false);
+            }
+            catch (TaskCanceledException)
+            {
+                // Timeout waiting for change signal; fail the test with a clear message instead of throwing
+                Assert.Fail($"Timed out after {timeout} waiting for hot-reload change signal.");
+            }
         }
     }
 }

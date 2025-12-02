@@ -566,13 +566,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Verifies that when filtering entities for health checks,
-        /// stored procedures are excluded while tables and views are included.
+        /// stored procedures are excluded while tables are included.
         /// This matches the filter logic in HealthCheckHelper.UpdateEntityHealthCheckResultsAsync.
         /// </summary>
         [TestMethod]
         public void HealthChecks_ExcludeStoredProcedures()
         {
-            // Create a config with table, view, and stored procedure entities
+            // Create a config with table and stored procedure entities
             RuntimeConfig runtimeConfig = SetupCustomConfigFile(
                 enableGlobalHealth: true,
                 enableGlobalRest: true,

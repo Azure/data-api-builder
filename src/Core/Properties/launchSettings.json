@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Azure.DataApiBuilder.Core": {
+      "commandName": "Project",
+      "commandLineArgs": "validate"
+    }
+  }
+}

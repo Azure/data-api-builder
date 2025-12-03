@@ -19,4 +19,6 @@ public static class DabConfigEvents
     public const string GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED = "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED";
     public const string GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED = "GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED";
     public const string LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE = "LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE";
+    // Fired after all other hot-reload events have been invoked.
+    public const string HOT_RELOAD_ALL_DONE = "HOT_RELOAD_ALL_DONE";
 }

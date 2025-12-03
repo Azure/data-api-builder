@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Azure.DataApiBuilder.Config; // For HotReloadEventHandler, HotReloadEventArgs, DabConfigEvents
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.HotReload;
 
@@ -188,11 +189,11 @@ public class ConfigurationHotReloadTests
     public static async Task ClassInitializeAsync(TestContext context)
     {
         // Arrange
-        _watchedConfigPath = _configProvider.ConfigFilePath;
         GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
         _testClient = _testServer.CreateClient();
         _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
+        _watchedConfigPath = _configProvider.ConfigFilePath;
 
         string query = GQL_QUERY;
         object payload =
@@ -366,30 +367,42 @@ public class ConfigurationHotReloadTests
         // Arrange
         string gQLEntityEnabled = "false";
         string query = @"{
-            book_by_pk(id: 1) {
-                title
-            }
-        }";
+        book_by_pk(id: 1) {
+            title
+        }
+    }";
 
-        object payload =
-            new { query };
+        object payload = new { query };
 
         HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
         {
             Content = JsonContent.Create(payload)
         };
 
+        // First, wait for the config to be updated
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEntityEnabled: gQLEntityEnabled);
+
         await WaitForConditionAsync(
             () =>
             {
                 RuntimeConfig cfg = _configProvider.GetConfig();
-                return cfg.Entities.TryGetValue("Book", out var entity) && entity.GraphQL?.Enabled == false;
+                return cfg.Entities.TryGetValue("Book", out var bookEntity)
+                    && bookEntity.GraphQL.Enabled is false;
             },
             TimeSpan.FromSeconds(20),
             TimeSpan.FromMilliseconds(250));
+
+        string probeQuery = @"{ __schema { queryType { name } } }";
+        object probePayload = new { query = probeQuery };
+        HttpRequestMessage probeRequest = new(HttpMethod.Post, "/graphQL")
+        {
+            Content = JsonContent.Create(probePayload)
+        };
+
+        await _testClient.SendAsync(probeRequest);
+        await Task.Delay(TimeSpan.FromMilliseconds(2000));
 
         // Act
         HttpResponseMessage gQLResult = await _testClient.SendAsync(request);

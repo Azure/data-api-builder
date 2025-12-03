@@ -112,6 +112,9 @@ public abstract class RuntimeConfigLoader
 
         // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
         OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
+
+        // Finally, fire completion signal so tests can deterministically await full hot-reload.
+        OnConfigChangedEvent(new HotReloadEventArgs(HOT_RELOAD_ALL_DONE, message));
     }
 
     /// <summary>

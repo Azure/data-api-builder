@@ -32,7 +32,7 @@ public class AuthorizationResolverHotReloadTests
     /// and uses the same test server instance.
     /// This test is currently flakey, failing intermittently in our pipeline, and is therefore ignored.
     /// </summary>
-    [Ignore]
+    
     [TestMethod]
     [DoNotParallelize]
     [TestCategory(TestCategory.MSSQL)]

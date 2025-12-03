@@ -34,7 +34,9 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             { GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, null },
-            { LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, null }
+            { LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, null },
+            // Completion signal for tests/consumers that need to await full hot-reload lifecycle.
+            { HOT_RELOAD_ALL_DONE, null }
         };
     }
 

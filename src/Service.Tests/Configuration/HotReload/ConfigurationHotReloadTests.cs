@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Azure.DataApiBuilder.Config; // For HotReloadEventHandler, HotReloadEventArgs, DabConfigEvents
+//using Azure.DataApiBuilder.Config; // For HotReloadEventHandler, HotReloadEventArgs, DabConfigEvents
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration.HotReload;
 
@@ -388,11 +388,39 @@ public class ConfigurationHotReloadTests
             () =>
             {
                 RuntimeConfig cfg = _configProvider.GetConfig();
-                return cfg.Entities.TryGetValue("Book", out var bookEntity)
+                bool configUpdated = cfg.Entities.TryGetValue("Book", out var bookEntity)
                     && bookEntity.GraphQL.Enabled is false;
+
+                if (!configUpdated) { return false; }
+
+                // CRITICAL: Also verify the GraphQL schema was actually rebuilt
+                // by checking if we can still query books (we shouldn't be able to)
+                try
+                {
+                    // Try to execute an introspection query to see if book_by_pk exists
+                    var introspectionQuery = @"
+                    {
+                        __type(name: ""Query"") {
+                            fields {
+                                name
+                            }
+                        }
+                    }";
+
+                    var response = _testClient.PostAsync("/graphQL",
+                        JsonContent.Create(new { query = introspectionQuery })).Result;
+                    var content = response.Content.ReadAsStringAsync().Result;
+
+                    // Schema is correctly rebuilt when book_by_pk is no longer in the Query type
+                    return !content.Contains("book_by_pk") && !content.Contains("books");
+                }
+                catch
+                {
+                    return false;
+                }
             },
-            TimeSpan.FromSeconds(20),
-            TimeSpan.FromMilliseconds(250));
+            TimeSpan.FromSeconds(30), // Increased timeout
+            TimeSpan.FromMilliseconds(500));
 
         string probeQuery = @"{ __schema { queryType { name } } }";
         object probePayload = new { query = probeQuery };

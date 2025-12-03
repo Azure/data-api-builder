@@ -3,6 +3,7 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -380,10 +381,10 @@ namespace Azure.DataApiBuilder.Service
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
 
-            // Subscribe the GraphQL schema refresh method to the specific hot-reload event
-            _hotReloadEventHandler.Subscribe(
-                DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED,
-                (_, _) => RefreshGraphQLSchema(services));
+            //// Subscribe the GraphQL schema refresh method to the specific hot-reload event
+            //_hotReloadEventHandler.Subscribe(
+            //    DabConfigEvents.GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED,
+            //    (_, _) => RefreshGraphQLSchema(services));
 
             // Cache config
             IFusionCacheBuilder fusionCacheBuilder = services.AddFusionCache()
@@ -546,13 +547,13 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Refreshes the GraphQL schema when the runtime config updates during hot-reload scenario.
         /// </summary>
-        private void RefreshGraphQLSchema(IServiceCollection services)
-        {
-            // Re-add GraphQL services with updated config.
-            RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
-            Console.WriteLine("Updating GraphQL service.");
-            AddGraphQLService(services, runtimeConfig.Runtime?.GraphQL);
-        }
+        //private void RefreshGraphQLSchema(IServiceCollection services)
+        //{
+        //    // Re-add GraphQL services with updated config.
+        //    RuntimeConfig runtimeConfig = _configProvider!.GetConfig();
+        //    Console.WriteLine("Updating GraphQL service.");
+        //    AddGraphQLService(services, runtimeConfig.Runtime?.GraphQL);
+        //}
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
@@ -716,10 +717,46 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Evicts the GraphQL schema from the request executor resolver.
         /// </summary>
-        private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorResolver)
+        private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorManager)
         {
-            Console.WriteLine("Evicting old GraphQL schema.");
-            requestExecutorResolver.EvictExecutor();
+            Console.WriteLine("[DEBUG] Forcing GraphQL schema rebuild for hot-reload.");
+
+            try
+            {
+                // In HotChocolate v16, we need to modify the executor options to force a schema rebuild
+                // Simply evicting the executor is not enough because the schema document is cached separately
+
+                // Step 1: Evict the current executor
+                requestExecutorManager.EvictExecutor();
+                Console.WriteLine("[DEBUG] Executor evicted.");
+
+                // Step 2: Force the schema to be rebuilt on next request
+                // by triggering a request that will rebuild everything
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Small delay to ensure config provider has fully propagated the changes
+                        await Task.Delay(100);
+
+                        // This forces HotChocolate to rebuild the schema with the updated GraphQLSchemaCreator state
+                        var executor = await requestExecutorManager.GetExecutorAsync();
+
+                        // Evict again to ensure the next actual client request uses the freshly built schema
+                        requestExecutorManager.EvictExecutor();
+
+                        Console.WriteLine($"[DEBUG] Schema rebuilt. Type count: {executor.Schema.Types.Count()}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ERROR] Schema rebuild failed: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Schema eviction failed: {ex.Message}");
+            }
         }
 
         /// <summary>

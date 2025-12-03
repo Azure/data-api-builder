@@ -60,10 +60,17 @@ internal class CompressionOptionsConverterFactory : JsonConverterFactory
                     if (string.Equals(propertyName, "level", StringComparison.OrdinalIgnoreCase))
                     {
                         string? levelStr = reader.GetString();
-                        if (levelStr is not null && Enum.TryParse<CompressionLevel>(levelStr, ignoreCase: true, out CompressionLevel parsedLevel))
+                        if (levelStr is not null)
                         {
-                            level = parsedLevel;
-                            userProvidedLevel = true;
+                            if (Enum.TryParse<CompressionLevel>(levelStr, ignoreCase: true, out CompressionLevel parsedLevel))
+                            {
+                                level = parsedLevel;
+                                userProvidedLevel = true;
+                            }
+                            else
+                            {
+                                throw new JsonException($"Invalid compression level: '{levelStr}'. Valid values are: optimal, fastest, none.");
+                            }
                         }
                     }
                 }

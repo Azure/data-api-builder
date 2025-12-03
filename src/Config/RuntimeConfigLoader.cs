@@ -316,6 +316,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityCacheOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new RuntimeCacheOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheLevel2OptionsConverterFactory());
+        options.Converters.Add(new CompressionOptionsConverterFactory());
         options.Converters.Add(new MultipleCreateOptionsConverter());
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replacementSettings));

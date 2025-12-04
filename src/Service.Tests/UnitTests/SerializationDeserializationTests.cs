@@ -293,7 +293,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     new DatabaseObjectConverter(),
                     new TypeConverter()
                 },
-                ReferenceHandler = ReferenceHandler.Preserve,
+                ReferenceHandler = ReferenceHandler.Preserve
             };
 
             Dictionary<string, DatabaseObject> dict = new() { { "person", _databaseTable } };

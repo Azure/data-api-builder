@@ -106,22 +106,22 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="role">The role name to filter permissions (case-insensitive).</param>
         /// <param name="document">String representation of JSON OpenAPI description document.</param>
-        /// <returns>True if role exists and document generated. False if role not found.</returns>
+        /// <returns>True if role exists and document generated. False if role not found or empty/whitespace.</returns>
         public bool TryGetDocumentForRole(string role, [NotNullWhen(true)] out string? document)
         {
             document = null;
+
+            // Validate role is not null, empty, or whitespace
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return false;
+            }
+
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
-            // Check if the role exists in any entity's permissions
-            bool roleExists = false;
-            foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
-            {
-                if (kvp.Value.Permissions?.Any(p => string.Equals(p.Role, role, StringComparison.OrdinalIgnoreCase)) == true)
-                {
-                    roleExists = true;
-                    break;
-                }
-            }
+            // Check if the role exists in any entity's permissions using LINQ
+            bool roleExists = runtimeConfig.Entities
+                .Any(kvp => kvp.Value.Permissions?.Any(p => string.Equals(p.Role, role, StringComparison.OrdinalIgnoreCase)) == true);
 
             if (!roleExists)
             {
@@ -136,16 +136,16 @@ namespace Azure.DataApiBuilder.Core.Services
                     return false;
                 }
 
-                using (StringWriter textWriter = new(CultureInfo.InvariantCulture))
-                {
-                    OpenApiJsonWriter jsonWriter = new(textWriter);
-                    roleDoc.SerializeAsV3(jsonWriter);
-                    document = textWriter.ToString();
-                    return true;
-                }
+                using StringWriter textWriter = new(CultureInfo.InvariantCulture);
+                OpenApiJsonWriter jsonWriter = new(textWriter);
+                roleDoc.SerializeAsV3(jsonWriter);
+                document = textWriter.ToString();
+                return true;
             }
-            catch
+            catch (Exception)
             {
+                // Return false for any document generation failures (e.g., serialization errors).
+                // The caller can handle the 404 response appropriately.
                 return false;
             }
         }
@@ -931,25 +931,16 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
 
-                    // Determine included fields
-                    HashSet<string> actionFields;
-                    if (action.Fields.Include is null || action.Fields.Include.Contains("*"))
-                    {
-                        // Include is null or contains wildcard - start with all fields
-                        actionFields = new HashSet<string>(exposedColumnNames);
-                    }
-                    else
-                    {
-                        // Only include explicitly listed fields that exist in exposed columns
-                        actionFields = new HashSet<string>(action.Fields.Include.Where(f => exposedColumnNames.Contains(f)));
-                    }
+                    // Determine included fields using ternary - either all fields or explicitly listed
+                    HashSet<string> actionFields = (action.Fields.Include is null || action.Fields.Include.Contains("*"))
+                        ? new HashSet<string>(exposedColumnNames)
+                        : new HashSet<string>(action.Fields.Include.Where(f => exposedColumnNames.Contains(f)));
 
                     // Remove excluded fields
                     if (action.Fields.Exclude is not null && action.Fields.Exclude.Count > 0)
                     {
                         if (action.Fields.Exclude.Contains("*"))
                         {
-                            // Exclude all - no fields available for this action
                             actionFields.Clear();
                         }
                         else
@@ -1465,8 +1456,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 Properties = properties,
                 Description = entityConfig?.Description,
                 // For request body schemas, set additionalProperties based on request-body-strict setting
-                // When strict is true, disallow extra fields; when false, allow them
-                AdditionalPropertiesAllowed = isRequestBodySchema ? !isRequestBodyStrict : true
+                // Response schemas always allow additional properties
+                AdditionalPropertiesAllowed = !isRequestBodySchema || !isRequestBodyStrict
             };
 
             return schema;

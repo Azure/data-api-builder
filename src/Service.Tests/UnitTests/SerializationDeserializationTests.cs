@@ -318,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void TestDatabaseViewSerializationDeserialization_WithDollarColumn()
         {
-            InitializeObjects(true);
+            InitializeObjects(generateDollaredColumn: true);
 
             TestTypeNameChanges(_databaseView, "DatabaseView");
 
@@ -345,7 +345,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void TestDatabaseStoredProcedureSerializationDeserialization_WithDollarColumn()
         {
-            InitializeObjects(true);
+            InitializeObjects(generateDollaredColumn: true);
 
             TestTypeNameChanges(_databaseStoredProcedure, "DatabaseStoredProcedure");
 

@@ -33,6 +33,11 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
+                    if (permissions == null)
+                    {
+                        throw new JsonException("The 'permissions' property is required for Autoentity.");
+                    }
+
                     return new Autoentity(patterns, template, permissions);
                 }
 
@@ -49,6 +54,11 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
                     case "template":
                         AutoentityTemplateConverter templateConverter = new(_replacementSettings);
                         template = templateConverter.Read(ref reader, typeof(AutoentityTemplate), options);
+                        break;
+
+                    case "permissions":
+                        permissions = JsonSerializer.Deserialize<EntityPermission[]>(ref reader, options)
+                            ?? throw new JsonException("The 'permissions' property must contain at least one permission.");
                         break;
 
                     default:
@@ -94,7 +104,7 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
             autoentityTemplateConverter.Write(writer, template, options);
         }
 
-        if (value?.UserProvidedPermissionsOptions is true)
+        if (value?.Permissions is not null)
         {
             writer.WritePropertyName("permissions");
             JsonSerializer.Serialize(writer, value.Permissions, options);

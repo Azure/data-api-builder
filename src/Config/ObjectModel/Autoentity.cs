@@ -22,34 +22,12 @@ public record Autoentity
     public Autoentity(
         AutoentityPatterns? Patterns,
         AutoentityTemplate? Template,
-        EntityPermission[]? Permissions)
+        EntityPermission[] Permissions)
     {
         this.Patterns = Patterns ?? new AutoentityPatterns();
 
         this.Template = Template ?? new AutoentityTemplate();
 
-        if (Permissions is not null)
-        {
-            this.Permissions = Permissions;
-            UserProvidedPermissionsOptions = true;
-        }
-        else
-        {
-            this.Permissions = Array.Empty<EntityPermission>();
-        }
+        this.Permissions = Permissions;
     }
-
-    /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write permissions
-    /// property and value to the runtime config file.
-    /// When user doesn't provide the permissions property/value, which signals DAB to use the default,
-    /// the DAB CLI should not write the default value to a serialized config.
-    /// This is because the user's intent is to use DAB's default value which could change
-    /// and DAB CLI writing the property and value would lose the user's intent.
-    /// This is because if the user were to use the CLI created config, a permissions
-    /// property/value specified would be interpreted by DAB as "user explicitly set permissions."
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(Permissions))]
-    public bool UserProvidedPermissionsOptions { get; init; } = false;
 }

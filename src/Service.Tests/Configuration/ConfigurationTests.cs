@@ -40,6 +40,7 @@ using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -4292,9 +4293,11 @@ type Planet @model(name:""PlanetAlias"") {
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(null, null, null, null, null, null, null, null, null, "anonymous", EntityActionOperation.Read)]
-        [DataRow("%.%", "%.%", "{object}", true, true, true, false, 5, EntityCacheLevel.L1L2, "anonymous", EntityActionOperation.Read)]
-        [DataRow("books.%", "books.pages.%", "books_{object}", false, false, false, true, 2147483647, EntityCacheLevel.L1, "test-user", EntityActionOperation.Delete)]
-        [DataRow(null, "names.%", "{schema}.{object}", true, false, false, true, 1, null, "second-test-user", EntityActionOperation.All)]
+        [DataRow(new[] { "%.%" }, new[] { "%.%" }, "{object}", true, true, true, false, 5, EntityCacheLevel.L1L2, "anonymous", EntityActionOperation.Read)]
+        [DataRow(new[] { "books.%" }, new[] { "books.pages.%" }, "books_{object}", false, false, false, true, 2147483647, EntityCacheLevel.L1, "test-user", EntityActionOperation.Delete)]
+        [DataRow(new[] { "books.%" }, null, "books_{object}", false, null, false, null, 2147483647, null, "test-user", EntityActionOperation.Delete)]
+        [DataRow(null, new[] { "books.pages.%" }, null, null, false, null, true, null, EntityCacheLevel.L1, "test-user", EntityActionOperation.Delete)]
+        [DataRow(new[] { "title.%", "books.%", "names.%" }, new[] { "names.%", "%.%" }, "{schema}.{object}", true, false, false, true, 1, null, "second-test-user", EntityActionOperation.Create)]
         public void TestAutoEntitiesSerializationDeserialization(
             string[]? include,
             string[]? exclude,
@@ -4317,13 +4320,13 @@ type Planet @model(name:""PlanetAlias"") {
                     Template: new AutoentityTemplate(
                         Rest: restEnabled == null ? null : new EntityRestOptions(Enabled: (bool)restEnabled),
                         GraphQL: graphqlEnabled == null ? null : new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: (bool)graphqlEnabled),
-                        Health: new EntityHealthCheckConfig(healthCheckEnabled),
-                        Cache: new EntityCacheOptions(Enabled: cacheEnabled, TtlSeconds: cacheTTL, Level: cacheLevel)
+                        Health: healthCheckEnabled == null ? null : new EntityHealthCheckConfig(healthCheckEnabled),
+                        Cache: (cacheEnabled == null && cacheTTL == null && cacheLevel == null) ? null : new EntityCacheOptions(Enabled: cacheEnabled, TtlSeconds: cacheTTL, Level: cacheLevel)
                     ),
                     Permissions: new EntityPermission[1]));
 
             EntityAction[] entityActions = new EntityAction[] { new(entityActionOp, null, null) };
-            createdAutoentity["test-entity"].Permissions[0] = new EntityPermission("anonymous", entityActions);
+            createdAutoentity["test-entity"].Permissions[0] = new EntityPermission(role, entityActions);
             RuntimeAutoentities autoentities = new(createdAutoentity);
 
             FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
@@ -4357,66 +4360,100 @@ type Planet @model(name:""PlanetAlias"") {
                 Assert.AreEqual(expected: true, actual: entityExists);
 
                 // Validate patterns properties and their values exists in autoentities
-                JsonElement patternsElement = entityElement.GetProperty("patterns");
+                bool expectedPatternsExist = include != null || exclude != null || name != null;
+                bool patternsExists = entityElement.TryGetProperty("patterns", out JsonElement patternsElement);
+                Assert.AreEqual(expected: expectedPatternsExist, actual: patternsExists);
 
-                bool includeExists = patternsElement.TryGetProperty("include", out JsonElement includeElement);
-                Assert.AreEqual(expected: true, actual: includeExists);
-                Assert.AreEqual(expected: include, actual: includeElement.EnumerateArray().Select(e => e.GetString()).ToArray());
-
-                bool excludeExists = patternsElement.TryGetProperty("exclude", out JsonElement excludeElement);
-                Assert.AreEqual(expected: (exclude != null), actual: excludeExists);
-                if (excludeExists)
+                if (patternsExists)
                 {
-                    Assert.AreEqual(expected: exclude, actual: excludeElement.EnumerateArray().Select(e => e.GetString()).ToArray());
-                }
+                    bool includeExists = patternsElement.TryGetProperty("include", out JsonElement includeElement);
+                    Assert.AreEqual(expected: (include != null), actual: includeExists);
+                    if (includeExists)
+                    {
+                        CollectionAssert.AreEqual(expected: include, actual: includeElement.EnumerateArray().Select(e => e.GetString()).ToArray());
+                    }
 
-                bool nameExists = patternsElement.TryGetProperty("name", out JsonElement nameElement);
-                Assert.AreEqual(expected: true, actual: nameExists);
-                Assert.AreEqual(expected: name, actual: nameElement.GetString());
+                    bool excludeExists = patternsElement.TryGetProperty("exclude", out JsonElement excludeElement);
+                    Assert.AreEqual(expected: (exclude != null), actual: excludeExists);
+                    if (excludeExists)
+                    {
+                        CollectionAssert.AreEqual(expected: exclude, actual: excludeElement.EnumerateArray().Select(e => e.GetString()).ToArray());
+                    }
+
+                    bool nameExists = patternsElement.TryGetProperty("name", out JsonElement nameElement);
+                    Assert.AreEqual(expected: (name != null), actual: nameExists);
+                    if (nameExists)
+                    {
+                        Assert.AreEqual(expected: name, actual: nameElement.GetString());
+                    }
+                }
 
                 // Validate template properties and their values exists in autoentities
-                JsonElement templateElement = entityElement.GetProperty("template");
+                bool expectedTemplateExist = restEnabled != null || graphqlEnabled != null || healthCheckEnabled != null
+                    || cacheEnabled != null || cacheLevel != null || cacheTTL != null;
+                bool templateExists = entityElement.TryGetProperty("template", out JsonElement templateElement);
+                Assert.AreEqual(expected: expectedTemplateExist, actual: templateExists);
 
-                bool restPropertyExists = templateElement.TryGetProperty("rest", out JsonElement restElement);
-                Assert.AreEqual(expected: (restEnabled != null), actual: restPropertyExists);
-                if (restEnabled != null)
+                if (templateExists)
                 {
-                    Assert.IsTrue(restElement.TryGetProperty("enabled", out JsonElement restEnabledElement));
-                    Assert.AreEqual(expected: restEnabled, actual: restEnabledElement.GetBoolean());
+                    bool restPropertyExists = templateElement.TryGetProperty("rest", out JsonElement restElement);
+                    Assert.AreEqual(expected: (restEnabled != null), actual: restPropertyExists);
+                    if (restPropertyExists)
+                    {
+                        Assert.IsTrue(restElement.TryGetProperty("enabled", out JsonElement restEnabledElement));
+                        Assert.AreEqual(expected: restEnabled, actual: restEnabledElement.GetBoolean());
+                    }
+
+                    bool graphqlPropertyExists = templateElement.TryGetProperty("graphql", out JsonElement graphqlElement);
+                    Assert.AreEqual(expected: (graphqlEnabled != null), actual: graphqlPropertyExists);
+                    if (graphqlPropertyExists)
+                    {
+                        Assert.IsTrue(graphqlElement.TryGetProperty("enabled", out JsonElement graphqlEnabledElement));
+                        Assert.AreEqual(expected: graphqlEnabled, actual: graphqlEnabledElement.GetBoolean());
+                    }
+
+                    bool healthPropertyExists = templateElement.TryGetProperty("health", out JsonElement healthElement);
+                    Assert.AreEqual(expected: (healthCheckEnabled != null), actual: healthPropertyExists);
+                    if (healthPropertyExists)
+                    {
+                        Assert.IsTrue(healthElement.TryGetProperty("enabled", out JsonElement healthEnabledElement));
+                        Assert.AreEqual(expected: healthCheckEnabled, actual: healthEnabledElement.GetBoolean());
+                    }
+
+                    bool expectedCacheExist = cacheEnabled != null || cacheTTL != null || cacheLevel != null;
+                    bool cachePropertyExists = templateElement.TryGetProperty("cache", out JsonElement cacheElement);
+                    Assert.AreEqual(expected: expectedCacheExist, actual: cachePropertyExists);
+                    if (cacheEnabled != null)
+                    {
+                        Assert.IsTrue(cacheElement.TryGetProperty("enabled", out JsonElement cacheEnabledElement));
+                        Assert.AreEqual(expected: cacheEnabled, actual: cacheEnabledElement.GetBoolean());
+                    }
+
+                    if (cacheTTL != null)
+                    {
+                        Assert.IsTrue(cacheElement.TryGetProperty("ttl-seconds", out JsonElement cacheTtlElement));
+                        Assert.AreEqual(expected: cacheTTL, actual: cacheTtlElement.GetInt32());
+                    }
+
+                    if (cacheLevel != null)
+                    {
+                        Assert.IsTrue(cacheElement.TryGetProperty("level", out JsonElement cacheLevelElement));
+                        Assert.IsTrue(string.Equals(cacheLevel.ToString(), cacheLevelElement.GetString(), StringComparison.OrdinalIgnoreCase));
+                    }
                 }
-
-                bool graphqlPropertyExists = templateElement.TryGetProperty("graphql", out JsonElement graphqlElement);
-                Assert.AreEqual(expected: (graphqlEnabled != null), actual: graphqlPropertyExists);
-                if (graphqlEnabled != null)
-                {
-                    Assert.IsTrue(graphqlElement.TryGetProperty("enabled", out JsonElement graphqlEnabledElement));
-                    Assert.AreEqual(expected: graphqlEnabled, actual: graphqlEnabledElement.GetBoolean());
-                }
-
-                bool healthPropertyExists = templateElement.TryGetProperty("health", out JsonElement healthElement);
-                Assert.AreEqual(expected: true, actual: healthPropertyExists);
-                Assert.IsTrue(healthElement.TryGetProperty("enabled", out JsonElement healthEnabledElement));
-                Assert.AreEqual(expected: (healthCheckEnabled ?? true), actual: healthEnabledElement.GetBoolean());
-
-                bool cachePropertyExists = templateElement.TryGetProperty("cache", out JsonElement cacheElement);
-                Assert.AreEqual(expected: true, actual: cachePropertyExists);
-                Assert.IsTrue(cacheElement.TryGetProperty("enabled", out JsonElement cacheEnabledElement));
-                Assert.AreEqual(expected: (cacheEnabled ?? false), actual: cacheEnabledElement.GetBoolean());
-                Assert.IsTrue(cacheElement.TryGetProperty("ttl", out JsonElement cacheTtlElement));
-                Assert.AreEqual(expected: (cacheTTL ?? EntityCacheOptions.DEFAULT_TTL_SECONDS), actual: cacheTtlElement.GetInt32());
-                Assert.IsTrue(cacheElement.TryGetProperty("level", out JsonElement cacheLevelElement));
-                Assert.AreEqual(expected: (cacheLevel ?? EntityCacheOptions.DEFAULT_LEVEL).ToString(), actual: cacheLevelElement.GetString());
 
                 // Validate permissions properties and their values exists in autoentities
                 JsonElement permissionsElement = entityElement.GetProperty("permissions");
 
-                bool roleExists = permissionsElement.TryGetProperty("role", out JsonElement roleElement);
+                bool roleExists = permissionsElement[0].TryGetProperty("role", out JsonElement roleElement);
                 Assert.AreEqual(expected: true, actual: roleExists);
                 Assert.AreEqual(expected: role, actual: roleElement.GetString());
 
-                bool entityActionsExists = permissionsElement.TryGetProperty("entity-actions", out JsonElement entityActionsElement);
+                bool entityActionsExists = permissionsElement[0].TryGetProperty("actions", out JsonElement entityActionsElement);
                 Assert.AreEqual(expected: true, actual: entityActionsExists);
-                Assert.AreEqual(expected: entityActions.Select(e => e.ToString()).ToArray(), actual: entityActionsElement.EnumerateArray().Select(e => e.ToString()).ToArray());
+                bool entityActionOpExists = entityActionsElement[0].TryGetProperty("action", out JsonElement entityActionOpElement);
+                Assert.AreEqual(expected: true, actual: entityActionOpExists);
+                Assert.IsTrue(string.Equals(entityActionOp.ToString(), entityActionOpElement.GetString(), StringComparison.OrdinalIgnoreCase));
             }
         }
 

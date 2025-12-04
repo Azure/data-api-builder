@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.HealthCheck;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -39,6 +40,9 @@ public record Entity
     public EntityCacheOptions? Cache { get; init; }
     public EntityHealthCheckConfig? Health { get; init; }
 
+    [JsonConverter(typeof(EntityMcpOptionsConverterFactory))]
+    public EntityMcpOptions? Mcp { get; init; }
+
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
 
@@ -54,7 +58,8 @@ public record Entity
         EntityCacheOptions? Cache = null,
         bool IsLinkingEntity = false,
         EntityHealthCheckConfig? Health = null,
-        string? Description = null)
+        string? Description = null,
+        EntityMcpOptions? Mcp = null)
     {
         this.Health = Health;
         this.Source = Source;
@@ -67,6 +72,7 @@ public record Entity
         this.Cache = Cache;
         this.IsLinkingEntity = IsLinkingEntity;
         this.Description = Description;
+        this.Mcp = Mcp;
     }
 
     /// <summary>

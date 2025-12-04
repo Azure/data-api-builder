@@ -34,7 +34,9 @@ namespace Cli.Commands
             IEnumerable<string>? fieldsAliasCollection,
             IEnumerable<string>? fieldsDescriptionCollection,
             IEnumerable<bool>? fieldsPrimaryKeyCollection,
-            string? config
+            string? mcpDmlTools = null,
+            string? mcpCustomTool = null,
+            string? config = null
         )
             : base(config)
         {
@@ -61,6 +63,8 @@ namespace Cli.Commands
             FieldsAliasCollection = fieldsAliasCollection;
             FieldsDescriptionCollection = fieldsDescriptionCollection;
             FieldsPrimaryKeyCollection = fieldsPrimaryKeyCollection;
+            McpDmlTools = mcpDmlTools;
+            McpCustomTool = mcpCustomTool;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -132,5 +136,11 @@ namespace Cli.Commands
 
         [Option("fields.primary-key", Required = false, Separator = ',', HelpText = "Set this field as a primary key.")]
         public IEnumerable<bool>? FieldsPrimaryKeyCollection { get; }
+
+        [Option("mcp.dml-tools", Required = false, HelpText = "Enable MCP DML (Data Manipulation Language) tools for this entity. Allows CRUD operations via MCP.")]
+        public string? McpDmlTools { get; }
+
+        [Option("mcp.custom-tool", Required = false, HelpText = "Enable MCP custom tool for this entity. Only valid for stored procedures.")]
+        public string? McpCustomTool { get; }
     }
 }

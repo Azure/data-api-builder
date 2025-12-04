@@ -51,12 +51,17 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                 string connectionString = string.Empty;
                 DatasourceHealthCheckConfig? health = null;
                 Dictionary<string, object?>? datasourceOptions = null;
+                bool includeVectorFieldsByDefault = false;
+                bool userProvidedIncludeVectorFieldsByDefault = false;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new DataSource(databaseType, connectionString, datasourceOptions, health);
+                        return new DataSource(databaseType, connectionString, datasourceOptions, health, includeVectorFieldsByDefault)
+                        {
+                            UserProvidedIncludeVectorFieldsByDefault = userProvidedIncludeVectorFieldsByDefault
+                        };
                     }
 
                     if (reader.TokenType is JsonTokenType.PropertyName)
@@ -137,6 +142,24 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                 }
 
                                 break;
+                            case "include-vector-fields-by-default":
+                                if (reader.TokenType is JsonTokenType.True or JsonTokenType.False)
+                                {
+                                    includeVectorFieldsByDefault = reader.GetBoolean();
+                                    userProvidedIncludeVectorFieldsByDefault = true;
+                                }
+                                else if (reader.TokenType is JsonTokenType.String)
+                                {
+                                    // Support environment variable replacement
+                                    string stringValue = reader.DeserializeString(_replacementSettings)!;
+                                    if (bool.TryParse(stringValue, out bool boolValue))
+                                    {
+                                        includeVectorFieldsByDefault = boolValue;
+                                        userProvidedIncludeVectorFieldsByDefault = true;
+                                    }
+                                }
+
+                                break;
                             default:
                                 throw new JsonException($"Unexpected property {propertyName} while deserializing DataSource.");
                         }
@@ -149,11 +172,37 @@ internal class DataSourceConverterFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, DataSource value, JsonSerializerOptions options)
         {
-            // Remove the converter so we don't recurse.
-            JsonSerializerOptions innerOptions = new(options);
-            innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is DataSourceConverterFactory));
+            writer.WriteStartObject();
 
-            JsonSerializer.Serialize(writer, value, innerOptions);
+            // Always write required properties
+            writer.WritePropertyName("database-type");
+            JsonSerializer.Serialize(writer, value.DatabaseType, options);
+
+            writer.WritePropertyName("connection-string");
+            writer.WriteStringValue(value.ConnectionString);
+
+            // Write options if present
+            if (value.Options is not null && value.Options.Count > 0)
+            {
+                writer.WritePropertyName("options");
+                JsonSerializer.Serialize(writer, value.Options, options);
+            }
+
+            // Write health if present
+            if (value.Health is not null)
+            {
+                writer.WritePropertyName("health");
+                JsonSerializer.Serialize(writer, value.Health, options);
+            }
+
+            // Write include-vector-fields-by-default only if user provided it
+            if (value.UserProvidedIncludeVectorFieldsByDefault)
+            {
+                writer.WritePropertyName("include-vector-fields-by-default");
+                writer.WriteBooleanValue(value.IncludeVectorFieldsByDefault);
+            }
+
+            writer.WriteEndObject();
         }
     }
 }

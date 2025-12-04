@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Config
                 clientOptions.Retry.NetworkTimeout = TimeSpan.FromSeconds(options.RetryPolicy.NetworkTimeoutSeconds ?? AKVRetryPolicyOptions.DEFAULT_NETWORK_TIMEOUT_SECONDS);
             }
 
-            return new SecretClient(new Uri(options.Endpoint), new DefaultAzureCredential(), clientOptions);
+            return new SecretClient(new Uri(options.Endpoint), new DefaultAzureCredential(), clientOptions); // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
         }
 
         private string? GetAkvVariable(string name)

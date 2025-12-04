@@ -2711,9 +2711,10 @@ namespace Cli
                 // Azure Key Vault Endpoint
                 if (options.AzureKeyVaultEndpoint is not null)
                 {
+                    // Ensure endpoint flag is marked user provided so converter writes it.
                     updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
-                        ? updatedAzureKeyVaultOptions with { Endpoint = options.AzureKeyVaultEndpoint }
-                        : new AzureKeyVaultOptions { Endpoint = options.AzureKeyVaultEndpoint };
+                        ? updatedAzureKeyVaultOptions with { Endpoint = options.AzureKeyVaultEndpoint, UserProvidedEndpoint = true }
+                        : new AzureKeyVaultOptions(endpoint: options.AzureKeyVaultEndpoint);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.endpoint as '{endpoint}'", options.AzureKeyVaultEndpoint);
                 }
 
@@ -2722,7 +2723,7 @@ namespace Cli
                 {
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { Mode = options.AzureKeyVaultRetryPolicyMode.Value, UserProvidedMode = true }
-                        : new AKVRetryPolicyOptions { Mode = options.AzureKeyVaultRetryPolicyMode.Value, UserProvidedMode = true };
+                        : new AKVRetryPolicyOptions(mode: options.AzureKeyVaultRetryPolicyMode.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.mode as '{mode}'", options.AzureKeyVaultRetryPolicyMode.Value);
                 }
 
@@ -2737,7 +2738,7 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { MaxCount = options.AzureKeyVaultRetryPolicyMaxCount.Value, UserProvidedMaxCount = true }
-                        : new AKVRetryPolicyOptions { MaxCount = options.AzureKeyVaultRetryPolicyMaxCount.Value, UserProvidedMaxCount = true };
+                        : new AKVRetryPolicyOptions(maxCount: options.AzureKeyVaultRetryPolicyMaxCount.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-count as '{maxCount}'", options.AzureKeyVaultRetryPolicyMaxCount.Value);
                 }
 
@@ -2752,7 +2753,7 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { DelaySeconds = options.AzureKeyVaultRetryPolicyDelaySeconds.Value, UserProvidedDelaySeconds = true }
-                        : new AKVRetryPolicyOptions { DelaySeconds = options.AzureKeyVaultRetryPolicyDelaySeconds.Value, UserProvidedDelaySeconds = true };
+                        : new AKVRetryPolicyOptions(delaySeconds: options.AzureKeyVaultRetryPolicyDelaySeconds.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.delay-seconds as '{delaySeconds}'", options.AzureKeyVaultRetryPolicyDelaySeconds.Value);
                 }
 
@@ -2767,7 +2768,7 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { MaxDelaySeconds = options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value, UserProvidedMaxDelaySeconds = true }
-                        : new AKVRetryPolicyOptions { MaxDelaySeconds = options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value, UserProvidedMaxDelaySeconds = true };
+                        : new AKVRetryPolicyOptions(maxDelaySeconds: options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-delay-seconds as '{maxDelaySeconds}'", options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value);
                 }
 
@@ -2782,16 +2783,17 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { NetworkTimeoutSeconds = options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value, UserProvidedNetworkTimeoutSeconds = true }
-                        : new AKVRetryPolicyOptions { NetworkTimeoutSeconds = options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value, UserProvidedNetworkTimeoutSeconds = true };
+                        : new AKVRetryPolicyOptions(networkTimeoutSeconds: options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.network-timeout-seconds as '{networkTimeoutSeconds}'", options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value);
                 }
 
-                // Update Azure Key Vault options with retry policy if retry policy was modified
+                // Update Azure Key Vault options with retry policy if modified
                 if (updatedRetryPolicyOptions is not null)
                 {
+                    // Ensure outer AKV object marks retry policy as user provided so it serializes.
                     updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
-                        ? updatedAzureKeyVaultOptions with { RetryPolicy = updatedRetryPolicyOptions }
-                        : new AzureKeyVaultOptions { RetryPolicy = updatedRetryPolicyOptions };
+                        ? updatedAzureKeyVaultOptions with { RetryPolicy = updatedRetryPolicyOptions, UserProvidedRetryPolicy = true }
+                        : new AzureKeyVaultOptions(retryPolicy: updatedRetryPolicyOptions);
                 }
 
                 // Update runtime config if Azure Key Vault options were modified

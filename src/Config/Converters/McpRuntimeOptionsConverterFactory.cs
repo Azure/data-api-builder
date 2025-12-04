@@ -14,7 +14,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
 {
     // Determines whether to replace environment variable with its
     // value or not while deserializing.
-    private bool _replaceEnvVar;
+    private DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -25,25 +25,25 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new McpRuntimeOptionsConverter(_replaceEnvVar);
+        return new McpRuntimeOptionsConverter(_replacementSettings);
     }
 
-    internal McpRuntimeOptionsConverterFactory(bool replaceEnvVar)
+    internal McpRuntimeOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     private class McpRuntimeOptionsConverter : JsonConverter<McpRuntimeOptions>
     {
         // Determines whether to replace environment variable with its
         // value or not while deserializing.
-        private bool _replaceEnvVar;
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replaceEnvVar">Whether to replace environment variable with its
         /// value or not while deserializing.</param>
-        internal McpRuntimeOptionsConverter(bool replaceEnvVar)
+        internal McpRuntimeOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                         case "path":
                             if (reader.TokenType is not JsonTokenType.Null)
                             {
-                                path = reader.DeserializeString(_replaceEnvVar);
+                                path = reader.DeserializeString(_replacementSettings);
                             }
 
                             break;

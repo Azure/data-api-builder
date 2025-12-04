@@ -941,6 +941,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         if (action.Fields.Exclude.Contains("*"))
                         {
+                            // Exclude all - no fields available for this action
                             actionFields.Clear();
                         }
                         else
@@ -1455,8 +1456,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 Type = SCHEMA_OBJECT_TYPE,
                 Properties = properties,
                 Description = entityConfig?.Description,
-                // For request body schemas, set additionalProperties based on request-body-strict setting
-                // Response schemas always allow additional properties
+                // Response schemas always allow additional properties (true).
+                // Request body schemas respect request-body-strict: strict=true → false, strict=false → true
                 AdditionalPropertiesAllowed = !isRequestBodySchema || !isRequestBodyStrict
             };
 

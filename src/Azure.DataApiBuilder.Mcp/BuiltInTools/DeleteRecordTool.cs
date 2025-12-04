@@ -87,11 +87,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 2) Check if the tool is enabled in configuration before proceeding
                 if (config.McpDmlTools?.DeleteRecord != true)
                 {
-                    return McpResponseBuilder.BuildErrorResult(
-                        toolName,
-                        "ToolDisabled",
-                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
-                        logger);
+                    return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
                 }
 
                 // 3) Parsing & basic argument validation
@@ -105,26 +101,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
-                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
-
-                // 4) Resolve metadata for entity existence check
-                string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
-
-                try
+                // 4) Resolve metadata for entity existence
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entityName,
+                        config,
+                        serviceProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // Validate it's a table or view
@@ -140,7 +127,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", $"Permission denied: {roleError}", logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "delete", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -151,10 +138,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "PermissionDenied", $"Permission denied: {authError}", logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "delete", authError, logger);
                 }
 
-                // 6) Build and validate Delete context
+                // Need MetadataProviderFactory for RequestValidator; resolve here.
+                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
 
                 DeleteRequestContext context = new(
@@ -174,7 +162,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 requestValidator.ValidatePrimaryKey(context);
 
-                // 7) Execute
+                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
                 DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(dbType);
 
@@ -343,8 +331,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (Exception ex)
             {
-                ILogger<DeleteRecordTool>? innerLogger = serviceProvider.GetService<ILogger<DeleteRecordTool>>();
-                innerLogger?.LogError(ex, "Unexpected error in DeleteRecordTool.");
+                logger?.LogError(ex, "Unexpected error in DeleteRecordTool.");
 
                 return McpResponseBuilder.BuildErrorResult(
                     toolName,

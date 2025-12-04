@@ -85,7 +85,7 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
             }
         }
 
-        throw new JsonException("Unable to read the Autoentities Pattern Options");
+        throw new JsonException("Failed to read the Autoentities Template Options");
     }
 
     /// <summary>

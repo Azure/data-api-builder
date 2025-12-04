@@ -33,11 +33,6 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    if (permissions == null)
-                    {
-                        throw new JsonException("The 'permissions' property is required for Autoentity.");
-                    }
-
                     return new Autoentity(patterns, template, permissions);
                 }
 
@@ -67,7 +62,7 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
             }
         }
 
-        throw new JsonException("Unable to read the Autoentities");
+        throw new JsonException("Failed to read the Autoentities");
     }
 
     /// <summary>

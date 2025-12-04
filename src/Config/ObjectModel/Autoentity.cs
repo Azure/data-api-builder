@@ -22,12 +22,12 @@ public record Autoentity
     public Autoentity(
         AutoentityPatterns? Patterns,
         AutoentityTemplate? Template,
-        EntityPermission[] Permissions)
+        EntityPermission[]? Permissions)
     {
         this.Patterns = Patterns ?? new AutoentityPatterns();
 
         this.Template = Template ?? new AutoentityTemplate();
 
-        this.Permissions = Permissions;
+        this.Permissions = Permissions ?? Array.Empty<EntityPermission>();
     }
 }

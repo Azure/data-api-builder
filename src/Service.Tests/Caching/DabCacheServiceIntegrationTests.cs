@@ -765,6 +765,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 entities,
                 null,
                 null,
+                null,
                 null
             );
             mockRuntimeConfig

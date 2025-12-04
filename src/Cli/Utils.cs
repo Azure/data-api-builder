@@ -917,6 +917,7 @@ namespace Cli
                     _logger.LogError("Invalid format for --mcp.dml-tools. Accepted values are true/false.");
                     return null;
                 }
+
                 dmlToolsEnabled = dmlValue;
             }
 

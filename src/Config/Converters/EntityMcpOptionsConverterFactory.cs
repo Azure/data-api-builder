@@ -24,7 +24,7 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
 
     /// <summary>
     /// Converter for EntityMcpOptions that handles both boolean and object representations.
-    /// When boolean: true enables dml-tools, false disables dml-tools.
+    /// When boolean: true enables dml-tools and custom-tool remains false (default), false disables dml-tools and custom-tool remains false.
     /// When object: can specify individual properties (custom-tool and dml-tools).
     /// </summary>
     private class EntityMcpOptionsConverter : JsonConverter<EntityMcpOptions>
@@ -42,8 +42,9 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
                 bool value = reader.GetBoolean();
                 // Boolean true means: dml-tools=true, custom-tool=false (default)
                 // Boolean false means: dml-tools=false, custom-tool=false
+                // Pass null for customToolEnabled to keep it as default (not user-provided)
                 return new EntityMcpOptions(
-                    customToolEnabled: false,
+                    customToolEnabled: null,
                     dmlToolsEnabled: value
                 );
             }
@@ -66,13 +67,16 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
                         string? propertyName = reader.GetString();
                         reader.Read(); // Move to the value
 
-                        if (propertyName == "custom-tool")
+                        switch (propertyName)
                         {
-                            customToolEnabled = reader.TokenType == JsonTokenType.True;
-                        }
-                        else if (propertyName == "dml-tools")
-                        {
-                            dmlToolsEnabled = reader.TokenType == JsonTokenType.True;
+                            case "custom-tool":
+                                customToolEnabled = reader.TokenType == JsonTokenType.True;
+                                break;
+                            case "dml-tools":
+                                dmlToolsEnabled = reader.TokenType == JsonTokenType.True;
+                                break;
+                            default:
+                                throw new JsonException($"Unknown property '{propertyName}' in EntityMcpOptions");
                         }
                     }
                 }
@@ -87,7 +91,6 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
         {
             if (value == null)
             {
-                writer.WriteNullValue();
                 return;
             }
 
@@ -98,7 +101,7 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
             if (writeAsBoolean)
             {
                 // Write as boolean shorthand
-                writer.WriteBooleanValue(value.DmlToolEnabled ?? true);
+                writer.WriteBooleanValue(value.DmlToolEnabled);
             }
             else if (value.UserProvidedCustomToolEnabled || value.UserProvidedDmlToolsEnabled)
             {
@@ -107,20 +110,15 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
 
                 if (value.UserProvidedCustomToolEnabled)
                 {
-                    writer.WriteBoolean("custom-tool", value.CustomToolEnabled ?? false);
+                    writer.WriteBoolean("custom-tool", value.CustomToolEnabled);
                 }
 
                 if (value.UserProvidedDmlToolsEnabled)
                 {
-                    writer.WriteBoolean("dml-tools", value.DmlToolEnabled ?? true);
+                    writer.WriteBoolean("dml-tools", value.DmlToolEnabled);
                 }
 
                 writer.WriteEndObject();
-            }
-            else
-            {
-                // Nothing provided, write null (will be omitted by DefaultIgnoreCondition)
-                writer.WriteNullValue();
             }
         }
     }

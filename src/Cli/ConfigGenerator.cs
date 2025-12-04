@@ -449,7 +449,7 @@ namespace Cli
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
-            
+
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
             {
                 EntityMcpOptions? mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
@@ -459,7 +459,7 @@ namespace Cli
                     return false;
                 }
             }
-            
+
             EntityMcpOptions? mcpOptionsToUse = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
 
             // Create new entity.
@@ -1633,10 +1633,11 @@ namespace Cli
             EntityActionPolicy? updatedPolicy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
             EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
-            
+
             // Determine if the entity is or will be a stored procedure
             bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
             EntityMcpOptions? updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
+
             // If MCP options were provided, use them; otherwise keep existing MCP options
             if (updatedMcpOptions is null)
             {

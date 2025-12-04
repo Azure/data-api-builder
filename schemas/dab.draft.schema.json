@@ -695,7 +695,7 @@
     },
     "entities": {
       "type": "object",
-      "description": "Entities that will be exposed via REST and/or GraphQL",
+      "description": "Entities that will be exposed via REST, GraphQL and/or MCP",
       "patternProperties": {
         "^.*$": {
           "type": "object",

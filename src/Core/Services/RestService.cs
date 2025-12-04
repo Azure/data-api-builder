@@ -440,11 +440,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// or {SubDir}/.../{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
         /// 
-        /// Note: Uses shortest-prefix matching. When multiple entity paths could match,
-        /// the shortest matching path takes precedence. For example, if both "api" and
-        /// "api/books" are valid entity paths, a request to "/api/books/id/1" will match
-        /// "api" with primaryKeyRoute "books/id/1". Configure unique, non-overlapping
-        /// paths to avoid ambiguity.
+        /// Note: Uses longest-prefix matching (most-specific match wins). When multiple
+        /// entity paths could match, the longest matching path takes precedence. For example,
+        /// if both "cart" and "cart/item" are valid entity paths, a request to
+        /// "/cart/item/id/123" will match "cart/item" with primaryKeyRoute "id/123".
         /// </summary>
         /// <param name="routeAfterPathBase">The request route (no '/' prefix) containing the entity path
         /// (and optionally primary key).</param>
@@ -458,9 +457,9 @@ namespace Azure.DataApiBuilder.Core.Services
             // Split routeAfterPath to extract segments
             string[] segments = routeAfterPathBase.Split('/');
 
-            // Try progressively longer paths until we find a match
-            // Start with the first segment, then first two, etc.
-            for (int i = 1; i <= segments.Length; i++)
+            // Try longest paths first (most-specific match wins)
+            // Start with all segments, then remove one at a time
+            for (int i = segments.Length; i >= 1; i--)
             {
                 string entityPath = string.Join("/", segments.Take(i));
                 if (runtimeConfig.TryGetEntityNameFromPath(entityPath, out string? entityName))

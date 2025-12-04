@@ -269,6 +269,13 @@ public class ColumnDefinition
     public bool IsReadOnly { get; set; }
     public object? DefaultValue { get; set; }
 
+    /// <summary>
+    /// Indicates whether this column is a vector type (SQL Server vector data type).
+    /// Vector columns can be large and are excluded from results by default when
+    /// include-vector-fields-by-default is set to false in the configuration.
+    /// </summary>
+    public bool IsVectorType { get; set; }
+
     public ColumnDefinition() { }
 
     public ColumnDefinition(Type systemType)

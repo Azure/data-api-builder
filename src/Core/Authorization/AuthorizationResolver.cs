@@ -285,6 +285,11 @@ public class AuthorizationResolver : IAuthorizationResolver
             HashSet<string> allowedColumnsForAnonymousRole = new();
             string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+
+            // Get the include-vector-fields-by-default setting from the data source config
+            DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
+            bool includeVectorFields = dataSource.IncludeVectorFieldsByDefault;
+
             foreach (EntityPermission permission in entity.Permissions)
             {
                 string role = permission.Role;
@@ -298,11 +303,11 @@ public class AuthorizationResolver : IAuthorizationResolver
                     // Use a HashSet to store all the backing field names
                     // that are accessible to the user.
                     HashSet<string> allowedColumns = new();
-                    IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName, metadataProvider);
+                    IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName, metadataProvider, includeVectorFields);
 
                     if (entityAction.Fields is null)
                     {
-                        operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider));
+                        operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider, includeVectorFields));
                     }
                     else
                     {
@@ -313,7 +318,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                         if (entityAction.Fields.Include is null ||
                             (entityAction.Fields.Include.Count == 1 && entityAction.Fields.Include.Contains(WILDCARD)))
                         {
-                            operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider));
+                            operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider, includeVectorFields));
                         }
                         else
                         {
@@ -325,7 +330,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                         if (entityAction.Fields.Exclude is null ||
                             (entityAction.Fields.Exclude.Count == 1 && entityAction.Fields.Exclude.Contains(WILDCARD)))
                         {
-                            operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider));
+                            operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider, includeVectorFields));
                         }
                         else
                         {
@@ -787,8 +792,13 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// For CosmosDb_NoSql, read all the column names from schema.gql GraphQL type fields
     /// </summary>
     /// <param name="entityName">Used to lookup table definition of specific entity</param>
+    /// <param name="metadataProvider">Metadata provider for the entity's data source.</param>
+    /// <param name="includeVectorFields">When false, vector type columns are excluded from results.</param>
     /// <returns>Collection of columns in table definition.</returns>
-    private static IEnumerable<string> ResolveEntityDefinitionColumns(string entityName, ISqlMetadataProvider metadataProvider)
+    private static IEnumerable<string> ResolveEntityDefinitionColumns(
+        string entityName,
+        ISqlMetadataProvider metadataProvider,
+        bool includeVectorFields = true)
     {
         if (metadataProvider.GetDatabaseType() is DatabaseType.CosmosDB_NoSQL)
         {
@@ -797,7 +807,20 @@ public class AuthorizationResolver : IAuthorizationResolver
 
         // Table definition is null on stored procedure entities
         SourceDefinition? sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
-        return sourceDefinition is null ? new List<string>() : sourceDefinition.Columns.Keys;
+        if (sourceDefinition is null)
+        {
+            return new List<string>();
+        }
+
+        // When includeVectorFields is false and this is MSSQL, filter out vector type columns
+        if (!includeVectorFields && metadataProvider.GetDatabaseType() is DatabaseType.MSSQL)
+        {
+            return sourceDefinition.Columns
+                .Where(kvp => !kvp.Value.IsVectorType)
+                .Select(kvp => kvp.Key);
+        }
+
+        return sourceDefinition.Columns.Keys;
     }
 
     /// <summary>

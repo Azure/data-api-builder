@@ -1636,6 +1636,19 @@ namespace Cli
 
             // Determine if the entity is or will be a stored procedure
             bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
+
+            // Validate MCP options if provided
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                EntityMcpOptions? mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
+
+                if (mcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
+
             EntityMcpOptions? updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
 
             // If MCP options were provided, use them; otherwise keep existing MCP options

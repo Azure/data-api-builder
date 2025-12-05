@@ -740,49 +740,8 @@
                   "additionalProperties": false,
                   "properties": {
                     "dml-tools": {
-                      "oneOf": [
-                        {
-                          "type": "boolean",
-                          "description": "Enable/disable all DML tools with default settings."
-                        },
-                        {
-                          "type": "object",
-                          "description": "Individual DML tools configuration",
-                          "additionalProperties": false,
-                          "properties": {
-                            "describe-entities": {
-                              "type": "boolean",
-                              "description": "Enable/disable the describe-entities tool.",
-                              "default": true
-                            },
-                            "create-record": {
-                              "type": "boolean",
-                              "description": "Enable/disable the create-record tool.",
-                              "default": true
-                            },
-                            "read-records": {
-                              "type": "boolean",
-                              "description": "Enable/disable the read-records tool.",
-                              "default": true
-                            },
-                            "update-record": {
-                              "type": "boolean",
-                              "description": "Enable/disable the update-record tool.",
-                              "default": true
-                            },
-                            "delete-record": {
-                              "type": "boolean",
-                              "description": "Enable/disable the delete-record tool.",
-                              "default": true
-                            },
-                            "execute-entity": {
-                              "type": "boolean",
-                              "description": "Enable/disable the execute-entity tool.",
-                              "default": true
-                            }
-                          }
-                        }
-                      ]
+                      "type": "boolean",
+                      "description": "Enable/disable all DML tools with default settings."
                     }
                   }
                 },

@@ -450,6 +450,17 @@ namespace Cli
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
+            EntityMcpOptions? mcpOptionsToUse = null;
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                mcpOptionsToUse = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
+                if (mcpOptionsToUse is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
+
             // Create new entity.
             Entity entity = new(
                 Source: source,
@@ -460,7 +471,8 @@ namespace Cli
                 Relationships: null,
                 Mappings: null,
                 Cache: cacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description);
+                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
+                Mcp: mcpOptionsToUse);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
@@ -1621,6 +1633,26 @@ namespace Cli
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
             EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
+            // Determine if the entity is or will be a stored procedure
+            bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
+
+            // Construct and validate MCP options if provided
+            EntityMcpOptions? updatedMcpOptions = null;
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
+                if (updatedMcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
+            else
+            {
+                // Keep existing MCP options if no updates provided
+                updatedMcpOptions = entity.Mcp;
+            }
+
             if (!updatedGraphQLDetails.Enabled)
             {
                 _logger.LogWarning("Disabling GraphQL for this entity will restrict its usage in relationships");
@@ -1857,7 +1889,8 @@ namespace Cli
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description
+                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description,
+                Mcp: updatedMcpOptions
                 );
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {

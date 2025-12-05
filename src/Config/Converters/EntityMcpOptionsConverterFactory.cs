@@ -70,10 +70,10 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
                         switch (propertyName)
                         {
                             case "custom-tool":
-                                customToolEnabled = reader.TokenType == JsonTokenType.True;
+                                customToolEnabled = reader.GetBoolean();
                                 break;
                             case "dml-tools":
-                                dmlToolsEnabled = reader.TokenType == JsonTokenType.True;
+                                dmlToolsEnabled = reader.GetBoolean();
                                 break;
                             default:
                                 throw new JsonException($"Unknown property '{propertyName}' in EntityMcpOptions");

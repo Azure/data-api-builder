@@ -450,17 +450,16 @@ namespace Cli
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
+            EntityMcpOptions? mcpOptionsToUse = null;
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
             {
-                EntityMcpOptions? mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
-                if (mcpOptions is null)
+                mcpOptionsToUse = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
+                if (mcpOptionsToUse is null)
                 {
                     _logger.LogError("Failed to construct MCP options.");
                     return false;
                 }
             }
-
-            EntityMcpOptions? mcpOptionsToUse = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
 
             // Create new entity.
             Entity entity = new(
@@ -1637,23 +1636,20 @@ namespace Cli
             // Determine if the entity is or will be a stored procedure
             bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
 
-            // Validate MCP options if provided
+            // Construct and validate MCP options if provided
+            EntityMcpOptions? updatedMcpOptions = null;
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
             {
-                EntityMcpOptions? mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
-
-                if (mcpOptions is null)
+                updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
+                if (updatedMcpOptions is null)
                 {
                     _logger.LogError("Failed to construct MCP options.");
                     return false;
                 }
             }
-
-            EntityMcpOptions? updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
-
-            // If MCP options were provided, use them; otherwise keep existing MCP options
-            if (updatedMcpOptions is null)
+            else
             {
+                // Keep existing MCP options if no updates provided
                 updatedMcpOptions = entity.Mcp;
             }
 

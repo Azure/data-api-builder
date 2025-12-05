@@ -75,6 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                             else
                             {
                                 EasyAuthType easyAuthProvider = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), provider, ignoreCase: true);
+
                                 services.AddAuthentication()
                                     .AddEasyAuthAuthentication(easyAuthProvider);
                             }

@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void ValidateEasyAuthConfig()
         {
             RuntimeConfig config =
-                CreateRuntimeConfigWithOptionalAuthN(new AuthenticationOptions(EasyAuthType.StaticWebApps.ToString(), null));
+                CreateRuntimeConfigWithOptionalAuthN(new AuthenticationOptions(EasyAuthType.AppService.ToString(), null));
 
             _mockFileSystem.AddFile(
                 FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,

@@ -5257,7 +5257,9 @@ type Planet @model(name:""PlanetAlias"") {
         /// by executing HTTP requests against the engine until a non-503 error is received.
         /// </summary>
         /// <param name="httpClient">Client used for request execution.</param>
-        /// <param name="config">Post-startup configuration</param>
+        /// <param name="content">New config file content that will be added to DAB.</param>
+        /// <param name="configurationEndpoint">Endpoint through which content will be sent to DAB."</param>
+        /// <param name="rest">Global settings used at runtime for REST APIs.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config</returns>
         private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, JsonContent content, string configurationEndpoint, RestRuntimeOptions rest)
         {
@@ -5273,15 +5275,16 @@ type Planet @model(name:""PlanetAlias"") {
         /// Executing REST requests against the engine until a non-503 error is received.
         /// </summary>
         /// <param name="httpClient">Client used for request execution.</param>
+        /// <param name="rest">Global settings used at runtime for REST APIs.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
         /// else the response code from the REST request</returns>
         private static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient, RestRuntimeOptions rest)
         {
-            // Retry request RETRY_COUNT times in 1 second increments to allow required services
+            // Retry request RETRY_COUNT times in exponential increments to allow required services
             // time to instantiate and hydrate permissions.
-            int retryCount = RETRY_COUNT;
+            int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
-            while (retryCount > 0)
+            while (retryCount < RETRY_COUNT)
             {
                 // Spot test authorization resolver utilization to ensure configuration is used.
                 HttpResponseMessage postConfigHydrationResult =
@@ -5290,8 +5293,8 @@ type Planet @model(name:""PlanetAlias"") {
 
                 if (postConfigHydrationResult.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
-                    retryCount--;
-                    await Task.Delay(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    retryCount++;
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(RETRY_WAIT_SECONDS * 2, retryCount)));
                     continue;
                 }
 

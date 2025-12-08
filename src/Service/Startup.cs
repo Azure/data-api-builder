@@ -28,6 +28,7 @@ using Azure.DataApiBuilder.Mcp.Core;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
+using Azure.DataApiBuilder.Service.SemanticCache;
 using Azure.DataApiBuilder.Service.Telemetry;
 using Azure.DataApiBuilder.Service.Utilities;
 using Azure.Identity;
@@ -462,6 +463,39 @@ namespace Azure.DataApiBuilder.Service
             }
 
             services.AddSingleton<DabCacheService>();
+
+            // Semantic Cache Services
+            if (runtimeConfigAvailable && (runtimeConfig?.IsSemanticCachingEnabled ?? false))
+            {
+                SemanticCacheOptions semanticCacheOptions = runtimeConfig!.Runtime!.SemanticCache!;
+
+                // Validate required configuration
+                if (semanticCacheOptions.AzureManagedRedis is null ||
+                    string.IsNullOrWhiteSpace(semanticCacheOptions.AzureManagedRedis.ConnectionString))
+                {
+                    throw new Exception("Semantic Cache: Azure Managed Redis connection string is required when semantic caching is enabled.");
+                }
+
+                if (semanticCacheOptions.EmbeddingProvider is null ||
+                    string.IsNullOrWhiteSpace(semanticCacheOptions.EmbeddingProvider.Endpoint))
+                {
+                    throw new Exception("Semantic Cache: Embedding provider endpoint is required when semantic caching is enabled.");
+                }
+
+                // Register Redis ConnectionMultiplexer for semantic cache
+                Task<ConnectionMultiplexer> semanticCacheRedisTask = ConnectionMultiplexer.ConnectAsync(semanticCacheOptions.AzureManagedRedis.ConnectionString);
+
+                services.AddSingleton<IConnectionMultiplexer>(sp => semanticCacheRedisTask.Result);
+
+                // Register semantic cache components
+                services.AddSingleton(semanticCacheOptions.EmbeddingProvider);
+                services.AddSingleton(semanticCacheOptions.AzureManagedRedis);
+                services.AddSingleton<IEmbeddingService, AzureOpenAIEmbeddingService>();
+                services.AddSingleton<RedisVectorStore>();
+                services.AddSingleton<ISemanticCache, SemanticCacheService>();
+
+                _logger.LogInformation("Semantic caching is enabled and configured.");
+            }
 
             services.AddDabMcpServer(configProvider);
 

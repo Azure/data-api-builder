@@ -15,6 +15,7 @@ public record RuntimeOptions
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
     public RuntimeCacheOptions? Cache { get; init; }
+    public SemanticCacheOptions? SemanticCache { get; init; }
     public PaginationOptions? Pagination { get; init; }
     public RuntimeHealthCheckConfig? Health { get; init; }
 
@@ -27,6 +28,7 @@ public record RuntimeOptions
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
         RuntimeCacheOptions? Cache = null,
+        SemanticCacheOptions? SemanticCache = null,
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null)
     {
@@ -37,6 +39,7 @@ public record RuntimeOptions
         this.BaseRoute = BaseRoute;
         this.Telemetry = Telemetry;
         this.Cache = Cache;
+        this.SemanticCache = SemanticCache;
         this.Pagination = Pagination;
         this.Health = Health;
     }
@@ -49,6 +52,15 @@ public record RuntimeOptions
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Cache))]
     public bool IsCachingEnabled => Cache?.Enabled is true;
+
+    /// <summary>
+    /// Resolves the value of the semantic-cache property if present, default is false.
+    /// Semantic caching is enabled only when explicitly set to true.
+    /// </summary>
+    /// <returns>Whether semantic caching is enabled globally.</returns>
+    [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(SemanticCache))]
+    public bool IsSemanticCachingEnabled => SemanticCache?.Enabled is true;
 
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Rest))]

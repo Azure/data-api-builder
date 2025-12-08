@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
@@ -187,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             _sourceDefinition.SourceEntityRelationshipMap.Add("persons", metadata);
 
-            // In serialization options we need  ReferenceHandler = ReferenceHandler.Preserve, or else it doesnot seialize objects with cycle references
+            // In serialization options we need  ReferenceHandler = ReferenceHandler.Preserve, or else it does not serialize objects with cycle references
             // SourceDefinition -> RelationShipMetadata -> ForeignKeyDefinition RelationshipPair ->DatabaseTable -> SourceDefinition
             Assert.ThrowsException<JsonException>(() =>
             {
@@ -276,8 +277,96 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "FirstName");
         }
 
-        private void InitializeObjects()
+        /// <summary>
+        /// Validates serialization and deserilization of Dictionary containing DatabaseTable
+        /// The table will have dollar sign prefix ($) in the column name
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// </summary>
+        [TestMethod]
+        public void TestDictionaryDatabaseObjectSerializationDeserialization_WithDollarColumn()
         {
+            InitializeObjects(generateDollaredColumn: true);
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                },
+                ReferenceHandler = ReferenceHandler.Preserve
+            };
+
+            Dictionary<string, DatabaseObject> dict = new() { { "person", _databaseTable } };
+
+            string serializedDict = JsonSerializer.Serialize(dict, _options);
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serializedDict, _options)!;
+
+            DatabaseTable deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
+
+            Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
+            Assert.AreEqual(deserializedDatabaseTable.FullName, _databaseTable.FullName);
+            deserializedDatabaseTable.Equals(_databaseTable);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.SourceDefinition, _databaseTable.SourceDefinition, "$FirstName");
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "$FirstName");
+        }
+
+        /// <summary>
+        /// Validates serialization and deserilization of Dictionary containing DatabaseView
+        /// The table will have dollar sign prefix ($) in the column name
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseViewSerializationDeserialization_WithDollarColumn()
+        {
+            InitializeObjects(generateDollaredColumn: true);
+
+            TestTypeNameChanges(_databaseView, "DatabaseView");
+
+            // Test to catch if there is change in number of properties/fields
+            // Note: On Addition of property make sure it is added in following object creation _databaseView and include in serialization
+            // and deserialization test.
+            int fields = typeof(DatabaseView).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
+            Assert.AreEqual(fields, 6);
+
+            string serializedDatabaseView = JsonSerializer.Serialize(_databaseView, _options);
+            DatabaseView deserializedDatabaseView = JsonSerializer.Deserialize<DatabaseView>(serializedDatabaseView, _options)!;
+
+            Assert.AreEqual(deserializedDatabaseView.SourceType, _databaseView.SourceType);
+            deserializedDatabaseView.Equals(_databaseView);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseView.SourceDefinition, _databaseView.SourceDefinition, "$FirstName");
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseView.ViewDefinition, _databaseView.ViewDefinition, "$FirstName");
+        }
+
+        /// <summary>
+        /// Validates serialization and deserilization of Dictionary containing DatabaseStoredProcedure
+        /// The table will have dollar sign prefix ($) in the column name
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseStoredProcedureSerializationDeserialization_WithDollarColumn()
+        {
+            InitializeObjects(generateDollaredColumn: true);
+
+            TestTypeNameChanges(_databaseStoredProcedure, "DatabaseStoredProcedure");
+
+            // Test to catch if there is change in number of properties/fields
+            // Note: On Addition of property make sure it is added in following object creation _databaseStoredProcedure and include in serialization
+            // and deserialization test.
+            int fields = typeof(DatabaseStoredProcedure).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
+            Assert.AreEqual(fields, 6);
+
+            string serializedDatabaseSP = JsonSerializer.Serialize(_databaseStoredProcedure, _options);
+            DatabaseStoredProcedure deserializedDatabaseSP = JsonSerializer.Deserialize<DatabaseStoredProcedure>(serializedDatabaseSP, _options)!;
+
+            Assert.AreEqual(deserializedDatabaseSP.SourceType, _databaseStoredProcedure.SourceType);
+            deserializedDatabaseSP.Equals(_databaseStoredProcedure);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseSP.SourceDefinition, _databaseStoredProcedure.SourceDefinition, "$FirstName", true);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseSP.StoredProcedureDefinition, _databaseStoredProcedure.StoredProcedureDefinition, "$FirstName", true);
+        }
+
+        private void InitializeObjects(bool generateDollaredColumn = false)
+        {
+            string columnName = generateDollaredColumn ? "$FirstName" : "FirstName";
             _options = new()
             {
                 // ObjectConverter behavior different in .NET8 most likely due to
@@ -289,10 +378,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     new DatabaseObjectConverter(),
                     new TypeConverter()
                 }
+
             };
 
             _columnDefinition = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("John"), false);
-            _sourceDefinition = GetSourceDefinition(false, false, new List<string>() { "FirstName" }, _columnDefinition);
+            _sourceDefinition = GetSourceDefinition(false, false, new List<string>() { columnName }, _columnDefinition);
 
             _databaseTable = new DatabaseTable()
             {
@@ -311,10 +401,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     IsInsertDMLTriggerEnabled = false,
                     IsUpdateDMLTriggerEnabled = false,
-                    PrimaryKey = new List<string>() { "FirstName" },
+                    PrimaryKey = new List<string>() { columnName },
                 },
             };
-            _databaseView.ViewDefinition.Columns.Add("FirstName", _columnDefinition);
+            _databaseView.ViewDefinition.Columns.Add(columnName, _columnDefinition);
 
             _parameterDefinition = new()
             {
@@ -331,10 +421,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
-                    PrimaryKey = new List<string>() { "FirstName" },
+                    PrimaryKey = new List<string>() { columnName },
                 }
             };
-            _databaseStoredProcedure.StoredProcedureDefinition.Columns.Add("FirstName", _columnDefinition);
+            _databaseStoredProcedure.StoredProcedureDefinition.Columns.Add(columnName, _columnDefinition);
             _databaseStoredProcedure.StoredProcedureDefinition.Parameters.Add("Id", _parameterDefinition);
         }
 
@@ -488,6 +578,69 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 TableDefinition = source2,
             };
             return new(_databaseTable, table2);
+        }
+
+        /// <summary>
+        /// Verifies that when merging multiple runtime configs, if the child config omits
+        /// the azure-key-vault section, the merged result still contains the AzureKeyVaultOptions (including retry-policy)
+        /// inherited from the parent config.
+        /// </summary>
+        [TestMethod]
+        public void TestMergedConfigInheritsAzureKeyVaultOptions()
+        {
+            // Arrange
+
+            // Parent config with AKV section.
+            string parentConfig = @"{
+  ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=.;Database=Parent;Trusted_Connection=True;"" },
+  ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+  ""entities"": {},
+  ""azure-key-vault"": {
+    ""endpoint"": ""https://myvault.vault.azure.net/"",
+    ""retry-policy"": {
+      ""mode"": ""fixed"",
+      ""max-count"": 7,
+      ""delay-seconds"": 3,
+      ""max-delay-seconds"": 15,
+      ""network-timeout-seconds"": 20
+    }
+  }
+}";
+
+            // Child config overrides some properties but omits azure-key-vault entirely.
+            string childConfig = @"{
+  ""data-source"": { ""database-type"": ""mssql"", ""connection-string"": ""Server=.;Database=Child;Trusted_Connection=True;"" },
+  ""runtime"": { ""rest"": { ""enabled"": true }, ""graphql"": { ""enabled"": true } },
+  ""entities"": {}
+}";
+            // Act
+
+            // Merge child over parent.
+            string mergedJson = MergeJsonProvider.Merge(parentConfig, childConfig);
+
+            // Parse with AKV replacement enabled so extraction path executes.
+            DeserializationVariableReplacementSettings replacementSettings = new(
+                azureKeyVaultOptions: null,
+                doReplaceEnvVar: false,
+                doReplaceAkvVar: true);
+
+            // Assert            
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(mergedJson, out RuntimeConfig mergedConfig, replacementSettings: replacementSettings), "Merged runtime config failed to parse.");
+            Assert.IsNotNull(mergedConfig, "Merged runtime config is null.");
+
+            // Validate AKV inheritance.
+            Assert.IsNotNull(mergedConfig.AzureKeyVault, "AzureKeyVaultOptions should be inherited from base config.");
+            Assert.AreEqual("https://myvault.vault.azure.net/", mergedConfig.AzureKeyVault!.Endpoint, "Inherited AKV endpoint mismatch.");
+            Assert.IsNotNull(mergedConfig.AzureKeyVault.RetryPolicy, "RetryPolicy should be inherited.");
+            Assert.AreEqual(AKVRetryPolicyMode.Fixed, mergedConfig.AzureKeyVault.RetryPolicy!.Mode, "Inherited retry-policy mode mismatch.");
+            Assert.AreEqual(7, mergedConfig.AzureKeyVault.RetryPolicy.MaxCount, "Inherited retry-policy max-count mismatch.");
+            Assert.AreEqual(3, mergedConfig.AzureKeyVault.RetryPolicy.DelaySeconds, "Inherited retry-policy delay-seconds mismatch.");
+            Assert.AreEqual(15, mergedConfig.AzureKeyVault.RetryPolicy.MaxDelaySeconds, "Inherited retry-policy max-delay-seconds mismatch.");
+            Assert.AreEqual(20, mergedConfig.AzureKeyVault.RetryPolicy.NetworkTimeoutSeconds, "Inherited retry-policy network-timeout-seconds mismatch.");
+
+            // Ensure child override for connection-string applied while AKV remained from base.
+            Assert.AreEqual("Server=.;Database=Child;Trusted_Connection=True;", mergedConfig.DataSource.ConnectionString, "Child connection-string override not applied.");
         }
     }
 }

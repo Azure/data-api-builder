@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-            
+
             Entity bookEntity = runtimeConfig.Entities["Book"];
             Assert.IsNotNull(bookEntity.Mcp, "MCP options should be present");
             Assert.IsTrue(bookEntity.Mcp.DmlToolEnabled, "DmlTools should be enabled");
@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-            
+
             Entity bookEntity = runtimeConfig.Entities["Book"];
             Assert.IsNotNull(bookEntity.Mcp, "MCP options should be present");
             Assert.IsFalse(bookEntity.Mcp.DmlToolEnabled, "DmlTools should be disabled");
@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-            
+
             Entity spEntity = runtimeConfig.Entities["GetBook"];
             Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
             Assert.IsTrue(spEntity.Mcp.CustomToolEnabled, "CustomTool should be enabled");
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-            
+
             Entity bookEntity = runtimeConfig.Entities["Book"];
             Assert.IsNotNull(bookEntity.Mcp, "MCP options should be present");
             Assert.IsTrue(bookEntity.Mcp.DmlToolEnabled, "DmlTools should be enabled");
@@ -216,7 +216,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-            
+
             Entity bookEntity = runtimeConfig.Entities["Book"];
             Assert.IsNull(bookEntity.Mcp, "MCP options should be null when not specified");
         }
@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-            
+
             Entity spEntity = runtimeConfig.Entities["GetBook"];
             Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
             Assert.IsTrue(spEntity.Mcp.CustomToolEnabled, "CustomTool should be enabled");
@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-            
+
             Entity spEntity = runtimeConfig.Entities["GetBook"];
             Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
             Assert.IsFalse(spEntity.Mcp.CustomToolEnabled, "CustomTool should be disabled");
@@ -345,7 +345,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-            
+
             Entity spEntity = runtimeConfig.Entities["GetBook"];
             Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
             Assert.IsTrue(spEntity.Mcp.CustomToolEnabled, "CustomTool should be enabled");
@@ -402,26 +402,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Assert
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
-            
+
             // Book: mcp = true
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
             Entity bookEntity = runtimeConfig.Entities["Book"];
             Assert.IsNotNull(bookEntity.Mcp);
             Assert.IsTrue(bookEntity.Mcp.DmlToolEnabled);
             Assert.IsFalse(bookEntity.Mcp.CustomToolEnabled);
-            
+
             // Author: mcp = false
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Author"));
             Entity authorEntity = runtimeConfig.Entities["Author"];
             Assert.IsNotNull(authorEntity.Mcp);
             Assert.IsFalse(authorEntity.Mcp.DmlToolEnabled);
             Assert.IsFalse(authorEntity.Mcp.CustomToolEnabled);
-            
+
             // Publisher: no mcp
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Publisher"));
             Entity publisherEntity = runtimeConfig.Entities["Publisher"];
             Assert.IsNull(publisherEntity.Mcp);
-            
+
             // GetBook: mcp object
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
             Entity spEntity = runtimeConfig.Entities["GetBook"];
@@ -458,7 +458,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }";
 
             // Act
-            bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
+            bool success = RuntimeConfigLoader.TryParseConfig(config, out _);
 
             // Assert
             Assert.IsFalse(success, "Config parsing should fail with invalid MCP value");
@@ -495,7 +495,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }";
 
             // Act
-            bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
+            bool success = RuntimeConfigLoader.TryParseConfig(config, out _);
 
             // Assert
             Assert.IsFalse(success, "Config parsing should fail with unknown MCP property");

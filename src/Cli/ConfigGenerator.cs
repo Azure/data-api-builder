@@ -828,6 +828,31 @@ namespace Cli
                 }
             }
 
+            // Semantic Cache: All options
+            if (options.RuntimeSemanticCacheEnabled != null ||
+                options.RuntimeSemanticCacheSimilarityThreshold != null ||
+                options.RuntimeSemanticCacheMaxResults != null ||
+                options.RuntimeSemanticCacheExpireSeconds != null ||
+                options.RuntimeSemanticCacheRedisConnectionString != null ||
+                options.RuntimeSemanticCacheRedisVectorIndex != null ||
+                options.RuntimeSemanticCacheRedisKeyPrefix != null ||
+                options.RuntimeSemanticCacheEmbeddingProviderType != null ||
+                options.RuntimeSemanticCacheEmbeddingEndpoint != null ||
+                options.RuntimeSemanticCacheEmbeddingApiKey != null ||
+                options.RuntimeSemanticCacheEmbeddingModel != null)
+            {
+                SemanticCacheOptions? updatedSemanticCacheOptions = runtimeConfig?.Runtime?.SemanticCache ?? new();
+                bool status = TryUpdateConfiguredSemanticCacheValues(options, ref updatedSemanticCacheOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { SemanticCache = updatedSemanticCacheOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer
             if (options.RuntimeHostMode != null ||
                 options.RuntimeHostCorsOrigins != null ||
@@ -1193,6 +1218,171 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the semantic cache configuration in runtime settings.
+        /// Validates user-provided parameters and returns true if the updated semantic cache options
+        /// need to be overwritten on the existing config parameters.
+        /// </summary>
+        /// <param name="options">Configuration options.</param>
+        /// <param name="updatedSemanticCacheOptions">Semantic cache options to be updated.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredSemanticCacheValues(
+            ConfigureOptions options,
+            ref SemanticCacheOptions? updatedSemanticCacheOptions)
+        {
+            object? updatedValue;
+            try
+            {
+                // Runtime.SemanticCache.Enabled
+                updatedValue = options?.RuntimeSemanticCacheEnabled;
+                if (updatedValue != null)
+                {
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { Enabled = (bool)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.Enabled as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.SemanticCache.SimilarityThreshold
+                updatedValue = options?.RuntimeSemanticCacheSimilarityThreshold;
+                if (updatedValue != null)
+                {
+                    double threshold = (double)updatedValue;
+                    if (threshold < 0.0 || threshold > 1.0)
+                    {
+                        _logger.LogError("Failed to update Runtime.SemanticCache.SimilarityThreshold as '{updatedValue}'. Value must be between 0.0 and 1.0.", updatedValue);
+                        return false;
+                    }
+
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { SimilarityThreshold = threshold };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.SimilarityThreshold as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.SemanticCache.MaxResults
+                updatedValue = options?.RuntimeSemanticCacheMaxResults;
+                if (updatedValue != null)
+                {
+                    int maxResults = (int)updatedValue;
+                    if (maxResults <= 0)
+                    {
+                        _logger.LogError("Failed to update Runtime.SemanticCache.MaxResults as '{updatedValue}'. Value must be greater than 0.", updatedValue);
+                        return false;
+                    }
+
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { MaxResults = maxResults };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.MaxResults as '{updatedValue}'", updatedValue);
+                }
+
+                // Runtime.SemanticCache.ExpireSeconds
+                updatedValue = options?.RuntimeSemanticCacheExpireSeconds;
+                if (updatedValue != null)
+                {
+                    int expireSeconds = (int)updatedValue;
+                    if (expireSeconds <= 0)
+                    {
+                        _logger.LogError("Failed to update Runtime.SemanticCache.ExpireSeconds as '{updatedValue}'. Value must be greater than 0.", updatedValue);
+                        return false;
+                    }
+
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { ExpireSeconds = expireSeconds };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.ExpireSeconds as '{updatedValue}'", updatedValue);
+                }
+
+                // Azure Managed Redis options
+                AzureManagedRedisOptions? updatedRedisOptions = updatedSemanticCacheOptions?.AzureManagedRedis;
+
+                updatedValue = options?.RuntimeSemanticCacheRedisConnectionString;
+                if (updatedValue != null)
+                {
+                    updatedRedisOptions = updatedRedisOptions is not null
+                        ? updatedRedisOptions with { ConnectionString = (string)updatedValue }
+                        : new AzureManagedRedisOptions { ConnectionString = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.AzureManagedRedis.ConnectionString");
+                }
+
+                updatedValue = options?.RuntimeSemanticCacheRedisVectorIndex;
+                if (updatedValue != null)
+                {
+                    updatedRedisOptions = updatedRedisOptions is not null
+                        ? updatedRedisOptions with { VectorIndex = (string)updatedValue }
+                        : new AzureManagedRedisOptions { VectorIndex = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.AzureManagedRedis.VectorIndex as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeSemanticCacheRedisKeyPrefix;
+                if (updatedValue != null)
+                {
+                    updatedRedisOptions = updatedRedisOptions is not null
+                        ? updatedRedisOptions with { KeyPrefix = (string)updatedValue }
+                        : new AzureManagedRedisOptions { KeyPrefix = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.AzureManagedRedis.KeyPrefix as '{updatedValue}'", updatedValue);
+                }
+
+                // Update Redis options if modified
+                if (updatedRedisOptions is not null)
+                {
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { AzureManagedRedis = updatedRedisOptions };
+                }
+
+                // Embedding Provider options
+                EmbeddingProviderOptions? updatedEmbeddingOptions = updatedSemanticCacheOptions?.EmbeddingProvider;
+
+                updatedValue = options?.RuntimeSemanticCacheEmbeddingProviderType;
+                if (updatedValue != null)
+                {
+                    string providerType = (string)updatedValue;
+                    if (!providerType.Equals("azure-openai", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogError("Failed to update Runtime.SemanticCache.EmbeddingProvider.Type as '{updatedValue}'. Currently only 'azure-openai' is supported.", updatedValue);
+                        return false;
+                    }
+
+                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
+                        ? updatedEmbeddingOptions with { Type = providerType }
+                        : new EmbeddingProviderOptions { Type = providerType };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.Type as '{updatedValue}'", updatedValue);
+                }
+
+                updatedValue = options?.RuntimeSemanticCacheEmbeddingEndpoint;
+                if (updatedValue != null)
+                {
+                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
+                        ? updatedEmbeddingOptions with { Endpoint = (string)updatedValue }
+                        : new EmbeddingProviderOptions { Endpoint = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.Endpoint");
+                }
+
+                updatedValue = options?.RuntimeSemanticCacheEmbeddingApiKey;
+                if (updatedValue != null)
+                {
+                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
+                        ? updatedEmbeddingOptions with { ApiKey = (string)updatedValue }
+                        : new EmbeddingProviderOptions { ApiKey = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.ApiKey");
+                }
+
+                updatedValue = options?.RuntimeSemanticCacheEmbeddingModel;
+                if (updatedValue != null)
+                {
+                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
+                        ? updatedEmbeddingOptions with { Model = (string)updatedValue }
+                        : new EmbeddingProviderOptions { Model = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.Model as '{updatedValue}'", updatedValue);
+                }
+
+                // Update Embedding options if modified
+                if (updatedEmbeddingOptions is not null)
+                {
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { EmbeddingProvider = updatedEmbeddingOptions };
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.SemanticCache with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

@@ -76,7 +76,54 @@ Semantic caching is integrated at the `SqlQueryEngine` level and works for:
 
 ## Configuration
 
-Add to your `dab-config.json`:
+### Using DAB CLI (Recommended)
+
+You can configure semantic caching using the `dab configure` command:
+
+```bash
+# Enable semantic cache with minimal configuration
+dab configure \
+  --runtime.semantic-cache.enabled true \
+  --runtime.semantic-cache.azure-managed-redis.connection-string "your-redis.redis.cache.windows.net:6380,password=yourpassword,ssl=True" \
+  --runtime.semantic-cache.embedding-provider.type "azure-openai" \
+  --runtime.semantic-cache.embedding-provider.endpoint "https://your-openai.openai.azure.com" \
+  --runtime.semantic-cache.embedding-provider.api-key "your-api-key" \
+  --runtime.semantic-cache.embedding-provider.model "text-embedding-ada-002"
+
+# With all options
+dab configure \
+  --runtime.semantic-cache.enabled true \
+  --runtime.semantic-cache.similarity-threshold 0.85 \
+  --runtime.semantic-cache.max-results 5 \
+  --runtime.semantic-cache.expire-seconds 86400 \
+  --runtime.semantic-cache.azure-managed-redis.connection-string "your-redis.redis.cache.windows.net:6380,password=yourpassword,ssl=True" \
+  --runtime.semantic-cache.azure-managed-redis.vector-index "dab-semantic-index" \
+  --runtime.semantic-cache.azure-managed-redis.key-prefix "dab:sc:" \
+  --runtime.semantic-cache.embedding-provider.type "azure-openai" \
+  --runtime.semantic-cache.embedding-provider.endpoint "https://your-openai.openai.azure.com" \
+  --runtime.semantic-cache.embedding-provider.api-key "your-api-key" \
+  --runtime.semantic-cache.embedding-provider.model "text-embedding-ada-002"
+```
+
+**Available CLI Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--runtime.semantic-cache.enabled` | bool | Enable/disable semantic caching |
+| `--runtime.semantic-cache.similarity-threshold` | double | Minimum similarity (0.0-1.0) for cache hit. Default: 0.85 |
+| `--runtime.semantic-cache.max-results` | int | Max KNN results to retrieve. Default: 5 |
+| `--runtime.semantic-cache.expire-seconds` | int | TTL for cached entries in seconds. Default: 86400 |
+| `--runtime.semantic-cache.azure-managed-redis.connection-string` | string | Redis connection string (required) |
+| `--runtime.semantic-cache.azure-managed-redis.vector-index` | string | Vector index name. Default: "dab-semantic-index" |
+| `--runtime.semantic-cache.azure-managed-redis.key-prefix` | string | Redis key prefix. Default: "dab:sc:" |
+| `--runtime.semantic-cache.embedding-provider.type` | string | Provider type (currently only "azure-openai") |
+| `--runtime.semantic-cache.embedding-provider.endpoint` | string | Azure OpenAI endpoint URL (required) |
+| `--runtime.semantic-cache.embedding-provider.api-key` | string | Azure OpenAI API key (required) |
+| `--runtime.semantic-cache.embedding-provider.model` | string | Embedding model name (required) |
+
+### Manual Configuration (JSON)
+
+Alternatively, you can manually add to your `dab-config.json`:
 
 ### Minimal Configuration (Required Settings Only)
 
@@ -351,25 +398,190 @@ FT.CREATE dab-semantic-index
 
 ## Testing
 
-### Unit Tests
+### Unit Tests ✅ (Completed)
 
-Test each component independently:
+Located in `Service.Tests/UnitTests/`:
+- `SemanticCacheServiceTests.cs` - Tests SemanticCacheService orchestration
+- `AzureOpenAIEmbeddingServiceTests.cs` - Tests embedding generation with mocks
+- `SemanticCacheOptionsTests.cs` - Tests configuration validation
+
+**Run unit tests:**
+```powershell
+cd src
+dotnet test Service.Tests/Azure.DataApiBuilder.Service.Tests.csproj --filter "FullyQualifiedName~SemanticCache"
+```
+
+Test coverage includes:
 - Mock `IConnectionMultiplexer` for Redis tests
 - Mock `IHttpClientFactory` for Azure OpenAI tests
-- Use test doubles for `RuntimeConfigProvider`
+- Configuration validation scenarios
+- Error handling and graceful degradation
 
-### Integration Tests
+### Integration Tests ✅ (Completed)
 
-1. **Embedding generation**: Test with real Azure OpenAI
-2. **Vector storage/retrieval**: Test with Redis container
-3. **End-to-end flow**: Test full semantic cache workflow
+Located in `Service.Tests/IntegrationTests/SemanticCacheIntegrationTests.cs`
 
-### Load Tests
+Tests cover:
+1. **Service registration**: Validates DI container setup
+2. **Cache hit/miss scenarios**: Tests query matching logic
+3. **Store operations**: Validates storing new results
+4. **Error handling**: Tests graceful degradation on failures
+5. **Configuration validation**: Tests invalid configs
+6. **Similarity thresholding**: Validates filtering logic
 
-Simulate production load:
-- 1000 queries/second
-- Varying query similarity distributions
-- Monitor memory usage and latency
+**Run integration tests:**
+```powershell
+cd src
+dotnet test Service.Tests/Azure.DataApiBuilder.Service.Tests.csproj --filter "FullyQualifiedName~SemanticCacheIntegrationTests"
+```
+
+**Prerequisites for full integration tests:**
+- Azure Managed Redis Enterprise with RediSearch module
+- Azure OpenAI endpoint with embedding model deployed
+- Set environment variables:
+  - `REDIS_CONNECTION_STRING`
+  - `AZURE_OPENAI_ENDPOINT`
+  - `AZURE_OPENAI_KEY`
+
+### Manual End-to-End Tests
+
+#### Setup Test Environment
+
+1. **Create Azure Resources**
+```bash
+# Redis Enterprise with RediSearch
+az redis create \
+  --resource-group dab-test-rg \
+  --name dab-semantic-cache-test \
+  --location eastus \
+  --sku Enterprise_E10 \
+  --modules RediSearch
+
+# Get connection string
+az redis list-keys --resource-group dab-test-rg --name dab-semantic-cache-test
+```
+
+2. **Configure DAB**
+Create `dab-config.SemanticCache.json`:
+```json
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v0.12.0/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('SQL_CONNECTION_STRING')"
+  },
+  "runtime": {
+    "cache": {
+      "enabled": true,
+      "ttl-seconds": 60
+    },
+    "semantic-cache": {
+      "enabled": true,
+      "similarity-threshold": 0.85,
+      "max-results": 5,
+      "expire-seconds": 3600,
+      "azure-managed-redis": {
+        "connection-string": "@env('REDIS_CONNECTION_STRING')"
+      },
+      "embedding-provider": {
+        "type": "azure-openai",
+        "endpoint": "@env('AZURE_OPENAI_ENDPOINT')",
+        "api-key": "@env('AZURE_OPENAI_KEY')",
+        "model": "text-embedding-ada-002"
+      }
+    },
+    "rest": { "enabled": true, "path": "/api" },
+    "graphql": { "enabled": true, "path": "/graphql" },
+    "host": {
+      "mode": "development",
+      "authentication": { "provider": "StaticWebApps" }
+    }
+  },
+  "entities": {
+    "Book": {
+      "source": "dbo.books",
+      "permissions": [{ "role": "anonymous", "actions": ["read"] }],
+      "cache": { "enabled": true, "ttl-seconds": 60 }
+    }
+  }
+}
+```
+
+3. **Start DAB**
+```powershell
+cd src/Service
+dotnet run -- start --ConfigFileName dab-config.SemanticCache.json
+```
+
+4. **Test Queries**
+
+**Test 1: Cache Miss (First Query)**
+```graphql
+query {
+  books(filter: { id: { gt: 5 } }) {
+    items {
+      id
+      title
+    }
+  }
+}
+```
+Expected: Database query executed, logs show "Semantic cache miss"
+
+**Test 2: Semantic Cache Hit (Similar Query)**
+```graphql
+query {
+  books(filter: { id: { gte: 6 } }) {
+    items {
+      id
+      title
+    }
+  }
+}
+```
+Expected: Logs show "Semantic cache hit! Similarity: 0.9X"
+
+**Test 3: Check Logs**
+```
+[Information] Semantic cache miss for query: SELECT * FROM books WHERE id > 5
+[Information] Generating embedding for query (length: 35 chars)
+[Information] Stored query result in semantic cache with TTL 3600s
+[Information] Semantic cache hit! Similarity: 0.92 for query: SELECT * FROM books WHERE id >= 6
+```
+
+5. **Verify in Redis**
+```bash
+redis-cli -h your-redis.redis.cache.windows.net -p 10000 -a your-password --tls
+
+# Check index
+FT.INFO dab-semantic-index
+
+# Check stored entries
+FT.SEARCH dab-semantic-index "*" LIMIT 0 5
+
+# Check specific key
+HGETALL dab:sc:some-guid
+```
+
+### Load Tests (Future Work)
+
+**Recommended tools:**
+- k6 for load testing (existing framework in `Service.Tests/ConcurrentTests/`)
+- Apache Bench for simple HTTP load
+- Azure Load Testing service
+
+**Test scenarios:**
+- 100-1000 queries/second
+- Mix of similar/dissimilar queries (50/50 distribution)
+- Measure cache hit rate over time
+- Monitor Redis memory usage
+- Track embedding generation latency
+
+**Key metrics to track:**
+1. Cache hit rate: Target >60% for production workloads
+2. P95 latency: Should be <300ms including embedding generation
+3. Redis memory usage: Should stay below 80% capacity
+4. Embedding service rate limit hits: Should be <1%
 
 ## Troubleshooting
 

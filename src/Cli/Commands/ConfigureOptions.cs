@@ -47,6 +47,17 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            bool? runtimeSemanticCacheEnabled = null,
+            double? runtimeSemanticCacheSimilarityThreshold = null,
+            int? runtimeSemanticCacheMaxResults = null,
+            int? runtimeSemanticCacheExpireSeconds = null,
+            string? runtimeSemanticCacheRedisConnectionString = null,
+            string? runtimeSemanticCacheRedisVectorIndex = null,
+            string? runtimeSemanticCacheRedisKeyPrefix = null,
+            string? runtimeSemanticCacheEmbeddingProviderType = null,
+            string? runtimeSemanticCacheEmbeddingEndpoint = null,
+            string? runtimeSemanticCacheEmbeddingApiKey = null,
+            string? runtimeSemanticCacheEmbeddingModel = null,
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
             bool? runtimeHostCorsAllowCredentials = null,
@@ -103,6 +114,18 @@ namespace Cli.Commands
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            // Semantic Cache
+            RuntimeSemanticCacheEnabled = runtimeSemanticCacheEnabled;
+            RuntimeSemanticCacheSimilarityThreshold = runtimeSemanticCacheSimilarityThreshold;
+            RuntimeSemanticCacheMaxResults = runtimeSemanticCacheMaxResults;
+            RuntimeSemanticCacheExpireSeconds = runtimeSemanticCacheExpireSeconds;
+            RuntimeSemanticCacheRedisConnectionString = runtimeSemanticCacheRedisConnectionString;
+            RuntimeSemanticCacheRedisVectorIndex = runtimeSemanticCacheRedisVectorIndex;
+            RuntimeSemanticCacheRedisKeyPrefix = runtimeSemanticCacheRedisKeyPrefix;
+            RuntimeSemanticCacheEmbeddingProviderType = runtimeSemanticCacheEmbeddingProviderType;
+            RuntimeSemanticCacheEmbeddingEndpoint = runtimeSemanticCacheEmbeddingEndpoint;
+            RuntimeSemanticCacheEmbeddingApiKey = runtimeSemanticCacheEmbeddingApiKey;
+            RuntimeSemanticCacheEmbeddingModel = runtimeSemanticCacheEmbeddingModel;
             // Host
             RuntimeHostMode = runtimeHostMode;
             RuntimeHostCorsOrigins = runtimeHostCorsOrigins;
@@ -206,6 +229,39 @@ namespace Cli.Commands
 
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
+
+        [Option("runtime.semantic-cache.enabled", Required = false, HelpText = "Enable DAB's semantic cache globally. Default: false (boolean).")]
+        public bool? RuntimeSemanticCacheEnabled { get; }
+
+        [Option("runtime.semantic-cache.similarity-threshold", Required = false, HelpText = "Minimum similarity score for semantic cache hits. Default: 0.85 (double 0.0-1.0).")]
+        public double? RuntimeSemanticCacheSimilarityThreshold { get; }
+
+        [Option("runtime.semantic-cache.max-results", Required = false, HelpText = "Maximum number of KNN results to retrieve. Default: 5 (Integer).")]
+        public int? RuntimeSemanticCacheMaxResults { get; }
+
+        [Option("runtime.semantic-cache.expire-seconds", Required = false, HelpText = "TTL for semantic cache entries in seconds. Default: 86400 (1 day) (Integer).")]
+        public int? RuntimeSemanticCacheExpireSeconds { get; }
+
+        [Option("runtime.semantic-cache.azure-managed-redis.connection-string", Required = false, HelpText = "Redis connection string for semantic cache.")]
+        public string? RuntimeSemanticCacheRedisConnectionString { get; }
+
+        [Option("runtime.semantic-cache.azure-managed-redis.vector-index", Required = false, HelpText = "Redis vector index name. Default: 'dab-semantic-index'.")]
+        public string? RuntimeSemanticCacheRedisVectorIndex { get; }
+
+        [Option("runtime.semantic-cache.azure-managed-redis.key-prefix", Required = false, HelpText = "Redis key prefix for semantic cache entries. Default: 'dab:sc:'.")]
+        public string? RuntimeSemanticCacheRedisKeyPrefix { get; }
+
+        [Option("runtime.semantic-cache.embedding-provider.type", Required = false, HelpText = "Embedding provider type. Currently only 'azure-openai' is supported.")]
+        public string? RuntimeSemanticCacheEmbeddingProviderType { get; }
+
+        [Option("runtime.semantic-cache.embedding-provider.endpoint", Required = false, HelpText = "Azure OpenAI endpoint URL for embedding generation.")]
+        public string? RuntimeSemanticCacheEmbeddingEndpoint { get; }
+
+        [Option("runtime.semantic-cache.embedding-provider.api-key", Required = false, HelpText = "Azure OpenAI API key for embedding generation.")]
+        public string? RuntimeSemanticCacheEmbeddingApiKey { get; }
+
+        [Option("runtime.semantic-cache.embedding-provider.model", Required = false, HelpText = "Azure OpenAI embedding model deployment name (e.g., 'text-embedding-ada-002').")]
+        public string? RuntimeSemanticCacheEmbeddingModel { get; }
 
         [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
         public HostMode? RuntimeHostMode { get; }

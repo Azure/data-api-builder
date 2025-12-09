@@ -2,6 +2,22 @@
 
 This directory contains the complete semantic caching implementation for Data API Builder (DAB) using Azure OpenAI embeddings and Azure Managed Redis with vector search capabilities.
 
+## 🎯 Scope
+
+**Currently supported:** SQL databases only (SQL Server, PostgreSQL, MySQL)
+
+Semantic caching is integrated at the `SqlQueryEngine` level and works for:
+- ✅ GraphQL queries (SELECT operations)
+- ✅ REST API queries
+- ✅ Complex SQL queries with joins and filters
+
+**Not currently supported:**
+- ❌ Cosmos DB queries
+- ❌ Mutation operations (INSERT, UPDATE, DELETE)
+- ❌ Stored procedure calls
+
+**Future enhancement:** Could be extended to Cosmos DB (SQL API) if there's demand.
+
 ## Architecture Overview
 
 ```
@@ -62,6 +78,29 @@ This directory contains the complete semantic caching implementation for Data AP
 
 Add to your `dab-config.json`:
 
+### Minimal Configuration (Required Settings Only)
+
+```json
+{
+  "runtime": {
+    "semantic-cache": {
+      "enabled": true,
+      "azure-managed-redis": {
+        "connection-string": "your-redis.redis.cache.windows.net:6380,password=yourpassword,ssl=True"
+      },
+      "embedding-provider": {
+        "type": "azure-openai",
+        "endpoint": "https://your-openai.openai.azure.com",
+        "api-key": "your-api-key",
+        "model": "text-embedding-ada-002"
+      }
+    }
+  }
+}
+```
+
+### Full Configuration (All Options)
+
 ```json
 {
   "runtime": {
@@ -73,13 +112,41 @@ Add to your `dab-config.json`:
       "azure-managed-redis": {
         "connection-string": "${REDIS_CONNECTION_STRING}",
         "vector-index": "dab-semantic-index",
-        "key-prefix": "resp:"
+        "key-prefix": "dab:sc:"
       },
       "embedding-provider": {
         "type": "azure-openai",
         "endpoint": "${AZURE_OPENAI_ENDPOINT}",
         "api-key": "${AZURE_OPENAI_KEY}",
         "model": "text-embedding-3-small"
+      }
+    }
+  }
+}
+```
+
+### Environment Variables (Recommended for Production)
+
+```bash
+# .env file or Azure App Configuration
+REDIS_CONNECTION_STRING="your-redis.redis.cache.windows.net:6380,password=xyz,ssl=True"
+AZURE_OPENAI_ENDPOINT="https://your-openai.openai.azure.com"
+AZURE_OPENAI_KEY="your-api-key-here"
+```
+
+Then in config:
+```json
+{
+  "runtime": {
+    "semantic-cache": {
+      "enabled": true,
+      "azure-managed-redis": {
+        "connection-string": "@env('REDIS_CONNECTION_STRING')"
+      },
+      "embedding-provider": {
+        "endpoint": "@env('AZURE_OPENAI_ENDPOINT')",
+        "api-key": "@env('AZURE_OPENAI_KEY')",
+        "model": "text-embedding-ada-002"
       }
     }
   }

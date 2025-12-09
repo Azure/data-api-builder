@@ -490,9 +490,9 @@ namespace Azure.DataApiBuilder.Service
                 // Register semantic cache components
                 services.AddSingleton(semanticCacheOptions.EmbeddingProvider);
                 services.AddSingleton(semanticCacheOptions.AzureManagedRedis);
-                services.AddSingleton<IEmbeddingService, AzureOpenAIEmbeddingService>();
+                services.AddSingleton<Azure.DataApiBuilder.Core.Services.IEmbeddingService, AzureOpenAIEmbeddingService>();
                 services.AddSingleton<RedisVectorStore>();
-                services.AddSingleton<ISemanticCache, SemanticCacheService>();
+                services.AddSingleton<Azure.DataApiBuilder.Core.Services.ISemanticCache, SemanticCacheService>();
 
                 _logger.LogInformation("Semantic caching is enabled and configured.");
             }

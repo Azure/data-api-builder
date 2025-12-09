@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.SemanticCache;
@@ -18,7 +19,6 @@ namespace Azure.DataApiBuilder.Service.SemanticCache;
 public class SemanticCacheService : ISemanticCache
 {
     private readonly RuntimeConfigProvider _runtimeConfigProvider;
-    private readonly IEmbeddingService _embeddingService;
     private readonly RedisVectorStore _vectorStore;
     private readonly ILogger<SemanticCacheService> _logger;
 
@@ -29,7 +29,6 @@ public class SemanticCacheService : ISemanticCache
         ILogger<SemanticCacheService> logger)
     {
         _runtimeConfigProvider = runtimeConfigProvider ?? throw new ArgumentNullException(nameof(runtimeConfigProvider));
-        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _vectorStore = vectorStore ?? throw new ArgumentNullException(nameof(vectorStore));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -150,21 +149,5 @@ public class SemanticCacheService : ISemanticCache
             // Don't throw - gracefully degrade if caching fails
         }
     }
-
-    /// <summary>
-    /// Helper method to get semantic cache configuration from runtime config.
-    /// </summary>
-    private SemanticCacheOptions? GetSemanticCacheConfig()
-    {
-        try
-        {
-            var config = _runtimeConfigProvider.GetConfig();
-            return config.Runtime?.SemanticCache;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get semantic cache configuration");
-            return null;
-        }
-    }
 }
+

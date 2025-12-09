@@ -11,6 +11,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.SemanticCache;

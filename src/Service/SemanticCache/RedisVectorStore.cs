@@ -4,8 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -23,7 +21,7 @@ public class RedisVectorStore
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<RedisVectorStore> _logger;
     private readonly IDatabase _database;
-    private bool _indexCreated = false;
+    private bool _indexCreated;
 
     // Field names for Redis hash
     private const string FIELD_QUERY = "query";
@@ -99,7 +97,7 @@ public class RedisVectorStore
 
             var results = new List<(string Key, double Score, string Response)>();
 
-            if (result.Type == ResultType.Array)
+            if (result.Resp2Type == ResultType.Array)
             {
                 var resultArray = (RedisResult[])result!;
                 
@@ -223,14 +221,14 @@ public class RedisVectorStore
             byte[] embeddingBytes = ConvertFloatArrayToBytes(embedding);
 
             // Create hash entries
-            var hashEntries = new HashEntry[]
-            {
-                new HashEntry(FIELD_QUERY, query),
-                new HashEntry(FIELD_EMBEDDING, embeddingBytes),
-                new HashEntry(FIELD_RESPONSE, response),
-                new HashEntry(FIELD_TIMESTAMP, DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
-                new HashEntry(FIELD_DIMENSIONS, embedding.Length)
-            };
+            HashEntry[] hashEntries =
+            [
+                new(FIELD_QUERY, query),
+                new(FIELD_EMBEDDING, embeddingBytes),
+                new(FIELD_RESPONSE, response),
+                new(FIELD_TIMESTAMP, DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+                new(FIELD_DIMENSIONS, embedding.Length)
+            ];
 
             // Store in Redis with TTL
             await _database.HashSetAsync(key, hashEntries);
@@ -350,16 +348,4 @@ public class RedisVectorStore
         Buffer.BlockCopy(floats, 0, bytes, 0, bytes.Length);
         return bytes;
     }
-
-    /// <summary>
-    /// Converts a byte array to a float array (for future use if needed).
-    /// </summary>
-    private static float[] ConvertBytesToFloatArray(byte[] bytes)
-    {
-        float[] floats = new float[bytes.Length / sizeof(float)];
-        Buffer.BlockCopy(bytes, 0, floats, 0, bytes.Length);
-        return floats;
-    }
 }
-
-

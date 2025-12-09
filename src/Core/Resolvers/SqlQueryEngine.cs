@@ -37,6 +37,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
+        private readonly ISemanticCache? _semanticCache;
+        private readonly IEmbeddingService? _embeddingService;
 
         // <summary>
         // Constructor.
@@ -49,7 +51,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            DabCacheService cache)
+            DabCacheService cache,
+            ISemanticCache? semanticCache = null,
+            IEmbeddingService? embeddingService = null)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -59,6 +63,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
             _cache = cache;
+            _semanticCache = semanticCache;
+            _embeddingService = embeddingService;
         }
 
         /// <summary>
@@ -319,6 +325,60 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryString = queryBuilder.Build(structure);
             }
 
+            // Check semantic cache first if enabled
+            if (runtimeConfig.IsSemanticCachingEnabled && 
+                _semanticCache is not null && 
+                _embeddingService is not null &&
+                structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read] == string.Empty)
+            {
+                try
+                {
+                    // Generate embedding for the query
+                    float[] embedding = await _embeddingService.GenerateEmbeddingAsync(queryString);
+                    
+                    // Get semantic cache config
+                    var semanticCacheConfig = runtimeConfig.Runtime?.SemanticCache;
+                    int maxResults = semanticCacheConfig?.MaxResults ?? SemanticCacheOptions.DEFAULT_MAX_RESULTS;
+                    double similarityThreshold = semanticCacheConfig?.SimilarityThreshold ?? SemanticCacheOptions.DEFAULT_SIMILARITY_THRESHOLD;
+
+                    // Query semantic cache
+                    SemanticCacheResult? cacheResult = await _semanticCache.QueryAsync(
+                        embedding,
+                        maxResults,
+                        similarityThreshold);
+
+                    if (cacheResult is not null)
+                    {
+                        _logger.LogInformation(
+                            "Semantic cache hit! Similarity: {Similarity:F4} for query: {Query}",
+                            cacheResult.Similarity,
+                            queryString.Substring(0, Math.Min(100, queryString.Length)));
+                        
+                        // Parse cached JSON response back to JsonDocument
+                        return JsonDocument.Parse(cacheResult.Response);
+                    }
+
+                    _logger.LogDebug("Semantic cache miss for query: {Query}", 
+                        queryString.Substring(0, Math.Min(100, queryString.Length)));
+
+                    // Execute query against database
+                    JsonDocument? queryResponse = await ExecuteQueryAndCacheAsync(
+                        queryExecutor,
+                        queryString,
+                        structure,
+                        dataSourceName,
+                        embedding,
+                        runtimeConfig);
+
+                    return queryResponse;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Semantic cache operation failed, falling back to normal execution");
+                    // Fall through to normal execution
+                }
+            }
+
             // Global Cache enablement check
             if (runtimeConfig.CanUseCache())
             {
@@ -346,7 +406,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // 2. MSSQL datasource set-session-context property is true
             // 3. Entity level cache is disabled
             // 4. A db policy is resolved for the read operation
-            JsonDocument? response = await queryExecutor.ExecuteQueryAsync(
+            JsonDocument? dbResponse = await queryExecutor.ExecuteQueryAsync(
                 sqltext: queryString,
                 parameters: structure.Parameters,
                 dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
@@ -354,7 +414,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 args: null,
                 dataSourceName: dataSourceName);
 
-            return response;
+            return dbResponse;
         }
 
         private async Task<JsonDocument?> GetResultInCacheScenario(
@@ -439,6 +499,60 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
             return JsonDocument.Parse(jsonBytes);
+        }
+
+        /// <summary>
+        /// Executes a query against the database and stores the result in the semantic cache.
+        /// </summary>
+        private async Task<JsonDocument?> ExecuteQueryAndCacheAsync(
+            IQueryExecutor queryExecutor,
+            string queryString,
+            SqlQueryStructure structure,
+            string dataSourceName,
+            float[] embedding,
+            RuntimeConfig runtimeConfig)
+        {
+            // Execute query against database
+            JsonDocument? response = await queryExecutor.ExecuteQueryAsync(
+                sqltext: queryString,
+                parameters: structure.Parameters,
+                dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
+                httpContext: _httpContextAccessor.HttpContext!,
+                args: null,
+                dataSourceName: dataSourceName);
+
+            // Store result in semantic cache if we have a response
+            if (response is not null && _semanticCache is not null)
+            {
+                try
+                {
+                    // Get TTL from config
+                    var semanticCacheConfig = runtimeConfig.Runtime?.SemanticCache;
+                    int expireSeconds = semanticCacheConfig?.ExpireSeconds ?? SemanticCacheOptions.DEFAULT_EXPIRE_SECONDS;
+                    TimeSpan ttl = TimeSpan.FromSeconds(expireSeconds);
+
+                    // Serialize response to JSON string for storage
+                    string responseJson = response.RootElement.GetRawText();
+
+                    // Store in semantic cache
+                    await _semanticCache.StoreAsync(
+                        embedding,
+                        responseJson,
+                        ttl);
+
+                    _logger.LogDebug(
+                        "Stored query result in semantic cache with TTL {TtlSeconds}s for query: {Query}",
+                        expireSeconds,
+                        queryString.Substring(0, Math.Min(100, queryString.Length)));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to store result in semantic cache, continuing normally");
+                    // Don't throw - gracefully degrade if caching fails
+                }
+            }
+
+            return response;
         }
 
         // <summary>

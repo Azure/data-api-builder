@@ -1,10 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Azure.DataApiBuilder.Service.SemanticCache;
+namespace Azure.DataApiBuilder.Core.Services;
 
 /// <summary>
 /// Interface for generating embeddings from text using various providers.

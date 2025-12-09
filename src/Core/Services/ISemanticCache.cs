@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Azure.DataApiBuilder.Service.SemanticCache
+namespace Azure.DataApiBuilder.Core.Services
 {
+    /// <summary>
+    /// Interface for semantic caching service that uses vector embeddings
+    /// and similarity search to cache query responses.
+    /// </summary>
     public interface ISemanticCache
     {
         /// <summary>
@@ -37,5 +37,32 @@ namespace Azure.DataApiBuilder.Service.SemanticCache
             TimeSpan? ttl = null,
             CancellationToken cancellationToken = default);
     }
-}
+
+    /// <summary>
+    /// Result from a semantic cache query containing the cached response and similarity score.
+    /// </summary>
+    public class SemanticCacheResult
+    {
+        /// <summary>
+        /// The cached JSON response.
+        /// </summary>
+        public string Response { get; }
+
+        /// <summary>
+        /// The cosine similarity score between the query and cached entry (0.0 to 1.0).
+        /// </summary>
+        public double Similarity { get; }
+
+        /// <summary>
+        /// The original query text that was cached (optional).
+        /// </summary>
+        public string? OriginalQuery { get; }
+
+        public SemanticCacheResult(string response, double similarity, string? originalQuery = null)
+        {
+            Response = response ?? throw new ArgumentNullException(nameof(response));
+            Similarity = similarity;
+            OriginalQuery = originalQuery;
+        }
+    }
 }

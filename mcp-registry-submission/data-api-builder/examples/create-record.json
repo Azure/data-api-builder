@@ -1,0 +1,28 @@
+{
+  "description": "Create a new product record in the database",
+  "request": {
+    "method": "tools/call",
+    "params": {
+      "name": "create_record",
+      "arguments": {
+        "entityName": "Product",
+        "item": {
+          "name": "Wireless Mouse",
+          "description": "Ergonomic wireless mouse with USB receiver",
+          "price": 29.99,
+          "category": "Electronics",
+          "stockQuantity": 150
+        }
+      }
+    }
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"status\": \"success\",\n  \"message\": \"Record created successfully in entity 'Product'\",\n  \"recordId\": 1042,\n  \"insertedData\": {\n    \"id\": 1042,\n    \"name\": \"Wireless Mouse\",\n    \"description\": \"Ergonomic wireless mouse with USB receiver\",\n    \"price\": 29.99,\n    \"category\": \"Electronics\",\n    \"stockQuantity\": 150,\n    \"createdAt\": \"2024-12-10T10:30:45Z\"\n  }\n}"
+      }
+    ]
+  },
+  "notes": "This example shows creating a new record. The MCP server validates that the current role has CREATE permission on the Product entity and that all required fields are provided. Field names must match those returned by describe_entities. The response includes the auto-generated ID and timestamp fields."
+}

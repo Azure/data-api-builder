@@ -1,0 +1,60 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.azure/data-api-builder",
+  "description": "Model Context Protocol server for Azure Data API Builder (DAB). Enables AI assistants to configure, introspect, and manage database-backed REST and GraphQL APIs dynamically. Built in C# for Microsoft SQL Server and Azure SQL Database.",
+  "repository": {
+    "url": "https://github.com/Azure/data-api-builder",
+    "source": "github"
+  },
+  "license": "MIT",
+  "homepage": "https://learn.microsoft.com/azure/data-api-builder/",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "identifier": "Microsoft.DataApiBuilder",
+      "version": "1.2.18",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Database connection string for Microsoft SQL Server or Azure SQL Database. Required for DAB to connect to your database.",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "DATABASE_CONNECTION_STRING"
+        },
+        {
+          "description": "Path to DAB configuration file (dab-config.json). If not provided, defaults to current directory.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "DAB_CONFIG_PATH"
+        },
+        {
+          "description": "Client role header for authorization. Controls which operations the MCP client can perform based on DAB's permission model.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "X-MS-API-ROLE"
+        }
+      ]
+    }
+  ],
+  "tags": [
+    "database",
+    "sql",
+    "graphql",
+    "rest",
+    "api",
+    "csharp",
+    "azure",
+    "configuration",
+    "crud",
+    "sqlserver",
+    "mssql",
+    "data-access"
+  ],
+  "securityConsiderations": "This MCP server provides direct database access and configuration capabilities. Ensure proper authentication and authorization are configured. Use environment variables for sensitive connection strings. Review DAB's security model and permission system before deployment. The server can read, write, update, and delete database records based on configured permissions."
+}

@@ -1,0 +1,31 @@
+{
+  "description": "Query database records with filtering and pagination",
+  "request": {
+    "method": "tools/call",
+    "params": {
+      "name": "read_records",
+      "arguments": {
+        "entityName": "Product",
+        "filter": {
+          "category": "Electronics",
+          "price": {
+            "$lte": 100
+          }
+        },
+        "orderby": "price asc",
+        "skip": 0,
+        "take": 10,
+        "select": ["id", "name", "price", "stockQuantity"]
+      }
+    }
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"status\": \"success\",\n  \"records\": [\n    {\n      \"id\": 1042,\n      \"name\": \"Wireless Mouse\",\n      \"price\": 29.99,\n      \"stockQuantity\": 150\n    },\n    {\n      \"id\": 1038,\n      \"name\": \"USB Cable\",\n      \"price\": 12.50,\n      \"stockQuantity\": 500\n    },\n    {\n      \"id\": 1019,\n      \"name\": \"Keyboard Cover\",\n      \"price\": 15.99,\n      \"stockQuantity\": 75\n    },\n    {\n      \"id\": 1055,\n      \"name\": \"HDMI Adapter\",\n      \"price\": 24.99,\n      \"stockQuantity\": 200\n    }\n  ],\n  \"count\": 4,\n  \"hasMore\": false\n}"
+      }
+    ]
+  },
+  "notes": "This example demonstrates querying with multiple features: filtering by category and price range, sorting by price ascending, pagination with skip/take, and field selection. The filter supports comparison operators like $lte (less than or equal), $gte, $lt, $gt, $eq, and $ne. Always verify READ permission exists before querying."
+}

@@ -1,0 +1,132 @@
+{
+  "description": "Multi-step workflow: Discover schema, create configuration, and perform CRUD operations",
+  "workflow": {
+    "step1": {
+      "description": "First, discover all available entities with lightweight summary",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "describe_entities",
+          "arguments": {
+            "nameOnly": true
+          }
+        }
+      },
+      "response": {
+        "entities": [
+          {"name": "Product", "description": "Product catalog"},
+          {"name": "Customer", "description": "Customer information"},
+          {"name": "Order", "description": "Sales orders"},
+          {"name": "OrderItem", "description": "Order line items"}
+        ],
+        "count": 4
+      }
+    },
+    "step2": {
+      "description": "Get detailed metadata for entities of interest",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "describe_entities",
+          "arguments": {
+            "nameOnly": false,
+            "entities": ["Product", "Order"]
+          }
+        }
+      },
+      "response": {
+        "entities": [
+          {
+            "name": "Product",
+            "fields": [
+              {"name": "id", "description": "Product ID"},
+              {"name": "name", "description": "Product name"},
+              {"name": "price", "description": "Unit price"}
+            ],
+            "permissions": ["CREATE", "READ", "UPDATE", "DELETE"]
+          },
+          {
+            "name": "Order",
+            "fields": [
+              {"name": "id", "description": "Order ID"},
+              {"name": "customerId", "description": "Customer reference"},
+              {"name": "orderDate", "description": "Order date"},
+              {"name": "totalAmount", "description": "Total order value"}
+            ],
+            "permissions": ["CREATE", "READ"]
+          }
+        ]
+      }
+    },
+    "step3": {
+      "description": "Create a new product based on discovered schema",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "create_record",
+          "arguments": {
+            "entityName": "Product",
+            "item": {
+              "name": "Gaming Headset",
+              "price": 89.99,
+              "category": "Electronics",
+              "stockQuantity": 50
+            }
+          }
+        }
+      },
+      "response": {
+        "status": "success",
+        "recordId": 2001
+      }
+    },
+    "step4": {
+      "description": "Query the newly created product",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "read_records",
+          "arguments": {
+            "entityName": "Product",
+            "filter": {
+              "id": 2001
+            }
+          }
+        }
+      },
+      "response": {
+        "records": [
+          {
+            "id": 2001,
+            "name": "Gaming Headset",
+            "price": 89.99,
+            "category": "Electronics",
+            "stockQuantity": 50
+          }
+        ]
+      }
+    },
+    "step5": {
+      "description": "Update the product with adjusted pricing",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "update_record",
+          "arguments": {
+            "entityName": "Product",
+            "id": 2001,
+            "item": {
+              "price": 79.99,
+              "stockQuantity": 45
+            }
+          }
+        }
+      },
+      "response": {
+        "status": "success",
+        "message": "Record updated successfully"
+      }
+    }
+  },
+  "notes": "This comprehensive example shows the recommended workflow for working with the DAB MCP server: (1) Start with lightweight entity discovery using nameOnly=true, (2) Get full metadata for relevant entities, (3) Perform CRUD operations based on discovered schema and permissions, (4) Validate changes by querying. This pattern ensures the AI assistant understands the data model before making changes and respects permission boundaries throughout the workflow."
+}

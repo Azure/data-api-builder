@@ -1,0 +1,22 @@
+{
+  "description": "Discover database entities with detailed metadata",
+  "request": {
+    "method": "tools/call",
+    "params": {
+      "name": "describe_entities",
+      "arguments": {
+        "nameOnly": false,
+        "entities": ["Product", "Customer"]
+      }
+    }
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"entities\": [\n    {\n      \"name\": \"Product\",\n      \"description\": \"Product catalog with pricing and inventory\",\n      \"fields\": [\n        {\"name\": \"id\", \"description\": \"Primary key identifier\"},\n        {\"name\": \"name\", \"description\": \"Product name\"},\n        {\"name\": \"description\", \"description\": \"Product description\"},\n        {\"name\": \"price\", \"description\": \"Unit price in USD\"},\n        {\"name\": \"category\", \"description\": \"Product category\"},\n        {\"name\": \"stockQuantity\", \"description\": \"Available inventory count\"},\n        {\"name\": \"createdAt\", \"description\": \"Record creation timestamp\"}\n      ],\n      \"permissions\": [\"CREATE\", \"READ\", \"UPDATE\", \"DELETE\"]\n    },\n    {\n      \"name\": \"Customer\",\n      \"description\": \"Customer information and contact details\",\n      \"fields\": [\n        {\"name\": \"id\", \"description\": \"Primary key identifier\"},\n        {\"name\": \"firstName\", \"description\": \"Customer first name\"},\n        {\"name\": \"lastName\", \"description\": \"Customer last name\"},\n        {\"name\": \"email\", \"description\": \"Email address\"},\n        {\"name\": \"phone\", \"description\": \"Phone number\"},\n        {\"name\": \"address\", \"description\": \"Mailing address\"},\n        {\"name\": \"registeredDate\", \"description\": \"Account registration date\"}\n      ],\n      \"permissions\": [\"READ\", \"UPDATE\"]\n    }\n  ],\n  \"count\": 2\n}"
+      }
+    ]
+  },
+  "notes": "This example demonstrates how to retrieve detailed metadata for specific entities. The response includes field definitions and permission mappings. The 'nameOnly' parameter is set to false to get full details. Always call describe_entities first before performing CRUD operations to understand available entities and permissions."
+}

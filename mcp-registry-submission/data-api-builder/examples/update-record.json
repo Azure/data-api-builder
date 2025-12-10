@@ -1,0 +1,27 @@
+{
+  "description": "Update an existing database record by primary key",
+  "request": {
+    "method": "tools/call",
+    "params": {
+      "name": "update_record",
+      "arguments": {
+        "entityName": "Product",
+        "id": 1042,
+        "item": {
+          "price": 24.99,
+          "stockQuantity": 125,
+          "description": "Ergonomic wireless mouse with USB receiver - Sale Price!"
+        }
+      }
+    }
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"status\": \"success\",\n  \"message\": \"Record updated successfully in entity 'Product'\",\n  \"recordId\": 1042,\n  \"updatedFields\": [\"price\", \"stockQuantity\", \"description\"],\n  \"updatedData\": {\n    \"id\": 1042,\n    \"name\": \"Wireless Mouse\",\n    \"description\": \"Ergonomic wireless mouse with USB receiver - Sale Price!\",\n    \"price\": 24.99,\n    \"category\": \"Electronics\",\n    \"stockQuantity\": 125,\n    \"createdAt\": \"2024-12-10T10:30:45Z\",\n    \"modifiedAt\": \"2024-12-10T14:22:18Z\"\n  }\n}"
+      }
+    ]
+  },
+  "notes": "This example shows updating specific fields of an existing record. Only the fields provided in 'item' are updated; other fields remain unchanged. The MCP server validates UPDATE permission and that the record exists by its primary key. Partial updates are supported."
+}

@@ -1,0 +1,27 @@
+{
+  "description": "Execute a stored procedure with parameters",
+  "request": {
+    "method": "tools/call",
+    "params": {
+      "name": "execute_entity",
+      "arguments": {
+        "entityName": "GetMonthlySalesReport",
+        "parameters": {
+          "startDate": "2024-01-01",
+          "endDate": "2024-12-31",
+          "categoryFilter": "Electronics",
+          "minAmount": 1000
+        }
+      }
+    }
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"status\": \"success\",\n  \"message\": \"Stored procedure 'GetMonthlySalesReport' executed successfully\",\n  \"results\": [\n    {\n      \"month\": \"January\",\n      \"totalSales\": 45230.50,\n      \"orderCount\": 234,\n      \"avgOrderValue\": 193.29\n    },\n    {\n      \"month\": \"February\",\n      \"totalSales\": 52100.75,\n      \"orderCount\": 267,\n      \"avgOrderValue\": 195.13\n    },\n    {\n      \"month\": \"March\",\n      \"totalSales\": 48975.25,\n      \"orderCount\": 251,\n      \"avgOrderValue\": 195.12\n    },\n    {\n      \"month\": \"April\",\n      \"totalSales\": 61200.00,\n      \"orderCount\": 312,\n      \"avgOrderValue\": 196.15\n    }\n  ],\n  \"rowCount\": 4,\n  \"executionTime\": \"142ms\"\n}"
+      }
+    ]
+  },
+  "notes": "This example demonstrates executing a stored procedure that takes multiple parameters and returns a result set. The entity must be configured in dab-config.json with type 'stored-procedure'. Parameters must match the stored procedure signature. The MCP server validates EXECUTE permission before invoking the procedure. Use describe_entities to see required parameters for stored procedures."
+}

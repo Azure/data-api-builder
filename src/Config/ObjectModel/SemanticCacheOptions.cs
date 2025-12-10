@@ -75,6 +75,7 @@ public record SemanticCacheOptions
     {
         this.Enabled = enabled;
 
+        // Only set values and flags when explicitly provided (not null)
         if (similarityThreshold is not null)
         {
             this.SimilarityThreshold = similarityThreshold;
@@ -82,7 +83,8 @@ public record SemanticCacheOptions
         }
         else
         {
-            this.SimilarityThreshold = DEFAULT_SIMILARITY_THRESHOLD;
+            this.SimilarityThreshold = null; // Keep null when not provided
+            UserProvidedSimilarityThreshold = false;
         }
 
         if (maxResults is not null)
@@ -92,7 +94,8 @@ public record SemanticCacheOptions
         }
         else
         {
-            this.MaxResults = DEFAULT_MAX_RESULTS;
+            this.MaxResults = null; // Keep null when not provided
+            UserProvidedMaxResults = false;
         }
 
         if (expireSeconds is not null)
@@ -102,7 +105,8 @@ public record SemanticCacheOptions
         }
         else
         {
-            this.ExpireSeconds = DEFAULT_EXPIRE_SECONDS;
+            this.ExpireSeconds = null; // Keep null when not provided
+            UserProvidedExpireSeconds = false;
         }
 
         this.AzureManagedRedis = azureManagedRedis;

@@ -108,9 +108,16 @@ public class SemanticCacheOptionsTests
             }
         }";
 
+        // Create JsonSerializerOptions with the custom converter (following Azure best practices for configuration validation)
+        var options = new JsonSerializerOptions 
+        { 
+            PropertyNameCaseInsensitive = true,
+            Converters = { new Azure.DataApiBuilder.Config.Converters.SemanticCacheOptionsConverterFactory() }
+        };
+
         // Act & Assert
         Assert.ThrowsException<JsonException>(() =>
-            JsonSerializer.Deserialize<SemanticCacheOptions>(json));
+            JsonSerializer.Deserialize<SemanticCacheOptions>(json, options));
     }
 
     [TestMethod]
@@ -131,9 +138,16 @@ public class SemanticCacheOptionsTests
             }
         }";
 
+        // Create JsonSerializerOptions with the custom converter (following Azure best practices for configuration validation)
+        var options = new JsonSerializerOptions 
+        { 
+            PropertyNameCaseInsensitive = true,
+            Converters = { new Azure.DataApiBuilder.Config.Converters.SemanticCacheOptionsConverterFactory() }
+        };
+
         // Act & Assert
         Assert.ThrowsException<JsonException>(() =>
-            JsonSerializer.Deserialize<SemanticCacheOptions>(json));
+            JsonSerializer.Deserialize<SemanticCacheOptions>(json, options));
     }
 
     [TestMethod]
@@ -154,9 +168,16 @@ public class SemanticCacheOptionsTests
             }
         }";
 
+        // Create JsonSerializerOptions with the custom converter (following Azure best practices for configuration validation)
+        var options = new JsonSerializerOptions 
+        { 
+            PropertyNameCaseInsensitive = true,
+            Converters = { new Azure.DataApiBuilder.Config.Converters.SemanticCacheOptionsConverterFactory() }
+        };
+
         // Act & Assert
         Assert.ThrowsException<JsonException>(() =>
-            JsonSerializer.Deserialize<SemanticCacheOptions>(json));
+            JsonSerializer.Deserialize<SemanticCacheOptions>(json, options));
     }
 
     [TestMethod]

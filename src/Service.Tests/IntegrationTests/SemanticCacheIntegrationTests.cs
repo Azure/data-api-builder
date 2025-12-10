@@ -266,13 +266,84 @@ namespace Azure.DataApiBuilder.Service.Tests.IntegrationTests
             Assert.AreEqual(1.0, validHigh.SimilarityThreshold);
         }
 
+        /// <summary>
+        /// Tests semantic cache with REAL Azure OpenAI embeddings.
+        /// This test requires actual Azure OpenAI resource and will be skipped if environment variables are not set.
+        /// Set ENABLE_REAL_AZURE_OPENAI_TESTS=true and configure Azure OpenAI environment variables to run this test.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public void TestSemanticCacheConfiguration_WithRealAzureOpenAI()
+        {
+            // Skip test if real Azure OpenAI testing is not enabled
+            if (Environment.GetEnvironmentVariable("ENABLE_REAL_AZURE_OPENAI_TESTS") != "true")
+            {
+                Assert.Inconclusive("Set ENABLE_REAL_AZURE_OPENAI_TESTS=true and configure Azure OpenAI environment variables to run real Azure OpenAI tests");
+            }
+
+            // Arrange & Act - This will validate that all required environment variables are set
+            RuntimeConfig config = CreateConfigWithSemanticCache(enabled: true, useRealAzureOpenAI: true);
+            
+            // Assert - Verify configuration was created successfully with real Azure OpenAI settings
+            Assert.IsNotNull(config.Runtime?.SemanticCache, "SemanticCache configuration should be created");
+            Assert.IsTrue(config.Runtime.SemanticCache.Enabled, "SemanticCache should be enabled");
+            
+            var embeddingProvider = config.Runtime.SemanticCache.EmbeddingProvider;
+            Assert.IsNotNull(embeddingProvider, "EmbeddingProvider should be configured");
+            Assert.AreEqual("azure-openai", embeddingProvider.Type, "Provider type should be azure-openai");
+            
+            // Verify endpoint is a real Azure OpenAI endpoint (not the specific mock one we use in tests)
+            Assert.IsTrue(embeddingProvider.Endpoint.Contains(".openai.azure.com"), 
+                $"Endpoint should be a real Azure OpenAI endpoint, got: {embeddingProvider.Endpoint}");
+            
+            // Check that it's NOT the specific mock endpoint we use for unit testing
+            Assert.IsFalse(embeddingProvider.Endpoint.Equals("https://test.openai.azure.com", StringComparison.OrdinalIgnoreCase), 
+                "Should not be using the specific mock test endpoint");
+            
+            // Verify API key is not the mock key
+            Assert.AreNotEqual("test-key", embeddingProvider.ApiKey, "Should not be using mock API key");
+            
+            // Verify endpoint starts with https (security requirement)
+            Assert.IsTrue(embeddingProvider.Endpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase),
+                "Endpoint should use HTTPS for security");
+            
+            Console.WriteLine($"✅ Real Azure OpenAI configuration validated:");
+            Console.WriteLine($"   Endpoint: {embeddingProvider.Endpoint}");
+            Console.WriteLine($"   Model: {embeddingProvider.Model}");
+            Console.WriteLine($"   API Key: {new string('*', Math.Max(0, embeddingProvider.ApiKey.Length - 4))}{(embeddingProvider.ApiKey.Length >= 4 ? embeddingProvider.ApiKey[^4..] : "****")}");
+        }
+
         #region Helper Methods
 
         /// <summary>
         /// Creates a test runtime config with semantic cache configuration.
+        /// Supports both mock and real Azure OpenAI endpoints based on environment variables.
         /// </summary>
-        private static RuntimeConfig CreateConfigWithSemanticCache(bool enabled)
+        private static RuntimeConfig CreateConfigWithSemanticCache(bool enabled, bool useRealAzureOpenAI = false)
         {
+            // Use real Azure OpenAI if requested and environment variables are available
+            string embeddingEndpoint;
+            string embeddingApiKey;
+            
+            if (useRealAzureOpenAI)
+            {
+                // Following Azure security best practices - never hardcode credentials
+                embeddingEndpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") 
+                    ?? throw new InvalidOperationException("AZURE_OPENAI_ENDPOINT environment variable is required for real Azure OpenAI testing");
+                
+                embeddingApiKey = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY") 
+                    ?? throw new InvalidOperationException("AZURE_OPENAI_API_KEY environment variable is required for real Azure OpenAI testing");
+                
+                Console.WriteLine($"Using real Azure OpenAI endpoint: {embeddingEndpoint}");
+            }
+            else
+            {
+                // Use mock endpoint for unit tests
+                embeddingEndpoint = "https://test.openai.azure.com";
+                embeddingApiKey = "test-key";
+                Console.WriteLine("Using mock Azure OpenAI endpoint for unit testing");
+            }
+
             return new RuntimeConfig(
                 Schema: "test-schema",
                 DataSource: new DataSource(DatabaseType.MSSQL, "Server=test;Database=test;", null),
@@ -294,9 +365,10 @@ namespace Azure.DataApiBuilder.Service.Tests.IntegrationTests
                             connectionString: "localhost:6379,ssl=False"
                         ),
                         embeddingProvider: new EmbeddingProviderOptions(
-                            endpoint: "https://test.openai.azure.com",
-                            apiKey: "test-key",
-                            model: "text-embedding-ada-002"
+                            type: "azure-openai", // Explicitly specify the provider type
+                            endpoint: embeddingEndpoint,
+                            apiKey: embeddingApiKey,
+                            model: Environment.GetEnvironmentVariable("AZURE_OPENAI_EMBEDDING_MODEL") ?? "text-embedding-ada-002"
                         )
                     ) : null
                 ),

@@ -65,6 +65,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _cache = cache;
             _semanticCache = semanticCache;
             _embeddingService = embeddingService;
+
+            // Log semantic cache service injection status
+            _logger.LogInformation(
+                "SqlQueryEngine initialized - SemanticCache injected: {HasSemanticCache}, EmbeddingService injected: {HasEmbeddingService}",
+                semanticCache != null,
+                embeddingService != null);
         }
 
         /// <summary>
@@ -331,10 +337,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _embeddingService is not null &&
                 structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read] == string.Empty)
             {
+                _logger.LogInformation(
+                    "Semantic cache IS ENABLED - will attempt to use it for query: {Query}",
+                    queryString.Substring(0, Math.Min(100, queryString.Length)));
+
                 try
                 {
                     // Generate embedding for the query
                     float[] embedding = await _embeddingService.GenerateEmbeddingAsync(queryString);
+                    
+                    _logger.LogDebug(
+                        "Generated embedding with {Dimensions} dimensions",
+                        embedding.Length);
                     
                     // Get semantic cache config
                     var semanticCacheConfig = runtimeConfig.Runtime?.SemanticCache;
@@ -377,6 +391,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _logger.LogWarning(ex, "Semantic cache operation failed, falling back to normal execution");
                     // Fall through to normal execution
                 }
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "Semantic cache check failed - enabled: {Enabled}, cache: {CacheNotNull}, embedding: {EmbeddingNotNull}, dbPolicy: {DbPolicy}",
+                    runtimeConfig.IsSemanticCachingEnabled,
+                    _semanticCache is not null,
+                    _embeddingService is not null,
+                    structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
             }
 
             // Global Cache enablement check

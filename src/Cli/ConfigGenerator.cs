@@ -1291,43 +1291,54 @@ namespace Cli
                 }
 
                 // Azure Managed Redis options
-                AzureManagedRedisOptions? updatedRedisOptions = updatedSemanticCacheOptions?.AzureManagedRedis;
+                // Start with existing options or create a new instance
+                bool hasRedisUpdates = false;
+                string? redisConnectionString = updatedSemanticCacheOptions?.AzureManagedRedis?.ConnectionString;
+                string? redisVectorIndex = updatedSemanticCacheOptions?.AzureManagedRedis?.VectorIndex;
+                string? redisKeyPrefix = updatedSemanticCacheOptions?.AzureManagedRedis?.KeyPrefix;
 
                 updatedValue = options?.RuntimeSemanticCacheRedisConnectionString;
                 if (updatedValue != null)
                 {
-                    updatedRedisOptions = updatedRedisOptions is not null
-                        ? updatedRedisOptions with { ConnectionString = (string)updatedValue }
-                        : new AzureManagedRedisOptions { ConnectionString = (string)updatedValue };
+                    redisConnectionString = (string)updatedValue;
+                    hasRedisUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.AzureManagedRedis.ConnectionString");
                 }
 
                 updatedValue = options?.RuntimeSemanticCacheRedisVectorIndex;
                 if (updatedValue != null)
                 {
-                    updatedRedisOptions = updatedRedisOptions is not null
-                        ? updatedRedisOptions with { VectorIndex = (string)updatedValue }
-                        : new AzureManagedRedisOptions { VectorIndex = (string)updatedValue };
+                    redisVectorIndex = (string)updatedValue;
+                    hasRedisUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.AzureManagedRedis.VectorIndex as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeSemanticCacheRedisKeyPrefix;
                 if (updatedValue != null)
                 {
-                    updatedRedisOptions = updatedRedisOptions is not null
-                        ? updatedRedisOptions with { KeyPrefix = (string)updatedValue }
-                        : new AzureManagedRedisOptions { KeyPrefix = (string)updatedValue };
+                    redisKeyPrefix = (string)updatedValue;
+                    hasRedisUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.AzureManagedRedis.KeyPrefix as '{updatedValue}'", updatedValue);
                 }
 
-                // Update Redis options if modified
-                if (updatedRedisOptions is not null)
+                // Create new Redis options only if there were updates or if it needs to be created
+                if (hasRedisUpdates || updatedSemanticCacheOptions?.AzureManagedRedis is not null)
                 {
-                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { AzureManagedRedis = updatedRedisOptions };
+                    AzureManagedRedisOptions redisOptions = new(
+                        connectionString: redisConnectionString,
+                        vectorIndex: redisVectorIndex,
+                        keyPrefix: redisKeyPrefix
+                    );
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { AzureManagedRedis = redisOptions };
                 }
 
                 // Embedding Provider options
-                EmbeddingProviderOptions? updatedEmbeddingOptions = updatedSemanticCacheOptions?.EmbeddingProvider;
+                // Start with existing options or create a new instance
+                bool hasEmbeddingUpdates = false;
+                string? embeddingType = updatedSemanticCacheOptions?.EmbeddingProvider?.Type;
+                string? embeddingEndpoint = updatedSemanticCacheOptions?.EmbeddingProvider?.Endpoint;
+                string? embeddingApiKey = updatedSemanticCacheOptions?.EmbeddingProvider?.ApiKey;
+                string? embeddingModel = updatedSemanticCacheOptions?.EmbeddingProvider?.Model;
 
                 updatedValue = options?.RuntimeSemanticCacheEmbeddingProviderType;
                 if (updatedValue != null)
@@ -1339,43 +1350,45 @@ namespace Cli
                         return false;
                     }
 
-                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
-                        ? updatedEmbeddingOptions with { Type = providerType }
-                        : new EmbeddingProviderOptions { Type = providerType };
+                    embeddingType = providerType;
+                    hasEmbeddingUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.Type as '{updatedValue}'", updatedValue);
                 }
 
                 updatedValue = options?.RuntimeSemanticCacheEmbeddingEndpoint;
                 if (updatedValue != null)
                 {
-                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
-                        ? updatedEmbeddingOptions with { Endpoint = (string)updatedValue }
-                        : new EmbeddingProviderOptions { Endpoint = (string)updatedValue };
+                    embeddingEndpoint = (string)updatedValue;
+                    hasEmbeddingUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.Endpoint");
                 }
 
                 updatedValue = options?.RuntimeSemanticCacheEmbeddingApiKey;
                 if (updatedValue != null)
                 {
-                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
-                        ? updatedEmbeddingOptions with { ApiKey = (string)updatedValue }
-                        : new EmbeddingProviderOptions { ApiKey = (string)updatedValue };
+                    embeddingApiKey = (string)updatedValue;
+                    hasEmbeddingUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.ApiKey");
                 }
 
                 updatedValue = options?.RuntimeSemanticCacheEmbeddingModel;
                 if (updatedValue != null)
                 {
-                    updatedEmbeddingOptions = updatedEmbeddingOptions is not null
-                        ? updatedEmbeddingOptions with { Model = (string)updatedValue }
-                        : new EmbeddingProviderOptions { Model = (string)updatedValue };
+                    embeddingModel = (string)updatedValue;
+                    hasEmbeddingUpdates = true;
                     _logger.LogInformation("Updated RuntimeConfig with Runtime.SemanticCache.EmbeddingProvider.Model as '{updatedValue}'", updatedValue);
                 }
 
-                // Update Embedding options if modified
-                if (updatedEmbeddingOptions is not null)
+                // Create new Embedding options only if there were updates or if it needs to be created
+                if (hasEmbeddingUpdates || updatedSemanticCacheOptions?.EmbeddingProvider is not null)
                 {
-                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { EmbeddingProvider = updatedEmbeddingOptions };
+                    EmbeddingProviderOptions embeddingOptions = new(
+                        type: embeddingType,
+                        endpoint: embeddingEndpoint,
+                        apiKey: embeddingApiKey,
+                        model: embeddingModel
+                    );
+                    updatedSemanticCacheOptions = updatedSemanticCacheOptions! with { EmbeddingProvider = embeddingOptions };
                 }
 
                 return true;
@@ -3019,9 +3032,9 @@ namespace Cli
                     fields.Add(new FieldMetadata
                     {
                         Name = names[i],
-                        Alias = aliases.Count > i ? aliases[i] : null,
-                        Description = descriptions.Count > i ? descriptions[i] : null,
-                        PrimaryKey = keys.Count > i && keys[i],
+                        Alias = aliases.ElementAtOrDefault(i),
+                        Description = descriptions.ElementAtOrDefault(i),
+                        PrimaryKey = keys.ElementAtOrDefault(i)
                     });
                 }
             }

@@ -429,7 +429,9 @@ namespace Azure.DataApiBuilder.Service.Tests.IntegrationTests
         /// <summary>
         /// Verifies cache entries exist in Redis.
         /// </summary>
+#pragma warning disable CS1998 // Async method lacks 'await' operators
         private static async Task VerifyCacheEntriesInRedis(int expectedCount = -1)
+#pragma warning restore CS1998
         {
             var redis = ConnectionMultiplexer.Connect(RedisConnectionString);
             var db = redis.GetDatabase();

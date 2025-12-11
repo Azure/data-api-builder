@@ -450,11 +450,11 @@ namespace Cli
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
             EntityMcpOptions? mcpOptions = null;
-            
+
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
             {
                 mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
-                
+
                 if (mcpOptions is null)
                 {
                     _logger.LogError("Failed to construct MCP options.");

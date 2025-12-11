@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string BROWSER_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
 
         private const int RETRY_COUNT = 5;
-        private const int RETRY_WAIT_SECONDS = 1;
+        private const int RETRY_WAIT_SECONDS = 2;
 
         /// <summary>
         ///
@@ -5296,7 +5296,7 @@ type Planet @model(name:""PlanetAlias"") {
                 if (postConfigHydrationResult.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
                     retryCount++;
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(RETRY_WAIT_SECONDS * 2, retryCount)));
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(RETRY_WAIT_SECONDS, retryCount)));
                     continue;
                 }
 
@@ -5314,11 +5314,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// else the response code from the GRAPHQL request</returns>
         private static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient, GraphQLRuntimeOptions graphQL)
         {
-            // Retry request RETRY_COUNT times in 1 second increments to allow required services
+            // Retry request RETRY_COUNT times in exponential increments to allow required services
             // time to instantiate and hydrate permissions.
-            int retryCount = RETRY_COUNT;
+            int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
-            while (retryCount > 0)
+            while (retryCount < RETRY_COUNT)
             {
                 string query = @"{
                     book_by_pk(id: 1) {
@@ -5340,8 +5340,8 @@ type Planet @model(name:""PlanetAlias"") {
 
                 if (responseCode == HttpStatusCode.ServiceUnavailable)
                 {
-                    retryCount--;
-                    await Task.Delay(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    retryCount++;
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(RETRY_WAIT_SECONDS, retryCount)));
                     continue;
                 }
 
@@ -5359,11 +5359,11 @@ type Planet @model(name:""PlanetAlias"") {
         /// else the response code from the MCP request</returns>	
         private static async Task<HttpStatusCode> GetMcpResponsePostConfigHydration(HttpClient httpClient, McpRuntimeOptions mcp)
         {
-            // Retry request RETRY_COUNT times in 1 second increments to allow required services	
-            // time to instantiate and hydrate permissions.	
-            int retryCount = RETRY_COUNT;
+            // Retry request RETRY_COUNT times in exponential increments to allow required services
+            // time to instantiate and hydrate permissions.
+            int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
-            while (retryCount > 0)
+            while (retryCount < RETRY_COUNT)
             {
                 // Minimal MCP request (list tools) – valid JSON-RPC request
                 object payload = new
@@ -5383,8 +5383,8 @@ type Planet @model(name:""PlanetAlias"") {
 
                 if (responseCode == HttpStatusCode.ServiceUnavailable || responseCode == HttpStatusCode.NotFound)
                 {
-                    retryCount--;
-                    await Task.Delay(TimeSpan.FromSeconds(RETRY_WAIT_SECONDS));
+                    retryCount++;
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(RETRY_WAIT_SECONDS, retryCount)));
                     continue;
                 }
 

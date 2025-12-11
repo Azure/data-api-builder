@@ -17,9 +17,6 @@
         "path": "/graphql",
         "allow-introspection": true
       },
-      "mcp": {
-        "enabled": true
-      },
       "host": {
         "authentication": {
           "provider": "StaticWebApps"

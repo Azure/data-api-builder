@@ -449,12 +449,13 @@ namespace Cli
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
-
-            EntityMcpOptions? mcpOptionsToUse = null;
+            EntityMcpOptions? mcpOptions = null;
+            
             if (options.McpDmlTools is not null || options.McpCustomTool is not null)
             {
-                mcpOptionsToUse = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
-                if (mcpOptionsToUse is null)
+                mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
+                
+                if (mcpOptions is null)
                 {
                     _logger.LogError("Failed to construct MCP options.");
                     return false;
@@ -472,7 +473,7 @@ namespace Cli
                 Mappings: null,
                 Cache: cacheOptions,
                 Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
-                Mcp: mcpOptionsToUse);
+                Mcp: mcpOptions);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)

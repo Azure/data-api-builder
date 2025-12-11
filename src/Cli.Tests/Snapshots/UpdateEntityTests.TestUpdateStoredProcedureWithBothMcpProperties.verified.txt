@@ -1,0 +1,66 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {
+          Audience: ,
+          Issuer: 
+        }
+      }
+    }
+  },
+  Entities: [
+    {
+      UpdateBook: {
+        Source: {
+          Type: stored-procedure
+        },
+        GraphQL: {
+          Singular: UpdateBook,
+          Plural: UpdateBooks,
+          Enabled: true,
+          Operation: Mutation
+        },
+        Rest: {
+          Methods: [
+            Post
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Execute
+              }
+            ]
+          }
+        ],
+        Mcp: {
+          CustomToolEnabled: true,
+          DmlToolEnabled: false,
+          UserProvidedCustomToolEnabled: true,
+          UserProvidedDmlToolsEnabled: true
+        }
+      }
+    }
+  ]
+}

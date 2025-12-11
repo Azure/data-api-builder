@@ -1,0 +1,59 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: [
+    {
+      Book: {
+        Source: {
+          Object: books,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: Book,
+          Plural: Books,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Mcp: {
+          CustomToolEnabled: false,
+          DmlToolEnabled: true,
+          UserProvidedCustomToolEnabled: false,
+          UserProvidedDmlToolsEnabled: true
+        }
+      }
+    }
+  ]
+}

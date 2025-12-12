@@ -144,7 +144,7 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
             }
 
             // Write description if it's provided
-            if (!string.IsNullOrWhiteSpace(value?.Description))
+            if (value is not null && !string.IsNullOrWhiteSpace(value.Description))
             {
                 writer.WritePropertyName("description");
                 JsonSerializer.Serialize(writer, value.Description, options);

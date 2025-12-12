@@ -797,7 +797,8 @@ namespace Cli
 
             // MCP: Enabled and Path
             if (options.RuntimeMcpEnabled != null ||
-                options.RuntimeMcpPath != null)
+                options.RuntimeMcpPath != null ||
+                options.RuntimeMcpDescription != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -1051,6 +1052,14 @@ namespace Cli
                         _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
                         return false;
                     }
+                }
+
+                // Runtime.Mcp.Description
+                updatedValue = options?.RuntimeMcpDescription;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Description = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Description as '{updatedValue}'", updatedValue);
                 }
 
                 // Handle DML tools configuration

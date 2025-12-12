@@ -38,6 +38,7 @@ namespace Cli.Commands
             bool? runtimeRestRequestBodyStrict = null,
             bool? runtimeMcpEnabled = null,
             string? runtimeMcpPath = null,
+            string? runtimeMcpDescription = null,
             bool? runtimeMcpDmlToolsEnabled = null,
             bool? runtimeMcpDmlToolsDescribeEntitiesEnabled = null,
             bool? runtimeMcpDmlToolsCreateRecordEnabled = null,
@@ -93,6 +94,7 @@ namespace Cli.Commands
             // Mcp
             RuntimeMcpEnabled = runtimeMcpEnabled;
             RuntimeMcpPath = runtimeMcpPath;
+            RuntimeMcpDescription = runtimeMcpDescription;
             RuntimeMcpDmlToolsEnabled = runtimeMcpDmlToolsEnabled;
             RuntimeMcpDmlToolsDescribeEntitiesEnabled = runtimeMcpDmlToolsDescribeEntitiesEnabled;
             RuntimeMcpDmlToolsCreateRecordEnabled = runtimeMcpDmlToolsCreateRecordEnabled;
@@ -179,6 +181,9 @@ namespace Cli.Commands
 
         [Option("runtime.mcp.path", Required = false, HelpText = "Customize DAB's MCP endpoint path. Default: '/mcp' Conditions: Prefix path with '/'.")]
         public string? RuntimeMcpPath { get; }
+
+        [Option("runtime.mcp.description", Required = false, HelpText = "Set the MCP server description to be exposed in the initialize response.")]
+        public string? RuntimeMcpDescription { get; }
 
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsEnabled { get; }

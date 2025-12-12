@@ -3,7 +3,9 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -161,26 +163,64 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Extract the actual id value from the request
             object? requestId = id.HasValue ? GetIdValue(id.Value) : null;
 
-            // Create the initialize response
-            var response = new
+            // Get the description from runtime config if available
+            string? instructions = null;
+            try
             {
-                jsonrpc = "2.0",
-                id = requestId,
-                result = new
+                RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
+                if (runtimeConfigProvider != null)
                 {
-                    protocolVersion = _protocolVersion,
-                    capabilities = new
-                    {
-                        tools = new { listChanged = true },
-                        logging = new { }
-                    },
-                    serverInfo = new
-                    {
-                        name = "Data API Builder",
-                        version = "1.0.0"
-                    }
+                    RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                }
+            }
+            catch
+            {
+                // If we can't get the config, continue without instructions
+            }
+
+            // Create the initialize response
+            var result = new
+            {
+                protocolVersion = _protocolVersion,
+                capabilities = new
+                {
+                    tools = new { listChanged = true },
+                    logging = new { }
+                },
+                serverInfo = new
+                {
+                    name = "Data API Builder",
+                    version = "1.0.0"
                 }
             };
+
+            // Add instructions if available and non-empty
+            object response;
+            if (!string.IsNullOrWhiteSpace(instructions))
+            {
+                response = new
+                {
+                    jsonrpc = "2.0",
+                    id = requestId,
+                    result = new
+                    {
+                        result.protocolVersion,
+                        result.capabilities,
+                        result.serverInfo,
+                        instructions
+                    }
+                };
+            }
+            else
+            {
+                response = new
+                {
+                    jsonrpc = "2.0",
+                    id = requestId,
+                    result
+                };
+            }
 
             string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);

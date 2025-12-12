@@ -927,6 +927,63 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.mcp.description {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for mcp.description and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("This MCP provides access to the Products database and should be used to answer product-related or inventory-related questions from the user.", DisplayName = "Set MCP description.")]
+        [DataRow("Use this server for customer data queries.", DisplayName = "Set MCP description with short text.")]
+        public void TestUpdateDescriptionForMcpSettings(string descriptionValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update mcp.description value
+            ConfigureOptions options = new(
+                runtimeMcpDescription: descriptionValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Description is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Mcp?.Description);
+            Assert.AreEqual(descriptionValue, runtimeConfig.Runtime.Mcp.Description);
+        }
+
+        /// <summary>
+        /// Tests that the MCP description can be added to a config that doesn't already have one
+        /// </summary>
+        [TestMethod]
+        public void TestAddDescriptionToMcpSettings()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Initial config should not have a description
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
+            Assert.IsNull(config.Runtime?.Mcp?.Description);
+
+            // Act: Add description
+            string descriptionValue = "This is a test description for MCP server.";
+            ConfigureOptions options = new(
+                runtimeMcpDescription: descriptionValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Description is added
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Mcp?.Description);
+            Assert.AreEqual(descriptionValue, runtimeConfig.Runtime.Mcp.Description);
+        }
+
+        /// <summary>
         /// Sets up the mock file system with an initial configuration file.
         /// This method adds a config file to the mock file system and verifies its existence.
         /// It also attempts to parse the config file to ensure it is valid.

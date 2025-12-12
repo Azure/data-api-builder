@@ -798,7 +798,14 @@ namespace Cli
             // MCP: Enabled and Path
             if (options.RuntimeMcpEnabled != null ||
                 options.RuntimeMcpPath != null ||
-                options.RuntimeMcpDescription != null)
+                options.RuntimeMcpDescription != null ||
+                options.RuntimeMcpDmlToolsEnabled != null ||
+                options.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null ||
+                options.RuntimeMcpDmlToolsCreateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);

@@ -65,12 +65,13 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                 bool enabled = true;
                 string? path = null;
                 DmlToolsConfig? dmlTools = null;
+                string? description = null;
 
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
                     {
-                        return new McpRuntimeOptions(enabled, path, dmlTools);
+                        return new McpRuntimeOptions(enabled, path, dmlTools, description);
                     }
 
                     string? propertyName = reader.GetString();
@@ -96,6 +97,14 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
 
                         case "dml-tools":
                             dmlTools = dmlToolsConfigConverter.Read(ref reader, typeToConvert, options);
+                            break;
+
+                        case "description":
+                            if (reader.TokenType is not JsonTokenType.Null)
+                            {
+                                description = reader.DeserializeString(_replacementSettings);
+                            }
+
                             break;
 
                         default:
@@ -132,6 +141,13 @@ internal class McpRuntimeOptionsConverterFactory : JsonConverterFactory
                                     throw new JsonException("Failed to get mcp.dml-tools options converter");
 
                 dmlToolsOptionsConverter.Write(writer, value.DmlTools, options);
+            }
+
+            // Write description if it's provided
+            if (!string.IsNullOrWhiteSpace(value?.Description))
+            {
+                writer.WritePropertyName("description");
+                JsonSerializer.Serialize(writer, value.Description, options);
             }
 
             writer.WriteEndObject();

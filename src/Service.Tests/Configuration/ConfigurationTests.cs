@@ -2510,7 +2510,7 @@ type Moon {
         {
             const string CUSTOM_CONFIG = "custom-config.json";
             string runtimeBaseRoute = "/base-route";
-            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
+            TestHelper.ConstructNewConfigWithSpecifiedHostModeStaticWebApps(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -5292,10 +5292,29 @@ type Planet @model(name:""PlanetAlias"") {
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config</returns>
         private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, JsonContent content, string configurationEndpoint, RestRuntimeOptions rest)
         {
-            // Hydrate configuration post-startup
-            HttpResponseMessage postResult =
-                await httpClient.PostAsync(configurationEndpoint, content);
-            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+            string appServiceTokenPayload = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims:
+                [
+                    new AppServiceClaim
+                    {
+                        Typ = Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                        Val = POST_STARTUP_CONFIG_ROLE
+                    }
+                ]);
+
+            using HttpRequestMessage postRequest = new(HttpMethod.Post, configurationEndpoint)
+            {
+                Content = content
+            };
+
+            postRequest.Headers.Add(
+                Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER,
+                appServiceTokenPayload);
+
+            HttpResponseMessage postResult = await httpClient.SendAsync(postRequest);
+            string body = await postResult.Content.ReadAsStringAsync();
+            Assert.AreEqual(HttpStatusCode.Unauthorized, postResult.StatusCode, body);
 
             return await GetRestResponsePostConfigHydration(httpClient, rest);
         }

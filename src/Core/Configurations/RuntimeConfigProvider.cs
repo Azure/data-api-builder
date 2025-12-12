@@ -64,11 +64,30 @@ public class RuntimeConfigProvider
     /// </seealso>
     private void RaiseChanged()
     {
-        //First use of GetConfig during hot reload, in order to do validation of
-        //config file before any changes are made for hot reload.
-        //In case validation fails, an exception will be thrown and hot reload will be canceled.
+        // First, validate and apply the hot-reloaded config (sets LKG or restores previous).
         ValidateConfig();
 
+        // Ensure dependent components (metadata providers, schema, etc.) are refreshed BEFORE signalling the change token.
+        // This makes consumers that await the provider's change token observe the updated state deterministically.
+        // Handlers are invoked synchronously here to avoid races.
+        try
+        {
+            if (_configLoader.RuntimeConfig is not null && RuntimeConfigLoadedHandlers.Count > 0)
+            {
+                InvokeConfigLoadedHandlersAsync().GetAwaiter().GetResult();
+            }
+        }
+        catch (Exception)
+        {
+            // If handler refresh fails, restore LKG and propagate a validation error similar to ValidateConfig failure path.
+            _configLoader.RestoreLkgConfig();
+            throw new DataApiBuilderException(
+                message: "Failed to refresh runtime components after hot reload.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        // Finally, rotate and signal the change token so listeners can react.
         DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
         previousToken.SignalChange();
     }

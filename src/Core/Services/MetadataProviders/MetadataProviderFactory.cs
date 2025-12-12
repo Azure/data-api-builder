@@ -62,10 +62,34 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
+            // Build new providers from current config
+            var newProviders = new Dictionary<string, ISqlMetadataProvider>();
+            foreach ((string dataSourceName, DataSource dataSource) in _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
+            {
+                ISqlMetadataProvider provider = dataSource.DatabaseType switch
+                {
+                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(_runtimeConfigProvider, _fileSystem),
+                    DatabaseType.MSSQL => new MsSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    DatabaseType.DWSQL => new MsSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    DatabaseType.MySQL => new MySqlMetadataProvider(_runtimeConfigProvider, _queryManagerFactory, _logger, dataSourceName, _isValidateOnly),
+                    _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
+                };
+                newProviders.Add(dataSourceName, provider);
+            }
+
+            // Initialize all new providers before making them visible
+            foreach ((_, ISqlMetadataProvider provider) in newProviders)
+            {
+                provider.InitializeAsync().GetAwaiter().GetResult();
+            }
+
+            // Atomically swap the provider set
             _metadataProviders.Clear();
-            ConfigureMetadataProviders();
-            // Blocks the current thread until initialization is finished.
-            this.InitializeAsync().GetAwaiter().GetResult();
+            foreach ((string name, ISqlMetadataProvider provider) in newProviders)
+            {
+                _metadataProviders[name] = provider;
+            }
         }
 
         /// <inheritdoc />

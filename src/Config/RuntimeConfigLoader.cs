@@ -107,11 +107,14 @@ public abstract class RuntimeConfigLoader
             // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
             OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
             OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
-            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+            //OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
         }
 
         // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
         OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
+
+        // Finally, fire completion signal so tests can deterministically await full hot-reload.
+        OnConfigChangedEvent(new HotReloadEventArgs(HOT_RELOAD_ALL_DONE, message));
     }
 
     /// <summary>

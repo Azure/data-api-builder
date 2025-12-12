@@ -3068,7 +3068,6 @@ type Moon {
         /// </summary>
         /// <param name="entityType">Type of the entity</param>
         /// <param name="requestPath">Request path for performing POST API requests on the entity</param>
-        [Ignore]
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(EntitySourceType.Table, "/api/Book", DisplayName = "Location Header validation - Table, Base Route not configured")]
@@ -3920,7 +3919,7 @@ type Planet @model(name:""PlanetAlias"") {
         /// <summary>
         /// Tests different log level filters that are valid and check that they are deserialized correctly
         /// </summary>
-        [Ignore]
+        
         [DataTestMethod]
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(LogLevel.Trace, typeof(RuntimeConfigValidator))]

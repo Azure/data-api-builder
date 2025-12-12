@@ -811,7 +811,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// Datawarehouse does not support explicit foreign keys. ignoring this test.
         /// </summary>
         [TestMethod]
-        [Ignore]
+        
         public override Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
             string[] sourceFields,
             string[] targetFields,

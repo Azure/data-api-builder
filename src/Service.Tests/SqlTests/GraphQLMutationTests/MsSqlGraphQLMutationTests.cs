@@ -499,7 +499,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         [TestMethod]
         // IGNORE FOR NOW, SEE: Issue #285
-        [Ignore]
+        
         public async Task InsertMutationForNonGraphQLTypeTable()
         {
             string msSqlQuery = @"
@@ -805,7 +805,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Check: </code> that the new entry is in the view
         /// </summary>
         [TestMethod]
-        [Ignore]
+        
         public async Task InsertIntoInsertableComplexView()
         {
             // this view does not have the necessary trigger

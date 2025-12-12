@@ -367,7 +367,7 @@ public class EndToEndTests
     /// Ensures that invalid links provided for Cors.Origins result in failed engine startup 
     /// due to validation failure.
     /// </summary>
-    [Ignore]
+    
     [DataTestMethod]
     [DataRow("http://locahost1 https://localhost2", true, DisplayName = "Success in updating Host.Cors.Origins.")]
     public void TestUpdateHostCorsOriginsRuntimeSettings(string path, bool isSuccess)

@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions; // Added for DataApiBuilderException
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,7 +36,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 return false;
             }
 
-            var metadataProviderFactory = serviceProvider.GetRequiredService<Azure.DataApiBuilder.Core.Services.MetadataProviders.IMetadataProviderFactory>();
+            IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
 
             // Resolve datasource name for the entity.
             try

@@ -773,8 +773,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.IsFalse(actual.Contains("SHOULD_NOT_APPEAR"), "Env var value should not be expanded inside AKV secret.");
                 Assert.IsTrue(actual.Contains("Application Name="), "Application Name should be appended for MSSQL when env replacement is enabled.");
 
-                var builderOriginal = new SqlConnectionStringBuilder(secretValueWithEnvPattern.Replace("Server=", "Data Source=").Replace("Database=", "Initial Catalog="));
-                var builderActual = new SqlConnectionStringBuilder(actual);
+                SqlConnectionStringBuilder builderOriginal = new(secretValueWithEnvPattern.Replace("Server=", "Data Source=").Replace("Database=", "Initial Catalog="));
+                SqlConnectionStringBuilder builderActual = new(actual);
                 Assert.AreEqual(builderOriginal["Data Source"], builderActual["Data Source"], "Server/Data Source should match.");
                 Assert.AreEqual(builderOriginal["Initial Catalog"], builderActual["Initial Catalog"], "Database/Initial Catalog should match (with env pattern retained).");
                 Assert.AreEqual(builderOriginal["User ID"], builderActual["User ID"], "User Id should match.");
@@ -829,8 +829,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.IsNotNull(config);
 
                 string expected = RuntimeConfigLoader.GetConnectionStringWithApplicationName(finalSecretValue);
-                var builderExpected = new SqlConnectionStringBuilder(expected);
-                var builderActual = new SqlConnectionStringBuilder(config.DataSource.ConnectionString);
+                SqlConnectionStringBuilder builderExpected = new(expected);
+                SqlConnectionStringBuilder builderActual = new(config.DataSource.ConnectionString);
                 Assert.AreEqual(builderExpected["Data Source"], builderActual["Data Source"], "Data Source should match.");
                 Assert.AreEqual(builderExpected["Initial Catalog"], builderActual["Initial Catalog"], "Initial Catalog should match.");
                 Assert.AreEqual(builderExpected["User ID"], builderActual["User ID"], "User ID should match.");

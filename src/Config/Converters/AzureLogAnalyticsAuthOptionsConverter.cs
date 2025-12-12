@@ -9,15 +9,14 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAnalyticsAuthOptions>
 {
-    // Determines whether to replace environment variable with its
-    // value or not while deserializing.
-    private bool _replaceEnvVar;
+    // Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
-    public AzureLogAnalyticsAuthOptionsConverter(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    public AzureLogAnalyticsAuthOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     /// <summary>
@@ -48,7 +47,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                     case "custom-table-name":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            customTableName = reader.DeserializeString(_replaceEnvVar);
+                            customTableName = reader.DeserializeString(_replacementSettings);
                         }
 
                         break;
@@ -56,7 +55,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                     case "dcr-immutable-id":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            dcrImmutableId = reader.DeserializeString(_replaceEnvVar);
+                            dcrImmutableId = reader.DeserializeString(_replacementSettings);
                         }
 
                         break;
@@ -64,7 +63,7 @@ internal class AzureLogAnalyticsAuthOptionsConverter : JsonConverter<AzureLogAna
                     case "dce-endpoint":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            dceEndpoint = reader.DeserializeString(_replaceEnvVar);
+                            dceEndpoint = reader.DeserializeString(_replacementSettings);
                         }
 
                         break;

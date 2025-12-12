@@ -11,7 +11,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
 {
     // Determines whether to replace environment variable with its
     // value or not while deserializing.
-    private bool _replaceEnvVar;
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
@@ -22,25 +22,25 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new HealthCheckOptionsConverter(_replaceEnvVar);
+        return new HealthCheckOptionsConverter(_replacementSettings);
     }
 
-    internal RuntimeHealthOptionsConvertorFactory(bool replaceEnvVar)
+    internal RuntimeHealthOptionsConvertorFactory(DeserializationVariableReplacementSettings? replacementSettings)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     private class HealthCheckOptionsConverter : JsonConverter<RuntimeHealthCheckConfig>
     {
         // Determines whether to replace environment variable with its
         // value or not while deserializing.
-        private bool _replaceEnvVar;
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
         /// <param name="replaceEnvVar">Whether to replace environment variable with its
         /// value or not while deserializing.</param>
-        internal HealthCheckOptionsConverter(bool replaceEnvVar)
+        internal HealthCheckOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
         {
-            _replaceEnvVar = replaceEnvVar;
+            _replacementSettings = replacementSettings;
         }
 
         /// <summary>
@@ -102,7 +102,7 @@ internal class RuntimeHealthOptionsConvertorFactory : JsonConverterFactory
                                     {
                                         if (reader.TokenType == JsonTokenType.String)
                                         {
-                                            string? currentRole = reader.DeserializeString(_replaceEnvVar);
+                                            string? currentRole = reader.DeserializeString(_replacementSettings);
                                             if (!string.IsNullOrEmpty(currentRole))
                                             {
                                                 stringList.Add(currentRole);

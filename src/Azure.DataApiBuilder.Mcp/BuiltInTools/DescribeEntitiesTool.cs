@@ -67,6 +67,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<DescribeEntitiesTool>? logger = serviceProvider.GetService<ILogger<DescribeEntitiesTool>>();
+            string toolName = GetToolMetadata().Name;
 
             try
             {
@@ -77,10 +78,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!IsToolEnabled(runtimeConfig))
                 {
-                    return Task.FromResult(McpResponseBuilder.BuildErrorResult(
-                        "ToolDisabled",
-                        $"The {GetToolMetadata().Name} tool is disabled in the configuration.",
-                        logger));
+                    return Task.FromResult(McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger));
                 }
 
                 // Get authorization services to determine current user's role
@@ -158,6 +156,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     if (entityFilter != null && entityFilter.Count > 0)
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "EntitiesNotFound",
                             $"No entities found matching the filter: {string.Join(", ", entityFilter)}",
                             logger));
@@ -165,6 +164,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     else
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "NoEntitiesConfigured",
                             "No entities are configured in the runtime configuration.",
                             logger));
@@ -197,6 +197,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (OperationCanceledException)
             {
                 return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "OperationCanceled",
                     "The describe operation was canceled.",
                     logger));
@@ -205,6 +206,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 logger?.LogError(dabEx, "Data API Builder error in DescribeEntitiesTool");
                 return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "DataApiBuilderError",
                     dabEx.Message,
                     logger));
@@ -212,6 +214,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             catch (ArgumentException argEx)
             {
                 return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "InvalidArguments",
                     argEx.Message,
                     logger));
@@ -220,6 +223,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 logger?.LogError(ioEx, "Invalid operation in DescribeEntitiesTool");
                 return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "InvalidOperation",
                     "Failed to retrieve entity metadata: " + ioEx.Message,
                     logger));
@@ -228,6 +232,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             {
                 logger?.LogError(ex, "Unexpected error in DescribeEntitiesTool");
                 return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "UnexpectedError",
                     "An unexpected error occurred while describing entities.",
                     logger));

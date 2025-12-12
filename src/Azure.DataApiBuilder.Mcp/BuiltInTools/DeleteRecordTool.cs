@@ -73,6 +73,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             CancellationToken cancellationToken = default)
         {
             ILogger<DeleteRecordTool>? logger = serviceProvider.GetService<ILogger<DeleteRecordTool>>();
+            string toolName = GetToolMetadata().Name;
 
             try
             {
@@ -86,49 +87,37 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 // 2) Check if the tool is enabled in configuration before proceeding
                 if (config.McpDmlTools?.DeleteRecord != true)
                 {
-                    return McpResponseBuilder.BuildErrorResult(
-                        "ToolDisabled",
-                        $"The {this.GetToolMetadata().Name} tool is disabled in the configuration.",
-                        logger);
+                    return McpErrorHelpers.ToolDisabled(GetToolMetadata().Name, logger);
                 }
 
                 // 3) Parsing & basic argument validation
                 if (arguments is null)
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", "No arguments provided.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", "No arguments provided.", logger);
                 }
 
                 if (!McpArgumentParser.TryParseEntityAndKeys(arguments.RootElement, out string entityName, out Dictionary<string, object?> keys, out string parseError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidArguments", parseError, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
-                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
-                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
-
-                // 4) Resolve metadata for entity existence check
-                string dataSourceName;
-                ISqlMetadataProvider sqlMetadataProvider;
-
-                try
+                // 4) Resolve metadata for entity existence
+                if (!McpMetadataHelper.TryResolveMetadata(
+                        entityName,
+                        config,
+                        serviceProvider,
+                        out ISqlMetadataProvider sqlMetadataProvider,
+                        out DatabaseObject dbObject,
+                        out string dataSourceName,
+                        out string metadataError))
                 {
-                    dataSourceName = config.GetDataSourceNameFromEntityName(entityName);
-                    sqlMetadataProvider = metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                }
-                catch (Exception)
-                {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
-                }
-
-                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
-                {
-                    return McpResponseBuilder.BuildErrorResult("EntityNotFound", $"Entity '{entityName}' is not defined in the configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", metadataError, logger);
                 }
 
                 // Validate it's a table or view
                 if (dbObject.SourceType != EntitySourceType.Table && dbObject.SourceType != EntitySourceType.View)
                 {
-                    return McpResponseBuilder.BuildErrorResult("InvalidEntity", $"Entity '{entityName}' is not a table or view. Use 'execute-entity' for stored procedures.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity '{entityName}' is not a table or view. Use 'execute-entity' for stored procedures.", logger);
                 }
 
                 // 5) Authorization
@@ -138,7 +127,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {roleError}", logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "delete", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
@@ -149,10 +138,11 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpResponseBuilder.BuildErrorResult("PermissionDenied", $"Permission denied: {authError}", logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, entityName, "delete", authError, logger);
                 }
 
-                // 6) Build and validate Delete context
+                // Need MetadataProviderFactory for RequestValidator; resolve here.
+                IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 RequestValidator requestValidator = new(metadataProviderFactory, runtimeConfigProvider);
 
                 DeleteRequestContext context = new(
@@ -164,7 +154,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 {
                     if (kvp.Value is null)
                     {
-                        return McpResponseBuilder.BuildErrorResult("InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
+                        return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", $"Primary key value for '{kvp.Key}' cannot be null.", logger);
                     }
 
                     context.PrimaryKeyValuePairs[kvp.Key] = kvp.Value;
@@ -172,7 +162,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 requestValidator.ValidatePrimaryKey(context);
 
-                // 7) Execute
+                IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
                 DatabaseType dbType = config.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
                 IMutationEngine mutationEngine = mutationEngineFactory.GetMutationEngine(dbType);
 
@@ -195,6 +185,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         string keyDetails = McpJsonHelper.FormatKeyDetails(keys);
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "RecordNotFound",
                             $"No record found with the specified primary key: {keyDetails}",
                             logger);
@@ -203,6 +194,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                              message.Contains("REFERENCE constraint", StringComparison.OrdinalIgnoreCase))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "ConstraintViolation",
                             "Cannot delete record due to foreign key constraint. Other records depend on this record.",
                             logger);
@@ -211,6 +203,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                              message.Contains("authorization", StringComparison.OrdinalIgnoreCase))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "PermissionDenied",
                             "You do not have permission to delete this record.",
                             logger);
@@ -219,6 +212,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                              message.Contains("type", StringComparison.OrdinalIgnoreCase))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "InvalidArguments",
                             "Invalid data type for one or more key values.",
                             logger);
@@ -226,6 +220,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                     // For any other DAB exceptions, return the message as-is
                     return McpResponseBuilder.BuildErrorResult(
+                        toolName,
                         "DataApiBuilderError",
                         dabEx.Message,
                         logger);
@@ -242,7 +237,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         208 => $"Table '{dbObject.FullName}' not found in the database.",
                         _ => $"Database error: {sqlEx.Message}"
                     };
-                    return McpResponseBuilder.BuildErrorResult("DatabaseError", errorMessage, logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseError", errorMessage, logger);
                 }
                 catch (DbException dbEx)
                 {
@@ -254,6 +249,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     if (errorMsg.Contains("foreign key") || errorMsg.Contains("constraint"))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "ConstraintViolation",
                             "Cannot delete record due to foreign key constraint. Other records depend on this record.",
                             logger);
@@ -261,24 +257,25 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     else if (errorMsg.Contains("not found") || errorMsg.Contains("does not exist"))
                     {
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "RecordNotFound",
                             "No record found with the specified primary key.",
                             logger);
                     }
 
-                    return McpResponseBuilder.BuildErrorResult("DatabaseError", $"Database error: {dbEx.Message}", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "DatabaseError", $"Database error: {dbEx.Message}", logger);
                 }
                 catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("connection", StringComparison.OrdinalIgnoreCase))
                 {
                     // Handle connection-related issues
                     logger?.LogError(ioEx, "Database connection error");
-                    return McpResponseBuilder.BuildErrorResult("ConnectionError", "Failed to connect to the database.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "ConnectionError", "Failed to connect to the database.", logger);
                 }
                 catch (TimeoutException timeoutEx)
                 {
                     // Handle query timeout
                     logger?.LogError(timeoutEx, "Delete operation timeout for {Entity}", entityName);
-                    return McpResponseBuilder.BuildErrorResult("TimeoutError", "The delete operation timed out.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "TimeoutError", "The delete operation timed out.", logger);
                 }
                 catch (Exception ex)
                 {
@@ -289,6 +286,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     {
                         string keyDetails = McpJsonHelper.FormatKeyDetails(keys);
                         return McpResponseBuilder.BuildErrorResult(
+                            toolName,
                             "RecordNotFound",
                             $"No entity found with the given key {keyDetails}.",
                             logger);
@@ -325,18 +323,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
             }
             catch (OperationCanceledException)
             {
-                return McpResponseBuilder.BuildErrorResult("OperationCanceled", "The delete operation was canceled.", logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "OperationCanceled", "The delete operation was canceled.", logger);
             }
             catch (ArgumentException argEx)
             {
-                return McpResponseBuilder.BuildErrorResult("InvalidArguments", argEx.Message, logger);
+                return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", argEx.Message, logger);
             }
             catch (Exception ex)
             {
-                ILogger<DeleteRecordTool>? innerLogger = serviceProvider.GetService<ILogger<DeleteRecordTool>>();
-                innerLogger?.LogError(ex, "Unexpected error in DeleteRecordTool.");
+                logger?.LogError(ex, "Unexpected error in DeleteRecordTool.");
 
                 return McpResponseBuilder.BuildErrorResult(
+                    toolName,
                     "UnexpectedError",
                     "An unexpected error occurred during the delete operation.",
                     logger);

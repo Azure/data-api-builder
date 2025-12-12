@@ -174,9 +174,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     instructions = runtimeConfig.Runtime?.Mcp?.Description;
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // If we can't get the config, continue without instructions
+                // Log to stderr for diagnostics
+                Console.Error.WriteLine($"[MCP DEBUG] Failed to retrieve MCP description from config: {ex.Message}");
             }
 
             // Create the initialize response
@@ -192,35 +194,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     name = "Data API Builder",
                     version = "1.0.0"
-                }
+                },
+                instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
             };
 
-            // Add instructions if available and non-empty
-            object response;
-            if (!string.IsNullOrWhiteSpace(instructions))
+            var response = new
             {
-                response = new
-                {
-                    jsonrpc = "2.0",
-                    id = requestId,
-                    result = new
-                    {
-                        result.protocolVersion,
-                        result.capabilities,
-                        result.serverInfo,
-                        instructions
-                    }
-                };
-            }
-            else
-            {
-                response = new
-                {
-                    jsonrpc = "2.0",
-                    id = requestId,
-                    result
-                };
-            }
+                jsonrpc = "2.0",
+                id = requestId,
+                result
+            };
 
             string json = JsonSerializer.Serialize(response);
             Console.Out.WriteLine(json);

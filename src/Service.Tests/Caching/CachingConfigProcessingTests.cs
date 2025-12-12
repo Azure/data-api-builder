@@ -383,7 +383,7 @@ public class CachingConfigProcessingTests
                     ""allow-credentials"": false
                         },
                   ""authentication"": {
-                    ""provider"": ""StaticWebApps""
+                    ""provider"": ""AppService""
                         },
                   ""mode"": ""production""
                   }" + globalCacheConfig +

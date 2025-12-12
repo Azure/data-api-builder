@@ -226,7 +226,7 @@ public class EndToEndTests
     public void TestAddEntity()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
-            "mssql", "--connection-string", TEST_ENV_CONN_STRING, "--auth.provider", "StaticWebApps" };
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING, "--auth.provider", "AppService" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));

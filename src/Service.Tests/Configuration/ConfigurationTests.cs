@@ -50,6 +50,7 @@ using Moq.Protected;
 using Serilog;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
 
@@ -393,7 +394,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     ""allow-credentials"": false
                 },
                 ""authentication"": {
-                    ""provider"": ""StaticWebApps""
+                    ""provider"": ""AppService""
                 },
                 ""mode"": ""development""
                 }
@@ -656,7 +657,7 @@ type Moon {
                                         },
                                         ""host"": {
                                             ""authentication"": {
-                                                ""provider"": ""StaticWebApps""
+                                                ""provider"": ""AppService""
                                             }
                                         }
                                     },
@@ -1140,10 +1141,21 @@ type Moon {
             // Sends a GET request to a protected entity which requires a specific role to access.
             // Authorization will pass because proper auth headers are present.
             HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: $"api/{POST_STARTUP_CONFIG_ENTITY}");
-            string swaTokenPayload = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
-                addAuthenticated: true,
-                specificRole: POST_STARTUP_CONFIG_ROLE);
-            message.Headers.Add(Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
+
+            // Use an AppService EasyAuth principal carrying the required role when
+            // authentication is configured to use AppService.
+            string appServiceTokenPayload = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims:
+                [
+                    new AppServiceClaim
+                    {
+                        Typ = Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                        Val = POST_STARTUP_CONFIG_ROLE
+                    }
+                ]);
+
+            message.Headers.Add(Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, appServiceTokenPayload);
             message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, POST_STARTUP_CONFIG_ROLE);
             HttpResponseMessage authorizedResponse = await httpClient.SendAsync(message);
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
@@ -2498,7 +2510,7 @@ type Moon {
         {
             const string CUSTOM_CONFIG = "custom-config.json";
             string runtimeBaseRoute = "/base-route";
-            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
+            TestHelper.ConstructNewConfigWithSpecifiedHostModeStaticWebApps(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"
@@ -5258,12 +5270,34 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="httpClient">Client used for request execution.</param>
         /// <param name="config">Post-startup configuration</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config</returns>
-        private static async Task<HttpStatusCode> HydratePostStartupConfiguration(HttpClient httpClient, JsonContent content, string configurationEndpoint)
+        private static async Task<HttpStatusCode> HydratePostStartupConfiguration(
+            HttpClient httpClient,
+            JsonContent content,
+            string configurationEndpoint)
         {
-            // Hydrate configuration post-startup
-            HttpResponseMessage postResult =
-                await httpClient.PostAsync(configurationEndpoint, content);
-            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+            string appServiceTokenPayload = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                roleClaimType: Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                additionalClaims:
+                [
+                    new AppServiceClaim
+                    {
+                        Typ = Config.ObjectModel.AuthenticationOptions.ROLE_CLAIM_TYPE,
+                        Val = POST_STARTUP_CONFIG_ROLE
+                    }
+                ]);
+
+            using HttpRequestMessage postRequest = new(HttpMethod.Post, configurationEndpoint)
+            {
+                Content = content
+            };
+
+            postRequest.Headers.Add(
+                Config.ObjectModel.AuthenticationOptions.CLIENT_PRINCIPAL_HEADER,
+                appServiceTokenPayload);
+
+            HttpResponseMessage postResult = await httpClient.SendAsync(postRequest);
+            string body = await postResult.Content.ReadAsStringAsync();
+            Assert.AreEqual(HttpStatusCode.Unauthorized, postResult.StatusCode, body);
 
             return await GetRestResponsePostConfigHydration(httpClient);
         }
@@ -5465,7 +5499,7 @@ type Planet @model(name:""PlanetAlias"") {
                 );
             entityMap.Add("Publisher", anotherEntity);
 
-            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.AppService), null);
 
             return new(
                 Schema: "IntegrationTestMinimalSchema",

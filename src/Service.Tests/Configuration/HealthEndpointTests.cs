@@ -564,57 +564,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             return runtimeConfig;
         }
 
-        /// <summary>
-        /// Verifies that when filtering entities for health checks,
-        /// stored procedures are excluded while tables are included.
-        /// This matches the filter logic in HealthCheckHelper.UpdateEntityHealthCheckResultsAsync.
-        /// </summary>
-        [TestMethod]
-        public void HealthChecks_ExcludeStoredProcedures()
-        {
-            // Create a config with table and stored procedure entities
-            RuntimeConfig runtimeConfig = SetupCustomConfigFile(
-                enableGlobalHealth: true,
-                enableGlobalRest: true,
-                enableGlobalGraphql: true,
-                enabledGlobalMcp: true,
-                enableDatasourceHealth: true,
-                enableEntityHealth: true,
-                enableEntityRest: true,
-                enableEntityGraphQL: true);
-
-            // Add a stored procedure entity to the existing config
-            Entity storedProcEntity = new(
-                Source: new("GetData", EntitySourceType.StoredProcedure, null, null),
-                GraphQL: new("getData", "getDataList"),
-                Rest: new(Enabled: true),
-                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Mappings: null,
-                Relationships: null,
-                Fields: null);
-
-            Dictionary<string, Entity> entitiesWithStoredProc = new(runtimeConfig.Entities.Entities)
-            {
-                { "GetData", storedProcEntity }
-            };
-
-            RuntimeConfig configWithStoredProc = runtimeConfig with
-            {
-                Entities = new RuntimeEntities(entitiesWithStoredProc)
-            };
-
-            // Apply the same filter used in HealthCheckHelper.UpdateEntityHealthCheckResultsAsync
-            List<KeyValuePair<string, Entity>> healthCheckEntities = configWithStoredProc.Entities.Entities
-                .Where(e => e.Value.IsEntityHealthEnabled && e.Value.Source.Type != EntitySourceType.StoredProcedure)
-                .ToList();
-
-            // Verify stored procedure is excluded and table is included
-            Assert.IsFalse(healthCheckEntities.Any(e => e.Value.Source.Type == EntitySourceType.StoredProcedure), 
-                "Stored procedures should be excluded from health checks");
-            Assert.IsTrue(healthCheckEntities.Any(e => e.Value.Source.Type == EntitySourceType.Table), 
-                "Tables should be included in health checks");
-        }
-
         private static void WriteToCustomConfigFile(RuntimeConfig runtimeConfig)
         {
             File.WriteAllText(

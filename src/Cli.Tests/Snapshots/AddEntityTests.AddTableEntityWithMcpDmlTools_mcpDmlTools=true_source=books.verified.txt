@@ -49,9 +49,7 @@
         ],
         Mcp: {
           CustomToolEnabled: false,
-          DmlToolEnabled: true,
-          UserProvidedCustomToolEnabled: false,
-          UserProvidedDmlToolsEnabled: true
+          DmlToolEnabled: true
         }
       }
     }

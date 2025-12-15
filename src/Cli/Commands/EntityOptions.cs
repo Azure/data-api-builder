@@ -137,10 +137,10 @@ namespace Cli.Commands
         [Option("fields.primary-key", Required = false, Separator = ',', HelpText = "Set this field as a primary key.")]
         public IEnumerable<bool>? FieldsPrimaryKeyCollection { get; }
 
-        [Option("mcp.dml-tools", Required = false, HelpText = "Enable MCP DML (Data Manipulation Language) tools for this entity. Allows CRUD operations via MCP.")]
+        [Option("mcp.dml-tools", Required = false, HelpText = "Enable MCP DML (Data Manipulation Language) tools for this entity. Allows CRUD operations via MCP. Default value is true.")]
         public string? McpDmlTools { get; }
 
-        [Option("mcp.custom-tool", Required = false, HelpText = "Enable MCP custom tool for this entity. Only valid for stored procedures.")]
+        [Option("mcp.custom-tool", Required = false, HelpText = "Enable MCP custom tool for this entity. Only valid for stored procedures. Default value is false.")]
         public string? McpCustomTool { get; }
     }
 }

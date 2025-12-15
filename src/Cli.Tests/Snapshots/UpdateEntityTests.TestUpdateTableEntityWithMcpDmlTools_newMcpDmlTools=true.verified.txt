@@ -5,7 +5,7 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /api,
+      Path: /,
       RequestBodyStrict: true
     },
     GraphQL: {
@@ -18,20 +18,24 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps
+        Provider: StaticWebApps,
+        Jwt: {
+          Audience: ,
+          Issuer: 
+        }
       }
     }
   },
   Entities: [
     {
-      Author: {
+      MyEntity: {
         Source: {
-          Object: authors,
+          Object: MyTable,
           Type: Table
         },
         GraphQL: {
-          Singular: Author,
-          Plural: Authors,
+          Singular: MyEntity,
+          Plural: MyEntities,
           Enabled: true
         },
         Rest: {
@@ -49,9 +53,7 @@
         ],
         Mcp: {
           CustomToolEnabled: false,
-          DmlToolEnabled: false,
-          UserProvidedCustomToolEnabled: false,
-          UserProvidedDmlToolsEnabled: true
+          DmlToolEnabled: true
         }
       }
     }

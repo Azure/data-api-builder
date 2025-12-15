@@ -19,10 +19,10 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
 
         /// <summary>
         /// Indicates whether DML tools are enabled for this entity.
-        /// Defaults to false when not explicitly provided.
+        /// Defaults to true when not explicitly provided.
         /// </summary>
         [JsonPropertyName("dml-tools")]
-        public bool DmlToolEnabled { get; init; } = false;
+        public bool DmlToolEnabled { get; init; } = true;
 
         /// <summary>
         /// Flag which informs CLI and JSON serializer whether to write the CustomToolEnabled

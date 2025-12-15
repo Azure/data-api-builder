@@ -165,20 +165,20 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             // Get the description from runtime config if available
             string? instructions = null;
-            try
+            RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
+            if (runtimeConfigProvider != null)
             {
-                RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
-                if (runtimeConfigProvider != null)
+                try
                 {
                     RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
                     instructions = runtimeConfig.Runtime?.Mcp?.Description;
                 }
-            }
-            catch (Exception ex)
-            {
-                // If we can't get the config, continue without instructions
-                // Log to stderr for diagnostics
-                Console.Error.WriteLine($"[MCP DEBUG] Failed to retrieve MCP description from config: {ex.Message}");
+                catch (Exception ex)
+                {
+                    // Log to stderr for diagnostics and rethrow to avoid masking configuration errors
+                    Console.Error.WriteLine($"[MCP WARNING] Failed to retrieve MCP description from config: {ex.Message}");
+                    throw;
+                }
             }
 
             // Create the initialize response

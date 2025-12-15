@@ -747,7 +747,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "enum": ["table", "view", "stored-procedure"],
+                      "enum": [ "table", "view", "stored-procedure" ],
                       "description": "Database object type"
                     },
                     "object": {
@@ -774,12 +774,24 @@
                           "description": "Array of parameter objects with metadata",
                           "items": {
                             "type": "object",
-                            "required": ["name"],
+                            "required": [ "name" ],
                             "properties": {
-                              "name": { "type": "string", "description": "Parameter name" },
-                              "required": { "type": "boolean", "description": "Is parameter required" },
-                              "default": { "type": ["string", "number", "boolean", "null"], "description": "Default value" },
-                              "description": { "type": "string", "description": "Parameter description. Since descriptions for multiple parameters are provided as a comma-separated string, individual parameter descriptions must not contain a comma (',')." }
+                              "name": {
+                                "type": "string",
+                                "description": "Parameter name"
+                              },
+                              "required": {
+                                "type": "boolean",
+                                "description": "Is parameter required"
+                              },
+                              "default": {
+                                "type": [ "string", "number", "boolean", "null" ],
+                                "description": "Default value"
+                              },
+                              "description": {
+                                "type": "string",
+                                "description": "Parameter description. Since descriptions for multiple parameters are provided as a comma-separated string, individual parameter descriptions must not contain a comma (',')."
+                              }
                             }
                           }
                         }
@@ -793,7 +805,7 @@
                       "description": "List of fields to be used as primary keys. Mandatory field for views when generated through the CLI."
                     }
                   },
-                  "required": ["type", "object"]
+                  "required": [ "type", "object" ]
                 }
               ]
             },
@@ -803,12 +815,24 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "name": { "type": "string", "description": "Database column name." },
-                  "alias": { "type": "string", "description": "Exposed name for the field." },
-                  "description": { "type": "string", "description": "Field description." },
-                  "primary-key": { "type": "boolean", "description": "Indicates whether this field is a primary key." }
+                  "name": {
+                    "type": "string",
+                    "description": "Database column name."
+                  },
+                  "alias": {
+                    "type": "string",
+                    "description": "Exposed name for the field."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Field description."
+                  },
+                  "primary-key": {
+                    "type": "boolean",
+                    "description": "Indicates whether this field is a primary key."
+                  }
                 },
-                "required": ["name"]
+                "required": [ "name" ]
               },
               "uniqueItems": true
             },
@@ -828,7 +852,7 @@
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "enum": ["get", "post", "put", "patch", "delete"]
+                        "enum": [ "get", "post", "put", "patch", "delete" ]
                       }
                     },
                     "enabled": {
@@ -839,13 +863,13 @@
                   },
                   "anyOf": [
                     {
-                      "required": ["path"]
+                      "required": [ "path" ]
                     },
                     {
-                      "required": ["methods"]
+                      "required": [ "methods" ]
                     },
                     {
-                      "required": ["enabled"]
+                      "required": [ "enabled" ]
                     }
                   ]
                 }
@@ -865,7 +889,7 @@
                     },
                     "operation": {
                       "type": "string",
-                      "enum": ["mutation", "query"]
+                      "enum": [ "mutation", "query" ]
                     },
                     "enabled": {
                       "type": "boolean",
@@ -875,15 +899,40 @@
                   },
                   "anyOf": [
                     {
-                      "required": ["type"]
+                      "required": [ "type" ]
                     },
                     {
-                      "required": ["operation"]
+                      "required": [ "operation" ]
                     },
                     {
-                      "required": ["enabled"]
+                      "required": [ "enabled" ]
                     }
                   ]
+                }
+              ]
+            },
+            "mcp": {
+              "oneOf": [
+                {
+                  "type": "boolean",
+                  "description": "Enable/disable DML tools. When true, all DML tools are enabled. When false, all DML tools are disabled. For stored procedures only: true also enables custom-tool as false by default."
+                },
+                {
+                  "type": "object",
+                  "description": "Granular MCP configuration. For stored procedures: can specify both custom-tool and dml-tools. For tables/views: only dml-tools is allowed.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "custom-tool": {
+                      "type": "boolean",
+                      "description": "Enable/disable the custom tool. Only applicable for stored-procedure entities.",
+                      "default": false
+                    },
+                    "dml-tools": {
+                      "type": "boolean",
+                      "description": "Enable/disable the dml-tools.",
+                      "default": true
+                    }
+                  }
                 }
               ]
             },
@@ -908,7 +957,7 @@
                   "properties": {
                     "cardinality": {
                       "type": "string",
-                      "enum": ["one", "many"]
+                      "enum": [ "one", "many" ]
                     },
                     "target.entity": {
                       "type": "string"
@@ -942,7 +991,7 @@
                       }
                     }
                   },
-                  "required": ["cardinality", "target.entity"]
+                  "required": [ "cardinality", "target.entity" ]
                 }
               }
             },
@@ -1143,6 +1192,48 @@
                     { "required": ["mappings"] },
                     { "properties": { "source": { "properties": { "key-fields": { } }, "required": ["key-fields"] } } }
                   ]
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "source": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "const": "stored-procedure"
+                      }
+                    }
+                  }
+                }
+              },
+              "then": {
+                "comment": "For stored procedures, both custom-tool and dml-tools are allowed in mcp"
+              },
+              "else": {
+                "comment": "For tables and views, only dml-tools is allowed in mcp",
+                "if": {
+                  "properties": {
+                    "mcp": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "mcp": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "dml-tools": {
+                          "type": "boolean",
+                          "description": "Enable/disable the dml-tools.",
+                          "default": true
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }

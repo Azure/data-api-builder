@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using CommandLine;
@@ -51,8 +52,11 @@ namespace Cli.Commands
             IEnumerable<string>? fieldsAliasCollection,
             IEnumerable<string>? fieldsDescriptionCollection,
             IEnumerable<bool>? fieldsPrimaryKeyCollection,
+            CliBool? mcpCustomToolEnabled,
+            CliBool? mcpDmlToolsEnabled,
             string? config)
-            : base(entity,
+            : base(
+                  entity,
                   sourceType,
                   sourceParameters,
                   sourceKeyFields,
@@ -75,6 +79,8 @@ namespace Cli.Commands
                   fieldsAliasCollection,
                   fieldsDescriptionCollection,
                   fieldsPrimaryKeyCollection,
+                  mcpCustomToolEnabled,
+                  mcpDmlToolsEnabled,
                   config)
         {
             Source = source;

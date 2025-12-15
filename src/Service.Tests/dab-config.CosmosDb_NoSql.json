@@ -20,6 +20,10 @@
       "path": "/graphql",
       "allow-introspection": true
     },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    },
     "host": {
       "cors": {
         "origins": [
@@ -31,12 +35,6 @@
         "provider": "StaticWebApps"
       },
       "mode": "development"
-    },
-    "telemetry": {
-      "app-insights": {
-        "enabled": true,
-        "connection-string": "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://dc.services.visualstudio.com/v2/track"
-      }
     }
   },
   "entities": {
@@ -44,15 +42,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Planet",
           "plural": "Planets"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -117,15 +115,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Character",
           "plural": "Characters"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -159,15 +157,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Star",
           "plural": "Stars"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -210,15 +208,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Tag",
           "plural": "Tags"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -244,15 +242,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Moon",
           "plural": "Moons"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -295,15 +293,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Earth",
           "plural": "Earths"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -390,15 +388,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "Sun",
           "plural": "Suns"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -432,15 +430,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "AdditionalAttribute",
           "plural": "AdditionalAttributes"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -468,15 +466,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "MoonAdditionalAttribute",
           "plural": "MoonAdditionalAttributes"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -504,15 +502,15 @@
       "source": {
         "object": "graphqldb.planet"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "MoreAttribute",
           "plural": "MoreAttributes"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -576,15 +574,15 @@
       "source": {
         "object": "graphqldb.newcontainer"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "PlanetAgain",
           "plural": "PlanetAgains"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {
@@ -731,15 +729,15 @@
       "source": {
         "object": "graphqldb.invalidAuthModelContainer"
       },
+      "rest": {
+        "enabled": false
+      },
       "graphql": {
         "enabled": true,
         "type": {
           "singular": "InvalidAuthModel",
           "plural": "InvalidAuthModels"
         }
-      },
-      "rest": {
-        "enabled": false
       },
       "permissions": [
         {

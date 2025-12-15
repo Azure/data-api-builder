@@ -83,6 +83,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
                               Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new("", ""),
+                              Mcp: null,
                               Permissions: Array.Empty<EntityPermission>(),
                               Relationships: new(),
                               Mappings: new());
@@ -110,6 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
                               Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(Singular: graphQLTypeName, Plural: "", Enabled: true, Operation: graphQLOperation),
+                              Mcp: null,
                               Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: actions.ToArray()) },
                               Relationships: new(),
                               Mappings: new());
@@ -128,6 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
                               Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(singularNameForEntity, pluralNameForEntity),
+                              Mcp: null,
                               Permissions: Array.Empty<EntityPermission>(),
                               Relationships: new(),
                               Mappings: new());
@@ -145,6 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
                               Fields: null,
                               Rest: new(Array.Empty<SupportedHttpVerb>()),
                               GraphQL: new(singularGraphQLName, ""),
+                              Mcp: null,
                               Permissions: Array.Empty<EntityPermission>(),
                               Relationships: new(),
                               Mappings: new());
@@ -188,3 +192,4 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
         }
     }
 }
+

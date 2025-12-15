@@ -124,7 +124,8 @@ public class HealthEndpointCachingTests
             Rest: new(Enabled: true),
             GraphQL: new("book", "books", true),
             Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-            Relationships: null,
+                Mcp: null,
+                Relationships: null,
             Mappings: null);
 
         Dictionary<string, Entity> entityMap = new()
@@ -168,3 +169,4 @@ public class HealthEndpointCachingTests
     }
 
 }
+

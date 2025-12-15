@@ -744,6 +744,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 GraphQL: new EntityGraphQLOptions(string.Empty, string.Empty),
                 Rest: new EntityRestOptions(),
                 Permissions: Array.Empty<EntityPermission>(),
+                Mcp: null,
                 Mappings: new Dictionary<string, string>(),
                 Relationships: new Dictionary<string, EntityRelationship>(),
                 Cache: new EntityCacheOptions { Enabled = true },
@@ -948,3 +949,4 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         }
     }
 }
+

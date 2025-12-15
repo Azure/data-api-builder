@@ -49,6 +49,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 Rest: new(Enabled: false),
                 GraphQL: new("Foo", "Foos", Enabled: true),
                 Permissions: Array.Empty<EntityPermission>(),
+                Mcp: null,
                 Relationships: new(),
                 Mappings: new());
         }
@@ -1350,3 +1351,4 @@ type Foo @model(name:""Foo"") {{
         }
     }
 }
+

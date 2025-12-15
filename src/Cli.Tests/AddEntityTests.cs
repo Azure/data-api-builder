@@ -53,8 +53,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
             return ExecuteVerifyTest(options);
         }
 
@@ -90,8 +91,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
 
@@ -130,8 +132,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfiguration, out RuntimeConfig? runtimeConfig), "Loaded config");
@@ -174,8 +177,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, GetFirstEntityConfiguration());
             return ExecuteVerifyTest(options, initialConfiguration);
@@ -213,8 +217,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             return ExecuteVerifyTest(options);
         }
@@ -258,8 +263,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             // Create VerifySettings and add all arguments to the method as parameters
             VerifySettings verifySettings = new();
@@ -299,8 +305,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-                );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             return ExecuteVerifyTest(options);
         }
@@ -339,8 +346,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-                );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             return ExecuteVerifyTest(options);
         }
@@ -375,8 +383,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             string config = INITIAL_CONFIG;
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig), "Loaded base config.");
@@ -438,8 +447,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-                );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
 
@@ -506,8 +516,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-                );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             VerifySettings settings = new();
             settings.UseHashedParameters(restMethods, graphQLOperation, restRoute, graphQLType);
@@ -550,8 +561,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-            );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
 
@@ -597,8 +609,9 @@ namespace Cli.Tests
                 fieldsNameCollection: [],
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: []
-                );
+                fieldsPrimaryKeyCollection: [],
+                mcpCustomToolEnabled: null,
+                mcpDmlToolsEnabled: null);
 
             RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
 
@@ -635,3 +648,4 @@ namespace Cli.Tests
         }
     }
 }
+

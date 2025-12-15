@@ -1428,6 +1428,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Rest: new(Enabled: true),
                 GraphQL: new("", ""),
                 Permissions: permissions,
+                Mcp: null,
                 Relationships: null,
                 Mappings: null);
 
@@ -1502,3 +1503,4 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         #endregion
     }
 }
+

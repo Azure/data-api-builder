@@ -13,6 +13,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Health">Health check configuration for the entity.</param>
 /// <param name="Source">The underlying database object to which the exposed entity is connected to.</param>
 /// <param name="Rest">The JSON may represent this as a bool or a string and we use a custom <c>JsonConverter</c> to convert that into the .NET type.</param>
+/// <param name="Mcp">MCP tool configuration for the entity.</param>
 /// <param name="GraphQL">The JSON may represent this as a bool or a string and we use a custom <c>JsonConverter</c> to convert that into the .NET type.</param>
 /// <param name="Permissions">Permissions assigned to this entity.</param>
 /// <param name="Relationships">Defines how an entity is related to other exposed
@@ -33,6 +34,7 @@ public record Entity
     public List<FieldMetadata>? Fields { get; init; }
     public EntityGraphQLOptions GraphQL { get; init; }
     public EntityRestOptions Rest { get; init; }
+    public EntityMcpOptions? Mcp { get; init; }
     public EntityPermission[] Permissions { get; init; }
     public Dictionary<string, string>? Mappings { get; init; }
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
@@ -48,6 +50,7 @@ public record Entity
         EntityGraphQLOptions GraphQL,
         List<FieldMetadata>? Fields,
         EntityRestOptions Rest,
+        EntityMcpOptions? Mcp,
         EntityPermission[] Permissions,
         Dictionary<string, string>? Mappings,
         Dictionary<string, EntityRelationship>? Relationships,
@@ -61,6 +64,7 @@ public record Entity
         this.Fields = Fields;
         this.GraphQL = GraphQL;
         this.Rest = Rest;
+        this.Mcp = Mcp;
         this.Permissions = Permissions;
         this.Mappings = Mappings;
         this.Relationships = Relationships;

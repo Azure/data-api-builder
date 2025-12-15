@@ -87,6 +87,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                             Rest: new(Enabled: false),
                             GraphQL: new("Container1", "Container1s"),
                             Permissions: new EntityPermission[] {},
+                            Mcp: null,
                             Relationships: null,
                             Mappings: null) },
                        {"Container2", new Entity(
@@ -95,6 +96,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                             Rest: new(Enabled: false),
                             GraphQL: new("Container2", "Container2s"),
                             Permissions: new EntityPermission[] {},
+                            Mcp: null,
                             Relationships: null,
                             Mappings: null) },
                        {"Container0", new Entity(
@@ -103,6 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                             Rest: new(Enabled: false),
                             GraphQL: new("Container0", "Container0s"),
                             Permissions: new EntityPermission[] {},
+                            Mcp: null,
                             Relationships: null,
                             Mappings: null) }
                    })
@@ -186,3 +189,4 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
     }
 }
+

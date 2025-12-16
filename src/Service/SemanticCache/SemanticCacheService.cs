@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -31,6 +32,18 @@ public class SemanticCacheService : ISemanticCache
         _runtimeConfigProvider = runtimeConfigProvider ?? throw new ArgumentNullException(nameof(runtimeConfigProvider));
         _vectorStore = vectorStore ?? throw new ArgumentNullException(nameof(vectorStore));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    private static string CreateEmbeddingKey(float[] embedding)
+    {
+        // Use a deterministic short hash so RedisVectorStore gets a non-empty `query` value.
+        // This is not used for similarity search (embedding is), but RedisVectorStore requires a non-empty query string.
+        byte[] bytes = new byte[embedding.Length * sizeof(float)];
+        Buffer.BlockCopy(embedding, 0, bytes, 0, bytes.Length);
+
+        byte[] hash = SHA256.HashData(bytes);
+        // 16 hex chars is enough for uniqueness in practice while keeping payload small.
+        return "embedding:" + Convert.ToHexString(hash).Substring(0, 16);
     }
 
     /// <inheritdoc/>
@@ -130,10 +143,9 @@ public class SemanticCacheService : ISemanticCache
             }
 
             // Store in Redis vector store
-            // Note: Using empty string for query since we only have embedding at this point
-            // The query text would need to be passed from the calling context if needed
+            // Note: Caller only provides embedding+response. Provide a deterministic non-empty query id.
             await _vectorStore.StoreAsync(
-                query: string.Empty,
+                query: CreateEmbeddingKey(embedding),
                 embedding: embedding,
                 response: responseJson,
                 expireSeconds: expireSeconds,

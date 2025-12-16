@@ -23,6 +23,11 @@
         }
       }
     },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp",
+      "dml-tools": true
+    },
     "host": {
       "cors": {
         "origins": [
@@ -980,6 +985,41 @@
         }
       }
     },
+    "Default_Books": {
+      "source": {
+        "object": "default_books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "default_book",
+          "plural": "default_books"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
     "Book_MM": {
       "source": {
         "object": "books_mm",
@@ -1934,8 +1974,12 @@
         "fungus": {
           "cardinality": "one",
           "target.entity": "Fungus",
-          "source.fields": [ "species" ],
-          "target.fields": [ "habitat" ],
+          "source.fields": [
+            "species"
+          ],
+          "target.fields": [
+            "habitat"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -2013,11 +2057,15 @@
         "spores": "hazards"
       },
       "relationships": {
-        "shrub": {
+        "Shrub": {
           "cardinality": "one",
           "target.entity": "Shrub",
-          "source.fields": [ "habitat" ],
-          "target.fields": [ "species" ],
+          "source.fields": [
+            "habitat"
+          ],
+          "target.fields": [
+            "species"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -2271,7 +2319,8 @@
     "Notebook": {
       "source": {
         "object": "notebooks",
-        "type": "table"
+        "type": "table",
+        "object-description": "Table containing notebook information"
       },
       "graphql": {
         "enabled": true,
@@ -3537,6 +3586,19 @@
               "action": "read"
             }
           ]
+        },
+        {
+          "role": "TestFieldExcludedForAggregation",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            }
+          ]
         }
       ],
       "mappings": {
@@ -3726,6 +3788,65 @@
           "linking.target.fields": []
         }
       }
+    },
+    "DateOnlyTable": {
+      "source": {
+        "object": "date_only_table",
+        "type": "table",
+        "key-fields": [
+          "event_date"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "DateOnlyTable",
+          "plural": "DateOnlyTables"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "GetBooksAuth": {
+      "source": {
+        "object": "get_books",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "GetBooksAuth",
+          "plural": "GetBooksAuths"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "teststoredprocauth",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
     }
   }
 }

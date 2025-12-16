@@ -2,15 +2,20 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.Controllers
@@ -47,11 +52,14 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
         private readonly ILogger<RestController> _logger;
 
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+
         /// <summary>
         /// Constructor.
         /// </summary>
-        public RestController(RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger)
+        public RestController(RuntimeConfigProvider runtimeConfigProvider, RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger)
         {
+            _runtimeConfigProvider = runtimeConfigProvider;
             _restService = restService;
             _openApiDocumentor = openApiDocumentor;
             _logger = logger;
@@ -185,14 +193,29 @@ namespace Azure.DataApiBuilder.Service.Controllers
             string route,
             EntityActionOperation operationType)
         {
+            if (route.Equals(REDIRECTED_ROUTE))
+            {
+                return NotFound();
+            }
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            // This activity tracks the entire REST request.
+            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity($"{HttpContext.Request.Method} {(route.Split('/').Length > 1 ? route.Split('/')[1] : string.Empty)}");
+
             try
             {
-                if (route.Equals(REDIRECTED_ROUTE))
+                TelemetryMetricsHelper.IncrementActiveRequests(ApiType.REST);
+
+                if (activity is not null)
                 {
-                    throw new DataApiBuilderException(
-                        message: $"GraphQL request redirected to {REDIRECTED_ROUTE}.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    activity.TrackMainControllerActivityStarted(
+                        Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true),
+                        HttpContext.Request.Headers["User-Agent"].ToString(),
+                        operationType.ToString(),
+                        route,
+                        HttpContext.Request.QueryString.ToString(),
+                        HttpContext.Request.Headers["X-MS-API-ROLE"].FirstOrDefault() ?? HttpContext.User.FindFirst("role")?.Value,
+                        ApiType.REST);
                 }
 
                 // Validate the PathBase matches the configured REST path.
@@ -211,7 +234,20 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
 
+                // This activity tracks the query execution. This will create a new activity nested under the REST request activity.
+                using Activity? queryActivity = TelemetryTracesHelper.DABActivitySource.StartActivity($"QUERY {entityName}");
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
+
+                RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+                string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+
+                if (queryActivity is not null)
+                {
+                    queryActivity.TrackQueryActivityStarted(
+                        databaseType,
+                        dataSourceName);
+                }
 
                 if (result is null)
                 {
@@ -219,6 +255,13 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         message: $"Not Found",
                         statusCode: HttpStatusCode.NotFound,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                }
+
+                int statusCode = (result as ObjectResult)?.StatusCode ?? (result as StatusCodeResult)?.StatusCode ?? (result as JsonResult)?.StatusCode ?? 200;
+                if (activity is not null && activity.IsAllDataRequested)
+                {
+                    HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(statusCode.ToString(), ignoreCase: true);
+                    activity.TrackMainControllerActivityFinished(httpStatusCode);
                 }
 
                 return result;
@@ -231,6 +274,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)ex.StatusCode;
+                activity?.TrackMainControllerActivityFinishedWithException(ex, ex.StatusCode);
+
+                HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
+                TelemetryMetricsHelper.TrackError(method, ex.StatusCode, route, ApiType.REST, ex);
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
@@ -241,10 +288,25 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
 
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+                HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
+                activity?.TrackMainControllerActivityFinishedWithException(ex, HttpStatusCode.InternalServerError);
+
+                TelemetryMetricsHelper.TrackError(method, HttpStatusCode.InternalServerError, route, ApiType.REST, ex);
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
                     SERVER_ERROR,
                     HttpStatusCode.InternalServerError);
+            }
+            finally
+            {
+                stopwatch.Stop();
+                HttpMethod method = Enum.Parse<HttpMethod>(HttpContext.Request.Method, ignoreCase: true);
+                HttpStatusCode httpStatusCode = Enum.Parse<HttpStatusCode>(Response.StatusCode.ToString(), ignoreCase: true);
+                TelemetryMetricsHelper.TrackRequest(method, httpStatusCode, route, ApiType.REST);
+                TelemetryMetricsHelper.TrackRequestDuration(method, httpStatusCode, route, ApiType.REST, stopwatch.Elapsed);
+
+                TelemetryMetricsHelper.DecrementActiveRequests(ApiType.REST);
             }
         }
 

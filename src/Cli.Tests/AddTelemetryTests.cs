@@ -45,7 +45,7 @@ namespace Cli.Tests
 
             // Add Telemetry
             bool isSuccess = ConfigGenerator.TryAddTelemetry(
-                new AddTelemetryOptions(appInsightsConnString, isTelemetryEnabled, configPath),
+                new AddTelemetryOptions(appInsightsConnString: appInsightsConnString, appInsightsEnabled: isTelemetryEnabled, config: configPath),
                 new FileSystemRuntimeConfigLoader(fileSystem),
                 fileSystem);
 
@@ -101,7 +101,7 @@ namespace Cli.Tests
 
             // Add Telemetry
             bool isSuccess = ConfigGenerator.TryAddTelemetry(
-                new AddTelemetryOptions("InstrumentationKey=11111-1111-111-11-1", CliBool.False, configPath),
+                new AddTelemetryOptions(appInsightsConnString: "InstrumentationKey=11111-1111-111-11-1", appInsightsEnabled: CliBool.False, config: configPath),
                 new FileSystemRuntimeConfigLoader(fileSystem),
                 fileSystem);
 
@@ -119,7 +119,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Generates a JSON string representing a runtime section of the config, with a customizable telemetry section.
-        /// </summary> 
+        /// </summary>
         private static string GenerateRuntimeSection(string telemetrySection)
         {
             return $@"

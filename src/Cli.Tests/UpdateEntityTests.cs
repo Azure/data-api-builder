@@ -293,6 +293,33 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Simple test to update an entity cache.
+        /// </summary>
+        [TestMethod, Description("It should update the cache into true.")]
+        public Task TestUpdateEntityCaching()
+        {
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                source: "MyTable",
+                cacheEnabled: "true",
+                cacheTtl: "1"
+            );
+
+            string initialConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""cache"": {
+                                    ""enabled"": false,
+                                    ""ttlseconds"": 0
+                                }
+                            }
+                        }
+                    }";
+
+            return ExecuteVerifyTest(initialConfig, options);
+        }
+
+        /// <summary>
         /// Test to check creation of a new relationship
         /// </summary>
         [TestMethod]
@@ -977,7 +1004,7 @@ namespace Cli.Tests
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(EnumExtensions.Deserialize<DatabaseType>(db), "", new()),
-                Runtime: new(Rest: new(), GraphQL: new(), Host: new(null, null)),
+                Runtime: new(Rest: new(), GraphQL: new(), Mcp: new(), Host: new(null, null)),
                 Entities: new(new Dictionary<string, Entity>())
             );
 
@@ -1003,6 +1030,7 @@ namespace Cli.Tests
 
             Entity sampleEntity1 = new(
                 Source: new("SOURCE1", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("SOURCE1", "SOURCE1s"),
                 Permissions: new[] { permissionForEntity },
@@ -1013,6 +1041,7 @@ namespace Cli.Tests
             // entity with graphQL disabled
             Entity sampleEntity2 = new(
                 Source: new("SOURCE2", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("SOURCE2", "SOURCE2s", false),
                 Permissions: new[] { permissionForEntity },
@@ -1029,11 +1058,46 @@ namespace Cli.Tests
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
                 DataSource: new DataSource(DatabaseType.MSSQL, "", new()),
-                Runtime: new(Rest: new(), GraphQL: new(), Host: new(null, null)),
+                Runtime: new(Rest: new(), GraphQL: new(), Mcp: new(), Host: new(null, null)),
                 Entities: new(entityMap)
             );
 
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: "SampleEntity2"));
+        }
+
+        /// <summary>
+        /// Test to verify updating the description property of an entity.
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateEntityDescription()
+        {
+            // Initial config with an old description
+            string initialConfig = GetInitialConfigString() + "," + @"
+                ""entities"": {
+                    ""MyEntity"": {
+                        ""source"": ""MyTable"",
+                        ""description"": ""Old description"",
+                        ""permissions"": [
+                            {
+                                ""role"": ""anonymous"",
+                                ""actions"": [""read""]
+                            }
+                        ]
+                    }
+                }
+            }";
+
+            // UpdateOptions with a new description
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                entity: "MyEntity",
+                description: "Updated description"
+            );
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Successfully updated entity in the config.");
+
+            // Assert that the description was updated
+            Assert.AreEqual("Updated description", updatedRuntimeConfig.Entities["MyEntity"].Description);
         }
 
         private static string GetInitialConfigString()
@@ -1093,7 +1157,10 @@ namespace Cli.Tests
             IEnumerable<string>? relationshipFields = null,
             IEnumerable<string>? map = null,
             IEnumerable<string>? restMethodsForStoredProcedure = null,
-            string? graphQLOperationForStoredProcedure = null
+            string? graphQLOperationForStoredProcedure = null,
+            string? cacheEnabled = null,
+            string? cacheTtl = null,
+            string? description = null
             )
         {
             return new(
@@ -1117,9 +1184,20 @@ namespace Cli.Tests
                 linkingTargetFields: linkingTargetFields,
                 relationshipFields: relationshipFields,
                 map: map,
+                cacheEnabled: cacheEnabled,
+                cacheTtl: cacheTtl,
                 config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethodsForStoredProcedure,
-                graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure
+                graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure,
+                description: description,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: null,
+                fieldsAliasCollection: null,
+                fieldsDescriptionCollection: null,
+                fieldsPrimaryKeyCollection: null
             );
         }
 

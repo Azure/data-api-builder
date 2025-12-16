@@ -7,103 +7,309 @@
 
 [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
 
-## Community
+## Join the community
 
-Join the Data API builder community! This sign up will help us maintain a list of interested developers to be part of our roadmap and to help us better understand the different ways DAB is being used. Sign up [here](https://forms.office.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR1S1JdzGAxhDrefV-tBYtwZUNE1RWVo0SUVMTkRESUZLMVVOS0wwUFNVRy4u).
+Want to be part of our priorities and roadmap? Sign up [here](https://forms.office.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR1S1JdzGAxhDrefV-tBYtwZUNE1RWVo0SUVMTkRESUZLMVVOS0wwUFNVRy4u).
 
-## About
+![](docs/media/dab-logo.png)
 
-**Data API builder for Azure Databases provides modern REST and GraphQL endpoints to your Azure Databases.**
+## About Data API builder
 
-With data API builder, database objects can be exposed via REST or GraphQL endpoints so that your data can be accessed using modern techniques on any platform, any language, and any device. With an integrated and flexible policy engine, native support for common behavior like pagination, filtering, projection and sorting, the creation of CRUD backend services can be done in minutes instead of hours or days, giving developers an efficiency boost like never seen before.
+Data API builder (DAB) is an open-source, no-code tool that creates secure, full-featured REST and GraphQL endpoints for your database. It’s a CRUD data API engine that runs in a container—on Azure, any other cloud, or on-premises. DAB is built for developers with integrated tooling, telemetry, and other productivity features.
 
-Data API builder is Open Source and works on any platform. It can be executed on-premises, in a container or as a Managed Service in Azure, via the new [Database Connection](https://learn.microsoft.com/azure/static-web-apps/database-overview) feature available in Azure Static Web Apps.
+> [!IMPORTANT]
+> Data API builder (DAB) is open source and always free.
 
-![Data API builder Architecture Overview Diagram](./docs/media/dab-architecture-overview.png)
+### Which databases does Data API builder support?
 
-## Features
+|               | Azure SQL | SQL Server | SQLDW | Cosmos DB | PostgreSQL | MySQL |
+| :-----------: | :-------: | :--------: | :---: | :-------: | :--------: | :---: |
+| **Supported** |    Yes    |     Yes    |  Yes  |    Yes    |     Yes    |  Yes  |
 
-- Allow collections, tables, views and stored procedures to be accessed via REST and GraphQL
-- Support authentication via OAuth2/JWT
-- Support for EasyAuth when running in Azure
-- Role-based authorization using received claims
-- Item-level security via policy expressions
-- REST
-  - CRUD operations via POST, GET, PUT, PATCH, DELETE
-  - Filtering, sorting and pagination
-- GraphQL
-  - Queries and mutations
-  - Filtering, sorting and pagination
-  - Relationship navigation
-- Easy development via dedicated CLI
-- Full integration with Static Web Apps via Database Connection feature when running in Azure
-- Open Source
+### Which environments does Data API builder support?
 
-## Getting Started
+|               | On-Prem | Azure |  AWS |  GCP | Other |
+| :-----------: | :-----: | :---: | :--: | :--: | :---: |
+| **Supported** |   Yes   |  Yes  |  Yes |  Yes |  Yes  |
 
-To get started quickly with Data API builder for Azure Databases, you can use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial, that will help to get familiar with some basic tools and concepts while giving you a good experience on how much Data API builder for Azure Databases can make you more efficient, but removing the need to write a lot of plumbing code.
+### Which endpoints does Data API builder support?
 
-### Walk-through video
+|               | REST | GraphQL |     MCP     |
+| :-----------: | :--: | :-----: | :---------: |
+| **Supported** |  Yes |   Yes   | Coming soon |
 
-<p>
-  <a href="https://www.youtube.com/watch?v=xAlaoDQolLw" target="_blank">
-    <img src="https://img.youtube.com/vi/xAlaoDQolLw/0.jpg" alt="Play Video" width="280" />
-  </a><br/>
-  Demo source code: https://aka.ms/dab/startrek
-</p>
+## Getting started
 
-#### Install Data API builder's cross-platform  command line
-    dotnet tool install microsoft.dataapibuilder --global
+Use the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial to quickly explore the core tools and concepts.
 
-## Documentation
+### 1. Install the `dotnet` [command line](https://get.dot.net)
 
-Documentation is available [here](https://learn.microsoft.com/azure/data-api-builder/).
+https://get.dot.net
 
-## Samples
+> [!NOTE]
+> You may already have .NET installed!
 
-Several samples are available already. To follow the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial you'll find the associated code in the [`samples`](https://github.com/Azure/data-api-builder/tree/main/samples) folder.
+The Data API builder (DAB) command line requires the .NET runtime version 8 or later.
 
-More samples, including end-to-end samples using the most common frontend frameworks, are available in the [https://github.com/Azure-Samples/data-api-builder](https://github.com/Azure-Samples/data-api-builder) repository
+#### Validate your installation
 
-## Getting Started Videos
+```sh
+dotnet --version
+```
 
-We've put together a playlist of short videos to help you get started with Data API builder and fullstack/jamstack development: https://www.youtube.com/playlist?list=PLYA3nHmjWIYE1PUl8_dVR-yKtCLgVhie4
+### 2. Install the `dab` command line
 
-## Known Issues
+The Data API builder (DAB) command line is cross-platform and intended for local developer use.
 
-List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues).
+```sh
+dotnet tool install microsoft.dataapibuilder -g
+```
 
-## Development Roadmap
+#### Validate your installation
 
-Do you want to know what we're working on and what is the planned development roadmap for Data API builder? Or do you have some wonderful ideas on how to improve Data API builder and want to share them? Go here: [https://github.com/Azure/data-api-builder/discussions/1377](https://github.com/Azure/data-api-builder/discussions/1377).
+```sh
+dab --version
+```
 
-## How to Contribute
+### 3. Create your database (example: Azure SQL database / T-SQL)
 
-Contributions to this project are more than welcome. Make sure you check out the following documents, to successfully contribute to the project:
+This example uses a single table for simplicity.
 
-- [Code Of Conduct](./CODE_OF_CONDUCT.md)
-- [Security](./SECURITY.md)
-- [Contributing](./CONTRIBUTING.md)
+```sql
+CREATE TABLE dbo.Todo
+(
+    Id INT PRIMARY KEY IDENTITY,
+    Title NVARCHAR(500) NOT NULL,
+    IsCompleted BIT NOT NULL DEFAULT 0
+);
+INSERT dbo.Todo (Title, IsCompleted)
+VALUES
+    ('Walk the dog', 0),
+    ('Feed the fish', 0),
+    ('Clean the cat', 1);
+```
 
-If you want to propose a completely new feature, please create an RFC item. Good examples of how to create RFC can be found here:
+### 4. Prepare your connection string
 
-- [Rust RFC Template](https://github.com/rust-lang/rfcs/blob/master/0000-template.md)
-- [Python PEP Guidance](https://www.python.org/dev/peps/pep-0001/#what-belongs-in-a-successful-pep)
+Data API builder (DAB) supports `.env` files for testing process-level environment variables.
 
-## References
+#### PowerShell (Windows)
 
-- [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
-- [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
-- [GraphQL](https://graphql.org/)
+```ps
+echo "my-connection-string=$env:database_connection_string" > .env
+```
 
-## License
+#### cmd.exe (Windows)
 
-**Data API builder for Azure Databases** is licensed under the MIT license. See the [LICENSE](./LICENSE.txt) file for more details.
+```cmd
+echo my-connection-string=%database_connection_string% > .env
+```
 
-## Third-Party Component Notice
+#### bash (macOS/Linux)
 
-If you use the third-party software Banana Cake Pop by ChilliCream, Inc., as part of your Data API builder solution, you may have the option to save your work on ChilliCream's cloud service, via your separate ChilliCream account.  Microsoft is not affiliated with and does not endorse ChilliCream's service, and you use those services at your own option.
+```bash
+echo "my-connection-string=$database_connection_string" > .env
+```
 
-## Trademarks
+#### Resulting .env file
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow Microsoft's Trademark & Brand Guidelines. Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.
+The file `.env` is automatically created through this process. These are the resulting contents:
+
+```
+"my-connection-string=$env:database_connection_string" 
+```
+> [!NOTE]
+> Be sure and replace `database_connection_string` with your actual database connection string.
+
+> [!IMPORTANT]
+> Adding `.env` to your `.gitignore` file will help ensure your secrets are not added to source control. 
+
+### 5. Create your initial configuration file
+
+Data API builder (DAB) requires a JSON configuration file. Use `dab --help` for syntax options.
+
+```sh
+dab init
+  --database-type mssql
+  --connection-string "@env('my-connection-string')"
+  --host-mode development
+```
+
+> [!NOTE]
+> Including `--host-mode development` enables Swagger for REST and Nitro for GraphQL.
+
+#### Resulting configuration
+
+The file `dab-config.json` is automatically created through this process. These are the resulting contents:
+
+```json
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v1.5.56/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('my-connection-string')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api",
+      "request-body-strict": true
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": { }
+}
+```
+### 6. Add your table to the configuration
+
+```sh
+dab add Todo
+  --source "dbo.Todo"
+  --permissions "anonymous:*"
+```
+
+> [!NOTE]
+> DAB supports tables, views, and stored procedures. When the type is not specified, the default is `table`.
+
+#### Resulting configuration
+
+The `entities` section of the configuration is no longer empty:
+
+```json
+{
+  "entities": {
+    "Todo": {
+      "source": {
+        "object": "dbo.Todo",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Todo",
+          "plural": "Todos"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+### 7. Run Data API builder
+
+In `production`, DAB runs in a container. In `development`, it’s locally self-hosted.
+
+```sh
+dab start
+```
+
+> [!IMPORTANT]
+> The DAB CLI assumes your configuration file is called `dab-config.json` and is in the local folder.
+
+### 8. Access your data!
+
+By default, DAB enables both REST and GraphQL.
+
+```sh
+GET http://localhost:5000/api/Todo
+```
+
+> [!NOTE]
+> Change the URL to match your port if it is different.
+
+#### Other things you should try
+
+* DAB’s Health endpoint: `http://localhost:5000/health`
+* DAB’s Swagger UI: `http://localhost:5000/swagger`
+* DAB’s Nitro UI: `http://localhost:5000/graphql`
+
+## How does it work?
+
+DAB dynamically creates endpoints and translates requests to SQL, returning JSON.
+
+```mermaid
+sequenceDiagram
+  actor Client as Client
+  participant Endpoint as Endpoint
+  participant QueryBuilder as QueryBuilder
+  participant DB as Database
+
+  %% Initialization / Warming up section (light grey)
+  rect rgba(120,120,120,0.10)
+    Endpoint -->>+ Endpoint: Read Config
+    Endpoint ->> DB: Query Metadata
+    DB -->> Endpoint: Metadata Response
+    Endpoint ->>- Endpoint: Start Engine
+  end
+
+  %% Request/Response section (very light purple)
+  rect rgba(180,150,255,0.11)
+    Client ->>+ Endpoint: HTTP Request
+      Endpoint ->> Endpoint: Authorize
+    Endpoint ->> QueryBuilder: Invoke
+    QueryBuilder -->> Endpoint: SQL Query
+      Endpoint ->> DB: Submit Query
+      DB -->> Endpoint: Data Response
+    Endpoint -->>- Client: HTTP Response
+  end
+```
+
+## Additional resources
+
+* [Online Documentation](https://aka.ms/dab/docs)
+* [Official Samples](https://aka.ms/dab/samples)
+* [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues)
+* [Feature Roadmap](https://github.com/Azure/data-api-builder/discussions/1377)
+
+#### References
+
+* [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md)
+* [Microsoft Azure REST API Guidelines](https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md)
+* [GraphQL Specification](https://graphql.org/)
+
+### How to contribute
+
+To contribute, see these documents:
+
+* [Code of Conduct](./CODE_OF_CONDUCT.md)
+* [Security](./SECURITY.md)
+* [Contributing](./CONTRIBUTING.md)
+* [MIT License](./LICENSE.txt)
+
+### Third-party component notice
+
+Nitro (formerly Banana Cake Pop by ChilliCream, Inc.) may optionally store work in its cloud service via your ChilliCream account. Microsoft is not affiliated with or endorsing this service. Use at your discretion.
+
+### Trademarks
+
+This project may use trademarks or logos. Use of Microsoft trademarks must follow Microsoft’s [Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks). Use of third-party marks is subject to their policies.

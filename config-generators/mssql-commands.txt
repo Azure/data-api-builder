@@ -3,6 +3,7 @@ add Publisher --config "dab-config.MsSql.json" --source publishers --permissions
 add Publisher_MM --config "dab-config.MsSql.json" --source publishers_mm --graphql "Publisher_MM:Publishers_MM" --permissions "anonymous:*"
 add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
+add Default_Books --config "dab-config.MsSql.json" --source default_books --permissions "anonymous:create,read,update,delete" --graphql "default_book:default_books"
 add Book_MM --config "dab-config.MsSql.json" --source books_mm --permissions "anonymous:*" --graphql "book_mm:books_mm"
 add BookWebsitePlacement --config "dab-config.MsSql.json" --source book_website_placements --permissions "anonymous:read"
 add Author --config "dab-config.MsSql.json" --source authors --permissions "anonymous:read"
@@ -206,6 +207,7 @@ update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilter_E
 update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilter_ColumnForbidden:read"
 update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:read"
 update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read"
+update BookNF --config "dab-config.MsSql.json" --permissions "TestFieldExcludedForAggregation:read" --fields.exclude "publisher_id"
 update BookNF --config "dab-config.MsSql.json" --relationship publishers --target.entity PublisherNF --cardinality one
 update BookNF --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update BookNF --config "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many
@@ -233,3 +235,5 @@ update DefaultBuiltInFunction --config "dab-config.MsSql.json" --permissions "an
 add dbo_DimAccount --config "dab-config.MsSql.json" --source "DimAccount" --permissions "anonymous:*" --rest true --graphql true
 update dbo_DimAccount --config "dab-config.MsSql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "ParentAccountKey:AccountKey"
 update dbo_DimAccount --config "dab-config.MsSql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "AccountKey:ParentAccountKey"
+add DateOnlyTable --config "dab-config.MsSql.json" --source "date_only_table" --permissions "anonymous:*" --rest true --graphql true --source.key-fields "event_date"
+add GetBooksAuth --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "teststoredprocauth:execute" --rest true --graphql true --graphql.operation "Query" --rest.methods "Get"

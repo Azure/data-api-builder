@@ -19,6 +19,10 @@ static class ModuleInitializer
     {
         // Ignore the connection string from the output to avoid committing it.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.ConnectionString);
+        // Ignore the IsDatasourceHealthEnabled from the output to avoid committing it.
+        VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.IsDatasourceHealthEnabled);
+        // Ignore the DatasourceThresholdMs from the output to avoid committing it.
+        VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatasourceThresholdMs);
         // Ignore the datasource files as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DataSourceFiles);
         // Ignore the CosmosDataSourceUsed as that's unimportant from a test standpoint.
@@ -31,6 +35,32 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsCachingEnabled);
         // Ignore the entity IsCachingEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsCachingEnabled);
+        // Ignore the global IsRestEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
+        // Ignore the global RuntimeOptions.IsRestEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsRestEnabled);
+        // Ignore the entity IsRestEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsRestEnabled);
+        // Ignore the global IsGraphQLEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsGraphQLEnabled);
+        // Ignore the global RuntimeOptions.IsGraphQLEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsGraphQLEnabled);
+        // Ignore the entity IsGraphQLEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsGraphQLEnabled);
+        // Ignore the global IsMcpEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsMcpEnabled);
+        // Ignore the global RuntimeOptions.IsMcpEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsMcpEnabled);
+        // Ignore the global IsHealthEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsHealthEnabled);
+        // Ignore the global RuntimeOptions.IsHealthCheckEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsHealthCheckEnabled);
+        // Ignore the entity IsEntityHealthEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsEntityHealthEnabled);
+        // Ignore the entity EntityThresholdMs as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.EntityThresholdMs);
+        // Ignore the entity EntityFirst as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.EntityFirst);
         // Ignore the entity IsLinkingEntity as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsLinkingEntity);
         // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
@@ -41,14 +71,32 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsGraphQLEnabled);
         // Ignore the IsRestEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
+        // Ignore the IsMcpEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsMcpEnabled);
+        // Ignore the McpDmlTools as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpDmlTools);
         // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.RestPath);
         // Ignore the GraphQLPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.GraphQLPath);
+        // Ignore the McpPath as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpPath);
         // Ignore the AllowIntrospection as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
+        // Ignore the EnableAggregation as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableAggregation);
+        // Ignore the AllowedRolesForHealth as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowedRolesForHealth);
+        // Ignore the CacheTtlSeconds as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CacheTtlSecondsForHealthReport);
+        // Ignore the EnableAggregation as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableAggregation);
+        // Ignore the EnableDwNto1JoinOpt as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(options => options.EnableDwNto1JoinOpt);
+        // Ignore the FeatureFlags as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.FeatureFlags);
         // Ignore the JSON schema path as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the message as that's not serialized in our config file anyway.
@@ -61,6 +109,10 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<HostOptions>(options => options.UserProvidedMaxResponseSizeMB);
         // Ignore UserProvidedDepthLimit as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.UserProvidedDepthLimit);
+        // Ignore EnableLegacyDateTimeScalar as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.EnableLegacyDateTimeScalar);
+        // Ignore UserProvidedPath as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<McpRuntimeOptions>(options => options.UserProvidedPath);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

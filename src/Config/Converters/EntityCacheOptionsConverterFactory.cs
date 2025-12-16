@@ -12,6 +12,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -21,11 +25,27 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new EntityCacheOptionsConverter();
+        return new EntityCacheOptionsConverter(_replacementSettings);
+    }
+
+    /// <param name="replacementSettings">The replacement settings to use while deserializing.</param>
+    internal EntityCacheOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings)
+    {
+        _replacementSettings = replacementSettings;
     }
 
     private class EntityCacheOptionsConverter : JsonConverter<EntityCacheOptions>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
+
+        /// <param name="replacementSettings">The replacement settings to use while deserializing.</param>
+        public EntityCacheOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
+        {
+            _replacementSettings = replacementSettings;
+        }
+
         /// <summary>
         /// Defines how DAB reads an entity's cache options and defines which values are
         /// used to instantiate EntityCacheOptions.
@@ -40,11 +60,13 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
                 // Defer to EntityCacheOptions record definition to define default ttl value.
                 int? ttlSeconds = null;
 
+                EntityCacheLevel? level = null;
+
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
                     {
-                        return new EntityCacheOptions(enabled, ttlSeconds);
+                        return new EntityCacheOptions(enabled, ttlSeconds, level);
                     }
 
                     string? property = reader.GetString();
@@ -80,6 +102,15 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
                             }
 
                             break;
+                        case "level":
+                            if (reader.TokenType is JsonTokenType.Null)
+                            {
+                                throw new JsonException("level property cannot be null.");
+                            }
+
+                            level = EnumExtensions.Deserialize<EntityCacheLevel>(reader.DeserializeString(_replacementSettings)!);
+
+                            break;
                     }
                 }
             }
@@ -89,9 +120,9 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
 
         /// <summary>
         /// When writing the EntityCacheOptions back to a JSON file, only write the ttl-seconds
-        /// property and value when EntityCacheOptions.Enabled is true. This avoids polluting
-        /// the written JSON file with a property the user most likely ommitted when writing the
-        /// original DAB runtime config file.
+        /// and level properties and values when EntityCacheOptions.Enabled is true.
+        /// This avoids polluting the written JSON file with a property the user most likely
+        /// omitted when writing the original DAB runtime config file.
         /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.
         /// </summary>
         public override void Write(Utf8JsonWriter writer, EntityCacheOptions value, JsonSerializerOptions options)
@@ -103,6 +134,12 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
             {
                 writer.WritePropertyName("ttl-seconds");
                 JsonSerializer.Serialize(writer, value.TtlSeconds, options);
+            }
+
+            if (value?.UserProvidedLevelOptions is true)
+            {
+                writer.WritePropertyName("level");
+                JsonSerializer.Serialize(writer, value.Level, options);
             }
 
             writer.WriteEndObject();

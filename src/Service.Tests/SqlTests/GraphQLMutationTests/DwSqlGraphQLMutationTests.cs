@@ -104,6 +104,72 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new Publisher with name = 'New publisher'
+        /// <code>Check: </code> Mutation fails because the database policy (@item.name ne 'New publisher') prohibits insertion of records with name = 'New publisher'.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationFailingDatabasePolicy()
+        {
+            string errorMessage = "Could not insert row with given values.";
+            string msSqlQuery = @"
+                SELECT count(*) as count
+                   FROM [publishers]
+                WHERE [name] = 'New publisher'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string graphQLMutationName = "createPublisher";
+            string graphQLMutationPayload = @"
+                mutation {
+                    createPublisher(item: { id: 1 name: ""New publisher"" }) {
+                        result
+                    }
+                }
+            ";
+
+            await InsertMutationFailingDatabasePolicy(
+                dbQuery: msSqlQuery,
+                errorMessage: errorMessage,
+                roleName: "database_policy_tester",
+                graphQLMutationName: graphQLMutationName,
+                graphQLMutationPayload: graphQLMutationPayload);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new Publisher with name = 'Not New publisher'
+        /// <code>Check: </code> Mutation succeeds because the database policy (@item.name ne 'New publisher') is passed
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithDatabasePolicy()
+        {
+            string msSqlQuery = @"
+                SELECT COUNT(*) AS [count]
+                   FROM [publishers]
+                WHERE [name] = 'Not New publisher'
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+
+            string graphqlMutationName = "createPublisher";
+            string graphQLMutationPayload = @"
+                mutation {
+                    createPublisher(item: { id: 1 name: ""Not New publisher"" }) {
+                        result
+                    }
+                }
+            ";
+
+            await InsertMutationWithDatabasePolicy(
+                dbQuery: msSqlQuery,
+                roleName: "database_policy_tester",
+                graphQLMutationName: graphqlMutationName,
+                graphQLMutationPayload: graphQLMutationPayload);
+        }
+
+        /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
         /// <code>Check: </code>Result value of success is verified in the response.
         /// </summary>

@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Core.Services
         ///                     }
         ///                 }</example>
         public void ValidateGraphQLValueNode(
-            IInputField schema,
+            IInputValueDefinition schema,
             IMiddlewareContext context,
             object? parameters,
             int nestingLevel,

@@ -55,11 +55,13 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         {
             Entity entity1 = new(
                 Source: new(Object: "insert_and_display_all_books_for_given_publisher", EntitySourceType.StoredProcedure, null, null),
+                Fields: null,
                 GraphQL: new(Singular: null, Plural: null, Enabled: false),
                 Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
                 Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
                 Mappings: null,
-                Relationships: null);
+                Relationships: null,
+                Description: "Represents a stored procedure for books");
 
             Dictionary<string, Entity> entities = new()
             {
@@ -127,6 +129,24 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             string expectedSchemaReferenceId = $"{entityName}{OpenApiDocumentor.SP_RESPONSE_SUFFIX}";
 
             ValidateOpenApiReferenceContents(schemaComponentReference, expectedSchemaReferenceId, expectedColumns, expectedColumnJsonTypes);
+        }
+
+        /// <summary>
+        /// Integration tests validating that entity descriptions are included in the OpenAPI document.
+        /// </summary>
+        [TestMethod]
+        public void OpenApiDocumentor_TagsIncludeEntityDescription()
+        {
+            // Arrange: The entity name and expected description
+            string entityName = "sp1";
+            string expectedDescription = "Represents a stored procedure for books"; // Set this to your actual description
+
+            // Act: Get the tags from the OpenAPI document
+            IList<OpenApiTag> tags = _openApiDocument.Tags;
+
+            // Assert: There is a tag for the entity and it includes the description
+            Assert.IsTrue(tags.Any(t => t.Name == entityName && t.Description == expectedDescription),
+                $"Expected tag for '{entityName}' with description '{expectedDescription}' not found.");
         }
 
         /// <summary>

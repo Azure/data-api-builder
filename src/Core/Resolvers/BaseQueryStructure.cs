@@ -1,12 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 
@@ -17,7 +18,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The Entity name associated with this query as appears in the config file.
         /// </summary>
-        public string EntityName { get; set; }
+        public virtual string EntityName { get; set; }
 
         /// <summary>
         /// The alias of the entity as used in the generated query.
@@ -72,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// DbPolicyPredicates is a string that represents the filter portion of our query
         /// in the WHERE Clause added by virtue of the database policy.
         /// </summary>
-        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
+        public virtual Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         public const string PARAM_NAME_PREFIX = "@";
 
@@ -156,7 +157,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Returns the SourceDefinitionDefinition for the entity(table/view) of this query.
         /// </summary>
-        public SourceDefinition GetUnderlyingSourceDefinition()
+        public virtual SourceDefinition GetUnderlyingSourceDefinition()
         {
             return MetadataProvider.GetSourceDefinition(EntityName);
         }
@@ -165,9 +166,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Extracts the *Connection.items query field from the *Connection query field
         /// </summary>
         /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
-        internal static FieldNode? ExtractItemsQueryField(FieldNode connectionQueryField)
+        internal static FieldNode? ExtractQueryField(FieldNode connectionQueryField)
         {
             FieldNode? itemsField = null;
+            FieldNode? groupByField = null;
             foreach (ISelectionNode node in connectionQueryField.SelectionSet!.Selections)
             {
                 FieldNode field = (FieldNode)node;
@@ -176,19 +178,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (fieldName == QueryBuilder.PAGINATION_FIELD_NAME)
                 {
                     itemsField = field;
-                    break;
+                }
+                else if (fieldName == QueryBuilder.GROUP_BY_FIELD_NAME)
+                {
+                    groupByField = field;
                 }
             }
 
-            return itemsField;
+            if (itemsField != null && groupByField != null)
+            {
+                // This is temporary and iteratively we will allow both items and groupby in same query.
+                throw new DataApiBuilderException(
+                    message: "Cannot have both groupBy and items in the same query",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return groupByField is null ? itemsField : groupByField;
         }
 
         /// <summary>
         /// Extracts the *Connection.items schema field from the *Connection schema field
         /// </summary>
-        internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
+        internal static ObjectField ExtractItemsSchemaField(ObjectField connectionSchemaField)
         {
-            return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+            return connectionSchemaField.Type.NamedType<ObjectType>().Fields[QueryBuilder.PAGINATION_FIELD_NAME];
         }
     }
 }

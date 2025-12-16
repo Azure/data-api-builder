@@ -22,15 +22,19 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
     {
         _eventHandlers = new Dictionary<string, EventHandler<TEventArgs>?>
         {
+            // QueryManagerFactory will create a new set of QueryExecutors
+            // during Hot-Reload so it is not necessary to specifically reconfigure
+            // QueryExecutors as part of the Hot-Reload process.
             { QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, null },
             { METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, null },
-            { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
-            { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED,null },
-            { QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, null },
-            { DOCUMENTOR_ON_CONFIG_CHANGED, null }
+            { QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, null },
+            { MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, null },
+            { DOCUMENTOR_ON_CONFIG_CHANGED, null },
+            { AUTHZ_RESOLVER_ON_CONFIG_CHANGED, null },
+            { GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, null },
+            { GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, null },
+            { GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, null },
+            { LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, null }
         };
     }
 
@@ -46,7 +50,7 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
     {
         if (_eventHandlers.ContainsKey(eventName))
         {
-            _eventHandlers[eventName] = handler;
+            _eventHandlers[eventName] += handler;
         }
     }
 }

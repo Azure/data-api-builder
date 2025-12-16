@@ -17,6 +17,7 @@ public record AuthenticationOptions(string Provider = nameof(EasyAuthType.Static
     public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
     public const string NAME_CLAIM_TYPE = "name";
     public const string ROLE_CLAIM_TYPE = "roles";
+    public const string ORIGINAL_ROLE_CLAIM_TYPE = "original_roles";
 
     /// <summary>
     /// Returns whether the configured Provider matches an

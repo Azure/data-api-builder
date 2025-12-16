@@ -66,6 +66,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
+        [TestMethod]
+        public async Task InQueryWithVariables(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query ($inVar: [Int]!) {
+                books(filter: { id:  { in: $inVar } }  orderBy:  { id: ASC }) {
+                    items {
+                        id
+                        title
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", new List<int>([1, 2]) } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        [TestMethod]
+        public async Task InQueryWithNullAndEmptyvalues(string dbQuery)
+        {
+            string graphQLQueryName = "supportedTypes";
+            string graphQLQuery = @"query ($inVar: [String]!) {
+                supportedTypes(filter: { string_types:  { in: $inVar } }) {
+                    items {
+                        string_types
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", new List<string>(["lksa;jdflasdf;alsdflksdfkldj", string.Empty, null]) } });
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
         /// <summary>
         /// Tests that the following "Find Many" query is properly handled by the engine given that it references
         /// mapped column names "column1" and "column2" and NOT "__column1" nor "__column2"
@@ -568,6 +605,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
               }
             }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Test IN Operator in a relationship, for example, in a One -> One relationship
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterOneToOneJoinQuery(string dbQuery)
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                  books(filter:  {
+                     title:  {
+                        in: [""Awesome book"", ""Also Awesome book""]
+                     },
+                     websiteplacement:  {
+                        book_id:  {
+                           in: [1, 2]
+                        }
+                     }
+                  } orderBy:  {
+                     id: DESC
+                  }){
+                    items{
+                      id
+                      title
+                      websiteplacement{
+                        price
+                        book_id
+                      }
+                    }
+                  }
+                }";
 
             JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -1725,6 +1800,367 @@ query {
             Assert.AreEqual(expected: expectedParentAccountKey, actual: relationshipResolvedAccountKey);
         }
 
+        /// <summary>
+        /// Test to check GraphQL support for aggregations with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForAggregationsWithAliases(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy {
+                aggregations {
+                    max(field: categoryid)
+                    max_price: max(field: price)
+                    min_price: min(field: price)
+                    avg_price: avg(field: price)
+                    sum_price: sum(field: price)
+                }
+            }
+        }
+    }";
+
+            // Arrange: Execute GraphQL request and get expected database result
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for aggregations with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByAggregationsWithAliases(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy(fields: [categoryid]) {
+                aggregations {
+                    max(field: categoryid)
+                    max_price: max(field: price)
+                    min_price: min(field: price)
+                    avg_price: avg(field: price)
+                    sum_price: sum(field: price)
+                    count: count(field: categoryid)
+                }
+            }
+        }
+    }";
+
+            // Arrange: Execute GraphQL request and get expected database result
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for min aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForMinAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy {
+                aggregations {
+                    min_price: min(field: price)
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for min aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForMaxAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy {
+                aggregations {
+                    max_price: max(field: price)
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for avg aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForAvgAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy {
+                aggregations {
+                    avg_price: avg(field: price)
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for sum aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForSumAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy {
+                aggregations {
+                    sum_price: sum(field: price)
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForCountAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy {
+                aggregations {
+                    count_categoryid: count(field: categoryid)
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for sum aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForHavingAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"
+    {
+        publishers
+        {
+        groupBy
+        {
+            aggregations
+            {
+            max(field: id, having:  {
+                gt: 2346
+            })
+            }
+        }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for sum aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByHavingAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy(fields: [categoryid, pieceid]) {
+                aggregations {
+                    sum_price: sum(field: price, having:{ gt: 50 })
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isfieldsPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for sum aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByHavingFieldsAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy(fields: [categoryid, pieceid]) {
+                fields
+                {
+                    categoryid
+                    pieceid
+                }
+                aggregations {
+                    sum_price: sum(field: price, having:{ gt: 50 })
+                    count_piece: count(field: pieceid, having: { lte : 100 })
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for sum aggregation with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByNoAggregation(string msSqlQuery)
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            groupBy(fields: [categoryid, pieceid]) {
+                fields
+                {
+                    categoryid
+                    pieceid
+                }
+            }
+        }
+    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            JsonElement groupByArray = actual.GetProperty(QueryBuilder.GROUP_BY_FIELD_NAME);
+
+            string expected = await GetDatabaseResultAsync(msSqlQuery);
+            JsonDocument expectedDocument = JsonDocument.Parse(expected);
+            JsonElement expectedArray = expectedDocument.RootElement;
+            SqlTestHelper.AssertNumericAggregations(groupByArray, expectedArray, isAggregatesPresentInResponse: false);
+        }
+
+        /// <summary>
+        /// Test to verify that aggregation operations are not available for tables without numeric fields.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        {
+            string graphQLQuery = @"
+    {
+        dateOnlyTables {
+            groupBy {
+                aggregations {
+                    max(field: event_date)
+                }
+            }
+        }
+    }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, "date_only_tables", isAuthenticated: false);
+
+            // Check if we got an error response
+            Assert.IsTrue(result[0].TryGetProperty("message", out JsonElement message),
+                "Expected an error when trying to use aggregations on a table without numeric fields");
+
+            // Verify the error message indicates that aggregations aren't available
+            string errorMessage = message.GetString();
+            Assert.IsTrue(errorMessage.Contains("The field `aggregations` does not exist on the type `DateOnlyTableGroupBy`."),
+                $"Expected error about missing aggregations field, but got: {errorMessage}");
+        }
+
         #endregion
 
         #region Negative Tests
@@ -1785,6 +2221,62 @@ query {
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
         }
 
+        [TestMethod]
+        public virtual async Task TestInvalidOrderByQueryUsingAnd()
+        {
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"{
+              books(orderBy: { and: { id: ASC, title: ASC } }) {
+                items {
+                  id
+                }
+              }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
+
+        [TestMethod]
+        public virtual async Task TestInvalidOrderByQueryUsingOr()
+        {
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"{
+              books(orderBy: { or: { id: ASC, title: ASC } }) {
+                items {
+                  id
+                }
+              }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
+
+        [TestMethod]
+        public virtual async Task TestInvalidOrderByQueryUsingRelationship()
+        {
+            string graphQLQueryName = "publishers";
+            string graphQLQuery = @"{
+              publishers (first: 5 orderBy:  {books:  {
+                title: DESC
+              }
+              }){
+                items {
+                  id
+                  books {
+                    items {
+                      title
+                    }
+                  }
+                }
+              }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString());
+        }
+
         /// <summary>
         /// Test to check that sourceFields and targetFields for relationship provided in the config
         /// overrides relationship fields defined in DB.
@@ -1803,6 +2295,7 @@ query {
 
             Entity clubEntity = new(
                 Source: new("clubs", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("club", "clubs"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
@@ -1812,6 +2305,7 @@ query {
 
             Entity playerEntity = new(
                 Source: new("players", EntitySourceType.Table, null, null),
+                Fields: null,
                 Rest: new(Enabled: true),
                 GraphQL: new("player", "players"),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },

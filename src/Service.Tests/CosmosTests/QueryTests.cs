@@ -682,6 +682,7 @@ type Planet @model(name:""Planet"") {
 
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            McpRuntimeOptions mcpRuntimeOptions = new(Enabled: false);
             Dictionary<string, object> dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
@@ -709,6 +710,7 @@ type Planet @model(name:""Planet"") {
             EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { createAction, readAction, deleteAction }) };
 
             Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Fields: null,
                                   Rest: null,
                                   GraphQL: new(Singular: "Planet", Plural: "Planets"),
                                   Permissions: permissions,
@@ -724,7 +726,7 @@ type Planet @model(name:""Planet"") {
             string entityName = "Planet";
 
             // cache configuration
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName, new EntityCacheOptions() { Enabled = true, TtlSeconds = 5 });
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, mcpRuntimeOptions, entity, entityName, new RuntimeCacheOptions() { Enabled = true, TtlSeconds = 5 });
 
             const string CUSTOM_CONFIG = "custom-config.json";
             const string CUSTOM_SCHEMA = "custom-schema.gql";

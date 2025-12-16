@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         /// - byte[] example referenced from Microsoft Docs example of Convert.FromBase64String(String) because
         /// a byte array would be represented in a JSON payload as a string.
         /// </summary>
-        /// <seealso cref="https://learn.microsoft.com/dotnet/api/system.convert.frombase64string?view=net-6.0#examples"/>
+        /// <seealso cref="https://learn.microsoft.com/dotnet/api/system.convert.frombase64string#examples"/>
         /// <seealso cref="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types"/>
         /// <param name="systemType">Denotes system value type of stored procedure parameter.</param>
         /// <param name="expectedGraphQLType">Target GraphQL type of parameter.</param>
@@ -87,17 +87,28 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             // Parameter collection used to create DatabaseObjectSource which is used to create a new entity object.
             Dictionary<string, object> configSourcedParameters = new() { { parameterName, JsonSerializer.SerializeToElement(configParamValue) } };
 
+            // Convert configSourcedParameters to List<ParameterMetadata>
+            List<ParameterMetadata> parameterMetadataList = configSourcedParameters
+                .Select(kvp => new ParameterMetadata
+                {
+                    Name = kvp.Key,
+                    Default = kvp.Value is JsonElement je
+                        ? je.ValueKind == JsonValueKind.String ? je.GetString() : je.ToString()
+                        : kvp.Value?.ToString()
+                })
+                .ToList();
+
             // Create a new entity where the GraphQL type is explicitly defined as Mutation in the runtime config.
             Entity spMutationEntity = GraphQLTestHelpers.GenerateStoredProcedureEntity(
                 graphQLTypeName: spMutationTypeName,
                 graphQLOperation: GraphQLOperation.Mutation,
-                parameters: configSourcedParameters);
+                parameters: parameterMetadataList);
 
             // Create a new entity where the GraphQL type is explicitly defined as Query in the runtime config.
             Entity spQueryEntity = GraphQLTestHelpers.GenerateStoredProcedureEntity(
                 graphQLTypeName: spQueryTypeName,
                 graphQLOperation: GraphQLOperation.Query,
-                parameters: configSourcedParameters);
+                parameters: parameterMetadataList);
 
             // Create the GraphQL type for the stored procedure entity.
             string spQueryEntityName = "spquery";

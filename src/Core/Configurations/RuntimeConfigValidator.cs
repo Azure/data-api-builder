@@ -38,21 +38,19 @@ public class RuntimeConfigValidator : IConfigValidator
     // The claimType is invalid if there is a match found.
     private static readonly Regex _invalidClaimCharsRgx = new(_invalidClaimChars, RegexOptions.Compiled);
 
-    // Reserved characters as defined in RFC3986 are not allowed to be present in the
-    // REST/GraphQL custom path because they are not acceptable to be present in URIs.
-    // Refer here: https://www.rfc-editor.org/rfc/rfc3986#page-12.
-    private static readonly string _reservedUriChars = @"[\.:\?#/\[\]@!$&'()\*\+,;=]+";
-
-    //  Regex to validate rest/graphql custom path prefix.
-    public static readonly Regex _reservedUriCharsRgx = new(_reservedUriChars, RegexOptions.Compiled);
-
     // Regex used to extract all claimTypes in policy. It finds all the substrings which are
     // of the form @claims.*** delimited by space character,end of the line or end of the string.
     private static readonly string _claimChars = @"@claims\.[^\s\)]*";
 
+    // List of databases that support row level policy with create action
+    private static readonly HashSet<DatabaseType> _databaseTypesSupportingCreatePolicy =
+    [
+        DatabaseType.MSSQL,
+        DatabaseType.DWSQL
+    ];
+
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
-    public const string URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG = "contains one or more reserved characters.";
 
     public RuntimeConfigValidator(
         RuntimeConfigProvider runtimeConfigProvider,
@@ -82,6 +80,9 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
+        ValidateLoggerFilters(runtimeConfig);
+        ValidateAzureLogAnalyticsAuth(runtimeConfig);
+        ValidateFileSinkPath(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -132,6 +133,100 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 HandleOrRecordException(new DataApiBuilderException(
                     message: "Application Insights connection string cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Only certain classes can have different log levels, this function ensures that only those classes are used in the config file.
+    /// </summary>
+    public static void ValidateLoggerFilters(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime?.Telemetry is not null && runtimeConfig.Runtime.Telemetry.LoggerLevel is not null)
+        {
+            Dictionary<string, LogLevel?> loggerLevelOptions = runtimeConfig.Runtime.Telemetry.LoggerLevel;
+
+            foreach (KeyValuePair<string, LogLevel?> logger in loggerLevelOptions)
+            {
+                if (!IsLoggerFilterValid(logger.Key))
+                {
+                    throw new NotSupportedException($"Log level filter {logger.Key} needs to be of a valid log class.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The auth options in Azure Log Analytics are required if it is enabled.
+    /// </summary>
+    public void ValidateAzureLogAnalyticsAuth(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.AzureLogAnalytics is not null)
+        {
+            AzureLogAnalyticsOptions azureLogAnalyticsOptions = runtimeConfig.Runtime.Telemetry.AzureLogAnalytics;
+            AzureLogAnalyticsAuthOptions? azureLogAnalyticsAuthOptions = azureLogAnalyticsOptions.Auth;
+            if (azureLogAnalyticsOptions.Enabled && (azureLogAnalyticsAuthOptions is null || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.CustomTableName) ||
+                string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DcrImmutableId) || string.IsNullOrWhiteSpace(azureLogAnalyticsAuthOptions.DceEndpoint)))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Azure Log Analytics Auth options 'custom-table-name', 'dcr-immutable-id', and 'dce-endpoint' cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The path in File Sink is required if it is enabled.
+    /// </summary>
+    public void ValidateFileSinkPath(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.File is not null)
+        {
+            FileSinkOptions fileSinkOptions = runtimeConfig.Runtime.Telemetry.File;
+            if (fileSinkOptions.Enabled && string.IsNullOrWhiteSpace(fileSinkOptions.Path))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "File option 'path' cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (fileSinkOptions.Path.Length > 260)
+            {
+                _logger.LogWarning("File option 'path' exceeds 260 characters, it is recommended that the path does not exceed this limit.");
+            }
+
+            // Checks if path is valid by checking if there are any invalid characters and then
+            // attempting to retrieve the full path, returns an exception if it is unable.
+            try
+            {
+                string fileName = System.IO.Path.GetFileName(fileSinkOptions.Path);
+                if (string.IsNullOrWhiteSpace(fileName) || fileName.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) != -1)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: "File option 'path' cannot have invalid characters in its directory or file name.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                string? directoryName = System.IO.Path.GetDirectoryName(fileSinkOptions.Path);
+                if (directoryName is not null && directoryName.IndexOfAny(System.IO.Path.GetInvalidPathChars()) != -1)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: "File option 'path' cannot have invalid characters in its directory or file name.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                System.IO.Path.GetFullPath(fileSinkOptions.Path);
+            }
+            catch (Exception ex)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: ex.Message,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
@@ -202,7 +297,7 @@ public class RuntimeConfigValidator : IConfigValidator
             return new JsonSchemaValidationResult(isValid: false, errors: null);
         }
 
-        return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+        return jsonConfigSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
     }
 
     /// <summary>
@@ -577,7 +672,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 );
         }
 
-        if (_reservedUriCharsRgx.IsMatch(pathForEntity))
+        if (RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(pathForEntity))
         {
             throw new DataApiBuilderException(
                 message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
@@ -607,11 +702,11 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig">The config that will be validated.</param>
     public void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
     {
-        // Both REST and GraphQL endpoints cannot be disabled at the same time.
-        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
+        // REST, GraphQL and MCP endpoints cannot be disabled at the same time.
+        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled && !runtimeConfig.IsMcpEnabled)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Both GraphQL and REST endpoints are disabled.",
+                message: $"GraphQL, REST, and MCP endpoints are disabled.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
@@ -629,7 +724,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
-            if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
+            if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
             {
                 HandleOrRecordException(new DataApiBuilderException(
                     message: $"Runtime base-route {exceptionMsgSuffix}",
@@ -640,19 +735,30 @@ public class RuntimeConfigValidator : IConfigValidator
 
         ValidateRestURI(runtimeConfig);
         ValidateGraphQLURI(runtimeConfig);
-        // Do not check for conflicts if GraphQL or REST endpoints are disabled.
-        if (!runtimeConfig.IsRestEnabled || !runtimeConfig.IsGraphQLEnabled)
+        ValidateMcpUri(runtimeConfig);
+        // Do not check for conflicts if two of the endpoints are disabled between GraphQL, REST, and MCP.
+        if ((!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled) ||
+            (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsMcpEnabled) ||
+            (!runtimeConfig.IsGraphQLEnabled && !runtimeConfig.IsMcpEnabled))
         {
             return;
         }
 
         if (string.Equals(
-            a: runtimeConfig.RestPath,
-            b: runtimeConfig.GraphQLPath,
-            comparisonType: StringComparison.OrdinalIgnoreCase))
+                a: runtimeConfig.RestPath,
+                b: runtimeConfig.GraphQLPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                a: runtimeConfig.RestPath,
+                b: runtimeConfig.McpPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(
+                a: runtimeConfig.McpPath,
+                b: runtimeConfig.GraphQLPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase))
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Conflicting GraphQL and REST path configuration.",
+                message: $"Conflicting path configuration between GraphQL, REST, and MCP.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
@@ -673,7 +779,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         // validate the rest path.
         string restPath = runtimeConfig.RestPath;
-        if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
+        if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"{ApiType.REST} path {exceptionMsgSuffix}",
@@ -690,7 +796,7 @@ public class RuntimeConfigValidator : IConfigValidator
     public void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
     {
         string graphqlPath = runtimeConfig.GraphQLPath;
-        if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
+        if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
@@ -700,45 +806,38 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
-    /// any reserved characters. In case the URI component is not well formed the exception message containing
-    /// the reason for ill-formed URI component is returned. Else we return an empty string.
+    /// Method to validate that the MCP URI (MCP path prefix).
     /// </summary>
-    /// <param name="uriComponent">path prefix/base route for rest/graphql apis</param>
-    /// <returns>false when the URI component is not well formed.</returns>
-    private static bool TryValidateUriComponent(string? uriComponent, out string exceptionMessageSuffix)
+    /// <param name="runtimeConfig"></param>
+    public void ValidateMcpUri(RuntimeConfig runtimeConfig)
     {
-        exceptionMessageSuffix = string.Empty;
-        if (string.IsNullOrEmpty(uriComponent))
+        // Skip validation if MCP is not configured
+        if (runtimeConfig.Runtime?.Mcp is null)
         {
-            exceptionMessageSuffix = "cannot be null or empty.";
-        }
-        // A valid URI component should start with a forward slash '/'.
-        else if (!uriComponent.StartsWith("/"))
-        {
-            exceptionMessageSuffix = "should start with a '/'.";
-        }
-        else
-        {
-            uriComponent = uriComponent.Substring(1);
-            // URI component should not contain any reserved characters.
-            if (DoesUriComponentContainReservedChars(uriComponent))
-            {
-                exceptionMessageSuffix = URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG;
-            }
+            return;
         }
 
-        return string.IsNullOrEmpty(exceptionMessageSuffix);
-    }
+        // Get the MCP path from the configuration
+        string? mcpPath = runtimeConfig.Runtime.Mcp.Path;
 
-    /// <summary>
-    /// Method to validate that the REST/GraphQL API's URI component does not contain
-    /// any reserved characters.
-    /// </summary>
-    /// <param name="uriComponent">path prefix for rest/graphql apis</param>
-    public static bool DoesUriComponentContainReservedChars(string uriComponent)
-    {
-        return _reservedUriCharsRgx.IsMatch(uriComponent);
+        // Validate that the path is not null or empty when MCP is configured
+        if (string.IsNullOrWhiteSpace(mcpPath))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "MCP path cannot be null or empty when MCP is configured.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            return;
+        }
+
+        // Validate the MCP path using the same validation as REST and GraphQL
+        if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(mcpPath, out string exceptionMsgSuffix))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"MCP path {exceptionMsgSuffix}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
     }
 
     private void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
@@ -839,7 +938,8 @@ public class RuntimeConfigValidator : IConfigValidator
 
                         DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
 
-                        if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        // Create operation does not support defining a database policy for certain database types.
+                        if (!_databaseTypesSupportingCreatePolicy.Contains(entityDataSource.DatabaseType) && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +
@@ -1373,5 +1473,41 @@ public class RuntimeConfigValidator : IConfigValidator
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);
         }
+    }
+
+    /// <summary>
+    /// Returns whether the log-level keyword is valid or not.
+    /// It does this by checking each section of the name of the class,
+    /// in order to ensure that the last section is complete.
+    /// E.g. Azure.DataApiBuilder is valid. While Azure.DataA is invalid.
+    /// </summary>
+    /// <param name="loggerFilter">String keyword that comes from log-level in config file</param>
+    private static bool IsLoggerFilterValid(string loggerFilter)
+    {
+        string[] loggerSub = loggerFilter.Split('.');
+        for (int i = 0; i < LoggerFilters.validFilters.Count; i++)
+        {
+            bool isValid = true;
+            string[] validFiltersSub = LoggerFilters.validFilters[i].Split('.');
+
+            if (loggerSub.Length <= validFiltersSub.Length)
+            {
+                for (int j = 0; j < loggerSub.Length; j++)
+                {
+                    if (!loggerSub[j].Equals(validFiltersSub[j]))
+                    {
+                        isValid = false;
+                        break;
+                    }
+                }
+
+                if (isValid)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

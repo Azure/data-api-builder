@@ -27,7 +27,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -88,7 +87,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
-            string graphqlMutationName = context.Selection.Field.Name.Value;
+            string graphqlMutationName = context.Selection.Field.Name;
             string entityName = GraphQLUtils.GetEntityNameFromContext(context);
 
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
@@ -107,7 +106,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 mutationOperation is EntityActionOperation.Create)
             {
                 // Multiple create mutation request is validated to ensure that the request is valid semantically.
-                IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
+                IInputValueDefinition schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
                 MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext = new(
                     entityName: entityName,
                     parentEntityName: string.Empty,
@@ -287,13 +286,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private static bool IsPointMutation(IMiddlewareContext context)
         {
             IOutputType outputType = context.Selection.Field.Type;
-            if (outputType.TypeName().Value.Equals(GraphQLUtils.DB_OPERATION_RESULT_TYPE))
+            if (outputType.TypeName().Equals(GraphQLUtils.DB_OPERATION_RESULT_TYPE))
             {
                 // Hit when the database type is DwSql. We don't support multiple mutation for DwSql yet.
                 return true;
             }
 
-            ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+            ObjectType underlyingFieldType = outputType.NamedType<ObjectType>();
             bool isPointMutation;
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? _))
             {
@@ -688,7 +687,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                         {
                                             // Ideally this case should not happen, however may occur due to unexpected reasons,
                                             // like the DbDataReader being null. We throw an exception
-                                            // which will be returned as an UnexpectedError  
+                                            // which will be returned as an UnexpectedError
                                             throw new DataApiBuilderException(message: "An unexpected error occurred while trying to execute the query.",
                                                                                 statusCode: HttpStatusCode.NotFound,
                                                                                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
@@ -1012,7 +1011,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 bool isMultipleInputType = false)
         {
             // rootFieldName can be either "item" or "items" depending on whether the operation
-            // is point multiple create or many-type multiple create. 
+            // is point multiple create or many-type multiple create.
             string rootFieldName = isMultipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
 
             // Parse the hotchocolate input parameters into .net object types
@@ -1047,7 +1046,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // The fields belonging to the inputobjecttype are converted to
                 // 1. Scalar input fields: Key - Value pair of field name and field value.
                 // 2. Object type input fields: Key - Value pair of relationship name and a dictionary of parameters (takes place for 1:1, N:1 relationship types)
-                // 3. List type input fields: key - Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types) 
+                // 3. List type input fields: key - Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types)
                 List<IDictionary<string, object?>> parsedMutationInputFields = (List<IDictionary<string, object?>>)parsedInputParams;
 
                 // For many type multiple create operation, the "parameters" dictionary is a key pair of <"items", List<IValueNode>>.
@@ -1082,8 +1081,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 //     ]){
                 //      items{
                 //         id
-                //         title 
-                //         publisher_id 
+                //         title
+                //         publisher_id
                 //      }
                 //   }
                 // }
@@ -1313,7 +1312,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // 1. Relationship between the parent entity (Book) and the linking table.
                     // 2. Relationship between the current entity (Author) and the linking table.
                     // To construct the insert database query for the linking table, relationship fields from both the
-                    // relationships are required. 
+                    // relationships are required.
 
                     // Populate Current entity's relationship fields
                     List<ForeignKeyDefinition> foreignKeyDefinitions = currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap[multipleCreateStructure.ParentEntityName];
@@ -1348,7 +1347,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // when records have been successfully created in both the entities involved in the relationship.
                     // The entities involved do not derive any fields from each other. Only the linking table derives the
                     // primary key fields from the entities involved in the relationship.
-                    // For a M:N relationships, the referencing fields are populated in LinkingTableParams whereas for  
+                    // For a M:N relationships, the referencing fields are populated in LinkingTableParams whereas for
                     // a 1:N relationship, referencing fields will be populated in CurrentEntityParams.
                     if (sqlMetadataProvider.TryGetFKDefinition(
                             sourceEntityName: entityName,
@@ -1424,7 +1423,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryParameters,
                 queryExecutor.ExtractResultSetFromDbDataReader,
                 GetHttpContext(),
-                exposedColumnNames.IsNullOrEmpty() ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
+                EnumerableUtilities.IsNullOrEmpty(exposedColumnNames) ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
                 dataSourceName);
 
             dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
@@ -1490,7 +1489,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to populate the referencing fields in LinkingEntityParams or CurrentEntityParams depending on whether the current entity is a linking entity or not. 
+        /// Helper method to populate the referencing fields in LinkingEntityParams or CurrentEntityParams depending on whether the current entity is a linking entity or not.
         /// </summary>
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database.</param>
         /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up.</param>
@@ -1617,7 +1616,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Helper method which traverses the input fields for a given record and populates the fields/values into the appropriate data structures
         /// storing the field/values belonging to the current entity and the linking entity.
-        /// Consider the below multiple create mutation request 
+        /// Consider the below multiple create mutation request
         /// mutation{
         /// createbook(item: {
         ///        title: "Harry Potter and the Goblet of Fire",
@@ -1640,7 +1639,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///  2. Related Entity - Publisher, Author
         ///  In M:N relationship, the field(s)(e.g. royalty_percentage) belonging to the
         ///  linking entity(book_author_link) is a property of the related entity's input object.
-        ///  So, this method identifies and populates 
+        ///  So, this method identifies and populates
         ///  1.  multipleCreateStructure.CurrentEntityParams with the current entity's fields.
         ///  2.  multipleCreateStructure.LinkingEntityParams with the linking entity's fields.
         /// </summary>
@@ -1690,8 +1689,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (mutationParameters.TryGetValue(rootFieldName, out object? inputParameters))
             {
-                IObjectField fieldSchema = context.Selection.Field;
-                IInputField itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
+                ObjectField fieldSchema = context.Selection.Field;
+                IInputValueDefinition itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
                 InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
                 return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters);
             }
@@ -1723,13 +1722,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///         //selection set (not relevant in this function)
         ///      }
         ///    }
-        ///    
-        /// 2. mutation manyMultipleCreateExample{  
+        ///
+        /// 2. mutation manyMultipleCreateExample{
         ///      createbooks(
-        ///        items:[{ fieldName0: "fieldValue0"},{fieldNameN: "fieldValueN"}]){  
-        ///           //selection set (not relevant in this function)  
-        ///        }  
-        ///      }  
+        ///        items:[{ fieldName0: "fieldValue0"},{fieldNameN: "fieldValueN"}]){
+        ///           //selection set (not relevant in this function)
+        ///        }
+        ///      }
         /// </summary>
         /// <param name="context">GQL middleware context used to resolve the values of arguments.</param>
         /// <param name="inputObjectType">Type of the input object field.</param>
@@ -1744,7 +1743,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             object? inputParameters)
         {
             // This condition is met for input types that accept an array of values
-            // where the mutation input field is 'items' such as 
+            // where the mutation input field is 'items' such as
             // 1. Many-type multiple create operation ---> createbooks, createBookmarks_Multiple:
             // For the mutation manyMultipleCreateExample (outlined in the method summary),
             // the following conditions will evalaute to true for root field 'items'.
@@ -1782,7 +1781,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // fields : ['title', 'publishers', 'authors', 'reviews']
             // 2. Relationship fields that are of object type:
             // For the mutation pointMultipleCreateExample (outlined in the method summary),
-            // when processing the field 'publishers'. For 'publishers' field, 
+            // when processing the field 'publishers'. For 'publishers' field,
             // inputParameters will contain ObjectFieldNode objects for fields: ['name']
             else if (inputParameters is List<ObjectFieldNode> inputFieldNodes)
             {
@@ -1843,16 +1842,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Extracts the InputObjectType for a given field.
-        /// Consider the following multiple create mutation 
-        /// mutation multipleCreateExample{  
+        /// Consider the following multiple create mutation
+        /// mutation multipleCreateExample{
         ///  createbook(
         ///    item: {
-        ///      title: "Harry Potter and the Goblet of Fire", 
-        ///      publishers: { name: "Bloomsbury" },  
-        ///      authors: [{ name: "J.K Rowling", birthdate: "1965-07-31", royalty_percentage: 100.0 }]}){  
-        ///        selection set (not relevant in this function)  
+        ///      title: "Harry Potter and the Goblet of Fire",
+        ///      publishers: { name: "Bloomsbury" },
+        ///      authors: [{ name: "J.K Rowling", birthdate: "1965-07-31", royalty_percentage: 100.0 }]}){
+        ///        selection set (not relevant in this function)
         ///      }
-        ///   }  
+        ///   }
         /// }
         /// When parsing this mutation request, the flow will reach this function two times.
         /// 1. For the field 'publishers'.
@@ -1872,7 +1871,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <exception cref="DataApiBuilderException"></exception>
         private static InputObjectType GetInputObjectTypeForAField(string fieldName, FieldCollection<InputField> fields)
         {
-            if (fields.TryGetField(fieldName, out IInputField? field))
+            if (fields.TryGetField(fieldName, out InputField? field))
             {
                 return ExecutionHelper.InputObjectTypeFromIInputField(field);
             }
@@ -1887,7 +1886,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="parameters">The parameters for the DELETE operation.</param>
-        /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
+        /// <param name="sqlMetadataProvider">Metadata provider for db on which to perform operation.</param>
         /// <returns>A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         private async Task<Dictionary<string, object>?>
             PerformDeleteOperation(
@@ -2128,7 +2127,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object?> parametersDictionary
         )
         {
-            if (context.Selection.Field.Arguments.TryGetField(inputArgumentName, out IInputField? schemaForArgument))
+            if (context.Selection.Field.Arguments.TryGetField(inputArgumentName, out Argument? schemaForArgument))
             {
                 // Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.
                 Dictionary<string, HashSet<string>> entityToExposedColumns = new();
@@ -2140,7 +2139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 else
                 {
                     throw new DataApiBuilderException(
-                            message: $"{inputArgumentName} cannot be null for mutation:{context.Selection.Field.Name.Value}.",
+                            message: $"{inputArgumentName} cannot be null for mutation:{context.Selection.Field.Name}.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
                         );
@@ -2174,42 +2173,53 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="entityToExposedColumns">Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.</param>
         /// <param name="schema">Schema for the input field.</param>
         /// <param name="entityName">Name of the entity.</param>
-        /// <param name="context">Middleware Context.</param>
+        /// <param name="context">Middleware context.</param>
         /// <param name="parameters">Value for the input field.</param>
-        /// <example>       1. mutation {
-        ///                 createbook(
-        ///                     item: {
-        ///                         title: "book #1",
-        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.6 }]
-        ///                     })
-        ///                 {
-        ///                     id
-        ///                 }
-        ///                 2. mutation {
-        ///                 createbooks(
-        ///                     items: [{
-        ///                         title: "book #1",
-        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.9 }]
-        ///                     },
-        ///                     {
-        ///                         title: "book #2",
-        ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
-        ///                         publishers: { name: "Pearson Education" },
-        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", royal_percentage: 8.2  }]
-        ///                     }])
-        ///                 {
-        ///                     items{
-        ///                         id
-        ///                         title
-        ///                     }
-        ///                 }</example>
+        /// <example>
+        /// Example 1 - Single item creation:
+        /// <code>
+        /// mutation {
+        ///     createbook(
+        ///         item: {
+        ///             title: "book #1",
+        ///             reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///             publishers: { name: "Macmillan publishers" },
+        ///             authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.6 }]
+        ///         })
+        ///     {
+        ///         id
+        ///     }
+        /// }
+        /// </code>
+        /// 
+        /// Example 2 - Multiple items creation:
+        /// <code>
+        /// mutation {
+        ///     createbooks(
+        ///         items: [{
+        ///             title: "book #1",
+        ///             reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///             publishers: { name: "Macmillan publishers" },
+        ///             authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.9 }]
+        ///         },
+        ///         {
+        ///             title: "book #2",
+        ///             reviews: [{ content: "Awesome book." }, { content: "Average book." }],
+        ///             publishers: { name: "Pearson Education" },
+        ///             authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", royal_percentage: 8.2 }]
+        ///         }])
+        ///     {
+        ///         items {
+        ///             id
+        ///             title
+        ///         }
+        ///     }
+        /// }
+        /// </code>
+        /// </example>
         private void PopulateMutationEntityAndFieldsToAuthorize(
             Dictionary<string, HashSet<string>> entityToExposedColumns,
-            IInputField schema,
+            IInputValueDefinition schema,
             string entityName,
             IMiddlewareContext context,
             object parameters)
@@ -2360,8 +2370,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="isolationLevel">Transaction isolation level</param>
         /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/framework/data/transactions/implementing-an-implicit-transaction-using-transaction-scope"/>
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption?view=net-6.0#fields" />
-        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption?view=net-6.0#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeoption#fields" />
+        /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.transactions.transactionscopeasyncflowoption#fields" />
         /// <returns>TransactionScope object set at the specified isolation level</returns>
         private static TransactionScope ConstructTransactionScopeWithSpecifiedIsolationLevel(System.Transactions.IsolationLevel isolationLevel)
         {

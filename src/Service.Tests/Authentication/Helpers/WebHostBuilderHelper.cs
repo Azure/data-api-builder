@@ -41,17 +41,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
         /// - DAB's Simulator/ EasyAuth authentication middleware and ClientRoleHeader middleware
         /// - dotnet's authorization middleware.
         /// </summary>
-        /// <param name="provider">Runtime configured identity provider name.</param>
+        /// <param name="provider">Runtime configured identity provider name. This is different than the
+        /// authentication scheme name because the configured value is simpler.</param>
         /// <param name="useAuthorizationMiddleware">Whether to include authorization middleware in request pipeline.</param>
         /// <returns>IHost to be used to create a TestServer</returns>
         public static async Task<IHost> CreateWebHost(
             string provider,
             bool useAuthorizationMiddleware)
         {
-            // Setup RuntimeConfigProvider object for the pipeline.
             MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = new(new MockFileSystem());
+            AuthenticationOptions authOptions = new()
+            {
+                Provider = provider
+            };
+
+            RuntimeConfig runtimeConfig = RuntimeConfigAuthHelper.CreateTestConfigWithAuthNProvider(authOptions);
+            fileSystemRuntimeConfigLoader.RuntimeConfig = runtimeConfig;
+            RuntimeConfigProvider runtimeConfigProvider = new(fileSystemRuntimeConfigLoader);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -60,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                         .UseTestServer()
                         .ConfigureServices(services =>
                         {
-                            if (string.Equals(provider, SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME, StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals(provider, AuthenticationOptions.SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase))
                             {
                                 services.AddAuthentication(defaultScheme: SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                                     .AddSimulatorAuthentication();
@@ -68,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                             else
                             {
                                 EasyAuthType easyAuthProvider = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), provider, ignoreCase: true);
-                                services.AddAuthentication(defaultScheme: EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
+                                services.AddAuthentication()
                                     .AddEasyAuthAuthentication(easyAuthProvider);
                             }
 
@@ -125,10 +132,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
         /// <returns>IHost to be used to create a TestServer</returns>
         public static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
         {
-            // Setup RuntimeConfigProvider object for the pipeline.
             MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = new(new MockFileSystem());
+            AuthenticationOptions authOptions = new()
+            {
+                Provider = "AzureAD",
+                Jwt = new(Audience: AUDIENCE, Issuer: LOCAL_ISSUER)
+            };
+
+            RuntimeConfig runtimeConfig = RuntimeConfigAuthHelper.CreateTestConfigWithAuthNProvider(authOptions);
+            fileSystemRuntimeConfigLoader.RuntimeConfig = runtimeConfig;
+            RuntimeConfigProvider runtimeConfigProvider = new(fileSystemRuntimeConfigLoader);
 
             return await new HostBuilder()
                 .ConfigureWebHost(webBuilder =>
@@ -159,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                                         // Lifetime
                                         ValidateLifetime = true,
                                         // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
-                                        // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
+                                        // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole#remarks
                                         RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                                     };
                                 });

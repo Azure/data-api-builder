@@ -14,7 +14,7 @@ using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
@@ -23,6 +23,7 @@ namespace Azure.DataApiBuilder.Config;
 
 public abstract class RuntimeConfigLoader
 {
+    private DabChangeToken _changeToken;
     private HotReloadEventHandler<HotReloadEventArgs>? _handler;
     protected readonly string? _connectionString;
 
@@ -31,10 +32,43 @@ public abstract class RuntimeConfigLoader
     // state in place of using out params.
     public RuntimeConfig? RuntimeConfig;
 
+    public RuntimeConfig? LastValidRuntimeConfig;
+
+    public bool IsNewConfigDetected;
+
+    public bool IsNewConfigValidated;
+
     public RuntimeConfigLoader(HotReloadEventHandler<HotReloadEventArgs>? handler = null, string? connectionString = null)
     {
+        _changeToken = new DabChangeToken();
         _handler = handler;
         _connectionString = connectionString;
+    }
+
+    /// <summary>
+    /// Change token producer which returns an uncancelled/unsignalled change token.
+    /// </summary>
+    /// <returns>DabChangeToken</returns>
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
+    }
+
+    /// <summary>
+    /// Swaps out the old change token with a new change token and
+    /// signals that a change has occurred.
+    /// </summary>
+    /// <seealso cref="https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Configuration/src/ConfigurationProvider.cs">
+    /// Example usage of Interlocked.Exchange(...) to refresh change token.</seealso>
+    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange">
+    /// Sets a variable to a specified value as an atomic operation.
+    /// </seealso>
+    private void RaiseChanged()
+    {
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
     }
 
     protected virtual void OnConfigChangedEvent(HotReloadEventArgs args)
@@ -43,24 +77,41 @@ public abstract class RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Sends the notification to the event handler to trigger the hot-reload events
-    /// that have subscribed for configuration changes. The order here matters since
-    /// there are dependencies that we must refresh one after another. If adding to this
-    /// method make sure that you add the event trigger after any required dependencies have
+    /// Notifies event handler and change token subscribers that a hot-reload has occurred.
+    /// Order here matters because some dependencies must be updated before others.
+    /// When modifying this function:
+    /// - Ensure that you add new event trigger(s) after any required dependencies have
     /// been refreshed by previously called event triggers.
     /// </summary>
     /// <param name="message"></param>
-    protected void SendEventNotification(string message = "")
+    protected void SignalConfigChanged(string message = "")
     {
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(MYSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(POSTGRESQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, message));
-        OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+        // Signal that a change has occurred to all change token listeners.
+        RaiseChanged();
+
+        // All the data inside of the if statement should only update when DAB is in development mode.
+        if (RuntimeConfig!.IsDevelopmentMode())
+        {
+            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(METADATA_PROVIDER_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(QUERY_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(MUTATION_ENGINE_FACTORY_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(DOCUMENTOR_ON_CONFIG_CHANGED, message));
+
+            // Order of event firing matters: Authorization rules can only be updated after the
+            // MetadataProviderFactory has been updated with latest database object metadata.
+            // RuntimeConfig must already be updated and is implied to have been updated by the time
+            // this function is called.
+            OnConfigChangedEvent(new HotReloadEventArgs(AUTHZ_RESOLVER_ON_CONFIG_CHANGED, message));
+
+            // Order of event firing matters: Eviction must be done before creating a new schema and then updating the schema.
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, message));
+            OnConfigChangedEvent(new HotReloadEventArgs(GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, message));
+        }
+
+        // Log Level Initializer is outside of if statement as it can be updated on both development and production mode.
+        OnConfigChangedEvent(new HotReloadEventArgs(LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, message));
     }
 
     /// <summary>
@@ -69,9 +120,8 @@ public abstract class RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
-    /// <param name="dataSourceName">The data source name to be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "");
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -80,28 +130,85 @@ public abstract class RuntimeConfigLoader
     public abstract string GetPublishedDraftSchemaLink();
 
     /// <summary>
+    /// Extracts AzureKeyVaultOptions from JSON string with configurable variable replacement.
+    /// </summary>
+    /// <param name="json">JSON that represents the config file.</param>
+    /// <param name="enableEnvReplacement">Whether to enable environment variable replacement during extraction.</param>
+    /// <param name="replacementFailureMode">Failure mode for environment variable replacement if enabled.</param>
+    /// <returns>AzureKeyVaultOptions if present, null otherwise.</returns>
+    private static AzureKeyVaultOptions? ExtractAzureKeyVaultOptions(
+        string json,
+        bool enableEnvReplacement,
+        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
+    {
+        JsonSerializerOptions options = new()
+        {
+            PropertyNameCaseInsensitive = false,
+            PropertyNamingPolicy = new HyphenatedNamingPolicy(),
+            ReadCommentHandling = JsonCommentHandling.Skip
+        };
+        DeserializationVariableReplacementSettings envOnlySettings = new(
+            azureKeyVaultOptions: null,
+            doReplaceEnvVar: enableEnvReplacement,
+            doReplaceAkvVar: false,
+            envFailureMode: replacementFailureMode);
+        options.Converters.Add(new StringJsonConverterFactory(envOnlySettings));
+        options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
+        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings: envOnlySettings));
+        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings: envOnlySettings));
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("azure-key-vault", out JsonElement akvElement))
+            {
+                return JsonSerializer.Deserialize<AzureKeyVaultOptions>(akvElement.GetRawText(), options);
+            }
+        }
+        catch
+        {
+            // If we can't extract AKV options, return null and proceed without AKV variable replacement
+            return null;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Parses a JSON string into a <c>RuntimeConfig</c> object for single database scenario.
     /// </summary>
     /// <param name="json">JSON that represents the config file.</param>
     /// <param name="config">The parsed config, or null if it parsed unsuccessfully.</param>
-    /// <returns>True if the config was parsed, otherwise false.</returns>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, no variable replacement will be performed.</param>
     /// <param name="logger">logger to log messages</param>
     /// <param name="connectionString">connectionString to add to config if specified</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing. By default, no replacement happens.</param>
-    /// <param name="dataSourceName"> datasource name for which to add connection string</param>
-    /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
-    /// <param name="replacementFailureMode">Determines failure mode for env variable replacement.</param>
+    /// <returns>True if the config was parsed, otherwise false.</returns>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
+        DeserializationVariableReplacementSettings? replacementSettings = null,
         ILogger? logger = null,
-        string? connectionString = null,
-        bool replaceEnvVar = false,
-        string dataSourceName = "",
-        Dictionary<string, string>? datasourceNameToConnectionString = null,
-        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
+        string? connectionString = null)
     {
-        JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar, replacementFailureMode);
+        // First pass: extract AzureKeyVault options if AKV replacement is requested
+        if (replacementSettings?.DoReplaceAkvVar is true)
+        {
+            AzureKeyVaultOptions? azureKeyVaultOptions = ExtractAzureKeyVaultOptions(
+                json: json,
+                enableEnvReplacement: replacementSettings.DoReplaceEnvVar,
+                replacementFailureMode: replacementSettings.EnvFailureMode);
+
+            // Update replacement settings with the extracted AKV options
+            if (azureKeyVaultOptions is not null)
+            {
+                replacementSettings = new DeserializationVariableReplacementSettings(
+                    azureKeyVaultOptions: azureKeyVaultOptions,
+                    doReplaceEnvVar: replacementSettings.DoReplaceEnvVar,
+                    doReplaceAkvVar: replacementSettings.DoReplaceAkvVar,
+                    envFailureMode: replacementSettings.EnvFailureMode);
+            }
+        }
+
+        JsonSerializerOptions options = GetSerializationOptions(replacementSettings);
 
         try
         {
@@ -115,25 +222,16 @@ public abstract class RuntimeConfigLoader
             // retreive current connection string from config
             string updatedConnectionString = config.DataSource.ConnectionString;
 
-            // set dataSourceName to default if not provided
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = config.DefaultDataSourceName;
-            }
-
             if (!string.IsNullOrEmpty(connectionString))
             {
                 // update connection string if provided.
                 updatedConnectionString = connectionString;
             }
 
-            if (datasourceNameToConnectionString is null)
-            {
-                datasourceNameToConnectionString = new Dictionary<string, string>();
-            }
+            Dictionary<string, string> datasourceNameToConnectionString = new();
 
-            // add to dictionary if datasourceName is present (will either be the default or the one provided)
-            datasourceNameToConnectionString.TryAdd(dataSourceName, updatedConnectionString);
+            // add to dictionary if datasourceName is present
+            datasourceNameToConnectionString.TryAdd(config.DefaultDataSourceName, updatedConnectionString);
 
             // iterate over dictionary and update runtime config with connection strings.
             foreach ((string dataSourceKey, string connectionValue) in datasourceNameToConnectionString)
@@ -143,17 +241,17 @@ public abstract class RuntimeConfigLoader
                 DataSource ds = config.GetDataSourceFromDataSourceName(dataSourceKey);
 
                 // Add Application Name for telemetry for MsSQL or PgSql
-                if (ds.DatabaseType is DatabaseType.MSSQL && replaceEnvVar)
+                if (ds.DatabaseType is DatabaseType.MSSQL && replacementSettings?.DoReplaceEnvVar == true)
                 {
                     updatedConnection = GetConnectionStringWithApplicationName(connectionValue);
                 }
-                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replaceEnvVar)
+                else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
                 {
                     updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
                 }
 
                 ds = ds with { ConnectionString = updatedConnection };
-                config.UpdateDataSourceNameToDataSource(dataSourceName, ds);
+                config.UpdateDataSourceNameToDataSource(config.DefaultDataSourceName, ds);
 
                 if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -188,13 +286,11 @@ public abstract class RuntimeConfigLoader
     /// <summary>
     /// Get Serializer options for the config file.
     /// </summary>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with value or not while deserializing.
-    /// By default, no replacement happens.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
     public static JsonSerializerOptions GetSerializationOptions(
-        bool replaceEnvVar = false,
-        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
+        DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-
         JsonSerializerOptions options = new()
         {
             PropertyNameCaseInsensitive = false,
@@ -205,23 +301,37 @@ public abstract class RuntimeConfigLoader
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
+        options.Converters.Add(new RuntimeHealthOptionsConvertorFactory(replacementSettings));
+        options.Converters.Add(new DataSourceHealthOptionsConvertorFactory(replacementSettings));
+        options.Converters.Add(new EntityHealthOptionsConvertorFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());
-        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replaceEnvVar));
-        options.Converters.Add(new EntitySourceConverterFactory(replaceEnvVar));
-        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
-        options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
+        options.Converters.Add(new GraphQLRuntimeOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new McpRuntimeOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new DmlToolsConfigConverter());
+        options.Converters.Add(new EntitySourceConverterFactory(replacementSettings));
+        options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new EntityRestOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
-        options.Converters.Add(new EntityCacheOptionsConverterFactory());
+        options.Converters.Add(new EntityCacheOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new RuntimeCacheOptionsConverterFactory());
+        options.Converters.Add(new RuntimeCacheLevel2OptionsConverterFactory());
         options.Converters.Add(new MultipleCreateOptionsConverter());
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
-        options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
+        options.Converters.Add(new DataSourceConverterFactory(replacementSettings));
         options.Converters.Add(new HostOptionsConvertorFactory());
-        options.Converters.Add(new LogLevelOptionsConverterFactory());
+        options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replacementSettings));
+        options.Converters.Add(new FileSinkConverter(replacementSettings));
 
-        if (replaceEnvVar)
+        // Add AzureKeyVaultOptionsConverterFactory to ensure AKV config is deserialized properly
+        options.Converters.Add(new AzureKeyVaultOptionsConverterFactory(replacementSettings));
+
+        // Only add the extensible string converter if we have replacement settings
+        if (replacementSettings is not null)
         {
-            options.Converters.Add(new StringJsonConverterFactory(replacementFailureMode));
+            options.Converters.Add(new StringJsonConverterFactory(replacementSettings));
         }
 
         return options;
@@ -313,7 +423,7 @@ public abstract class RuntimeConfigLoader
 
         // If the connection string does not contain the `Application Name` property, add it.
         // or if the connection string contains the `Application Name` property, replace it with the DataApiBuilder Application Name.
-        if (connectionStringBuilder.ApplicationName.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(connectionStringBuilder.ApplicationName))
         {
             connectionStringBuilder.ApplicationName = applicationName;
         }
@@ -325,5 +435,62 @@ public abstract class RuntimeConfigLoader
 
         // Return the updated connection string.
         return connectionStringBuilder.ConnectionString;
+    }
+
+    public bool DoesConfigNeedValidation()
+    {
+        if (IsNewConfigDetected && !IsNewConfigValidated)
+        {
+            IsNewConfigDetected = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Once the validation of the new config file is confirmed to have passed,
+    /// this function will save the newly resolved RuntimeConfig as the new last known good,
+    /// in order to have config file DAB can go into in case hot reload fails.
+    /// </summary>
+    public void SetLkgConfig()
+    {
+        IsNewConfigValidated = false;
+        LastValidRuntimeConfig = RuntimeConfig;
+    }
+
+    /// <summary>
+    /// Changes the state of the config file into the last known good iteration,
+    /// in order to allow users to still be able to make changes in DAB even if
+    /// a hot reload fails.
+    /// </summary>
+    public void RestoreLkgConfig()
+    {
+        RuntimeConfig = LastValidRuntimeConfig;
+    }
+
+    /// <summary>
+    /// Uses the Last Valid Runtime Config and inserts the log-level property to the Runtime Config that will be used
+    /// during the hot-reload if DAB is in Production Mode, this means that only changes to log-level will be registered.
+    /// This is done in order to ensure that no unwanted changes are honored during hot-reload in Production Mode.
+    /// </summary>
+    public void InsertWantedChangesInProductionMode()
+    {
+        if (!RuntimeConfig!.IsDevelopmentMode())
+        {
+            // Creates copy of last valid runtime config and only adds the new logger level changes
+            RuntimeConfig runtimeConfigCopy = LastValidRuntimeConfig! with
+            {
+                Runtime = LastValidRuntimeConfig.Runtime! with
+                {
+                    Telemetry = LastValidRuntimeConfig.Runtime!.Telemetry! with
+                    {
+                        LoggerLevel = RuntimeConfig.Runtime!.Telemetry!.LoggerLevel
+                    }
+                }
+            };
+
+            RuntimeConfig = runtimeConfigCopy;
+        }
     }
 }

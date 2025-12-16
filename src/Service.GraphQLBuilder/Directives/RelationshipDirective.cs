@@ -50,15 +50,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         /// <summary>
         /// Gets the target object type name for an input infield with a relationship directive.
         /// </summary>
-        /// <param name="infield">The input field that is expected to have a relationship directive defined on it.</param>
+        /// <param name="inputField">The input field that is expected to have a relationship directive defined on it.</param>
         /// <returns>The name of the target object if the relationship is found, null otherwise.</returns>
-        public static string? GetTarget(IInputField infield)
+        public static string? GetTarget(IInputValueDefinition inputField)
         {
-            Directive? directive = (Directive?)infield.Directives.FirstOrDefault(d => d.Name.Value == DirectiveName);
-            DirectiveNode? directiveNode = directive?.ToNode();
-            ArgumentNode? arg = directiveNode?.Arguments.First(a => a.Name.Value == "target");
-
-            return (string?)arg?.Value.Value;
+            Directive? directive = (Directive?)inputField.Directives.FirstOrDefault(DirectiveName);
+            return directive?.GetArgumentValue<string>("target");
         }
 
         /// <summary>

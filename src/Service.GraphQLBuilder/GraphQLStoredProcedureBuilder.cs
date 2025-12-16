@@ -11,7 +11,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using HotChocolate.Types.NodaTime;
 using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
@@ -56,17 +55,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
 
                     IValueNode? defaultValueNode = null;
-                    if (entity.Source.Parameters is not null && entity.Source.Parameters.TryGetValue(param, out object? value))
+                    if (entity.Source.Parameters is not null)
                     {
-                        Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(value.ToString()!, parameterDefinition: spdef.Parameters[param]);
-                        defaultValueNode = defaultGraphQLValue.Item2;
+                        ParameterMetadata? paramMetadata = entity.Source.Parameters
+                            .FirstOrDefault(p => p.Name == param);
+
+                        if (paramMetadata is not null && paramMetadata.Default is not null)
+                        {
+                            Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(paramMetadata.Default.ToString()!, parameterDefinition: spdef.Parameters[param]);
+                            defaultValueNode = defaultGraphQLValue.Item2;
+                        }
                     }
 
                     inputValues.Add(
                         new(
                             location: null,
                             name: new(param),
-                            description: new StringValueNode($"parameters for {name.Value} stored-procedure"),
+                            description: definition.Description != null
+                                        ? new StringValueNode(definition.Description)
+                                        : new StringValueNode($"parameters for {name.Value} stored-procedure"),
                             type: new NamedTypeNode(SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType)),
                             defaultValue: defaultValueNode,
                             directives: new List<DirectiveNode>())
@@ -158,11 +165,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
                     DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
                     STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
-                    BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
+                    BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(
+                        defaultValueFromConfig switch
+                        {
+                            "1" => true,
+                            "0" => false,
+                            var s when s.Equals("true", StringComparison.OrdinalIgnoreCase) => true,
+                            var s when s.Equals("false", StringComparison.OrdinalIgnoreCase) => false,
+                            _ => throw new FormatException($"String '{defaultValueFromConfig}' was not recognized as a valid Boolean.")
+                        })),
                     DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
                         DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
                     BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
-                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
+                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };
 

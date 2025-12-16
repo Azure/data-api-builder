@@ -295,7 +295,8 @@ WHERE
                 }
                 else if (columnDef.HasDefault)
                 {
-                    selections.Add($"{GetMySQLDefaultValue(columnDef)} as {quotedColName}");
+                    string columnSelectionValue = structure.InsertColumns.Any() ? GetMySQLDefaultValue(columnDef) : $"'{GetMySQLDefaultValue(columnDef)}'";
+                    selections.Add($"{columnSelectionValue} as {quotedColName}");
                 }
             }
 
@@ -365,6 +366,12 @@ WHERE
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
             throw new NotImplementedException();
+        }
+
+        public string QuoteTableNameAsDBConnectionParam(string param)
+        {
+            // Table names in MySQL should not be quoted when used as DB Connection Params.
+            return param;
         }
     }
 }

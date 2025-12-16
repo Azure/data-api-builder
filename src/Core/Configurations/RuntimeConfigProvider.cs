@@ -3,12 +3,14 @@
 
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Net;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -42,6 +44,53 @@ public class RuntimeConfigProvider
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
     private RuntimeConfigLoader _configLoader;
+    private DabChangeToken _changeToken = new();
+    private readonly IDisposable _changeTokenRegistration;
+
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
+    {
+        _configLoader = runtimeConfigLoader;
+        _changeTokenRegistration = ChangeToken.OnChange(_configLoader.GetChangeToken, RaiseChanged);
+    }
+
+    /// <summary>
+    /// Swaps out the old change token with a new change token and
+    /// signals that a change has occurred.
+    /// </summary>
+    /// <seealso cref="https://github.com/dotnet/runtime/blob/main/src/libraries/Microsoft.Extensions.Configuration/src/ConfigurationProvider.cs">
+    /// Example usage of Interlocked.Exchange(...) to refresh change token.</seealso>
+    /// <seealso cref="https://learn.microsoft.com/en-us/dotnet/api/system.threading.interlocked.exchange">
+    /// Sets a variable to a specified value as an atomic operation.
+    /// </seealso>
+    private void RaiseChanged()
+    {
+        //First use of GetConfig during hot reload, in order to do validation of
+        //config file before any changes are made for hot reload.
+        //In case validation fails, an exception will be thrown and hot reload will be canceled.
+        ValidateConfig();
+
+        DabChangeToken previousToken = Interlocked.Exchange(ref _changeToken, new DabChangeToken());
+        previousToken.SignalChange();
+    }
+
+    /// <summary>
+    /// Change token producer which returns an uncancelled/unsignalled change token.
+    /// </summary>
+    /// <returns>DabChangeToken</returns>
+#pragma warning disable CA1024 // Use properties where appropriate
+    public IChangeToken GetChangeToken()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _changeToken;
+    }
+
+    /// <summary>
+    /// Removes all change registration subscriptions.
+    /// </summary>
+    public void Dispose()
+    {
+        _changeTokenRegistration.Dispose();
+    }
 
     /// <summary>
     /// Accessor for the ConfigFilePath to avoid exposing the loader. If we are not
@@ -60,11 +109,6 @@ public class RuntimeConfigProvider
         }
     }
 
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
-    {
-        _configLoader = runtimeConfigLoader;
-    }
-
     /// <summary>
     /// Return the previous loaded config, or it will attempt to load the config that
     /// is known by the loader.
@@ -72,7 +116,7 @@ public class RuntimeConfigProvider
     /// <returns>The RuntimeConfig instance.</returns>
     /// <remark>Dont use this method if environment variable references need to be retained.</remark>
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
-    public RuntimeConfig GetConfig()
+    public virtual RuntimeConfig GetConfig()
     {
         if (_configLoader.RuntimeConfig is not null)
         {
@@ -144,8 +188,7 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
-                replaceEnvVar: false,
-                replacementFailureMode: EnvironmentVariableReplacementFailureMode.Ignore))
+                replacementSettings: null))
         {
             _configLoader.RuntimeConfig = runtimeConfig;
 
@@ -212,8 +255,7 @@ public class RuntimeConfigProvider
         string? graphQLSchema,
         string connectionString,
         string? accessToken,
-        bool replaceEnvVar = true,
-        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
+        DeserializationVariableReplacementSettings? replacementSettings)
     {
         if (string.IsNullOrEmpty(connectionString))
         {
@@ -227,7 +269,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: replaceEnvVar, replacementFailureMode: replacementFailureMode))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replacementSettings))
         {
             _configLoader.RuntimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {
@@ -241,6 +283,57 @@ public class RuntimeConfigProvider
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Runtimeconfig is hot-reloadable when the configuration is not in production mode and not late configured.
+    /// </summary>
+    /// <returns>True when config is hot-reloadable.</returns>
+    public bool IsConfigHotReloadable()
+    {
+        return !IsLateConfigured || !(_configLoader.RuntimeConfig?.Runtime?.Host?.Mode == HostMode.Production);
+    }
+
+    /// <summary>
+    /// This function checks if there is a new config that needs to be validated
+    /// and validates the configuration file as well as the schema file, in the
+    /// case that it is not able to validate both then it will return an error.
+    /// </summary>
+    /// <returns></returns>
+    public void ValidateConfig()
+    {
+        // Only used in hot reload to validate the configuration file
+        if (_configLoader.DoesConfigNeedValidation())
+        {
+            Console.WriteLine("Validating hot-reloaded configuration file.");
+            IFileSystem fileSystem = new FileSystem();
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            ILogger<RuntimeConfigValidator> logger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(this, fileSystem, logger, true);
+
+            // This function only works if DAB is started in Production Mode
+            _configLoader.InsertWantedChangesInProductionMode();
+
+            // Checks if the new config is valid or invalid
+            _configLoader.IsNewConfigValidated = runtimeConfigValidator.TryValidateConfig(ConfigFilePath, loggerFactory).Result;
+
+            // Saves the lastValidRuntimeConfig as the new RuntimeConfig if it is validated for hot reload
+            if (_configLoader.IsNewConfigValidated)
+            {
+                _configLoader.SetLkgConfig();
+            }
+            else
+            {
+                _configLoader.RestoreLkgConfig();
+
+                throw new DataApiBuilderException(
+                    message: "Failed validation of configuration file.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            Console.WriteLine("Validated hot-reloaded configuration file.");
+        }
     }
 
     private async Task<bool> InvokeConfigLoadedHandlersAsync()

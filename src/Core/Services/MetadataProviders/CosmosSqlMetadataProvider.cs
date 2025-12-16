@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -26,7 +27,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeEntities _runtimeConfigEntities;
         private readonly bool _isDevelopmentMode;
-        private Dictionary<string, string> _partitionKeyPaths = new();
+        private ConcurrentDictionary<string, string> _partitionKeyPaths = new();
 
         /// <summary>
         /// This contains each entity into EDM model convention which will be used to traverse DB Policy filter using ODataParser
@@ -113,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         ///         stars: [Star],
         ///         sun: Star
         ///     }
-        ///     
+        ///
         ///     type Star {
         ///         id : ID,
         ///         name : String
@@ -162,7 +163,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             // b) Once it is found, start collecting all the paths for each entity and its field.
             foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
             {
-                if (typeDefinition is ObjectTypeDefinitionNode node && node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
+                if (typeDefinition is ObjectTypeDefinitionNode node && node.Directives.Any(a => a.Name.Value == ModelDirective.Names.MODEL))
                 {
                     string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 
@@ -536,6 +537,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public string? GetPartitionKeyPath(string database, string container)
         {
+            ArgumentNullException.ThrowIfNull(database);
+            ArgumentNullException.ThrowIfNull(container);
+
             _partitionKeyPaths.TryGetValue($"{database}/{container}", out string? partitionKeyPath);
             return partitionKeyPath;
         }
@@ -543,10 +547,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <inheritdoc />
         public void SetPartitionKeyPath(string database, string container, string partitionKeyPath)
         {
-            if (!_partitionKeyPaths.TryAdd($"{database}/{container}", partitionKeyPath))
-            {
-                _partitionKeyPaths[$"{database}/{container}"] = partitionKeyPath;
-            }
+            ArgumentNullException.ThrowIfNull(database);
+            ArgumentNullException.ThrowIfNull(container);
+            ArgumentNullException.ThrowIfNull(partitionKeyPath);
+
+            _partitionKeyPaths.AddOrUpdate($"{database}/{container}", partitionKeyPath, (key, oldValue) => partitionKeyPath);
         }
 
         public bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)

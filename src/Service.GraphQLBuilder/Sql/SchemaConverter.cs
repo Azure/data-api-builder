@@ -2,17 +2,16 @@
 // Licensed under the MIT License.
 
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Types;
-using HotChocolate.Types.NodaTime;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
@@ -21,6 +20,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 {
     public static class SchemaConverter
     {
+        private static readonly string _aggregationTypeSuffix = "Aggregations";
+        private static readonly string _groupByTypeSuffix = "GroupBy";
+        public enum AggregationType
+        {
+            max,
+            min,
+            avg,
+            sum,
+            count
+        }
+
         /// <summary>
         /// Generate a GraphQL object type from a SQL table/view/stored-procedure definition, combined with the runtime config entity information
         /// </summary>
@@ -35,7 +45,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         public static ObjectTypeDefinitionNode GenerateObjectTypeDefinitionForDatabaseObject(
             string entityName,
             DatabaseObject databaseObject,
-            [NotNull] Entity configEntity,
+            Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
@@ -66,6 +76,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         message: $"The source type of entity: {entityName} is not supported",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+            }
+
+            StringValueNode? descriptionNode = null;
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
+            {
+                descriptionNode = new StringValueNode(configEntity.Description);
+            }
+
+            // Set the description node if available
+            if (descriptionNode != null)
+            {
+                objectDefinitionNode = objectDefinitionNode.WithDescription(descriptionNode);
             }
 
             return objectDefinitionNode;
@@ -112,6 +134,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
+            StringValueNode? descriptionNode = null;
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
+            {
+                descriptionNode = new StringValueNode(configEntity.Description);
+            }
+
             // Top-level object type definition name should be singular.
             // The singularPlural.Singular value is used, and if not configured,
             // the top-level entity name value is used. No singularization occurs
@@ -119,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             return new ObjectTypeDefinitionNode(
                 location: null,
                 name: new(value: GetDefinedSingularName(entityName, configEntity)),
-                description: null,
+                description: descriptionNode,
                 directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
@@ -169,12 +197,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 // A field is added to the ObjectTypeDefinition when:
                 // 1. The entity is a linking entity. A linking entity is not exposed by DAB for query/mutation but the fields are required to generate
                 // object definitions of directional linking entities from source to target.
-                // 2. The entity is not a linking entity and there is atleast one role allowed to access the field.
+                // 2. The entity is not a linking entity and there is at least one role allowed to access the field.
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles) || configEntity.IsLinkingEntity)
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
                     // This check is bypassed for linking entities for the same reason explained above.
-                    if (configEntity.IsLinkingEntity || roles is not null && roles.Count() > 0)
+                    if (configEntity.IsLinkingEntity || roles is not null && roles.Any())
                     {
                         FieldDefinitionNode field = GenerateFieldForColumn(configEntity, columnName, column, directives, roles);
                         fieldDefinitionNodes.Add(columnName, field);
@@ -203,6 +231,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
+            StringValueNode? descriptionNode = null;
+            if (!string.IsNullOrWhiteSpace(configEntity.Description))
+            {
+                descriptionNode = new StringValueNode(configEntity.Description);
+            }
+
             // Top-level object type definition name should be singular.
             // The singularPlural.Singular value is used, and if not configured,
             // the top-level entity name value is used. No singularization occurs
@@ -210,12 +244,169 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             return new ObjectTypeDefinitionNode(
                 location: null,
                 name: new(value: GetDefinedSingularName(entityName, configEntity)),
-                description: null,
+                description: descriptionNode,
                 directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
                 new List<NamedTypeNode>(),
                 fieldDefinitionNodes.Values.ToImmutableList());
         }
 
+        public static bool IsNumericField(ITypeNode type)
+        {
+            string typeName = type.NamedType().Name.Value;
+            return SupportedAggregateTypes.NumericAggregateTypes.Contains(typeName);
+        }
+
+        /// <summary>
+        /// Generates aggregation type for a given entity name.
+        /// Example:
+        /// type BookAggregations {
+        /// max(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean) : Float
+        /// min(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// avg(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// sum(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Float
+        /// count(field: BookNumericAggregateFields, having: HavingInput, distinct: Boolean): Int
+        /// }
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="entityNode"></param>
+        /// <returns></returns>
+        public static ObjectTypeDefinitionNode GenerateAggregationTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
+        {
+            string aggregationTypeName = GenerateObjectAggregationNodeName(entityName);
+
+            List<string> numericFields = entityNode.Fields
+                .Where(f => IsNumericField(f.Type))
+                .Select(f => f.Type.NamedType().Name.Value)
+                .ToList();
+
+            List<FieldDefinitionNode> aggregationFields = new();
+
+            // Add numeric aggregation fields
+            if (numericFields.Any())
+            {
+                string filterInputType = numericFields.Count == 1 ? $"{numericFields[0]}FilterInput" : GetCommonFilterInputType(numericFields);
+                aggregationFields.AddRange(new[]
+                {
+                    CreateNumericAggregationField(AggregationType.max.ToString(), FLOAT_TYPE, "Maximum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.min.ToString(), FLOAT_TYPE, "Minimum value for numeric fields", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.avg.ToString(), FLOAT_TYPE, "Average value", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.sum.ToString(), FLOAT_TYPE, "Sum of values", entityNode, filterInputType),
+                    CreateNumericAggregationField(AggregationType.count.ToString(), INT_TYPE, "Count of numeric values", entityNode, filterInputType)
+                });
+            }
+
+            return new ObjectTypeDefinitionNode(
+                location: null,
+                name: new NameNode(aggregationTypeName),
+                description: new StringValueNode($"Aggregation type for {entityName}"),
+                directives: new List<DirectiveNode>(),
+                interfaces: new List<NamedTypeNode>(),
+                fields: aggregationFields);
+        }
+
+        /// <summary>
+        /// Creates a numeric aggregation field for a graphql entity.
+        /// for example in the aggregations node for books it would create min/max/avg operations.
+        /// </summary>
+        /// <param name="operationName">The name of the aggregation operation (e.g., "sum", "avg").</param>
+        /// <param name="returnType">The return type of the aggregation operation (e.g., "Float", "Int").</param>
+        /// <param name="description">A description of the aggregation operation.</param>
+        /// <param name="entityNode">The GraphQL entity node that contains the numeric fields to be aggregated.</param>
+        /// <param name="filterInputType">The input type used for filtering criteria in the aggregation operation.</param>
+        /// <returns>A <see cref="FieldDefinitionNode"/> representing the numeric aggregation field in the GraphQL schema.</returns>
+        private static FieldDefinitionNode CreateNumericAggregationField(string operationName, string returnType, string description, ObjectTypeDefinitionNode entityNode, string filterInputType)
+        {
+            // Create an input type specific to this entity's numeric fields
+            string inputTypeName = EnumTypeBuilder.GenerateNumericAggregateFieldsEnumName(entityNode.Name.Value);
+
+            return new FieldDefinitionNode(
+                location: null,
+                name: new NameNode(operationName),
+                description: new StringValueNode(description),
+                arguments: new List<InputValueDefinitionNode>
+                {
+            new(null,
+                new NameNode("field"),
+                new StringValueNode("Field to aggregate on"),
+                new NonNullTypeNode(new NamedTypeNode(new NameNode(inputTypeName))),
+                null,
+                new List<DirectiveNode>()),
+            new(null,
+                new NameNode("having"),
+                new StringValueNode("Filter criteria for aggregation"),
+                new NamedTypeNode(new NameNode(filterInputType)),
+                null,
+                new List<DirectiveNode>()),
+            new(null,
+                new NameNode("distinct"),
+                new StringValueNode("Whether to aggregate on distinct values"),
+                new BooleanType().ToTypeNode(),
+                new BooleanValueNode(false),
+                new List<DirectiveNode>())
+                },
+                type: new NamedTypeNode(new NameNode(returnType)),
+                directives: new List<DirectiveNode>());
+        }
+
+        /// <summary>
+        /// Generates a GroupBy type for a given entity that includes fields and aggregations.
+        /// Example:
+        /// type BookGroupBy {
+        ///     fields: [BookScalarFields]
+        ///     aggregations: BookAggregations
+        /// }
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="entityNode">The entity's ObjectTypeDefinitionNode</param>
+        /// <returns>ObjectTypeDefinitionNode for the GroupBy type</returns>
+        public static ObjectTypeDefinitionNode GenerateGroupByTypeForEntity(string entityName, ObjectTypeDefinitionNode entityNode)
+        {
+            string groupByTypeName = GenerateGroupByTypeName(entityName);
+
+            List<FieldDefinitionNode> groupByFields = new()
+            {
+                new FieldDefinitionNode(
+                    location: null,
+                    name: new NameNode("fields"),
+                    description: new StringValueNode($"Grouped fields from {entityName}"),
+                    arguments: new List<InputValueDefinitionNode>(),
+                    type: new NamedTypeNode(new NameNode(entityName)),
+                    directives: new List<DirectiveNode>()
+                )
+            };
+
+            return new ObjectTypeDefinitionNode(
+                location: null,
+                name: new NameNode(groupByTypeName),
+                description: new StringValueNode($"GroupBy type for {entityName}"),
+                directives: new List<DirectiveNode>(),
+                interfaces: new List<NamedTypeNode>(),
+                fields: groupByFields);
+        }
+
+        /// <summary>
+        /// Determines the most appropriate common filter input type for a collection of numeric types
+        /// </summary>
+        private static string GetCommonFilterInputType(List<string> numericTypes)
+        {
+            Dictionary<string, int> typeHierarchy = new()
+            {
+                { DECIMAL_TYPE, 1 },
+                { FLOAT_TYPE, 2 },
+                { SINGLE_TYPE, 3 },
+                { LONG_TYPE, 4 },
+                { INT_TYPE, 5 },
+                { SHORT_TYPE, 6 },
+                { BYTE_TYPE, 7 }
+            };
+
+            // Find the highest precision type among the numeric types
+            string highestPrecisionType = numericTypes
+                .OrderBy(t => typeHierarchy.GetValueOrDefault(t, 0))
+                .First();
+
+            return $"{highestPrecisionType}FilterInput";
+        }
         /// <summary>
         /// Helper method to generate the FieldDefinitionNode for a column in a table/view or a result set field in a stored-procedure.
         /// </summary>
@@ -227,24 +418,34 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// <returns>Generated field definition node for the column to be used in the entity's object type definition.</returns>
         private static FieldDefinitionNode GenerateFieldForColumn(Entity configEntity, string columnName, ColumnDefinition column, List<DirectiveNode> directives, IEnumerable<string>? roles)
         {
-            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                                            roles,
-                                            out DirectiveNode? authZDirective))
+            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(roles, out DirectiveNode? authZDirective))
             {
                 directives.Add(authZDirective!);
             }
 
+            // Determine the exposed column name considering mappings and aliases
             string exposedColumnName = columnName;
             if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
             {
                 exposedColumnName = columnAlias;
             }
 
+            // Apply alias if present (alias overrides mapping)
+            FieldMetadata? fieldMetadata = null;
+            if (configEntity.Fields is not null)
+            {
+                fieldMetadata = configEntity.Fields.FirstOrDefault(f => f.Name == columnName);
+                if (fieldMetadata != null && !string.IsNullOrEmpty(fieldMetadata.Alias))
+                {
+                    exposedColumnName = fieldMetadata.Alias;
+                }
+            }
+
             NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
             FieldDefinitionNode field = new(
                 location: null,
                 new(exposedColumnName),
-                description: null,
+                description: fieldMetadata?.Description is null ? null : new StringValueNode(fieldMetadata.Description),
                 new List<InputValueDefinitionNode>(),
                 column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
                 directives);
@@ -305,7 +506,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
         /// <summary>
         /// Helper method to generate the list of directives for an entity's object type definition.
-        /// Generates and returns the authorize and model directives to be later added to the object's definition. 
+        /// Generates and returns the authorize and model directives to be later added to the object's definition.
         /// </summary>
         /// <param name="entityName">Name of the entity for whose object type definition, the list of directives are to be created.</param>
         /// <param name="configEntity">Entity definition.</param>
@@ -316,10 +517,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             List<DirectiveNode> objectTypeDirectives = new();
             if (!configEntity.IsLinkingEntity)
             {
-                objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
+                objectTypeDirectives.Add(
+                    new DirectiveNode(
+                        ModelDirective.Names.MODEL,
+                        new ArgumentNode(ModelDirective.Names.NAME_ARGUMENT, entityName)));
+
                 if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                        rolesAllowedForEntity,
-                        out DirectiveNode? authorizeDirective))
+                    rolesAllowedForEntity,
+                    out DirectiveNode? authorizeDirective))
                 {
                     objectTypeDirectives.Add(authorizeDirective!);
                 }
@@ -386,7 +591,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 DateTimeOffset value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseValue(value))),
                 DateTime value => new ObjectValueNode(new ObjectFieldNode(DATETIME_TYPE, new DateTimeType().ParseResult(value))),
                 byte[] value => new ObjectValueNode(new ObjectFieldNode(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(value))),
-                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(LOCALTIME_TYPE, new LocalTimeType().ParseResult(value))),
+                TimeOnly value => new ObjectValueNode(new ObjectFieldNode(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ParseResult(value))),
                 _ => throw new DataApiBuilderException(
                     message: $"The type {metadataValue.GetType()} is not supported as a GraphQL default value",
                     statusCode: HttpStatusCode.InternalServerError,
@@ -411,8 +616,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             bool isNullableRelationship = false;
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                &&
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo) &&
                 // From the relationship information, obtain the foreign key definition for the given target entity
                 relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                 out List<ForeignKeyDefinition>? listOfForeignKeys))
@@ -424,23 +628,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 // invalid entries. Non-zero referenced columns indicate valid matching foreign key definition in the
                 // database and hence only those can be used to determine the directionality.
 
-                // Find the foreignkeys in which the source entity is the referencing object.
-                IEnumerable<ForeignKeyDefinition> referencingForeignKeyInfo =
+                // Find the foreign keys in which the source entity is the referencing object.
+                ForeignKeyDefinition[] referencingForeignKeyInfo =
                     listOfForeignKeys.Where(fk =>
                         fk.ReferencingColumns.Count > 0
                         && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencingDbTable.Equals(databaseObject));
+                        && fk.Pair.ReferencingDbTable.Equals(databaseObject))
+                        .ToArray();
 
-                // Find the foreignkeys in which the source entity is the referenced object.
-                IEnumerable<ForeignKeyDefinition> referencedForeignKeyInfo =
+                // Find the foreign keys in which the source entity is the referenced object.
+                ForeignKeyDefinition[] referencedForeignKeyInfo =
                     listOfForeignKeys.Where(fk =>
                         fk.ReferencingColumns.Count > 0
                         && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencedDbTable.Equals(databaseObject));
+                        && fk.Pair.ReferencedDbTable.Equals(databaseObject))
+                        .ToArray();
 
                 // The source entity should at least be a referencing or referenced db object or both
                 // in the foreign key relationship.
-                if (referencingForeignKeyInfo.Count() > 0 || referencedForeignKeyInfo.Count() > 0)
+                if (referencingForeignKeyInfo.Length != 0 || referencedForeignKeyInfo.Length != 0)
                 {
                     // The source entity could be both the referencing and referenced entity
                     // in case of missing foreign keys in the db or self referencing relationships.
@@ -450,9 +656,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     // DAB doesn't support multiple relationships at the moment.
                     // and
                     // 2. when the source is not a referenced entity in any of the relationships.
-                    if (referencingForeignKeyInfo.Count() == 1 && referencedForeignKeyInfo.Count() == 0)
+                    if (referencingForeignKeyInfo.Length == 1 && referencedForeignKeyInfo.Length == 0)
                     {
-                        ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo.First();
+                        ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo[0];
                         isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
                     }
                     else
@@ -475,6 +681,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             return isNullableRelationship;
+        }
+
+        /// <summary>
+        /// Returns the aggregation node name for the given entity name.
+        /// </summary>
+        /// <param name="entityName">input entity name.</param>
+        /// <returns>{entityName}Aggregations</returns>
+        public static string GenerateObjectAggregationNodeName(string entityName)
+        {
+            return $"{entityName}{_aggregationTypeSuffix}";
+        }
+
+        public static string GenerateGroupByTypeName(string entityName)
+        {
+            return $"{entityName}{_groupByTypeSuffix}";
         }
     }
 }

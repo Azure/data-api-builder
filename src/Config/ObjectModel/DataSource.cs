@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -12,8 +13,33 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="DatabaseType">Type of database to use.</param>
 /// <param name="ConnectionString">Connection string to access the database.</param>
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
-public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, object?>? Options)
+/// <param name="Health">Health check configuration for the datasource.</param>
+public record DataSource(
+    DatabaseType DatabaseType,
+    string ConnectionString,
+    Dictionary<string, object?>? Options = null,
+    DatasourceHealthCheckConfig? Health = null)
 {
+    [JsonIgnore]
+    public bool IsDatasourceHealthEnabled =>
+        Health is null || Health.Enabled;
+
+    [JsonIgnore]
+    public int DatasourceThresholdMs
+    {
+        get
+        {
+            if (Health == null || Health?.ThresholdMs == null)
+            {
+                return HealthCheckConstants.DEFAULT_THRESHOLD_RESPONSE_TIME_MS;
+            }
+            else
+            {
+                return Health.ThresholdMs;
+            }
+        }
+    }
+
     /// <summary>
     /// Converts the <c>Options</c> dictionary into a typed options object.
     /// May return null if the dictionary is null.

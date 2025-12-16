@@ -22,7 +22,10 @@ public record RuntimeConfig
 
     public RuntimeOptions? Runtime { get; init; }
 
-    public RuntimeEntities Entities { get; init; }
+    [JsonPropertyName("azure-key-vault")]
+    public AzureKeyVaultOptions? AzureKeyVault { get; init; }
+
+    public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
 
@@ -68,6 +71,21 @@ public record RuntimeConfig
          Runtime.Rest is null ||
          Runtime.Rest.Enabled) &&
          DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
+
+    /// <summary>
+    /// Retrieves the value of runtime.mcp.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsMcpEnabled =>
+        Runtime is null ||
+        Runtime.Mcp is null ||
+        Runtime.Mcp.Enabled;
+
+    [JsonIgnore]
+    public bool IsHealthEnabled =>
+        Runtime is null ||
+        Runtime.Health is null ||
+        Runtime.Health.Enabled;
 
     /// <summary>
     /// A shorthand method to determine whether Static Web Apps is configured for the current authentication provider.
@@ -119,6 +137,25 @@ public record RuntimeConfig
     }
 
     /// <summary>
+    /// The path at which MCP API is available
+    /// </summary>
+    [JsonIgnore]
+    public string McpPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.Mcp is null || Runtime.Mcp.Path is null)
+            {
+                return McpRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.Mcp.Path;
+            }
+        }
+    }
+
+    /// <summary>
     /// Indicates whether introspection is allowed or not.
     /// </summary>
     [JsonIgnore]
@@ -134,6 +171,33 @@ public record RuntimeConfig
 
     [JsonIgnore]
     public string DefaultDataSourceName { get; set; }
+
+    /// <summary>
+    /// Retrieves the value of runtime.graphql.aggregation.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool EnableAggregation =>
+        Runtime is not null &&
+        Runtime.GraphQL is not null &&
+        Runtime.GraphQL.EnableAggregation;
+
+    [JsonIgnore]
+    public HashSet<string> AllowedRolesForHealth =>
+        Runtime?.Health?.Roles ?? new HashSet<string>();
+
+    [JsonIgnore]
+    public int CacheTtlSecondsForHealthReport =>
+        Runtime?.Health?.CacheTtlSeconds ?? EntityCacheOptions.DEFAULT_TTL_SECONDS;
+
+    /// <summary>
+    /// Retrieves the value of runtime.graphql.dwnto1joinopt.enabled property if present, default is false.
+    /// </summary>
+    [JsonIgnore]
+    public bool EnableDwNto1JoinOpt =>
+        Runtime is not null &&
+        Runtime.GraphQL is not null &&
+        Runtime.GraphQL.FeatureFlags is not null &&
+        Runtime.GraphQL.FeatureFlags.EnableDwNto1JoinQueryOptimization;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
@@ -178,24 +242,47 @@ public record RuntimeConfig
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
-    public RuntimeConfig(string? Schema, DataSource DataSource, RuntimeEntities Entities, RuntimeOptions? Runtime = null, DataSourceFiles? DataSourceFiles = null)
+    public RuntimeConfig(
+        string? Schema,
+        DataSource DataSource,
+        RuntimeEntities Entities,
+        RuntimeOptions? Runtime = null,
+        DataSourceFiles? DataSourceFiles = null,
+        AzureKeyVaultOptions? AzureKeyVault = null)
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
+        this.AzureKeyVault = AzureKeyVault;
         this.Entities = Entities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
+
+        if (this.DataSource is null)
+        {
+            throw new DataApiBuilderException(
+                message: "data-source is a mandatory property in DAB Config",
+                statusCode: HttpStatusCode.UnprocessableEntity,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+        }
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>
         {
-            { DefaultDataSourceName, this.DataSource }
+            { this.DefaultDataSourceName, this.DataSource }
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
+        if (Entities is null)
+        {
+            throw new DataApiBuilderException(
+                message: "entities is a mandatory property in DAB Config",
+                statusCode: HttpStatusCode.UnprocessableEntity,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+        }
+
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, DefaultDataSourceName);
+            _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
         }
 
         // Process data source and entities information for each database in multiple database scenario.
@@ -211,7 +298,10 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replaceEnvVar: true))
+                // Use default replacement settings for environment variable replacement
+                DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+
+                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replacementSettings: replacementSettings))
                 {
                     try
                     {
@@ -251,7 +341,7 @@ public record RuntimeConfig
     /// <param name="DataSourceNameToDataSource">Dictionary mapping datasourceName to datasource object.</param>
     /// <param name="EntityNameToDataSourceName">Dictionary mapping entityName to datasourceName.</param>
     /// <param name="DataSourceFiles">Datasource files which represent list of child runtimeconfigs for multi-db scenario.</param>
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, string DefaultDataSourceName, Dictionary<string, DataSource> DataSourceNameToDataSource, Dictionary<string, string> EntityNameToDataSourceName, DataSourceFiles? DataSourceFiles = null)
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, string DefaultDataSourceName, Dictionary<string, DataSource> DataSourceNameToDataSource, Dictionary<string, string> EntityNameToDataSourceName, DataSourceFiles? DataSourceFiles = null, AzureKeyVaultOptions? AzureKeyVault = null)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
@@ -261,6 +351,7 @@ public record RuntimeConfig
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;
+        this.AzureKeyVault = AzureKeyVault;
 
         SetupDataSourcesUsed();
     }
@@ -271,7 +362,7 @@ public record RuntimeConfig
     /// <param name="dataSourceName">Name of datasource.</param>
     /// <returns>DataSource object.</returns>
     /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public DataSource GetDataSourceFromDataSourceName(string dataSourceName)
+    public virtual DataSource GetDataSourceFromDataSourceName(string dataSourceName)
     {
         CheckDataSourceNamePresent(dataSourceName);
         return _dataSourceNameToDataSource[dataSourceName];
@@ -360,7 +451,7 @@ public record RuntimeConfig
     public string ToJson(JsonSerializerOptions? jsonSerializerOptions = null)
     {
         // get default serializer options if none provided.
-        jsonSerializerOptions = jsonSerializerOptions ?? RuntimeConfigLoader.GetSerializationOptions();
+        jsonSerializerOptions = jsonSerializerOptions ?? RuntimeConfigLoader.GetSerializationOptions(replacementSettings: null);
         return JsonSerializer.Serialize(this, jsonSerializerOptions);
     }
 
@@ -376,7 +467,7 @@ public record RuntimeConfig
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
     /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
-    public int GetEntityCacheEntryTtl(string entityName)
+    public virtual int GetEntityCacheEntryTtl(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
@@ -405,12 +496,47 @@ public record RuntimeConfig
     }
 
     /// <summary>
+    /// Returns the cache level value for a given entity.
+    /// If the property is not set, returns the default (L1L2) for a given entity.
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Cache level that a cache entry should be stored in.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    public virtual EntityCacheLevel GetEntityCacheEntryLevel(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        if (!entityConfig.IsCachingEnabled)
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} does not have caching enabled.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+        }
+
+        if (entityConfig.Cache.UserProvidedLevelOptions)
+        {
+            return entityConfig.Cache.Level.Value;
+        }
+        else
+        {
+            return EntityCacheLevel.L1L2;
+        }
+    }
+
+    /// <summary>
     /// Whether the caching service should be used for a given operation. This is determined by
     /// - whether caching is enabled globally
     /// - whether the datasource is SQL and session context is disabled.
     /// </summary>
     /// <returns>Whether cache operations should proceed.</returns>
-    public bool CanUseCache()
+    public virtual bool CanUseCache()
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
         return IsCachingEnabled && !setSessionContextEnabled;
@@ -497,6 +623,11 @@ public record RuntimeConfig
         return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
 
+    public bool NextLinkRelative()
+    {
+        return Runtime?.Pagination?.NextLinkRelative ?? false;
+    }
+
     public int MaxResponseSizeMB()
     {
         return Runtime?.Host?.MaxResponseSizeMB ?? HostOptions.MAX_RESPONSE_LENGTH_DAB_ENGINE_MB;
@@ -542,10 +673,26 @@ public record RuntimeConfig
     /// <summary>
     /// Checks if the property log-level or its value are null
     /// </summary>
-    public bool IsLogLevelNull() =>
-        Runtime is null ||
-        Runtime.LoggerLevel is null ||
-        Runtime.LoggerLevel.Value is null;
+    public bool IsLogLevelNull()
+    {
+        if (Runtime is null ||
+            Runtime.Telemetry is null ||
+            Runtime.Telemetry.LoggerLevel is null ||
+            Runtime.Telemetry.LoggerLevel.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (KeyValuePair<string, LogLevel?> logger in Runtime!.Telemetry.LoggerLevel)
+        {
+            if (logger.Key == null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Takes in the RuntimeConfig object and checks the LogLevel.
@@ -554,19 +701,47 @@ public record RuntimeConfig
     /// If host mode is Development, return `LogLevel.Debug`, else
     /// for production returns `LogLevel.Error`.
     /// </summary>
-    public static LogLevel GetConfiguredLogLevel(RuntimeConfig runtimeConfig)
+    public LogLevel GetConfiguredLogLevel(string loggerFilter = "")
     {
-        LogLevel? value = runtimeConfig.Runtime?.LoggerLevel?.Value;
-        if (value is not null)
+
+        if (!IsLogLevelNull())
         {
-            return (LogLevel)value;
+            int max = 0;
+            string currentFilter = string.Empty;
+            foreach (KeyValuePair<string, LogLevel?> logger in Runtime!.Telemetry!.LoggerLevel!)
+            {
+                // Checks if the new key that is valid has more priority than the current key
+                if (logger.Key.Length > max && loggerFilter.StartsWith(logger.Key))
+                {
+                    max = logger.Key.Length;
+                    currentFilter = logger.Key;
+                }
+            }
+
+            Runtime!.Telemetry!.LoggerLevel!.TryGetValue(currentFilter, out LogLevel? value);
+            if (value is not null)
+            {
+                return (LogLevel)value;
+            }
+
+            Runtime!.Telemetry!.LoggerLevel!.TryGetValue("default", out value);
+            if (value is not null)
+            {
+                return (LogLevel)value;
+            }
         }
 
-        if (runtimeConfig.IsDevelopmentMode())
+        if (IsDevelopmentMode())
         {
             return LogLevel.Debug;
         }
 
         return LogLevel.Error;
     }
+
+    /// <summary>
+    /// Gets the MCP DML tools configuration
+    /// </summary>
+    [JsonIgnore]
+    public DmlToolsConfig? McpDmlTools => Runtime?.Mcp?.DmlTools;
 }

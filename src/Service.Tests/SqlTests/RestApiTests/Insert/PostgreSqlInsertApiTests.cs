@@ -124,6 +124,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 "
             },
             {
+                "InsertOneWithDefaultValuesAndEmptyRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _tableWithDefaultValues + @"
+                    ) AS subq
+                "
+            },
+            {
                 "InsertSqlInjectionQuery1",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -246,6 +256,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             string expectedErrorMessage = $"55000: cannot insert into view \"{_composite_subset_bookPub}\"";
             await base.InsertOneInViewBadRequestTest(expectedErrorMessage, isExpectedErrorMsgSubstr: true);
+        }
+
+        [TestMethod]
+        public async Task InsertOneWithDefaultValuesAndEmptyRequestBody()
+        {
+            // Validate that we can insert when request body is empty but we have columns that have default values.
+            string requestBody = @"
+            {
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithDefaultValues,
+                sqlQuery: GetQuery(nameof(InsertOneWithDefaultValuesAndEmptyRequestBody)),
+                operationType: EntityActionOperation.Insert,
+                exceptionExpected: false,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created
+                );
         }
 
         #region overridden tests

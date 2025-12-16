@@ -67,9 +67,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            return $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ({Build(structure.InsertColumns)}) " +
-                    $"VALUES ({string.Join(", ", (structure.Values))}) " +
-                    $"RETURNING {Build(structure.OutputColumns)};";
+            string insertQuery = $"INSERT INTO {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} ";
+            if (structure.InsertColumns.Any())
+            {
+                insertQuery += $"({Build(structure.InsertColumns)}) " +
+                    $"VALUES ({string.Join(", ", (structure.Values))}) ";
+            }
+            else
+            {
+                insertQuery += "DEFAULT VALUES ";
+            }
+
+            return $"{insertQuery} RETURNING {Build(structure.OutputColumns)}";
         }
 
         /// <inheritdoc />
@@ -306,6 +315,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string query = $"SELECT attname AS {QuoteIdentifier("COLUMN_NAME")} FROM pg_attribute " +
                 $"WHERE attrelid = ({schemaParamName} || '.' || {tableParamName})::regclass AND attgenerated = 's';";
             return query;
+        }
+
+        public string QuoteTableNameAsDBConnectionParam(string param)
+        {
+            // PostreSQL uses same quoting for table name as DB Connection Param
+            // as when used directly in SQL text.
+            return QuoteIdentifier(param);
         }
     }
 }

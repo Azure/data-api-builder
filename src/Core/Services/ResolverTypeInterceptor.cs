@@ -3,21 +3,26 @@
 
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Configuration;
+using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using HotChocolate.Types.Descriptors.Definitions;
+using HotChocolate.Types.Descriptors.Configurations;
 
 internal sealed class ResolverTypeInterceptor : TypeInterceptor
 {
-    private readonly FieldMiddlewareDefinition _queryMiddleware;
-    private readonly FieldMiddlewareDefinition _mutationMiddleware;
+    private readonly FieldMiddlewareConfiguration _queryMiddleware;
+    private readonly FieldMiddlewareConfiguration _mutationMiddleware;
     private readonly PureFieldDelegate _leafFieldResolver;
     private readonly PureFieldDelegate _objectFieldResolver;
     private readonly PureFieldDelegate _listFieldResolver;
 
+    private ObjectType? _queryType;
+    private ObjectType? _mutationType;
+    private ObjectType? _subscriptionType;
+
     public ResolverTypeInterceptor(ExecutionHelper executionHelper)
     {
         _queryMiddleware =
-            new FieldMiddlewareDefinition(
+            new FieldMiddlewareConfiguration(
                 next => async context =>
                 {
                     await executionHelper.ExecuteQueryAsync(context).ConfigureAwait(false);
@@ -25,54 +30,75 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                 });
 
         _mutationMiddleware =
-            new FieldMiddlewareDefinition(
+            new FieldMiddlewareConfiguration(
                 next => async context =>
                 {
                     await executionHelper.ExecuteMutateAsync(context).ConfigureAwait(false);
                     await next(context).ConfigureAwait(false);
                 });
 
-        _leafFieldResolver = ctx => ExecutionHelper.ExecuteLeafField(ctx);
-        _objectFieldResolver = ctx => executionHelper.ExecuteObjectField(ctx);
-        _listFieldResolver = ctx => executionHelper.ExecuteListField(ctx);
+        _leafFieldResolver = ExecutionHelper.ExecuteLeafField;
+        _objectFieldResolver = executionHelper.ExecuteObjectField;
+        _listFieldResolver = executionHelper.ExecuteListField;
+    }
+
+    public override void OnAfterResolveRootType(
+        ITypeCompletionContext completionContext,
+        ObjectTypeConfiguration definition,
+        OperationType operationType)
+    {
+        switch (operationType)
+        {
+            // root types in GraphQL are always object types so we can safely cast here.
+            case OperationType.Query:
+                _queryType = (ObjectType)completionContext.Type;
+                break;
+            case OperationType.Mutation:
+                _mutationType = (ObjectType)completionContext.Type;
+                break;
+            case OperationType.Subscription:
+                _subscriptionType = (ObjectType)completionContext.Type;
+                break;
+            default:
+                // GraphQL only specifies the operation types Query, Mutation, and Subscription,
+                // so this case will never happen.
+                throw new NotSupportedException(
+                    "The specified operation type is not supported.");
+        }
     }
 
     public override void OnBeforeCompleteType(
         ITypeCompletionContext completionContext,
-        DefinitionBase? definition,
-        IDictionary<string, object?> contextData)
+        TypeSystemConfiguration? definition)
     {
         // We are only interested in object types here as only object types can have resolvers.
-        if (definition is not ObjectTypeDefinition objectTypeDef)
+        if (definition is not ObjectTypeConfiguration objectTypeConfig)
         {
             return;
         }
 
-        if (completionContext.IsQueryType ?? false)
+        if (ReferenceEquals(completionContext.Type, _queryType))
         {
-            foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
+            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
             {
-                field.MiddlewareDefinitions.Add(_queryMiddleware);
+                field.MiddlewareConfigurations.Add(_queryMiddleware);
             }
         }
-        else if (completionContext.IsMutationType ?? false)
+        else if (ReferenceEquals(completionContext.Type, _mutationType))
         {
-            foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
+            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
             {
-                field.MiddlewareDefinitions.Add(_mutationMiddleware);
+                field.MiddlewareConfigurations.Add(_mutationMiddleware);
             }
         }
-        else if (completionContext.IsSubscriptionType ?? false)
+        else if (ReferenceEquals(completionContext.Type, _subscriptionType))
         {
             throw new NotSupportedException();
         }
         else
         {
-            foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
+            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
             {
-                // In order to inspect the type we need to resolve the type reference on the definition.
-                // If it's null or cannot be resolved something is wrong, but we skip over this and let
-                // the type validation deal with schema errors.
                 if (field.Type is not null &&
                     completionContext.TryGetType(field.Type, out IType? type))
                 {

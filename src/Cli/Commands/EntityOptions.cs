@@ -23,7 +23,19 @@ namespace Cli.Commands
             IEnumerable<string>? fieldsToExclude,
             string? policyRequest,
             string? policyDatabase,
-            string? config)
+            string? cacheEnabled,
+            string? cacheTtl,
+            string? description,
+            IEnumerable<string>? parametersNameCollection,
+            IEnumerable<string>? parametersDescriptionCollection,
+            IEnumerable<string>? parametersRequiredCollection,
+            IEnumerable<string>? parametersDefaultCollection,
+            IEnumerable<string>? fieldsNameCollection,
+            IEnumerable<string>? fieldsAliasCollection,
+            IEnumerable<string>? fieldsDescriptionCollection,
+            IEnumerable<bool>? fieldsPrimaryKeyCollection,
+            string? config
+        )
             : base(config)
         {
             Entity = entity;
@@ -38,6 +50,17 @@ namespace Cli.Commands
             FieldsToExclude = fieldsToExclude;
             PolicyRequest = policyRequest;
             PolicyDatabase = policyDatabase;
+            CacheEnabled = cacheEnabled;
+            CacheTtl = cacheTtl;
+            Description = description;
+            ParametersNameCollection = parametersNameCollection;
+            ParametersDescriptionCollection = parametersDescriptionCollection;
+            ParametersRequiredCollection = parametersRequiredCollection;
+            ParametersDefaultCollection = parametersDefaultCollection;
+            FieldsNameCollection = fieldsNameCollection;
+            FieldsAliasCollection = fieldsAliasCollection;
+            FieldsDescriptionCollection = fieldsDescriptionCollection;
+            FieldsPrimaryKeyCollection = fieldsPrimaryKeyCollection;
         }
 
         // Entity is required but we have made required as false to have custom error message (more user friendly), if not provided.
@@ -76,5 +99,38 @@ namespace Cli.Commands
 
         [Option("policy-database", Required = false, HelpText = "Specify an OData style filter rule that will be injected in the query sent to the database.")]
         public string? PolicyDatabase { get; }
+
+        [Option("cache.enabled", Required = false, HelpText = "Specify if caching is enabled for Entity, default value is false.")]
+        public string? CacheEnabled { get; }
+
+        [Option("cache.ttl", Required = false, HelpText = "Specify time to live in seconds for cache entries for Entity.")]
+        public string? CacheTtl { get; }
+
+        [Option("description", Required = false, HelpText = "Description of the entity.")]
+        public string? Description { get; }
+
+        [Option("parameters.name", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter names for stored procedure.")]
+        public IEnumerable<string>? ParametersNameCollection { get; }
+
+        [Option("parameters.description", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter descriptions for stored procedure.")]
+        public IEnumerable<string>? ParametersDescriptionCollection { get; }
+
+        [Option("parameters.required", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter required flags (true/false) for stored procedure.")]
+        public IEnumerable<string>? ParametersRequiredCollection { get; }
+
+        [Option("parameters.default", Required = false, Separator = ',', HelpText = "Comma-separated list of parameter default values for stored procedure.")]
+        public IEnumerable<string>? ParametersDefaultCollection { get; }
+
+        [Option("fields.name", Required = false, Separator = ',', HelpText = "Name of the database column to expose as a field.")]
+        public IEnumerable<string>? FieldsNameCollection { get; }
+
+        [Option("fields.alias", Required = false, Separator = ',', HelpText = "Alias for the field.")]
+        public IEnumerable<string>? FieldsAliasCollection { get; }
+
+        [Option("fields.description", Required = false, Separator = ',', HelpText = "Description for the field.")]
+        public IEnumerable<string>? FieldsDescriptionCollection { get; }
+
+        [Option("fields.primary-key", Required = false, Separator = ',', HelpText = "Set this field as a primary key.")]
+        public IEnumerable<bool>? FieldsPrimaryKeyCollection { get; }
     }
 }

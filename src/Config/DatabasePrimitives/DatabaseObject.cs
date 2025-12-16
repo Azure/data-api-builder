@@ -55,7 +55,7 @@ public abstract class DatabaseObject
     /// <summary>
     /// Get the underlying SourceDefinition based on database object source type
     /// </summary>
-    public SourceDefinition SourceDefinition
+    public virtual SourceDefinition SourceDefinition
     {
         get
         {
@@ -131,6 +131,10 @@ public class StoredProcedureDefinition : SourceDefinition
 
 public class ParameterDefinition
 {
+    public string Name { get; set; } = null!;
+    public bool? Required { get; set; } = false;
+    public string? Default { get; set; }
+    public string? Description { get; set; }
     public Type SystemType { get; set; } = null!;
     public DbType? DbType { get; set; }
     public SqlDbType? SqlDbType { get; set; }

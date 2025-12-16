@@ -31,6 +31,12 @@
         "provider": "StaticWebApps"
       },
       "mode": "development"
+    },
+    "telemetry": {
+      "app-insights": {
+        "enabled": true,
+        "connection-string": "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://dc.services.visualstudio.com/v2/track"
+      }
     }
   },
   "entities": {

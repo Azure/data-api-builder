@@ -22,7 +22,6 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulato
 /// </summary>
 public class SimulatorAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-#if NET8_0_OR_GREATER
     /// <summary>
     /// Constructor for the SimulatorAuthenticationHandler.
     /// Note the parameters are required by the base class.
@@ -42,25 +41,6 @@ public class SimulatorAuthenticationHandler : AuthenticationHandler<Authenticati
         : base(options, logger, encoder)
     {
     }
-#else
-    /// <summary>
-    /// Constructor for the SimulatorAuthenticationHandler.
-    /// Note the parameters are required by the base class.
-    /// </summary>
-    /// <param name="runtimeConfigProvider">Runtime configuration provider.</param>
-    /// <param name="options">Simulator authentication options.</param>
-    /// <param name="logger">Logger factory.</param>
-    /// <param name="encoder">URL encoder.</param>
-    /// <param name="clock">System clock.</param>
-    public SimulatorAuthenticationHandler(
-        RuntimeConfigProvider runtimeConfigProvider,
-        IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger,
-        UrlEncoder encoder,
-        ISystemClock clock) : base(options, logger, encoder, clock)
-    {
-    }
-#endif
 
     /// <summary>
     /// Gets any authentication data for a request. When a client role header is present,
@@ -69,7 +49,7 @@ public class SimulatorAuthenticationHandler : AuthenticationHandler<Authenticati
     /// authenticated user.
     /// </summary>
     /// <seealso cref="https://github.com/microsoft/referencesource/blob/master/mscorlib/system/security/claims/ClaimsIdentity.cs"/>
-    /// <seealso cref="https://github.com/dotnet/aspnetcore/blob/v6.0.10/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs"/>
+    /// <seealso cref="https://github.com/dotnet/aspnetcore/blob/v8.0.10/src/Http/Authentication.Abstractions/src/AuthenticationTicket.cs"/>
     /// <returns>An authentication result to ASP.NET Core library authentication mechanisms</returns>
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -85,7 +65,7 @@ public class SimulatorAuthenticationHandler : AuthenticationHandler<Authenticati
 
         // AuthenticationTicket is Asp.Net Core Abstraction of Authentication information
         // of the authenticated user.
-        AuthenticationTicket ticket = new(claimsPrincipal, EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME);
+        AuthenticationTicket ticket = new(claimsPrincipal, SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME);
         AuthenticateResult success = AuthenticateResult.Success(ticket);
         return Task.FromResult(success);
     }

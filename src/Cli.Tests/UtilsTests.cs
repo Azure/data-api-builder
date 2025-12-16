@@ -137,13 +137,13 @@ public class UtilsTests
     public void TestTryParseSourceParameterDictionary()
     {
         IEnumerable<string>? parametersList = new string[] { "param1:123", "param2:-243", "param3:220.12", "param4:True", "param5:dab" };
-        Assert.IsTrue(TryParseSourceParameterDictionary(parametersList, out Dictionary<string, object>? sourceParameters));
+        Assert.IsTrue(TryParseSourceParameterDictionary(parametersList, out List<Azure.DataApiBuilder.Config.ObjectModel.ParameterMetadata>? sourceParameters));
         Assert.IsNotNull(sourceParameters);
-        Assert.AreEqual(sourceParameters.GetValueOrDefault("param1"), 123);
-        Assert.AreEqual(sourceParameters.GetValueOrDefault("param2"), -243);
-        Assert.AreEqual(sourceParameters.GetValueOrDefault("param3"), 220.12);
-        Assert.AreEqual(sourceParameters.GetValueOrDefault("param4"), true);
-        Assert.AreEqual(sourceParameters.GetValueOrDefault("param5"), "dab");
+        Assert.AreEqual(123, Convert.ToInt32(sourceParameters.First(p => p.Name == "param1").Default));
+        Assert.AreEqual(-243, Convert.ToInt32(sourceParameters.First(p => p.Name == "param2").Default));
+        Assert.AreEqual(220.12, Convert.ToDouble(sourceParameters.First(p => p.Name == "param3").Default));
+        Assert.AreEqual(true, Convert.ToBoolean(sourceParameters.First(p => p.Name == "param4").Default));
+        Assert.AreEqual("dab", Convert.ToString(sourceParameters.First(p => p.Name == "param5").Default));
     }
 
     /// <summary>
@@ -207,6 +207,10 @@ public class UtilsTests
     [DataRow("AzureAD", null, "issuer-xxx", false, DisplayName = "FAIL: AzureAD incorrectly configured with no audience specified.")]
     [DataRow("AzureAD", "aud-xxx", null, false, DisplayName = "FAIL: AzureAD incorrectly configured with no issuer specified.")]
     [DataRow("AzureAD", null, null, false, DisplayName = "FAIL: AzureAD incorrectly configured with no audience or issuer specified.")]
+    [DataRow("EntraID", "aud-xxx", "issuer-xxx", true, DisplayName = "PASS: EntraID correctly configured with both audience and issuer.")]
+    [DataRow("EntraID", null, "issuer-xxx", false, DisplayName = "FAIL: EntraID incorrectly configured with no audience specified.")]
+    [DataRow("EntraID", "aud-xxx", null, false, DisplayName = "FAIL: EntraID incorrectly configured with no issuer specified.")]
+    [DataRow("EntraID", null, null, false, DisplayName = "FAIL: EntraID incorrectly configured with no audience or issuer specified.")]
     public void TestValidateAudienceAndIssuerForAuthenticationProvider(
         string authenticationProvider,
         string? audience,

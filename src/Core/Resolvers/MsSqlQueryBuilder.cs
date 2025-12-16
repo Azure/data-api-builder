@@ -3,21 +3,20 @@
 
 using System.Data.Common;
 using System.Text;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     /// <summary>
     /// Class for building MsSql queries.
     /// </summary>
-    public class MsSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
+    public class MsSqlQueryBuilder : BaseTSqlQueryBuilder, IQueryBuilder
     {
-        private const string FOR_JSON_SUFFIX = " FOR JSON PATH, INCLUDE_NULL_VALUES";
-        private const string WITHOUT_ARRAY_WRAPPER_SUFFIX = "WITHOUT_ARRAY_WRAPPER";
+        private const string MSSQL_ESCAPE_CHAR = "\\";
 
         // Name of the column which stores the number of records with given PK. Used in Upsert queries.
         public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
@@ -42,37 +41,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     structure.JoinQueries.Select(
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
-            string predicates;
+            string predicates = BuildPredicates(structure);
 
-            if (structure.IsMultipleCreateOperation)
-            {
-                predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                    structure.FilterPredicates,
-                                    Build(structure.Predicates, " OR ", isMultipleCreateOperation: true),
-                                    Build(structure.PaginationMetadata.PaginationPredicate));
-            }
-            else
-            {
-                predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                    structure.FilterPredicates,
-                                    Build(structure.Predicates),
-                                    Build(structure.PaginationMetadata.PaginationPredicate));
-            }
+            string aggregations = BuildAggregationColumns(structure);
 
-            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
-                + $" FROM {fromSql}"
-                + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.OrderByColumns)}";
+            StringBuilder query = new();
 
-            query += FOR_JSON_SUFFIX;
-            if (!structure.IsListQuery)
-            {
-                query += "," + WITHOUT_ARRAY_WRAPPER_SUFFIX;
-            }
+            query.Append($"SELECT TOP {structure.Limit()} {WrappedColumns(structure)} {aggregations}")
+                .Append($" FROM {fromSql}")
+                .Append($" WHERE {predicates}")
+                .Append(BuildGroupBy(structure))
+                .Append(BuildHaving(structure))
+                .Append(BuildOrderBy(structure))
+                .Append(BuildJsonPath(structure));
 
-            return query;
+            return query.ToString();
+        }
+
+        /// <summary>
+        /// Helper method to add ESCAPE clause to the LIKE clauses in the query.
+        /// </summary>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        private static string AddEscapeToLikeClauses(string predicate)
+        {
+            const string escapeClause = $" ESCAPE '{MSSQL_ESCAPE_CHAR}'";
+            // Regex to find LIKE clauses and append ESCAPE
+            return Regex.Replace(predicate, @"(LIKE\s+@[\w\d]+)", $"$1{escapeClause}", RegexOptions.IgnoreCase);
         }
 
         /// <inheritdoc />
@@ -96,10 +91,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder insertQuery = new();
             if (!isInsertDMLTriggerEnabled)
             {
-                // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
-                insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
-                    $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
-                insertQuery.Append(values);
+                if (!string.IsNullOrEmpty(insertColumns))
+                {
+                    // When there is no DML trigger enabled on the table for insert operation, we can use OUTPUT clause to return the data.
+                    insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} ");
+                    insertQuery.Append(values);
+                }
+                else
+                {
+                    insertQuery.Append($"INSERT INTO {tableName} OUTPUT " +
+                        $"{MakeOutputColumns(structure.OutputColumns, OutputQualifier.Inserted.ToString())} DEFAULT VALUES");
+                }
             }
             else
             {
@@ -422,7 +425,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private string Build(LabelledColumn column, string columnPrefix)
         {
-            if (columnPrefix.IsNullOrEmpty())
+            if (string.IsNullOrEmpty(columnPrefix))
             {
                 return $"{QuoteIdentifier(column.ColumnName)} AS {QuoteIdentifier(column.Label)}";
             }
@@ -524,6 +527,38 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "On ST.object_id = STE.object_id AND ST.parent_id = object_id(@param0 + '.' + @param1) WHERE ST.is_disabled = 0;";
 
             return query;
+        }
+
+        public string QuoteTableNameAsDBConnectionParam(string param)
+        {
+            // Table names in MSSQL should not be quoted when used as DB Connection Params.
+            return param;
+        }
+
+        protected override string BuildPredicates(SqlQueryStructure structure)
+        {
+            string predicates;
+            if (structure.IsMultipleCreateOperation)
+            {
+                predicates = JoinPredicateStrings(
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                    structure.FilterPredicates,
+                                    Build(structure.Predicates, " OR ", isMultipleCreateOperation: true),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+            else
+            {
+                predicates = JoinPredicateStrings(
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                    structure.FilterPredicates,
+                                    Build(structure.Predicates),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+
+            // we add '\' character to escape the special characters in the string, but if special characters are needed to be searched
+            // as literal characters we need to escape the '\' character itself. Since we add `\` only for LIKE, so we search if the query
+            // contains LIKE and add the ESCAPE clause accordingly.
+            return AddEscapeToLikeClauses(predicates);
         }
     }
 }

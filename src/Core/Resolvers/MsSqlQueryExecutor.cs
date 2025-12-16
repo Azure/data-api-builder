@@ -16,7 +16,6 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Config.DabConfigEvents;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -45,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
             => base.ConnectionStringBuilders;
 
-        public DefaultAzureCredential AzureCredential { get; set; } = new();
+        public DefaultAzureCredential AzureCredential { get; set; } = new();  // CodeQL [SM05137] DefaultAzureCredential will use Managed Identity if available or fallback to default.
 
         /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials
@@ -65,6 +64,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
+        private const string QUERYIDHEADER = "QueryIdentifyingIds";
+
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
@@ -77,12 +78,61 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor,
                   handler)
         {
-            handler?.Subscribe(MSSQL_QUERY_EXECUTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
             ConfigureMsSqlQueryEecutor();
+        }
+
+        /// <summary>
+        /// Creates a SQLConnection to the data source of given name. This method also adds an event handler to
+        /// the connection's InfoMessage to extract the statement ID from the request and add it to httpcontext.
+        /// </summary>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>The SQLConnection</returns>
+        /// <exception cref="DataApiBuilderException">Exception thrown if datasource is not found.</exception>
+        public override SqlConnection CreateConnection(string dataSourceName)
+        {
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
+            {
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
+
+            SqlConnection conn = new()
+            {
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+            };
+
+            // Extract info message from SQLConnection
+            conn.InfoMessage += (object sender, SqlInfoMessageEventArgs e) =>
+            {
+                try
+                {
+                    // Log the statement ids returned by the SQL engine when we executed the batch.
+                    // This helps in correlating with SQL engine telemetry.
+
+                    // If the info message has an error code that matches the well-known codes used for returning statement ID,
+                    // then we can be certain that the message contains no PII.
+                    IEnumerable<SqlError> errorsReceived = e.Errors.Cast<SqlError>();
+
+                    IEnumerable<SqlInformationalCodes> allInfoCodesKnown = Enum.GetValues(typeof(SqlInformationalCodes)).Cast<SqlInformationalCodes>();
+
+                    IEnumerable<string> infoErrorMessagesReceived = errorsReceived.Join(allInfoCodesKnown, error => error.Number, code => (int)code, (error, code) => error.Message);
+
+                    foreach (string infoErrorMessageReceived in infoErrorMessagesReceived)
+                    {
+                        // Add statement ID to request
+                        AddStatementIDToMiddlewareContext(infoErrorMessageReceived);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    QueryExecutorLogger.LogError($"Error in info message handler while extracting query-identifying ID from SQLConnection. Error: {ex.Message}");
+                }
+            };
+
+            return conn;
         }
 
         /// <summary>
@@ -107,19 +157,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _dataSourceToSessionContextUsage[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
-        }
-
-        /// <summary>
-        /// Function registered for callback during a hot-reload scenario.
-        /// </summary>
-        /// <param name="sender">The calling object.</param>
-        /// <param name="args">Event arguments.</param>
-        public void MsSqlQueryExecutorOnConfigChanged(object? sender, HotReloadEventArgs args)
-        {
-            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
-            _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
-            _accessTokensFromConfiguration = _runtimeConfigProvider.ManagedIdentityAccessToken;
-            ConfigureMsSqlQueryEecutor();
         }
 
         /// <summary>
@@ -247,7 +284,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
                 parameters.Add(paramName, new(claimValue));
                 // Append statement to set read only param value - can be set only once for a connection.
-                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 1;";
+                string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 0;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);
             }
 
@@ -377,6 +414,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (parameterEntry.Value.SqlDbType is not null)
                 {
                     parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
+                }
+            }
+        }
+
+        private void AddStatementIDToMiddlewareContext(string statementId)
+        {
+            HttpContext? httpContext = HttpContextAccessor?.HttpContext;
+            if (httpContext != null)
+            {
+                // locking is because we could have multiple queries in a single http request and each query will be processed in parallel leading to concurrent access of the httpContext.Items.
+                lock (_httpContextLock)
+                {
+                    if (httpContext.Items.TryGetValue(QUERYIDHEADER, out object? currentValue) && currentValue is not null)
+                    {
+                        try
+                        {
+                            httpContext.Items[QUERYIDHEADER] = (string)currentValue + ";" + statementId;
+                        }
+                        catch
+                        {
+                            QueryExecutorLogger.LogWarning("Could not cast query identifying ID to string. The ID was not added to httpcontext");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        httpContext.Items[QUERYIDHEADER] = statementId;
+                    }
                 }
             }
         }

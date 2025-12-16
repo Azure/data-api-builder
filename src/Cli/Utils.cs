@@ -7,9 +7,9 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Cli.Commands;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
 
 /// <summary>
 /// Contains the methods for transforming objects, serialization options.
@@ -175,7 +175,7 @@ namespace Cli
                 uriComponent = uriComponent.Substring(1);
             }
 
-            return !DoesUriComponentContainReservedChars(uriComponent);
+            return !RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(uriComponent);
         }
 
         /// <summary>
@@ -329,19 +329,24 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method checks that parameter is only used with Stored Procedure, while
-        /// key-fields only with table/views. Also ensures that key-fields are always
-        /// provided for views.
+        /// Validates correct usage of parameters and key-fields based on the source type.
+        /// Ensures that parameters are only used with stored procedures, key-fields only with tables/views,
+        /// and that key-fields are always provided for views.
         /// </summary>
-        /// <param name="sourceType">type of the source object.</param>
-        /// <param name="parameters">IEnumerable string containing parameters for stored-procedure.</param>
-        /// <param name="keyFields">IEnumerable string containing key columns for table/view.</param>
-        /// <returns> Returns true when successful else on failure, returns false.</returns>
+        /// <param name="sourceType">Type of the source object.</param>
+        /// <param name="parameters">IEnumerable of strings containing parameters for stored procedures (old format).</param>
+        /// <param name="parametersNameCollection">IEnumerable of strings containing parameter names for stored procedures (new format).</param>
+        /// <param name="keyFields">IEnumerable of strings containing key columns for tables/views.</param>
+        /// <returns>True if the pairing is valid; otherwise, false.</returns>
         public static bool VerifyCorrectPairingOfParameterAndKeyFieldsWithType(
             EntitySourceType? sourceType,
-            IEnumerable<string>? parameters,
+            IEnumerable<string>? parameters,           // old format
+            IEnumerable<string>? parametersNameCollection,       // new format
             IEnumerable<string>? keyFields)
         {
+            bool hasOldParams = parameters is not null && parameters.Any();
+            bool hasNewParams = parametersNameCollection is not null && parametersNameCollection.Any();
+
             if (sourceType is EntitySourceType.StoredProcedure)
             {
                 if (keyFields is not null && keyFields.Any())
@@ -353,7 +358,7 @@ namespace Cli
             else
             {
                 // For Views and Tables
-                if (parameters is not null && parameters.Any())
+                if (hasOldParams || hasNewParams)
                 {
                     _logger.LogError("Tables/Views don't support parameters.");
                     return false;
@@ -382,7 +387,7 @@ namespace Cli
         public static bool TryCreateSourceObject(
             string name,
             EntitySourceType? type,
-            Dictionary<string, object>? parameters,
+            List<ParameterMetadata>? parameters,
             string[]? keyFields,
             [NotNullWhen(true)] out EntitySource? sourceObject)
         {
@@ -407,21 +412,23 @@ namespace Cli
         /// <returns> Returns true when successful else on failure, returns false.</returns>
         public static bool TryParseSourceParameterDictionary(
             IEnumerable<string>? parametersList,
-            out Dictionary<string, object>? sourceParameters)
+            out List<ParameterMetadata>? parameterMetadataList)
         {
-            sourceParameters = null;
+            parameterMetadataList = null;
+
             if (parametersList is null)
             {
                 return true;
             }
 
-            sourceParameters = new(StringComparer.OrdinalIgnoreCase);
+            parameterMetadataList = new();
+
             foreach (string param in parametersList)
             {
                 string[] items = param.Split(SEPARATOR);
                 if (items.Length != 2)
                 {
-                    sourceParameters = null;
+                    parameterMetadataList = null;
                     _logger.LogError("Invalid format for --source.params");
                     _logger.LogError("Correct source parameter syntax: --source.params \"key1:value1,key2:value2,...\".");
                     return false;
@@ -430,12 +437,19 @@ namespace Cli
                 string paramKey = items[0];
                 object paramValue = ParseStringValue(items[1]);
 
-                sourceParameters.Add(paramKey, paramValue);
+                // Add to ParameterMetadata list with default values for rich metadata
+                parameterMetadataList.Add(new ParameterMetadata
+                {
+                    Name = paramKey,
+                    Default = paramValue.ToString(),
+                    Required = false,
+                    Description = null
+                });
             }
 
-            if (!sourceParameters.Any())
+            if (!parameterMetadataList.Any())
             {
-                sourceParameters = null;
+                parameterMetadataList = null;
             }
 
             return true;
@@ -826,6 +840,56 @@ namespace Cli
             }
 
             return graphQLType;
+        }
+
+        /// <summary>
+        /// Constructs the EntityCacheOption for Add/Update.
+        /// </summary>
+        /// <param name="cacheEnabled">String value that defines if the cache is enabled.</param>
+        /// <param name="cacheTtl">Int that gives time to live in seconds for cache.</param>
+        /// <returns>EntityCacheOption if values are provided for cacheEnabled or cacheTtl, null otherwise.</returns>
+        public static EntityCacheOptions? ConstructCacheOptions(string? cacheEnabled, string? cacheTtl)
+        {
+            if (cacheEnabled is null && cacheTtl is null)
+            {
+                return null;
+            }
+
+            EntityCacheOptions cacheOptions = new();
+            bool isEnabled = false;
+            bool isCacheTtlUserProvided = false;
+            int ttl = EntityCacheOptions.DEFAULT_TTL_SECONDS;
+
+            if (cacheEnabled is not null && !bool.TryParse(cacheEnabled, out isEnabled))
+            {
+                _logger.LogError("Invalid format for --cache.enabled. Accepted values are true/false.");
+            }
+
+            if ((cacheTtl is not null && !int.TryParse(cacheTtl, out ttl)) || ttl < 0)
+            {
+                _logger.LogError("Invalid format for --cache.ttl. Accepted values are any non-negative integer.");
+            }
+
+            // This is needed so the cacheTtl is correctly written to config.
+            if (cacheTtl is not null)
+            {
+                isCacheTtlUserProvided = true;
+            }
+
+            // Both cacheEnabled and cacheTtl can not be null here, so if either one
+            // is, the other is not, and we return the cacheOptions with just that other
+            // value.
+            if (cacheEnabled is null)
+            {
+                return cacheOptions with { TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
+            }
+
+            if (cacheTtl is null)
+            {
+                return cacheOptions with { Enabled = isEnabled };
+            }
+
+            return cacheOptions with { Enabled = isEnabled, TtlSeconds = ttl, UserProvidedTtlOptions = isCacheTtlUserProvided };
         }
 
         /// <summary>

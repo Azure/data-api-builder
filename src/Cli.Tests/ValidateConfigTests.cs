@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Serilog;
+
 namespace Cli.Tests;
 /// <summary>
 /// Test for config file initialization.
@@ -9,7 +13,7 @@ namespace Cli.Tests;
 public class ValidateConfigTests
     : VerifyBase
 {
-    private IFileSystem? _fileSystem;
+    private MockFileSystem? _fileSystem;
     private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
 
     [TestInitialize]
@@ -146,6 +150,79 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// This Test is used to verify that DAB fails when the JWT properties are missing for OAuth based providers
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("AzureAD")]
+    [DataRow("EntraID")]
+    [DataRow("Custom")]
+    public void TestMissingJwtProperties(string authScheme)
+    {
+        string ConfigWithJwtAuthentication = $"{{{SAMPLE_SCHEMA_DATA_SOURCE}, {RUNTIME_SECTION_JWT_AUTHENTICATION_PLACEHOLDER}, \"entities\": {{ }}}}";
+        ConfigWithJwtAuthentication = ConfigWithJwtAuthentication.Replace("<>", authScheme, StringComparison.OrdinalIgnoreCase);
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithJwtAuthentication);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// This Test is used to verify that the validate command is able to catch when data source field or entities field is missing.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigFailsWithNoEntities()
+    {
+        string ConfigWithoutEntities = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithoutEntities);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// This Test is used to verify that the validate command is able to catch when data source field is missing.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateConfigFailsWithNoDataSource()
+    {
+        string ConfigWithoutDataSource = $"{{{SCHEMA_PROPERTY},{RUNTIME_SECTION_WITH_EMPTY_ENTITIES}}}";
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, ConfigWithoutDataSource);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// This method implicitly validates that RuntimeConfigValidator::ValidateConfigSchema(...) successfully
     /// executes against a config file referencing environment variables.
     /// [CLI] ConfigGenerator::IsConfigValid(...)
@@ -164,7 +241,7 @@ public class ValidateConfigTests
     ///     "object": "s001.book",
     ///     "parameters": {
     ///         "param1": "@env('sp_param1_int')", // INT
-    ///         "param2": "@env('sp_param2_bool')" // BOOL
+    ///         "param2": "@env('sp_param3_bool')" // BOOL
     ///     }
     ///   }
     /// </summary>
@@ -175,7 +252,7 @@ public class ValidateConfigTests
         Environment.SetEnvironmentVariable($"connection-string", SAMPLE_TEST_CONN_STRING);
         Environment.SetEnvironmentVariable($"database-type", "mssql");
         Environment.SetEnvironmentVariable($"sp_param1_int", "123");
-        Environment.SetEnvironmentVariable($"sp_param2_bool", "true");
+        Environment.SetEnvironmentVariable($"sp_param3_bool", "true");
 
         // Capture console output to get error messaging.
         StringWriter writer = new();
@@ -197,5 +274,89 @@ public class ValidateConfigTests
         Assert.IsTrue(
             condition: loggerOutput.Contains("The config satisfies the schema requirements."),
             message: "RuntimeConfigValidator::ValidateConfigSchema(...) didn't communicate successful config schema validation.");
+    }
+
+    /// <summary>
+    /// Tests that validation fails when AKV options are configured without an endpoint.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateAKVOptionsWithoutEndpointFails()
+    {
+        // Arrange
+        ConfigureOptions options = new(
+            azureKeyVaultRetryPolicyMaxCount: 1,
+            azureKeyVaultRetryPolicyDelaySeconds: 1,
+            azureKeyVaultRetryPolicyMaxDelaySeconds: 1,
+            azureKeyVaultRetryPolicyMode: AKVRetryPolicyMode.Exponential,
+            azureKeyVaultRetryPolicyNetworkTimeoutSeconds: 1,
+            config: TEST_RUNTIME_CONFIG_FILE
+        );
+
+        // Act
+        await ValidatePropertyOptionsFails(options);
+    }
+
+    /// <summary>
+    /// Tests that validation fails when Azure Log Analytics options are configured without the Auth options.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateAzureLogAnalyticsOptionsWithoutAuthFails()
+    {
+        // Arrange
+        ConfigureOptions options = new(
+            azureLogAnalyticsEnabled: CliBool.True,
+            azureLogAnalyticsDabIdentifier: "dab-identifier-test",
+            azureLogAnalyticsFlushIntervalSeconds: 1,
+            config: TEST_RUNTIME_CONFIG_FILE
+        );
+
+        // Act
+        await ValidatePropertyOptionsFails(options);
+    }
+
+    /// <summary>
+    /// Tests that validation fails when File Sink options are configured without the 'path' property.
+    /// </summary>
+    [TestMethod]
+    public async Task TestValidateFileSinkOptionsWithoutPathFails()
+    {
+        // Arrange
+        ConfigureOptions options = new(
+            fileSinkEnabled: CliBool.True,
+            fileSinkRollingInterval: RollingInterval.Day,
+            fileSinkRetainedFileCountLimit: 1,
+            fileSinkFileSizeLimitBytes: 1024,
+            config: TEST_RUNTIME_CONFIG_FILE
+        );
+
+        // Act
+        await ValidatePropertyOptionsFails(options);
+    }
+
+    /// <summary>
+    /// Helper function that ensures properties with missing options fail validation.
+    /// </summary>
+    private async Task ValidatePropertyOptionsFails(ConfigureOptions options)
+    {
+        _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+        Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+        Mock<RuntimeConfigProvider> mockRuntimeConfigProvider = new(_runtimeConfigLoader);
+        RuntimeConfigValidator validator = new(mockRuntimeConfigProvider.Object, _fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+        Mock<ILoggerFactory> mockLoggerFactory = new();
+        Mock<ILogger<JsonConfigSchemaValidator>> mockLogger = new();
+        mockLoggerFactory
+            .Setup(factory => factory.CreateLogger(typeof(JsonConfigSchemaValidator).FullName!))
+            .Returns(mockLogger.Object);
+
+        // Act: Attempts to add File Sink options without empty path
+        bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+        // Assert: Settings are configured, config parses, validation fails.
+        Assert.IsTrue(isSuccess);
+        string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+        Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+        JsonSchemaValidationResult result = await validator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, mockLoggerFactory.Object);
+        Assert.IsFalse(result.IsValid);
     }
 }

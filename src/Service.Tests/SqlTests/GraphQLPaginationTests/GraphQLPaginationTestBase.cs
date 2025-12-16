@@ -84,70 +84,100 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
+            string expected = @"{
+                ""items"": [
+                {
+                    ""id"": 1,
+                    ""title"": ""Awesome book""
+                },
+                {
+                    ""id"": 2,
+                    ""title"": ""Also Awesome book""
+                },
+                {
+                    ""id"": 3,
+                    ""title"": ""Great wall of china explained""
+                },
+                {
+                    ""id"": 4,
+                    ""title"": ""US history in a nutshell""
+                },
+                {
+                    ""id"": 5,
+                    ""title"": ""Chernobyl Diaries""
+                },
+                {
+                    ""id"": 6,
+                    ""title"": ""The Palace Door""
+                },
+                {
+                    ""id"": 7,
+                    ""title"": ""The Groovy Bar""
+                },
+                {
+                    ""id"": 8,
+                    ""title"": ""Time to Eat""
+                },
+                {
+                    ""id"": 9,
+                    ""title"": ""Policy-Test-01""
+                },
+                {
+                    ""id"": 10,
+                    ""title"": ""Policy-Test-02""
+                },
+                {
+                    ""id"": 11,
+                    ""title"": ""Policy-Test-04""
+                },
+                {
+                    ""id"": 12,
+                    ""title"": ""Time to Eat 2""
+                },
+                {
+                    ""id"": 13,
+                    ""title"": ""Before Sunrise""
+                },
+                {
+                    ""id"": 14,
+                    ""title"": ""Before Sunset""
+                },
+                {
+                    ""id"": 15,
+                    ""title"": ""SQL_CONN""
+                },
+                {
+                    ""id"": 16,
+                    ""title"": ""SOME%CONN""
+                },
+                {
+                    ""id"": 17,
+                    ""title"": ""CONN%_CONN""
+                },
+                {
+                    ""id"": 18,
+                    ""title"": ""[Special Book]""
+                },
+                {
+                    ""id"": 19,
+                    ""title"": ""ME\\YOU""
+                },
+                {
+                    ""id"": 20,
+                    ""title"": ""C:\\\\LIFE""
+                },
+                {
+                    ""id"": 21,
+                    ""title"": """"
+                }
+                ],
+                ""endCursor"": null,
+                ""hasNextPage"": false
+            }";
+
+            // Note: The max page size is 21 for MsSql and 20 for all other data sources, so when using -1
             // this resultset represents all books in the db.
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string expected = @"{
-              ""items"": [
-                {
-                  ""id"": 1,
-                  ""title"": ""Awesome book""
-                },
-                {
-                  ""id"": 2,
-                  ""title"": ""Also Awesome book""
-                },
-                {
-                  ""id"": 3,
-                  ""title"": ""Great wall of china explained""
-                },
-                {
-                  ""id"": 4,
-                  ""title"": ""US history in a nutshell""
-                },
-                {
-                  ""id"": 5,
-                  ""title"": ""Chernobyl Diaries""
-                },
-                {
-                  ""id"": 6,
-                  ""title"": ""The Palace Door""
-                },
-                {
-                  ""id"": 7,
-                  ""title"": ""The Groovy Bar""
-                },
-                {
-                  ""id"": 8,
-                  ""title"": ""Time to Eat""
-                },
-                {
-                  ""id"": 9,
-                  ""title"": ""Policy-Test-01""
-                },
-                {
-                  ""id"": 10,
-                  ""title"": ""Policy-Test-02""
-                },
-                {
-                  ""id"": 11,
-                  ""title"": ""Policy-Test-04""
-                },
-                {
-                  ""id"": 12,
-                  ""title"": ""Time to Eat 2""
-                },
-                {
-                  ""id"": 13,
-                  ""title"": ""Before Sunrise""
-                },
-                {
-                  ""id"": 14,
-                  ""title"": ""Before Sunset""
-                }
-              ],
-              ""endCursor"": null,
-              ""hasNextPage"": false
-            }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -172,67 +202,96 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
             string expected = @"{
-              ""items"": [
+                ""items"": [
                 {
-                  ""id"": 1,
-                  ""title"": ""Awesome book""
+                    ""id"": 1,
+                    ""title"": ""Awesome book""
                 },
                 {
-                  ""id"": 2,
-                  ""title"": ""Also Awesome book""
+                    ""id"": 2,
+                    ""title"": ""Also Awesome book""
                 },
                 {
-                  ""id"": 3,
-                  ""title"": ""Great wall of china explained""
+                    ""id"": 3,
+                    ""title"": ""Great wall of china explained""
                 },
                 {
-                  ""id"": 4,
-                  ""title"": ""US history in a nutshell""
+                    ""id"": 4,
+                    ""title"": ""US history in a nutshell""
                 },
                 {
-                  ""id"": 5,
-                  ""title"": ""Chernobyl Diaries""
+                    ""id"": 5,
+                    ""title"": ""Chernobyl Diaries""
                 },
                 {
-                  ""id"": 6,
-                  ""title"": ""The Palace Door""
+                    ""id"": 6,
+                    ""title"": ""The Palace Door""
                 },
                 {
-                  ""id"": 7,
-                  ""title"": ""The Groovy Bar""
+                    ""id"": 7,
+                    ""title"": ""The Groovy Bar""
                 },
                 {
-                  ""id"": 8,
-                  ""title"": ""Time to Eat""
+                    ""id"": 8,
+                    ""title"": ""Time to Eat""
                 },
                 {
-                  ""id"": 9,
-                  ""title"": ""Policy-Test-01""
+                    ""id"": 9,
+                    ""title"": ""Policy-Test-01""
                 },
                 {
-                  ""id"": 10,
-                  ""title"": ""Policy-Test-02""
+                    ""id"": 10,
+                    ""title"": ""Policy-Test-02""
                 },
                 {
-                  ""id"": 11,
-                  ""title"": ""Policy-Test-04""
+                    ""id"": 11,
+                    ""title"": ""Policy-Test-04""
                 },
                 {
-                  ""id"": 12,
-                  ""title"": ""Time to Eat 2""
+                    ""id"": 12,
+                    ""title"": ""Time to Eat 2""
                 },
                 {
-                  ""id"": 13,
-                  ""title"": ""Before Sunrise""
+                    ""id"": 13,
+                    ""title"": ""Before Sunrise""
                 },
                 {
-                  ""id"": 14,
-                  ""title"": ""Before Sunset""
+                    ""id"": 14,
+                    ""title"": ""Before Sunset""
+                },
+                {
+                    ""id"": 15,
+                    ""title"": ""SQL_CONN""
+                },
+                {
+                    ""id"": 16,
+                    ""title"": ""SOME%CONN""
+                },
+                {
+                    ""id"": 17,
+                    ""title"": ""CONN%_CONN""
+                },
+                {
+                    ""id"": 18,
+                    ""title"": ""[Special Book]""
+                },
+                {
+                    ""id"": 19,
+                    ""title"": ""ME\\YOU""
+                },
+                {
+                    ""id"": 20,
+                    ""title"": ""C:\\\\LIFE""
+                },
+                {
+                    ""id"": 21,
+                    ""title"": """"
                 }
-              ],
-              ""endCursor"": null,
-              ""hasNextPage"": false
+                ],
+                ""endCursor"": null,
+                ""hasNextPage"": false
             }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());

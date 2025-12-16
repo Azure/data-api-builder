@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -63,6 +66,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(msSqlQuery);
         }
 
+        /// <summary>
+        /// Tests IN operator using query variables
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithVariables()
+        {
+            string msSqlQuery = $"SELECT id, title FROM books where id IN (1,2) ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithVariables(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests IN operator with > 100 values
+        /// Expects to return a DAB exepcetion with bad request status code
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithExceedingValueCount()
+        {
+            Random rnd = new();
+            string result = string.Join(", ", Enumerable.Range(0, 105).Select(_ => rnd.Next(1, 21)));
+            List<int> numbers = result.Split(',')
+                         .Select(s => int.Parse(s.Trim()))
+                         .ToList();
+            string msSqlQuery = $"SELECT id, title FROM books where id IN ${(result)} ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query ($inVar: [Int]!) {
+		        books(filter: { id:  { in: $inVar } }  orderBy:  { id: ASC }) {
+			        items {
+				        id
+				        title
+			        }
+		        }
+	        }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false, new() { { "inVar", numbers } });
+            SqlTestHelper.TestForErrorInGraphQLResponse(actual.ToString(), "IN operator filter object cannot process more than 100 values at a time.");
+        }
+
+        /// <summary>
+        /// Tests IN operator with null's and empty values
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
+        /// </summary>
+        [TestMethod]
+        public async Task InQueryWithNullAndEmptyvalues()
+        {
+            string msSqlQuery = $"SELECT string_types FROM type_table where string_types IN ('lksa;jdflasdf;alsdflksdfkldj', ' ', NULL) FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await InQueryWithNullAndEmptyvalues(msSqlQuery);
+        }
+
         [TestMethod]
         public async Task MultipleResultQueryWithMappings()
         {
@@ -73,6 +124,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
             await MultipleResultQueryWithMappings(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Tests IN operator with aggregations
+        /// </summary>
+        [TestMethod]
+        public async Task INOperatorWithAggregations()
+        {
+            string dbQuery = @"
+                SELECT TOP 100 [table0].[publisher_id] AS [publisher_id] ,
+                                count([table0].[id])  AS [publisherCount]
+                        FROM [dbo].[books] AS [table0]
+                        WHERE 1 = 1
+                        GROUP BY [table0].[publisher_id]
+                        HAVING count([table0].[id])  IN (1, 2) FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                      books {
+                        groupBy(fields: [publisher_id]) {
+                          fields{
+                            publisher_id
+                          }
+                          aggregations{
+                            publisherCount: count(field: id, having:  {
+                               in: [1, 2]
+                            })
+                          }
+                        }
+                      }
+                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStringsForAggreagtionQueries(expected, actual.ToString());
         }
 
         /// <summary>
@@ -102,6 +189,44 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ,INCLUDE_NULL_VALUES";
 
             await OneToOneJoinQuery(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test In operator and Order by with a One-To-One relationship both directions
+        /// (book -> website placement, website placememnt -> book)
+        /// <summary>
+        [TestMethod]
+        public async Task InFilterOneToOneJoinQuery()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[id] AS [id]
+                    ,[table0].[title] AS [title]
+                    ,JSON_QUERY([table1_subq].[data]) AS [websiteplacement]
+                FROM [dbo].[books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[price] AS [price], [table1].[book_id] AS [book_id]
+                    FROM [dbo].[book_website_placements] AS [table1]
+                    WHERE [table1].[book_id] = [table0].[id]
+                    ORDER BY [table1].[id] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                        ,WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE (
+                        [table0].[title] IN ('Awesome book', 'Also Awesome book')
+                        AND EXISTS (
+                            SELECT 1
+                            FROM [dbo].[book_website_placements] AS [table6]
+                            WHERE [table6].[book_id] IN (1, 2)
+                              AND [table6].[book_id] = [table0].[id]
+                              AND [table0].[id] = [table6].[book_id]
+                        )
+                    )
+                ORDER BY [table0].[id] DESC
+                FOR JSON PATH
+                    ,INCLUDE_NULL_VALUES";
+
+            await InFilterOneToOneJoinQuery(msSqlQuery);
         }
 
         /// <summary>
@@ -141,6 +266,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             ";
 
             await QueryWithSingleColumnPrimaryKey(msSqlQuery);
+        }
+
+        [TestMethod]
+        public virtual async Task QueryWithEmptyStringResult()
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 21) {
+                    title
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+
+            string title = actual.GetProperty("title").GetString();
+            Assert.AreEqual("", title);
         }
 
         [TestMethod]
@@ -412,6 +553,348 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Procedure or function 'get_publisher_by_id' expects parameter '@id', which was not supplied.");
         }
+
+        /// <summary>
+        /// Test to check GraphQL support for aggregations with aliases.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForAggregationsWithAliases()
+        {
+            string msSqlQuery = @"
+                SELECT 
+                    MAX(categoryid) AS max, 
+                    MAX(price) AS max_price,
+                    MIN(price) AS min_price,
+                    AVG(price) AS avg_price,
+                    SUM(price) AS sum_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForAggregationsWithAliases(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for aggregations with aliases and groupby.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByAggregationsWithAliases()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    MAX(categoryid) AS max,
+                    MAX(price) AS max_price,
+                    MIN(price) AS min_price,
+                    AVG(price) AS avg_price,
+                    SUM(price) AS sum_price,
+                    COUNT(categoryid) AS count
+                FROM stocks_price
+                GROUP BY categoryid
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByAggregationsWithAliases(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for min aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForMinAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    MIN(price) AS min_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForMinAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for Max aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForMaxAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    MAX(price) AS max_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForMaxAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for avg aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForAvgAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    AVG(price) AS avg_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForAvgAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for sum aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForSumAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    SUM(price) AS sum_price
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForSumAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForCountAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    COUNT(categoryid) AS count_categoryid
+                FROM stocks_price
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForCountAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for having filter.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForHavingAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    MAX(id) AS max
+                FROM publishers
+                HAVING MAX(id) > 2346
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForHavingAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByHavingAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    SUM(price) AS sum_price
+                FROM stocks_price
+                GROUP BY categoryid, pieceid
+                HAVING SUM(price) > 50
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByHavingAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByHavingFieldsAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    categoryid,
+                    pieceid,
+                    SUM(price) AS sum_price,
+                    COUNT(pieceid) AS count_piece
+                FROM stocks_price
+                GROUP BY categoryid, pieceid
+                HAVING SUM(price) > 50 AND COUNT(pieceid) <= 100
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByHavingFieldsAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check GraphQL support for count aggregations.
+        /// This test verifies that the SQL query results are correctly mapped to the expected GraphQL format.
+        /// </summary>
+        [TestMethod]
+        public async Task TestSupportForGroupByNoAggregation()
+        {
+            string msSqlQuery = @"
+                SELECT
+                    categoryid,
+                    pieceid
+                FROM stocks_price
+                GROUP BY categoryid, pieceid
+                FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+            // Execute the test for the SQL query
+            await TestSupportForGroupByNoAggregation(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to check that an exception is thrown when both items and groupBy are present in the same query.
+        /// </summary>
+        [TestMethod]
+        public async Task TestInvalidQueryWithItemsAndGroupBy()
+        {
+            string graphQLQueryName = "stocks_prices";
+            string graphQLQuery = @"
+    {
+        stocks_prices {
+            items {
+                price
+            }
+            groupBy {
+                aggregations {
+                    sum_price: sum(field: price)
+                }
+            }
+        }
+    }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            if (result[0].TryGetProperty("message", out JsonElement message))
+            {
+                Assert.IsTrue(message.ToString() == "Cannot have both groupBy and items in the same query", "Requesting groupby and items in same query should fail.");
+            }
+        }
+
+        [TestMethod]
+        public override async Task TestNoAggregationOptionsForTableWithoutNumericFields()
+        {
+            await base.TestNoAggregationOptionsForTableWithoutNumericFields();
+        }
+
+        /// <summary>
+        /// Tests that the entity description is present as a GraphQL comment in the generated schema for MSSQL.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescriptionInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription("This is a test entity description for MSSQL.");
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            List<JsonDocument> jsonArray = [
+                JsonDocument.Parse("{ \"id\": 1, \"name\": \"Test\" }")
+            ];
+
+            string actualSchema = Core.Generator.SchemaGenerator.Generate(jsonArray, "TestEntity", config);
+            string expectedComment = "\"\"\"This is a test entity description for MSSQL.\"\"\"";
+            Assert.IsTrue(actualSchema.Contains(expectedComment, StringComparison.Ordinal), "Entity description should be present as a GraphQL comment for MSSQL.");
+        }
+
+        /// <summary>
+        /// Description = null should not emit GraphQL description block.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescription_Null_NotInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription(null);
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            string schema = Core.Generator.SchemaGenerator.Generate(
+                [JsonDocument.Parse("{\"id\":1}")],
+                "TestEntity",
+                config);
+
+            Assert.IsFalse(schema.Contains("Test entity description null", StringComparison.Ordinal), "Null description must not appear in schema.");
+            Assert.IsTrue(schema.Contains("type TestEntity", StringComparison.Ordinal), "Type definition should still exist.");
+        }
+
+        /// <summary>
+        /// Description = "" (empty) should not emit GraphQL description block.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescription_Empty_NotInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription(string.Empty);
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            string schema = Core.Generator.SchemaGenerator.Generate(
+                [JsonDocument.Parse("{\"id\":1}")],
+                "TestEntity",
+                config);
+
+            Assert.IsFalse(schema.Contains("\"\"\"\"\"\"", StringComparison.Ordinal), "Empty description triple quotes should not be emitted.");
+            Assert.IsTrue(schema.Contains("type TestEntity", StringComparison.Ordinal), "Type definition should still exist.");
+        }
+
+        /// <summary>
+        /// Description = whitespace should not emit GraphQL description block.
+        /// </summary>
+        [TestMethod]
+        public void TestEntityDescription_Whitespace_NotInGraphQLSchema()
+        {
+            Entity entity = CreateEntityWithDescription("   \t  ");
+            RuntimeConfig config = CreateRuntimeConfig(entity);
+            string schema = Core.Generator.SchemaGenerator.Generate(
+                [JsonDocument.Parse("{\"id\":1}")],
+                "TestEntity",
+                config);
+
+            Assert.IsFalse(schema.Contains("\"\"\"", StringComparison.Ordinal), "Whitespace-only description should not produce a GraphQL description block.");
+            Assert.IsTrue(schema.Contains("type TestEntity", StringComparison.Ordinal), "Type definition should still exist.");
+        }
+
+        private static Entity CreateEntityWithDescription(string description)
+        {
+            EntitySource source = new("TestTable", EntitySourceType.Table, null, null);
+            EntityGraphQLOptions gqlOptions = new("TestEntity", "TestEntities", true);
+            EntityRestOptions restOptions = new(null, "/test", true);
+            return new(
+                source,
+                gqlOptions,
+                null,
+                restOptions,
+                [],
+                null,
+                null,
+                null,
+                false,
+                null,
+                Description: description
+            );
+        }
+
+        private static RuntimeConfig CreateRuntimeConfig(Entity entity)
+        {
+            Dictionary<string, Entity> entityDict = new() { { "TestEntity", entity } };
+            RuntimeEntities entities = new(entityDict);
+            return new(
+                "",
+                new DataSource(DatabaseType.MSSQL, "", null),
+                entities,
+                null
+            );
+        }
+
         #endregion
     }
 }

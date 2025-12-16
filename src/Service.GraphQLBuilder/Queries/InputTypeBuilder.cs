@@ -24,8 +24,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         {
             List<InputValueDefinitionNode> inputFields = GenerateFilterInputFieldsForBuiltInFields(node, inputTypes);
             string filterInputName = GenerateObjectInputFilterName(node);
-
-            GenerateInputTypeFromInputFields(inputTypes, inputFields, filterInputName, $"Filter input for {node.Name} GraphQL type");
+            GenerateFilterInputTypeFromInputFields(inputTypes, inputFields, filterInputName, $"Filter input for {node.Name} GraphQL type");
         }
 
         internal static void GenerateOrderByInputTypeForObjectType(ObjectTypeDefinitionNode node, IDictionary<string, InputObjectTypeDefinitionNode> inputTypes)
@@ -33,7 +32,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
             List<InputValueDefinitionNode> inputFields = GenerateOrderByInputFieldsForBuiltInFields(node);
             string orderByInputName = GenerateObjectInputOrderByName(node);
 
-            GenerateInputTypeFromInputFields(inputTypes, inputFields, orderByInputName, $"Order by input for {node.Name} GraphQL type");
+            // OrderBy does not include "and" and "or" input types so we add only the orderByInputName here.
+            inputTypes.Add(
+                orderByInputName,
+                new(
+                    location: null,
+                    new NameNode(orderByInputName),
+                    new StringValueNode($"Order by input for {node.Name} GraphQL type"),
+                    new List<DirectiveNode>(),
+                    inputFields
+                    )
+                );
         }
 
         private static List<InputValueDefinitionNode> GenerateOrderByInputFieldsForBuiltInFields(ObjectTypeDefinitionNode node)
@@ -53,27 +62,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                             new List<DirectiveNode>())
                         );
                 }
-                else
-                {
-                    string targetEntityName = RelationshipDirectiveType.Target(field);
-
-                    inputFields.Add(
-                        new(
-                            location: null,
-                            field.Name,
-                            new StringValueNode($"Order by options for {field.Name}"),
-                            new NamedTypeNode(GenerateObjectInputOrderByName(targetEntityName)),
-                            defaultValue: null,
-                            new List<DirectiveNode>())
-                        );
-                }
-
             }
 
             return inputFields;
         }
 
-        private static void GenerateInputTypeFromInputFields(
+        private static void GenerateFilterInputTypeFromInputFields(
             IDictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             List<InputValueDefinitionNode> inputFields,
             string inputTypeName,
@@ -121,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 {
                     if (!inputTypes.ContainsKey(fieldTypeName))
                     {
-                        inputTypes.Add(fieldTypeName, StandardQueryInputs.InputTypes[fieldTypeName]);
+                        inputTypes.Add(fieldTypeName, StandardQueryInputs.GetFilterTypeByScalar(fieldTypeName));
                     }
 
                     InputObjectTypeDefinitionNode inputType = inputTypes[fieldTypeName];

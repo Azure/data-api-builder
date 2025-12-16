@@ -102,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceKey.ToString(), queryParameters: structure.Parameters);
 
-                executeQueryResult = await _cache.GetOrSetAsync<JObject>(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                executeQueryResult = await _cache.GetOrSetAsync<JObject>(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName), runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName));
             }
             else
             {
@@ -241,14 +241,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, ObjectField fieldSchema, ref IMetadata metadata)
         {
             return element;
         }
 
         /// <inheritdoc />
         /// metadata is not used in this method, but it is required by the interface.
-        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
+        public object ResolveList(JsonElement array, ObjectField fieldSchema, ref IMetadata metadata)
         {
             IType listType = fieldSchema.Type;
             // Is the List type nullable? [...]! vs [...]

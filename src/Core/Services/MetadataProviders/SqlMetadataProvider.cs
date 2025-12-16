@@ -21,6 +21,7 @@ using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Core.Services
@@ -82,7 +83,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
-        public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
+        public virtual Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
         protected readonly ILogger<ISqlMetadataProvider> _logger;
@@ -217,13 +218,33 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name)
         {
-            Dictionary<string, string>? backingColumnsToExposedNamesMap;
-            if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out backingColumnsToExposedNamesMap))
+            if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out Dictionary<string, string>? backingToExposed))
             {
                 throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
             }
 
-            return backingColumnsToExposedNamesMap.TryGetValue(backingFieldName, out name);
+            if (backingToExposed.TryGetValue(backingFieldName, out name))
+            {
+                return true;
+            }
+
+            if (_entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
+            {
+                // Find the field by backing name and use its Alias if present.
+                FieldMetadata? matched = entityDefinition
+                    .Fields
+                    .FirstOrDefault(f => f.Name.Equals(backingFieldName, StringComparison.OrdinalIgnoreCase)
+                                        && !string.IsNullOrEmpty(f.Alias));
+
+                if (matched is not null)
+                {
+                    name = matched.Alias!;
+                    return true;
+                }
+            }
+
+            name = null;
+            return false;
         }
 
         /// <inheritdoc />
@@ -233,6 +254,23 @@ namespace Azure.DataApiBuilder.Core.Services
             if (!EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out exposedNamesToBackingColumnsMap))
             {
                 throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
+            }
+
+            if (exposedNamesToBackingColumnsMap.TryGetValue(field, out name))
+            {
+                return true;
+            }
+
+            if (_entities.TryGetValue(entityName, out Entity? entityDefinition) && entityDefinition.Fields is not null)
+            {
+                FieldMetadata? matchedField = entityDefinition.Fields.FirstOrDefault(f =>
+                        f.Alias != null && f.Alias.Equals(field, StringComparison.OrdinalIgnoreCase));
+
+                if (matchedField is not null)
+                {
+                    name = matchedField.Name;
+                    return true;
+                }
             }
 
             return exposedNamesToBackingColumnsMap.TryGetValue(field, out name);
@@ -455,11 +493,12 @@ namespace Azure.DataApiBuilder.Core.Services
             // Loop through parameters specified in config, throw error if not found in schema
             // else set runtime config defined default values.
             // Note: we defer type checking of parameters specified in config until request time
-            Dictionary<string, object>? configParameters = procedureEntity.Source.Parameters;
+            List<ParameterMetadata>? configParameters = procedureEntity.Source.Parameters;
             if (configParameters is not null)
             {
-                foreach ((string configParamKey, object configParamValue) in configParameters)
+                foreach (ParameterMetadata paramMeta in configParameters)
                 {
+                    string configParamKey = paramMeta.Name;
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
                         HandleOrRecordException(new DataApiBuilderException(
@@ -469,8 +508,12 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
                     else
                     {
-                        parameterDefinition.HasConfigDefault = true;
-                        parameterDefinition.ConfigDefaultValue = configParamValue?.ToString();
+                        // Map all metadata from config
+                        parameterDefinition.Description = paramMeta.Description;
+                        parameterDefinition.Required = paramMeta.Required;
+                        parameterDefinition.Default = paramMeta.Default;
+                        parameterDefinition.HasConfigDefault = paramMeta.Default is not null;
+                        parameterDefinition.ConfigDefaultValue = paramMeta.Default?.ToString();
                     }
                 }
             }
@@ -1215,22 +1258,81 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else if (entitySourceType is EntitySourceType.Table)
                 {
+                    List<string> pkFields = new();
+
+                    // Resolve PKs from fields first
+                    if (entity.Fields is not null && entity.Fields.Any())
+                    {
+                        pkFields = entity.Fields
+                            .Where(f => f.PrimaryKey)
+                            .Select(f => f.Name)
+                            .ToList();
+                    }
+
+                    // Fallback to key-fields from config
+                    if (pkFields.Count == 0 && entity.Source.KeyFields is not null)
+                    {
+                        pkFields = entity.Source.KeyFields.ToList();
+                    }
+
+                    // If still empty, fallback to DB schema PKs
+                    if (pkFields.Count == 0)
+                    {
+                        DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
+                            entityName,
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName));
+
+                        pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
+                    }
+
+                    // Final safeguard
+                    pkFields ??= new List<string>();
+
                     await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         GetSourceDefinition(entityName),
-                        entity.Source.KeyFields);
+                        pkFields);
                 }
                 else
                 {
+                    List<string> pkFields = new();
+
+                    // Resolve PKs from fields first
+                    if (entity.Fields is not null && entity.Fields.Any())
+                    {
+                        pkFields = entity.Fields
+                            .Where(f => f.PrimaryKey)
+                            .Select(f => f.Name)
+                            .ToList();
+                    }
+
+                    // Fallback to key-fields from config
+                    if (pkFields.Count == 0 && entity.Source.KeyFields is not null)
+                    {
+                        pkFields = entity.Source.KeyFields.ToList();
+                    }
+
+                    // If still empty, fallback to DB schema PKs
+                    if (pkFields.Count == 0)
+                    {
+                        DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(
+                            entityName,
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName));
+
+                        pkFields = dataTable.PrimaryKey.Select(pk => pk.ColumnName).ToList();
+                    }
+
                     ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
                     await PopulateSourceDefinitionAsync(
                         entityName,
                         GetSchemaName(entityName),
                         GetDatabaseObjectName(entityName),
                         viewDefinition,
-                        entity.Source.KeyFields);
+                        pkFields);
                 }
             }
             catch (Exception e)
@@ -1272,28 +1374,22 @@ namespace Azure.DataApiBuilder.Core.Services
                 Type resultFieldType = SqlToCLRType(element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_SYSTEMTYPENAME).ToString());
                 bool isResultFieldNullable = element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_ISNULLABLE).GetBoolean();
 
+                // Validate that the stored procedure returns columns with proper names
+                // This commonly occurs when using aggregate functions or expressions without aliases
+                if (string.IsNullOrWhiteSpace(resultFieldName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The stored procedure '{dbStoredProcedureName}' returns a column without a name. " +
+                                "This typically happens when using aggregate functions (like MAX, MIN, COUNT) or expressions " +
+                                "without providing an alias. Please add column aliases to your SELECT statement. " +
+                                "For example: 'SELECT MAX(id) AS MaxId' instead of 'SELECT MAX(id)'.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
                 // Store the dictionary containing result set field with its type as Columns
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });
             }
-        }
-
-        /// <summary>
-        /// Helper method to create params for the query.
-        /// </summary>
-        /// <param name="paramName">Common prefix of param names.</param>
-        /// <param name="paramValues">Values of the param.</param>
-        /// <returns></returns>
-        private static Dictionary<string, object> GetQueryParams(
-            string paramName,
-            object[] paramValues)
-        {
-            Dictionary<string, object> parameters = new();
-            for (int paramNumber = 0; paramNumber < paramValues.Length; paramNumber++)
-            {
-                parameters.Add($"{paramName}{paramNumber}", paramValues[paramNumber]);
-            }
-
-            return parameters;
         }
 
         /// <summary>
@@ -1337,36 +1433,71 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             try
             {
-                // For StoredProcedures, result set definitions become the column definition.
-                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                // Build case-insensitive maps per entity.
+                Dictionary<string, string> backToExposed = new(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> exposedToBack = new(StringComparer.OrdinalIgnoreCase);
+
+                // Pull definitions.
+                _entities.TryGetValue(entityName, out Entity? entity);
                 SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                foreach (string columnName in sourceDefinition.Columns.Keys)
+
+                // 1) Prefer new-style fields (backing = f.Name, exposed = f.Alias ?? f.Name)
+                if (entity?.Fields is not null)
                 {
-                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
+                    foreach (FieldMetadata f in entity.Fields)
                     {
-                        EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
-                        EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
+                        string backing = f.Name;
+                        string exposed = string.IsNullOrWhiteSpace(f.Alias) ? backing : f.Alias!;
+                        backToExposed[backing] = exposed;
+                        exposedToBack[exposed] = backing;
                     }
                 }
+
+                // 2) Overlay legacy mappings (backing -> alias) only where we don't already have an alias from fields.
+                if (entity?.Mappings is not null)
+                {
+                    foreach (KeyValuePair<string, string> kvp in entity.Mappings)
+                    {
+                        string backing = kvp.Key;
+                        string exposed = kvp.Value;
+
+                        // If fields already provided an alias for this backing column, keep fields precedence.
+                        if (!backToExposed.ContainsKey(backing))
+                        {
+                            backToExposed[backing] = exposed;
+                        }
+
+                        // Always ensure reverse map is coherent (fields still take precedence if the same exposed already exists).
+                        if (!exposedToBack.ContainsKey(exposed))
+                        {
+                            exposedToBack[exposed] = backing;
+                        }
+                    }
+                }
+
+                // 3) Ensure all physical columns are mapped (identity default).
+                foreach (string backing in sourceDefinition.Columns.Keys)
+                {
+                    if (!backToExposed.ContainsKey(backing))
+                    {
+                        backToExposed[backing] = backing;
+                    }
+
+                    string exposed = backToExposed[backing];
+                    if (!exposedToBack.ContainsKey(exposed))
+                    {
+                        exposedToBack[exposed] = backing;
+                    }
+                }
+
+                // 4) Store maps for runtime
+                EntityBackingColumnsToExposedNames[entityName] = backToExposed;
+                EntityExposedNamesToBackingColumnNames[entityName] = exposedToBack;
             }
             catch (Exception e)
             {
                 HandleOrRecordException(e);
             }
-        }
-
-        /// <summary>
-        /// Obtains the underlying mapping that belongs
-        /// to a given entity.
-        /// </summary>
-        /// <param name="entityName">entity whose map we get.</param>
-        /// <returns>mapping belonging to entity.</returns>
-        private Dictionary<string, string>? GetMappingForEntity(string entityName)
-        {
-            _entities.TryGetValue(entityName, out Entity? entity);
-            return entity?.Mappings;
         }
 
         /// <summary>
@@ -1391,19 +1522,9 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName,
             SourceDefinition sourceDefinition,
-            string[]? runtimeConfigKeyFields)
+            List<string> pkFields)
         {
-            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
-
-            List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
-            if (runtimeConfigKeyFields is null || runtimeConfigKeyFields.Length == 0)
-            {
-                sourceDefinition.PrimaryKey = new(primaryKeys.Select(primaryKey => primaryKey.ColumnName));
-            }
-            else
-            {
-                sourceDefinition.PrimaryKey = new(runtimeConfigKeyFields);
-            }
+            sourceDefinition.PrimaryKey = [.. pkFields];
 
             if (sourceDefinition.PrimaryKey.Count == 0)
             {
@@ -1419,6 +1540,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);
             }
 
+            DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
@@ -1477,12 +1599,13 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaOrDatabaseName, SourceDefinition sourceDefinition)
         {
             string schemaOrDatabaseParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+            string quotedTableName = SqlQueryBuilder.QuoteTableNameAsDBConnectionParam(tableName);
             string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
             string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns(schemaOrDatabaseParamName, tableParamName);
             Dictionary<string, DbConnectionParam> parameters = new()
             {
                 { schemaOrDatabaseParamName, new(schemaOrDatabaseName, DbType.String) },
-                { tableParamName, new(tableName, DbType.String) }
+                { tableParamName, new(quotedTableName, DbType.String) }
             };
 
             List<string>? readOnlyFields = await QueryExecutor.ExecuteQueryAsync(
@@ -1525,10 +1648,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (entity.GraphQL is null || (entity.GraphQL.Enabled))
                 {
                     if (entity.Mappings is not null
-                        && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
-                        && !string.IsNullOrWhiteSpace(fieldAlias))
+                       && entity.Mappings.TryGetValue(databaseColumnName, out string? fieldAlias)
+                       && !string.IsNullOrWhiteSpace(fieldAlias))
                     {
                         databaseColumnName = fieldAlias;
+                    }
+
+                    if (entity.Fields is not null)
+                    {
+                        FieldMetadata? fieldMeta = entity.Fields.FirstOrDefault(f => f.Name == databaseColumnName);
+                        if (fieldMeta != null && !string.IsNullOrWhiteSpace(fieldMeta.Alias))
+                        {
+                            databaseColumnName = fieldMeta.Alias;
+                        }
                     }
 
                     return IsIntrospectionField(databaseColumnName);
@@ -1589,7 +1721,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     throw new DataApiBuilderException(
                         message,
                         statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                        innerException: ex);
                 }
             }
 
@@ -1995,7 +2128,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         // 2. Config Defined:
                         //      - Two ForeignKeyDefinition objects:
                         //        1.  Referencing table: Source entity, Referenced table: Target entity
-                        //        2.  Referencing table: Target entity, Referenced table: Source entity 
+                        //        2.  Referencing table: Target entity, Referenced table: Source entity
                         List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
                         relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }

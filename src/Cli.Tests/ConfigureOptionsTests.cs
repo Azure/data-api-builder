@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Serilog;
+
 namespace Cli.Tests
 {
     /// <summary>
@@ -55,18 +57,19 @@ namespace Cli.Tests
 
             // Arrange
             _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, initialConfig);
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
 
             // Act: Run Configure with no options
             ConfigureOptions options = new(
                 config: TEST_RUNTIME_CONFIG_FILE
             );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
-            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
-
-            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            // Assert
+            Assert.IsTrue(isSuccess);
 
             // Assert that INITIAL_CONFIG is same as the updated config
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             if (isDepthLimitProvidedInConfig)
             {
                 Assert.IsTrue(updatedConfig.Contains(depthLimitSection));
@@ -100,13 +103,608 @@ namespace Cli.Tests
                 depthLimit: maxDepthLimit,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Depth Limit is added
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
             Assert.IsNotNull(config.Runtime?.GraphQL?.DepthLimit);
             Assert.AreEqual(maxDepthLimit, config.Runtime.GraphQL.DepthLimit);
+        }
+
+        /// <summary>
+        /// Tests that running the "configure --azure-key-vault" commands on a config without AKV properties results
+        /// in a valid config being generated.
+        [TestMethod]
+        public void TestAddAKVOptions()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add AKV options
+            ConfigureOptions options = new(
+                azureKeyVaultEndpoint: "foo",
+                azureKeyVaultRetryPolicyMaxCount: 1,
+                azureKeyVaultRetryPolicyDelaySeconds: 1,
+                azureKeyVaultRetryPolicyMaxDelaySeconds: 1,
+                azureKeyVaultRetryPolicyMode: AKVRetryPolicyMode.Exponential,
+                azureKeyVaultRetryPolicyNetworkTimeoutSeconds: 1,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the AKV options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.AzureKeyVault);
+            Assert.IsNotNull(config.AzureKeyVault?.RetryPolicy);
+            Assert.AreEqual("foo", config.AzureKeyVault?.Endpoint);
+            Assert.AreEqual(AKVRetryPolicyMode.Exponential, config.AzureKeyVault?.RetryPolicy.Mode);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.MaxCount);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.DelaySeconds);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.MaxDelaySeconds);
+            Assert.AreEqual(1, config.AzureKeyVault?.RetryPolicy.NetworkTimeoutSeconds);
+        }
+
+        /// <summary>
+        /// Tests that running the "configure --azure-log-analytics" commands on a config without Azure Log Analytics properties results
+        /// in a valid config being generated.
+        [TestMethod]
+        public void TestAddAzureLogAnalyticsOptions()
+        {
+            // Arrange
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add Azure Log Analytics options
+            ConfigureOptions options = new(
+                azureLogAnalyticsEnabled: CliBool.True,
+                azureLogAnalyticsDabIdentifier: "dab-identifier-test",
+                azureLogAnalyticsFlushIntervalSeconds: 1,
+                azureLogAnalyticsCustomTableName: "custom-table-name-test",
+                azureLogAnalyticsDcrImmutableId: "dcr-immutable-id-test",
+                azureLogAnalyticsDceEndpoint: "dce-endpoint-test",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Azure Log Analytics options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics);
+            Assert.AreEqual(true, config.Runtime.Telemetry.AzureLogAnalytics.Enabled);
+            Assert.AreEqual("dab-identifier-test", config.Runtime.Telemetry.AzureLogAnalytics.DabIdentifier);
+            Assert.AreEqual(1, config.Runtime.Telemetry.AzureLogAnalytics.FlushIntervalSeconds);
+            Assert.IsNotNull(config.Runtime.Telemetry.AzureLogAnalytics.Auth);
+            Assert.AreEqual("custom-table-name-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.CustomTableName);
+            Assert.AreEqual("dcr-immutable-id-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DcrImmutableId);
+            Assert.AreEqual("dce-endpoint-test", config.Runtime.Telemetry.AzureLogAnalytics.Auth.DceEndpoint);
+        }
+
+        /// <summary>
+        /// Tests that running the "configure --file" commands on a config without file sink properties results
+        /// in a valid config being generated.
+        /// </summary>
+        [TestMethod]
+        public void TestAddFileSinkOptions()
+        {
+            // Arrange
+            string fileSinkPath = "/custom/log/path.txt";
+            RollingInterval fileSinkRollingInterval = RollingInterval.Hour;
+            int fileSinkRetainedFileCountLimit = 5;
+            int fileSinkFileSizeLimitBytes = 2097152;
+
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+
+            Assert.IsTrue(_fileSystem!.File.Exists(TEST_RUNTIME_CONFIG_FILE));
+
+            // Act: Attempts to add file options
+            ConfigureOptions options = new(
+                fileSinkEnabled: CliBool.True,
+                fileSinkPath: fileSinkPath,
+                fileSinkRollingInterval: fileSinkRollingInterval,
+                fileSinkRetainedFileCountLimit: fileSinkRetainedFileCountLimit,
+                fileSinkFileSizeLimitBytes: fileSinkFileSizeLimitBytes,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the file options are added.
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.File);
+            Assert.AreEqual(true, config.Runtime.Telemetry.File.Enabled);
+            Assert.AreEqual(fileSinkPath, config.Runtime.Telemetry.File.Path);
+            Assert.AreEqual(fileSinkRollingInterval.ToString(), config.Runtime.Telemetry.File.RollingInterval);
+            Assert.AreEqual(fileSinkRetainedFileCountLimit, config.Runtime.Telemetry.File.RetainedFileCountLimit);
+            Assert.AreEqual(fileSinkFileSizeLimitBytes, config.Runtime.Telemetry.File.FileSizeLimitBytes);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.graphql.enabled" on a config with various values results
+        /// in runtime. Takes in updated value for graphql.enabled and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update GraphQL.Enabled to false.")]
+        [DataRow(true, DisplayName = "Validate GraphQL.Enabled to remain true.")]
+        public void TestUpdateEnabledForGraphQLSettings(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update enabled flag
+            ConfigureOptions options = new(
+                runtimeGraphQLEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Enabled Flag is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.GraphQL.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.graphql.path" on a config with various values results
+        /// in runtime config update. Takes in updated value for graphql.path and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("/updatedPath", DisplayName = "Update path to /updatedPath for GraphQL.")]
+        [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in GraphQL path name.")]
+        [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in GraphQL path name.")]
+        public void TestUpdatePathForGraphQLSettings(string updatedPathValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update path value
+            ConfigureOptions options = new(
+                runtimeGraphQLPath: updatedPathValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Path update is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.GraphQL.Path);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.graphql.allow-introspection" on a 
+        /// config with various values results in runtime config update.
+        /// Takes in updated value for graphql.allow-introspection and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update GraphQL.AllowIntrospection to be false.")]
+        [DataRow(true, DisplayName = "Validate GraphQL.AllowIntrospection to remain true.")]
+        public void TestUpdateAllowIntrospectionForGraphQLSettings(bool updatedAllowIntrospectionValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update allow-introspection flag
+            ConfigureOptions options = new(
+                runtimeGraphQLAllowIntrospection: updatedAllowIntrospectionValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Allow-Introspection value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.AllowIntrospection);
+            Assert.AreEqual(updatedAllowIntrospectionValue, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.graphql.multiple-mutations.create.enabled"
+        /// on a config with various values results in runtime config update. 
+        /// Takes in updated value for multiple mutations.create.enabled and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update GraphQL.MultipleMutation.Create.Enabled to be false.")]
+        [DataRow(true, DisplayName = "Validate GraphQL.MultipleMutation.Create.Enabled to remain true.")]
+        public void TestUpdateMultipleMutationCreateEnabledForGraphQLSettings(bool updatedMultipleMutationsCreateEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update multiple-mutations.create.enabled flag
+            ConfigureOptions options = new(
+                runtimeGraphQLMultipleMutationsCreateEnabled: updatedMultipleMutationsCreateEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Multiple-Mutation.Create.Enabled is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.MultipleMutationOptions?.MultipleCreateOptions?.Enabled);
+            Assert.AreEqual(updatedMultipleMutationsCreateEnabledValue, runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.graphql.path" on a config with various values results
+        /// in runtime config update. Takes in updatedPath and updated value for allow-introspection and 
+        /// validates whether the runtime config reflects those updated values
+        [TestMethod]
+        public void TestUpdateMultipleParametersForGraphQLSettings()
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            bool updatedAllowIntrospectionValue = false;
+            string updatedPathValue = "/updatedPath";
+
+            // Act: Attempts to update the path value and allow-introspection flag
+            ConfigureOptions options = new(
+                runtimeGraphQLPath: updatedPathValue,
+                runtimeGraphQLAllowIntrospection: updatedAllowIntrospectionValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the path is updated and allow introspection is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.Path);
+            Assert.IsNotNull(runtimeConfig.Runtime?.GraphQL?.AllowIntrospection);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.GraphQL.Path);
+            Assert.AreEqual(updatedAllowIntrospectionValue, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.enabled {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for rest.enabled and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update Rest.Enabled to false.")]
+        [DataRow(true, DisplayName = "Validate if Rest.Enabled remains true.")]
+        public void TestUpdateEnabledForRestSettings(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update enabled flag
+            ConfigureOptions options = new(
+                runtimeRestEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Enabled Flag is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.path {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for rest.path and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("/updatedPath", DisplayName = "Update REST path to /updatedPath.")]
+        [DataRow("/updated_Path", DisplayName = "Ensure underscore is allowed in REST path.")]
+        [DataRow("/updated-Path", DisplayName = "Ensure hyphen is allowed in REST path.")]
+        public void TestUpdatePathForRestSettings(string updatedPathValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update path value
+            ConfigureOptions options = new(
+                runtimeRestPath: updatedPathValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Path update is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.request-body-strict" on a config with various values results
+        /// in runtime config update. Takes in updated value for rest.request-body-strict and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update Rest.Request-Body-Strict to false.")]
+        [DataRow(true, DisplayName = "Validate if Rest.Request-body-Strict remains true.")]
+        public void TestUpdateRequestBodyStrictForRestSettings(bool updatedRequestBodyStrictValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update request-body-strict value
+            ConfigureOptions options = new(
+                runtimeRestRequestBodyStrict: updatedRequestBodyStrictValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the RequestBodyStrict Value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.RequestBodyStrict);
+            Assert.AreEqual(updatedRequestBodyStrictValue, runtimeConfig.Runtime.Rest.RequestBodyStrict);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.rest.enabled {value} --runtime.rest.path {value}"
+        /// on a config with various values results in runtime config update. 
+        /// Takes in updated value for enabled and path and further 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, "/updatedPath", DisplayName = "Update enabled flag and path in Rest runtime settings.")]
+        public void TestUpdateMultipleParametersRestSettings(bool updatedEnabledValue, string updatedPathValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update the path value and enabled flag
+            ConfigureOptions options = new(
+                runtimeRestPath: updatedPathValue,
+                runtimeRestEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the path is updated and enabled is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Path);
+            Assert.IsNotNull(runtimeConfig.Runtime?.Rest?.Enabled);
+            Assert.AreEqual(updatedPathValue, runtimeConfig.Runtime.Rest.Path);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Rest.Enabled);
+        }
+
+        /// <summary>
+        /// Validates that running "dab configure --runtime.cache.enabled" on a config with various values results
+        /// in runtime config update. Takes in updated value for cache.enabled and 
+        /// validates whether the runtime config reflects those updated values.
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update Cache.Enabled to false.")]
+        [DataRow(true, DisplayName = "Validate if Cache.Enabled remains true.")]
+        public void TestUpdateEnabledForCacheSettings(bool updatedEnabledValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update cache enabled flag
+            ConfigureOptions options = new(
+                runtimeCacheEnabled: updatedEnabledValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the cache Enabled Flag is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.Enabled);
+            Assert.AreEqual(updatedEnabledValue, runtimeConfig.Runtime.Cache.Enabled);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.cache.ttl-seconds" on a config with various values results
+        /// in runtime config update. Takes in updated value for cache.ttl-seconds and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(4, DisplayName = "Update global cache TTL to 4.")]
+        public void TestUpdateTTLForCacheSettings(int updatedTtlValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update TTL Value
+            ConfigureOptions options = new(
+                runtimeCacheTtl: updatedTtlValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the TTL Value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Cache?.TtlSeconds);
+            Assert.AreEqual(updatedTtlValue, runtimeConfig.Runtime.Cache.TtlSeconds);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.mode {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.mode and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("production", DisplayName = "Update mode to production for Host.")]
+        [DataRow("Production", DisplayName = "Update mode to Production for Host.")]
+        [DataRow("development", DisplayName = "Ensure mode is retained to development for Host.")]
+        [DataRow("Development", DisplayName = "Ensure mode is retained to Development for Host.")]
+        public void TestCaseInsensitiveUpdateModeForHostSettings(string modeValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            Enum.TryParse<HostMode>(modeValue, ignoreCase: true, out HostMode updatedModeValue);
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.mode value
+            ConfigureOptions options = new(
+                runtimeHostMode: updatedModeValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Mode in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Mode);
+            Assert.AreEqual(updatedModeValue, runtimeConfig.Runtime.Host.Mode);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.cors.origins {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.cors.origins and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("https://localhost, https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with comma.")]
+        [DataRow("https://localhost https://localhost1", DisplayName = "Overwrite list of origins in Cors in Host with space.")]
+        public void TestUpdateCorsOriginsForHostSettings(string inputValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            // Convert the comma-separated string into a List<string>
+            List<string> originsValue = inputValue.Split(new char[] { ',', ' ' }).ToList();
+
+            // Act: Attempts to update host.cors.origins value
+            ConfigureOptions configureOptions = new(
+                runtimeHostCorsOrigins: originsValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(configureOptions, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Cors.Origins in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Cors?.Origins);
+            CollectionAssert.AreEqual(originsValue.ToArray(), runtimeConfig.Runtime.Host.Cors.Origins);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.cors.allow-credentials {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.cors.allow-credentials and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow(false, DisplayName = "Update cors.allow-credentials to false for Host.")]
+        [DataRow(true, DisplayName = "Update cors.allow-credentials to true for Host.")]
+        public void TestUpdateCorsAllowCredentialsHostSettings(bool allowCredentialsValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.cors.allow-credentials value
+            ConfigureOptions options = new(
+                runtimeHostCorsAllowCredentials: allowCredentialsValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the cors.allow-credentials in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Cors?.AllowCredentials);
+            Assert.AreEqual(allowCredentialsValue, runtimeConfig.Runtime.Host.Cors.AllowCredentials);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.authentication.provider {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.authentication.provider and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("staticWebApps", DisplayName = "Update authentication.provider to StaticWebApps for Host.")]
+        [DataRow("Appservice", DisplayName = "Update authentication.provider to AppService for Host.")]
+        [DataRow("azuread", DisplayName = "Update authentication.provider to AzureAD for Host.")]
+        [DataRow("entraid", DisplayName = "Update authentication.provider to EntraID for Host.")]
+        public void TestUpdateAuthenticationProviderHostSettings(string authenticationProviderValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.authentication.provider value
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationProvider: authenticationProviderValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the authentication.provider in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Provider);
+            Assert.AreEqual(authenticationProviderValue, runtimeConfig.Runtime.Host.Authentication.Provider);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.authentication.jwt.audience {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.authentication.jwt.audience and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("updatedAudience", DisplayName = "Update authentication.jwt.audience to 'updatedAudience' for Host.")]
+        public void TestUpdateAuthenticationJwtAudienceHostSettings(string updatedJwtAudienceValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.authentication.jwt.audience value
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationJwtAudience: updatedJwtAudienceValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the authentication.jwt.audience in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.Audience);
+            Assert.AreEqual(updatedJwtAudienceValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Audience);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --runtime.host.authentication.jwt.issuer {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for host.authentication.jwt.issuer and 
+        /// validates whether the runtime config reflects those updated values
+        [DataTestMethod]
+        [DataRow("updatedIssuer", DisplayName = "Update authentication.jwt.issuer to 'updatedIssuer' for Host.")]
+        public void TestUpdateAuthenticationJwtIssuerHostSettings(string updatedJwtIssuerValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update host.authentication.jwt.issuer value
+            ConfigureOptions options = new(
+                runtimeHostAuthenticationJwtIssuer: updatedJwtIssuerValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the authentication.jwt.issuer in Host is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Host?.Authentication?.Jwt?.Issuer);
+            Assert.AreEqual(updatedJwtIssuerValue.ToString(), runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer);
         }
 
         /// <summary>
@@ -142,9 +740,10 @@ namespace Cli.Tests
             );
 
             // Act: Update Depth Limit
-            Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Depth Limit is updated
+            Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
 

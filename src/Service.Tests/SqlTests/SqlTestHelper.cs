@@ -8,13 +8,16 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
@@ -60,6 +63,60 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         {
             return string.IsNullOrEmpty(jsonString1) && string.IsNullOrEmpty(jsonString2) ||
                 JToken.DeepEquals(JToken.Parse(jsonString1), JToken.Parse(jsonString2));
+        }
+
+        /// <summary>
+        /// For nested queries results from direct db call, it will append a whitespace for each item in an array
+        /// e.g. [{address: 1},<whitespace>{address: 2}]
+        /// Removing all whitespaces when comparing with results from GraphQL
+        /// </summary>
+        /// <param name="expected"></param>
+        /// <param name="actual"></param>
+        public static void PerformTestEqualJsonStringsForNestedQueries(string expected, string actual)
+        {
+            PerformTestEqualJsonStrings(
+                expected.Trim().Replace(" ", ""),
+                actual.Trim().Replace(" ", ""));
+        }
+
+        /// <summary>
+        /// Perform equality for aggregation queries
+        /// Aggregation queries can have fields node and aggregations node and so the stucture is different.
+        /// </summary>
+        /// <param name="expected"></param>
+        /// <param name="actual"></param>
+        public static void PerformTestEqualJsonStringsForAggreagtionQueries(string expected, string actual)
+        {
+            JToken expectedToken = JToken.Parse(expected); // result of db query
+            JToken actualToken = JToken.Parse(actual); // result of gql query
+
+            IEnumerable<JObject> flatActualArray = actualToken["groupBy"]
+                .Select(gb =>
+                {
+                    JObject obj = new();
+                    JObject fields = gb["fields"] as JObject;
+                    if (fields != null)
+                    {
+                        foreach (JProperty prop in fields.Properties())
+                        {
+                            obj[prop.Name] = prop.Value;
+                        }
+                    }
+
+                    JObject aggs = gb["aggregations"] as JObject;
+                    if (aggs != null)
+                    {
+                        foreach (JProperty prop in aggs.Properties())
+                        {
+                            obj[prop.Name] = prop.Value;
+                        }
+                    }
+
+                    return obj;
+                });
+            JToken normalizedActual = new JArray(flatActualArray);
+
+            JsonStringsDeepEqual(expectedToken.ToString(), normalizedActual.ToString());
         }
 
         /// <summary>
@@ -134,18 +191,164 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             if (message is not null)
             {
                 Console.WriteLine(response);
-                Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error");
+                Assert.IsTrue(response.Contains(message), $"Message \"{message}\" not found in error {response}");
             }
 
             if (statusCode != null)
             {
-                Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code \"{statusCode}\" not found in error");
+                Assert.IsTrue(response.Contains($"\"code\":\"{statusCode}\""), $"Status code \"{statusCode}\" not found in error {response}");
             }
 
             if (path is not null)
             {
                 Console.WriteLine(response);
-                Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error");
+                Assert.IsTrue(response.Contains(path), $"Path \"{path}\" not found in error {response}");
+            }
+        }
+
+        /// <summary>
+        /// For the results from GraphQL execution response, it will contains the Items key for 1-Many relations
+        /// However for direct db query execution response, it will not have the Item key.
+        /// This function will remove the Item key and aggregate child objs to parent which makes it easier to compare two results
+        /// books {                    books {
+        ///     items: {
+        ///         authors {    ==>  
+        ///               id                  authors {
+        ///                                     id
+        ///                                 }
+        ///                             }
+        ///     }
+        /// }
+        /// }
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        public static JsonNode RemoveItemsKeyFromJson(JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                JsonObject jsonObject = new();
+
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    if (property.Name == "items")
+                    {
+                        if (property.Value.ValueKind == JsonValueKind.Array)
+                        {
+                            // If "items" contains an array, return its elements merged into the parent
+                            JsonArray itemsArray = new();
+                            foreach (JsonElement item in property.Value.EnumerateArray())
+                            {
+                                itemsArray.Add(RemoveItemsKeyFromJson(item));
+                            }
+
+                            return itemsArray;
+
+                        }
+                        else if (property.Value.ValueKind == JsonValueKind.Object)
+                        {
+                            // If "items" contains an object, merge its properties into the parent
+                            JsonObject nestedObject = RemoveItemsKeyFromJson(property.Value) as JsonObject;
+                            foreach (KeyValuePair<string, JsonNode> kvp in nestedObject)
+                            {
+                                jsonObject[kvp.Key] = kvp.Value;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        JsonNode node = RemoveItemsKeyFromJson(property.Value);
+
+                        if (node.GetValueKind() == JsonValueKind.String || node.GetValueKind() == JsonValueKind.Number)
+                        {
+                            jsonObject[property.Name] = node;
+                        }
+                        else
+                        {
+                            // serialize the array to be in same format as the query results from DB
+                            jsonObject[property.Name] = JsonSerializer.Serialize(node, new JsonSerializerOptions
+                            {
+                                // avoid \u0022 when a json string is serialized for multiple times due to recursion
+                                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                            });
+                        }
+                    }
+                }
+
+                return jsonObject;
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                JsonArray jsonArray = new();
+                foreach (JsonElement item in element.EnumerateArray())
+                {
+                    jsonArray.Add(RemoveItemsKeyFromJson(item));
+                }
+
+                return jsonArray;
+            }
+            else
+            {
+                return JsonValue.Create(element);
+            }
+        }
+
+        /// <summary>
+        /// Validates the result from the sql db matches the graphql result returned by the engine.
+        /// </summary>
+        /// <param name="groupByArray">groupByArray</param>
+        /// <param name="expectedArray">expectedArray</param>
+        public static void AssertNumericAggregations(JsonElement groupByArray, JsonElement expectedArray, bool isfieldsPresentInResponse = true, bool isAggregatesPresentInResponse = true)
+        {
+            // Assert: Ensure expected and actual are arrays
+            Assert.AreEqual(JsonValueKind.Array, expectedArray.ValueKind);
+            Assert.AreEqual(JsonValueKind.Array, groupByArray.ValueKind);
+
+            // Convert expected values into a list of dictionaries for easy lookup
+            List<Dictionary<string, JsonElement>> expectedList = expectedArray.EnumerateArray()
+                .Select(obj => obj.EnumerateObject().ToDictionary(prop => prop.Name, prop => prop.Value))
+                .ToList();
+
+            int index = 0;
+            // Act: Iterate over each `groupBy` object in actual
+            foreach (JsonElement groupByObject in groupByArray.EnumerateArray())
+            {
+                // Create a combined dictionary and populate it with fields first
+                Dictionary<string, JsonElement> combinedDictionary = new();
+
+                if (isfieldsPresentInResponse)
+                {
+                    Assert.IsTrue(groupByObject.TryGetProperty("fields", out JsonElement fields), "Fields object not found.");
+                    Assert.AreEqual(JsonValueKind.Object, fields.ValueKind);
+
+                    // Add fields to the combined dictionary
+                    foreach (JsonProperty field in fields.EnumerateObject())
+                    {
+                        combinedDictionary[field.Name] = field.Value;
+                    }
+                }
+
+                if (isAggregatesPresentInResponse)
+                {
+                    Assert.IsTrue(groupByObject.TryGetProperty(QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME, out JsonElement aggregations), "Aggregations object not found.");
+                    Assert.AreEqual(JsonValueKind.Object, aggregations.ValueKind);
+
+                    // Add aggregations to the combined dictionary
+                    foreach (JsonProperty aggregation in aggregations.EnumerateObject())
+                    {
+                        combinedDictionary[aggregation.Name] = aggregation.Value;
+                    }
+                }
+
+                // Convert actual aggregations and expectedList[index] to strings
+                string resultString = JsonSerializer.Serialize(combinedDictionary);
+                string expectedAggregationsString = JsonSerializer.Serialize(expectedList[index]);
+
+                // Check if expected key-value pairs exist in actual aggregations
+                Assert.IsTrue(JsonStringsDeepEqual(expectedAggregationsString, resultString),
+                    "GroupBy result did not match expected result.");
+
+                index++;
             }
         }
 
@@ -178,6 +381,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string testCategory = TestCategory.MSSQL)
         {
             DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "IntegrationTestMinimalSchema",
@@ -185,7 +389,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
-                    Host: new(null, null)
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: authenticationOptions)
                 ),
                 Entities: new(new Dictionary<string, Entity>())
             );
@@ -230,7 +435,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     // For eg. POST Request LocalPath: /api/Review
                     // 201 Created Response LocalPath: /api/Review/book_id/1/id/5001
                     // therefore, actualLocation = book_id/1/id/5001
-                    string responseLocalPath = (response.Headers.Location.LocalPath);
+                    string responseLocalPath = response.Headers.Location.LocalPath;
                     string requestLocalPath = request.RequestUri.LocalPath;
                     string actualLocationPath = responseLocalPath.Substring(requestLocalPath.Length + 1);
                     Assert.AreEqual(expectedLocationHeader, actualLocationPath);
@@ -353,7 +558,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             // Create SqlError object.
             // For details on what the parameters stand for please refer:
-            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number?view=dotnet-plat-ext-6.0#examples
+            // https://learn.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlerror.number#examples
             SqlError sqlError = (nineParamsConstructor
                 .Invoke(new object[] { number, (byte)0, (byte)0, "", "", "", (int)0, (uint)0, null }) as SqlError)!;
             errorList.Add(sqlError);
@@ -391,6 +596,63 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             typenameResponseBuilder.Append("]");
             return typenameResponseBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Compares the expected JSON result with the actual JSON result after applying necessary transformations.
+        /// </summary>
+        /// <param name="expectedJson">The expected JSON string.</param>
+        /// <param name="actualJson">The actual JSON string to compare.</param>
+        public static void PerformTestEqualJsonStringsWithTransformations(string expectedJson, string actualJson)
+        {
+            // Parse the expected and actual JSON
+            JsonDocument expectedDocument = JsonDocument.Parse(expectedJson);
+
+            // Transform expected JSON to match the actual GraphQL format
+            string transformedExpectedJson = TransformExpectedJson(expectedDocument);
+
+            // Compare the transformed expected JSON with the actual JSON
+            Assert.AreEqual(transformedExpectedJson, actualJson, "The JSON results do not match.");
+        }
+
+        /// <summary>
+        /// Transforms the expected JSON to match the format of the actual GraphQL output.
+        /// This method is generic and can handle various structures.
+        /// </summary>
+        /// <param name="expectedDocument">The expected JSON document.</param>
+        /// <returns>The transformed expected JSON as a string.</returns>
+        private static string TransformExpectedJson(JsonDocument expectedDocument)
+        {
+            // Create a new JSON array to hold the transformed data
+            JsonArray transformedArray = new();
+
+            // Iterate through each element in the expected JSON array
+            foreach (JsonElement element in expectedDocument.RootElement.EnumerateArray())
+            {
+                JsonObject transformedElement = new();
+
+                // Iterate through each property in the element
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    // Generic transformation logic
+                    // For example, you might want to rename properties or adjust their values
+                    string newPropertyName = property.Name;
+
+                    // Example transformation: if the property name starts with "max_", remove the prefix
+                    if (newPropertyName.StartsWith("max_"))
+                    {
+                        newPropertyName = newPropertyName.Substring(4); // Remove "max_" prefix
+                    }
+
+                    // Add the transformed property to the new object
+                    transformedElement[newPropertyName] = JsonNode.Parse(property.Value.GetRawText());
+                }
+
+                // Add the transformed element to the transformed array
+                transformedArray.Add(transformedElement);
+            }
+
+            return transformedArray.ToString();
         }
 
         /// <summary>

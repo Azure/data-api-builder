@@ -7,6 +7,7 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -30,12 +31,31 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 {
-    // This stores either the default config name e.g. dab-config.json
-    // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
+    /// <summary>
+    /// This stores either the default config name e.g. dab-config.json
+    /// or user provided config file which could be a relative file path,
+    /// absolute file path or simply the file name assumed to be in current directory.
+    /// </summary>
     private string _baseConfigFilePath;
 
+    /// <summary>
+    /// This field is used to determine if the loader is being used by the CLI.
+    /// CLI usage of the loader should not set up the file watcher for hot reload
+    /// because:
+    /// 1. Hot reload isn't needed for the CLI.
+    /// 2. The CLI doesn't set _baseConfigFilePath using the user supplied config file name
+    /// resulting in failed config file lookups within the file watcher.
+    /// </summary>
+    private bool _isCliLoader;
+
+    /// <summary>
+    /// Watches the config file for changes and triggers hot-reload when a change is detected.
+    /// </summary>
     private ConfigFileWatcher? _configFileWatcher;
 
+    /// <summary>
+    /// File system abstraction used to interact with the runtime config file.
+    /// </summary>
     private readonly IFileSystem _fileSystem;
 
     public const string CONFIGFILE_NAME = "dab-config";
@@ -45,10 +65,6 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public const string RUNTIME_ENV_CONNECTION_STRING = $"{ENVIRONMENT_PREFIX}CONNSTRING";
     public const string ASP_NET_CORE_ENVIRONMENT_VAR_NAME = "ASPNETCORE_ENVIRONMENT";
     public const string SCHEMA = "dab.draft.schema.json";
-
-    /// <summary>
-    /// Returns the default config file name.
-    /// </summary>
     public const string DEFAULT_CONFIG_FILE_NAME = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
 
     /// <summary>
@@ -64,12 +80,14 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         IFileSystem fileSystem,
         HotReloadEventHandler<HotReloadEventArgs>? handler = null,
         string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME,
-        string? connectionString = null)
+        string? connectionString = null,
+        bool isCliLoader = false)
         : base(handler, connectionString)
     {
         _fileSystem = fileSystem;
         _baseConfigFilePath = baseConfigFilePath;
         ConfigFilePath = GetFinalConfigFilePath();
+        _isCliLoader = isCliLoader;
     }
 
     /// <summary>
@@ -105,16 +123,24 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
+        // File watching / hot-reload isn't used for the CLI.
+        if (_isCliLoader)
+        {
+            return false;
+        }
+
+        // If the file watcher is already set up, we don't need to do it again.
         if (_configFileWatcher is not null)
         {
             return false;
         }
 
-        if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+        if (RuntimeConfig is not null)
         {
             try
             {
-                _configFileWatcher = new(this, GetConfigDirectoryName(), GetConfigFileName());
+                _configFileWatcher = new(new FileSystemWatcherWrapper(_fileSystem), GetConfigDirectoryName(), GetConfigFileName());
+                _configFileWatcher.NewFileContentsDetected += OnNewFileContentsDetected;
             }
             catch (Exception ex)
             {
@@ -130,52 +156,138 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// When a change is detected in the Config file being watched this trigger
+    /// function is called and handles the hot reload logic when appropriate,
+    /// ie: in a local development scenario.
+    /// </summary>
+    private void OnNewFileContentsDetected(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (RuntimeConfig is not null)
+            {
+                HotReloadConfig(RuntimeConfig.IsDevelopmentMode());
+            }
+        }
+        catch (Exception ex)
+        {
+            // Need to remove the dependencies in startup on the RuntimeConfigProvider
+            // before we can have an ILogger here.
+            Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Load the runtime config from the specified path.
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
     /// <param name="logger">ILogger for logging errors.</param>
+    /// <param name="isDevMode">When not null indicates we need to overwrite mode and how to do so.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, uses default settings with environment variable replacement disabled.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,
         [NotNullWhen(true)] out RuntimeConfig? config,
-        bool replaceEnvVar = false,
         ILogger? logger = null,
-        string defaultDataSourceName = "")
+        bool? isDevMode = null,
+        DeserializationVariableReplacementSettings? replacementSettings = null)
     {
         if (_fileSystem.File.Exists(path))
         {
-            Console.WriteLine($"Loading config file from {path}.");
-            string json = _fileSystem.File.ReadAllText(path);
-            if (TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar))
+            Console.WriteLine($"Loading config file from {_fileSystem.Path.GetFullPath(path)}.");
+
+            // Use File.ReadAllText because DAB doesn't need write access to the file
+            // and ensures the file handle is released immediately after reading.
+            // Previous usage of File.Open may cause file locking issues when
+            // actively using hot-reload and modifying the config file in a text editor.
+            // Includes an exponential back-off retry mechanism to accommodate
+            // circumstances where the file may be in use by another process.
+            int runCount = 1;
+            string json = string.Empty;
+            while (runCount <= FileUtilities.RunLimit)
+            {
+                try
+                {
+                    json = _fileSystem.File.ReadAllText(path);
+                    break;
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"IO Exception, retrying due to {ex.Message}");
+                    if (runCount == FileUtilities.RunLimit)
+                    {
+                        throw;
+                    }
+
+                    Thread.Sleep(TimeSpan.FromSeconds(Math.Pow(FileUtilities.ExponentialRetryBase, runCount)));
+                    runCount++;
+                }
+            }
+
+            // Use default replacement settings if none provided
+            replacementSettings ??= new DeserializationVariableReplacementSettings();
+
+            if (!string.IsNullOrEmpty(json) && TryParseConfig(
+                json,
+                out RuntimeConfig,
+                replacementSettings,
+                logger: null,
+                connectionString: _connectionString))
             {
                 if (TrySetupConfigFileWatcher())
                 {
+                    Console.WriteLine("Monitoring config: {0} for hot-reloading.", ConfigFilePath);
                     logger?.LogInformation("Monitoring config: {ConfigFilePath} for hot-reloading.", ConfigFilePath);
                 }
 
-                if (!string.IsNullOrEmpty(defaultDataSourceName))
+                // When isDevMode is not null it means we are in a hot-reload scenario, and need to save the previous
+                // mode in the new RuntimeConfig since we do not support hot-reload of the mode.
+                if (isDevMode is not null && RuntimeConfig.Runtime is not null && RuntimeConfig.Runtime.Host is not null)
                 {
-                    RuntimeConfig.UpdateDefaultDataSourceName(defaultDataSourceName);
+                    // Log error when the mode is changed during hot-reload.
+                    if (isDevMode != this.RuntimeConfig.IsDevelopmentMode())
+                    {
+                        if (logger is null)
+                        {
+                            Console.WriteLine("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
+                        }
+                        else
+                        {
+                            logger.LogError("Hot-reload doesn't support switching mode. Please restart the service to switch the mode.");
+                        }
+                    }
+
+                    RuntimeConfig.Runtime.Host.Mode = (bool)isDevMode ? HostMode.Development : HostMode.Production;
                 }
 
                 config = RuntimeConfig;
+
+                if (LastValidRuntimeConfig is null)
+                {
+                    LastValidRuntimeConfig = RuntimeConfig;
+                }
+
                 return true;
+            }
+
+            if (LastValidRuntimeConfig is not null)
+            {
+                RuntimeConfig = LastValidRuntimeConfig;
             }
 
             config = null;
             return false;
         }
 
-        string errorMessage = "Unable to find config file: {path} does not exist.";
         if (logger is null)
         {
+            string errorMessage = $"Unable to find config file: {path} does not exist.";
             Console.Error.WriteLine(errorMessage);
         }
         else
         {
+            string errorMessage = "Unable to find config file: {path} does not exist.";
             logger.LogError(message: errorMessage, path);
         }
 
@@ -187,23 +299,39 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Tries to load the config file using the filename known to the RuntimeConfigLoader and for the default environment.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
-    /// <param name="replaceEnvVar">Whether to replace environment variable with its
-    /// value or not while deserializing.</param>
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization. If null, uses default settings with environment variable replacement disabled.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string defaultDataSourceName = "")
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
-        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar, defaultDataSourceName: defaultDataSourceName);
+        // Convert legacy replaceEnvVar parameter to replacement settings for backward compatibility
+        DeserializationVariableReplacementSettings? replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: replaceEnvVar, doReplaceAkvVar: replaceEnvVar);
+        return TryLoadConfig(ConfigFilePath, out config, replacementSettings: replacementSettings);
     }
 
     /// <summary>
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    public void HotReloadConfig(string defaultDataSourceName, ILogger? logger = null)
+    private void HotReloadConfig(bool isDevMode, ILogger? logger = null)
     {
         logger?.LogInformation(message: "Starting hot-reload process for config: {ConfigFilePath}", ConfigFilePath);
-        TryLoadConfig(ConfigFilePath, out _, replaceEnvVar: true, defaultDataSourceName: defaultDataSourceName);
-        SendEventNotification();
+
+        // Use default replacement settings for hot reload
+        DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+
+        if (!TryLoadConfig(ConfigFilePath, out _, logger: logger, isDevMode: isDevMode, replacementSettings: replacementSettings))
+        {
+            throw new DataApiBuilderException(
+                message: "Deserialization of the configuration file failed.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        IsNewConfigDetected = true;
+        IsNewConfigValidated = false;
+        SignalConfigChanged();
+
+        logger?.LogInformation("Hot-reload process finished.");
     }
 
     /// <summary>
@@ -235,11 +363,11 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             index++)
         {
             if (!string.IsNullOrWhiteSpace(environmentPrecedence[index])
-               // The last index is for the default case - the last fallback option
-               // where environmentPrecedence[index] is string.Empty
-               // for that case, we still need to get the file name considering overrides
-               // so need to do an OR on the last index here
-               || index == environmentPrecedence.Length - 1)
+                // The last index is for the default case - the last fallback option
+                // where environmentPrecedence[index] is string.Empty
+                // for that case, we still need to get the file name considering overrides
+                // so need to do an OR on the last index here
+                || index == environmentPrecedence.Length - 1)
             {
                 configFileNameWithExtension = GetFileName(environmentPrecedence[index], considerOverrides);
             }
@@ -351,7 +479,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 
         string? schemaPath = _fileSystem.Path.Combine(assemblyDirectory, "dab.draft.schema.json");
         string schemaFileContent = _fileSystem.File.ReadAllText(schemaPath);
-        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions());
+        Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions(replacementSettings: null));
 
         if (jsonDictionary is null)
         {
@@ -381,7 +509,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Allows the base config file and the actually loaded config file name(tracked by the property ConfigFileName)
     /// to be updated. This is commonly done when the CLI is starting up.
     /// </summary>
-    /// <param name="fileName"></param>
+    /// <param name="filePath"></param>
     public void UpdateConfigFilePath(string filePath)
     {
         _baseConfigFilePath = filePath;

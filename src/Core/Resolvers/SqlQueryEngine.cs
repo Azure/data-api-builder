@@ -12,12 +12,14 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -80,7 +82,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata, structure.GroupByMetadata),
                     structure.PaginationMetadata);
             }
             else
@@ -136,7 +138,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName)
         {
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
+            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name, out string? entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
@@ -210,23 +212,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, ObjectField fieldSchema, ref IMetadata metadata)
         {
+
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-            if (parentMetadata.Subqueries.TryGetValue(QueryBuilder.PAGINATION_FIELD_NAME, out PaginationMetadata? paginationObjectMetadata))
+            if (parentMetadata is not null)
             {
-                parentMetadata = paginationObjectMetadata;
+                // Sub objects with items array/subqueries in it are handled by below code.
+                if (parentMetadata.Subqueries.TryGetValue(QueryBuilder.PAGINATION_FIELD_NAME, out PaginationMetadata? paginationObjectMetadata))
+                {
+                    parentMetadata = paginationObjectMetadata;
+                }
+
+                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
+                metadata = currentMetadata;
+
+                if (currentMetadata.IsPaginated)
+                {
+                    return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+                }
             }
 
-            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
-            metadata = currentMetadata;
-
-            if (currentMetadata.IsPaginated)
-            {
-                return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
-            }
-
-            // In certain cirumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
+            // In certain circumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
             // of JsonValueKind.Object. In this case, we need to parse the JSON. This snippet can be removed when DW result is consistent
             // with MSSQL result.
             if (element.ValueKind is JsonValueKind.String)
@@ -252,12 +259,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>List of JsonElements parsed from the provided JSON array.</returns>
         /// <remarks>Return type is 'object' instead of a 'List of JsonElements' because when this function returns JsonElement,
         /// the HC12 engine doesn't know how to handle the JsonElement and results in requests failing at runtime.</remarks>
-        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata? metadata)
+        public object ResolveList(JsonElement array, ObjectField fieldSchema, ref IMetadata? metadata)
         {
             if (metadata is not null)
             {
                 PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+                parentMetadata.Subqueries.TryGetValue(fieldSchema.Name, out PaginationMetadata? currentMetadata);
                 metadata = currentMetadata;
             }
 
@@ -323,11 +330,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // We want to avoid caching token metadata because token metadata can change frequently and we want to avoid caching it.
                 if (!dbPolicyConfigured && entityCacheEnabled)
                 {
-                    DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
-                    byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
-                    JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
-                    return cacheServiceResponse;
+                    return await GetResultInCacheScenario(
+                    runtimeConfig,
+                    structure,
+                    queryString,
+                    dataSourceName,
+                    queryExecutor,
+                    runtimeConfig.GetEntityCacheEntryLevel(structure.EntityName)
+                    );
                 }
             }
 
@@ -343,13 +353,98 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 httpContext: _httpContextAccessor.HttpContext!,
                 args: null,
                 dataSourceName: dataSourceName);
+
             return response;
+        }
+
+        private async Task<JsonDocument?> GetResultInCacheScenario(
+            RuntimeConfig runtimeConfig,
+            SqlQueryStructure structure,
+            string queryString,
+            string dataSourceName,
+            IQueryExecutor queryExecutor,
+            EntityCacheLevel cacheEntryLevel)
+        {
+            DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+            JsonElement? result;
+            MaybeValue<JsonElement?>? maybeResult;
+            switch (structure.CacheControlOption?.ToLowerInvariant())
+            {
+                // Do not get result from cache even if it exists, still cache result.
+                case SqlQueryStructure.CACHE_CONTROL_NO_CACHE:
+                    result = await queryExecutor.ExecuteQueryAsync(
+                        sqltext: queryMetadata.QueryText,
+                        parameters: queryMetadata.QueryParameters,
+                        dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
+                        httpContext: _httpContextAccessor.HttpContext!,
+                        args: null,
+                        dataSourceName: queryMetadata.DataSource);
+                    _cache.Set<JsonElement?>(
+                        queryMetadata,
+                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        result,
+                        cacheEntryLevel);
+                    return ParseResultIntoJsonDocument(result);
+
+                // Do not store result even if valid, still get from cache if available.
+                case SqlQueryStructure.CACHE_CONTROL_NO_STORE:
+                    maybeResult = _cache.TryGet<JsonElement?>(queryMetadata, cacheEntryLevel);
+                    // maybeResult is a nullable wrapper so we must check hasValue at outer and inner layer.
+                    if (maybeResult.HasValue && maybeResult.Value.HasValue)
+                    {
+                        result = maybeResult.Value.Value;
+                    }
+                    else
+                    {
+                        result = await queryExecutor.ExecuteQueryAsync(
+                            sqltext: queryMetadata.QueryText,
+                            parameters: queryMetadata.QueryParameters,
+                            dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
+                            httpContext: _httpContextAccessor.HttpContext!,
+                            args: null,
+                            dataSourceName: queryMetadata.DataSource);
+                    }
+
+                    return ParseResultIntoJsonDocument(result);
+
+                // Only return query response if it exists in cache, return gateway timeout otherwise.
+                case SqlQueryStructure.CACHE_CONTROL_ONLY_IF_CACHED:
+                    maybeResult = _cache.TryGet<JsonElement?>(queryMetadata, cacheEntryLevel);
+                    // maybeResult is a nullable wrapper so we must check hasValue at outer and inner layer.
+                    if (maybeResult.HasValue && maybeResult.Value.HasValue)
+                    {
+                        result = maybeResult.Value.Value;
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Header 'only-if-cached' was used but item was not found in cache.",
+                            statusCode: System.Net.HttpStatusCode.GatewayTimeout,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
+                    }
+
+                    return ParseResultIntoJsonDocument(result);
+
+                default:
+                    result = await _cache.GetOrSetAsync<JsonElement>(
+                        queryExecutor,
+                        queryMetadata,
+                        cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        cacheEntryLevel);
+                    return ParseResultIntoJsonDocument(result);
+            }
+        }
+
+        private static JsonDocument? ParseResultIntoJsonDocument(JsonElement? result)
+        {
+            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+            return JsonDocument.Parse(jsonBytes);
         }
 
         // <summary>
         // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
-        // As such, this could feasibly be moved to the mutation engine. 
+        // As such, this could feasibly be moved to the mutation engine.
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName)
         {
@@ -387,7 +482,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             args: null,
                             dataSourceName: dataSourceName),
                         queryMetadata,
-                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName),
+                        runtimeConfig.GetEntityCacheEntryLevel(entityName: structure.EntityName));
 
                     JsonDocument? cacheServiceResponse = null;
 

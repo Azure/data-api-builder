@@ -584,13 +584,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Relationships: null,
                 Mappings: null);
 
-            // Create a stored procedure entity
+            // Create a stored procedure entity - using an actual stored procedure from test schema
             Entity storedProcEntity = new(
                 Health: new(enabled: true),
-                Source: new("GetData", EntitySourceType.StoredProcedure, null, null),
+                Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
                 Fields: null,
                 Rest: new(Enabled: true),
-                GraphQL: new("getData", "getDataList", true),
+                GraphQL: new("executeGetBooks", "executeGetBooksList", true),
                 Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null);
@@ -598,7 +598,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Dictionary<string, Entity> entityMap = new()
             {
                 { "Book", tableEntity },
-                { "GetData", storedProcEntity }
+                { "GetBooks", storedProcEntity }
             };
 
             RuntimeConfig runtimeConfig = CreateRuntimeConfig(
@@ -646,9 +646,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsTrue(entityNamesInHealthCheck.Contains("Book"),
                     "Table entity 'Book' should be included in health check results");
 
-                // Verify that the stored procedure entity (GetData) does NOT appear in health checks
-                Assert.IsFalse(entityNamesInHealthCheck.Contains("GetData"),
-                    "Stored procedure entity 'GetData' should be excluded from health check results");
+                // Verify that the stored procedure entity (GetBooks) does NOT appear in health checks
+                Assert.IsFalse(entityNamesInHealthCheck.Contains("GetBooks"),
+                    "Stored procedure entity 'GetBooks' should be excluded from health check results");
             }
         }
 

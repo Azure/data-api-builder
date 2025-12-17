@@ -366,7 +366,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod("Hot-reload gql disabled at entity level.")]
-    [Ignore] // This test requires GraphQL schema reload
+    [Ignore] // This test requires GraphQL schema reload. See: issue #3019
     public async Task HotReloadEntityGQLEnabledFlag()
     {
         // Arrange
@@ -413,7 +413,7 @@ public class ConfigurationHotReloadTests
     /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [Ignore] // This test requires GraphQL schema reload
+    [Ignore] // This test requires GraphQL schema reload. See: issue #3019
     public async Task HotReloadConfigAddEntity()
     {
         // Arrange
@@ -498,7 +498,7 @@ public class ConfigurationHotReloadTests
     /// results in bad request, while the new mappings results in a correct response as "title" field is no longer valid.
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
-    [Ignore] // This test requires GraphQL schema reload
+    [Ignore] // This test requires GraphQL schema reload. See: issue #3019
     public async Task HotReloadConfigUpdateMappings()
     {
         // Arrange

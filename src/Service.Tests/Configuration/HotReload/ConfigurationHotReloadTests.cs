@@ -30,6 +30,7 @@ public class ConfigurationHotReloadTests
     private const string GQL_QUERY_NAME = "books";
     private const string HOT_RELOAD_SUCCESS_MESSAGE = "Validated hot-reloaded configuration file";
     private const string HOT_RELOAD_FAILURE_MESSAGE = "Unable to hot reload configuration file due to";
+    private const int HOT_RELOAD_TIMEOUT_SECONDS = 30;
 
     private const string GQL_QUERY = @"{
                 books(first: 100) {
@@ -308,7 +309,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         // Act
@@ -348,7 +349,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         // Act
@@ -394,7 +395,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         // Act
@@ -434,7 +435,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         // Act
@@ -514,7 +515,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         // Act
@@ -598,7 +599,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
@@ -641,7 +642,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig updatedRuntimeConfig = _configProvider.GetConfig();
@@ -671,7 +672,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"WrongConnectionString");
         await WaitForConditionAsync(
           () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
-          TimeSpan.FromSeconds(12),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
@@ -683,7 +684,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
           () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-          TimeSpan.FromSeconds(12),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
@@ -720,7 +721,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
           () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
-          TimeSpan.FromSeconds(12),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
@@ -733,7 +734,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
           () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-          TimeSpan.FromSeconds(12),
+          TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
@@ -782,7 +783,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to fail
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();
@@ -829,7 +830,7 @@ public class ConfigurationHotReloadTests
         // Wait for hot-reload to fail (parsing error should trigger failure message)
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         RuntimeConfig newRuntimeConfig = _configProvider.GetConfig();

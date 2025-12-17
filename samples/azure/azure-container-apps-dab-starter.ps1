@@ -42,7 +42,7 @@
     Minimum number of container replicas. Default: 1
 
 .PARAMETER MaxReplicas
-    Maximum number of container replicas. Default: 3
+    Maximum number of container replicas. Default: 3`n`n.PARAMETER DabConfigFile`n    Path to DAB configuration file. Default: src/Service.Tests/dab-config.MsSql.json
 
 .EXAMPLE
     .\azure-container-apps-dab-starter.ps1
@@ -67,20 +67,20 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$true)]
     [string]$SubscriptionId,
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$true)]
     [string]$ResourceGroup,
     
     [Parameter(Mandatory=$false)]
     [ValidateSet('eastus', 'eastus2', 'westus', 'westus2', 'westus3', 'centralus', 'northeurope', 'westeurope', 'uksouth', 'southeastasia')]
     [string]$Location = "eastus",
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$true)]
     [string]$ResourcePrefix,
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$true)]
     [SecureString]$SqlAdminPassword,
     
     [Parameter(Mandatory=$false)]
@@ -99,11 +99,20 @@ param(
     
     [Parameter(Mandatory=$false)]
     [ValidateRange(1, 30)]
-    [int]$MaxReplicas = 3
+    [int]$MaxReplicas = 3,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$DabConfigFile
 )
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+# Validate replica configuration
+if ($MaxReplicas -lt $MinReplicas) {
+    Write-Host "[ERROR] MaxReplicas ($MaxReplicas) must be greater than or equal to MinReplicas ($MinReplicas)" -ForegroundColor Red
+    exit 1
+}
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -119,7 +128,7 @@ function Write-Success {
     Write-Host "[OK] $Message" -ForegroundColor Green
 }
 
-function Write-Error {
+function Write-ErrorMessage {
     param([string]$Message)
     Write-Host "[ERROR] $Message" -ForegroundColor Red
 }
@@ -129,24 +138,40 @@ function Test-Prerequisites {
     
     # Check Azure CLI
     if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-        Write-Error "Azure CLI is not installed. Please install from: https://aka.ms/InstallAzureCLIDirect"
+        Write-ErrorMessage "Azure CLI is not installed. Please install from: https://aka.ms/InstallAzureCLIDirect"
         exit 1
     }
     Write-Success "Azure CLI installed"
     
     # Check Docker
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        Write-Error "Docker is not installed. Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
+        Write-ErrorMessage "Docker is not installed. Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
         exit 1
     }
     
+    # Check Azure CLI containerapp extension (ignore metadata permission errors)
+    $extensionCheck = az extension list --query "[?name=='containerapp'].name" -o tsv 2>$null
+    if ([string]::IsNullOrEmpty($extensionCheck)) {
+        Write-ErrorMessage "Azure CLI containerapp extension is not installed."
+        Write-Host "Please run: az extension add --name containerapp --upgrade --yes" -ForegroundColor Yellow
+        Write-Host "If permission errors occur, run PowerShell as Administrator." -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Success "Azure CLI containerapp extension installed"
+    
     # Check if Docker is running
     try {
-        docker ps | Out-Null
+        $dockerOutput = docker ps 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-ErrorMessage "Docker is not running. Please start Docker Desktop."
+            Write-Host "Error: $dockerOutput" -ForegroundColor Red
+            exit 1
+        }
         Write-Success "Docker is running"
     }
     catch {
-        Write-Error "Docker is not running. Please start Docker Desktop."
+        Write-ErrorMessage "Docker is not running or not responding. Please start Docker Desktop."
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
         exit 1
     }
     
@@ -162,7 +187,7 @@ function Test-Prerequisites {
     # Check if logged into Azure
     $account = az account show 2>$null | ConvertFrom-Json
     if (-not $account) {
-        Write-Error "Not logged into Azure. Please run: az login"
+        Write-ErrorMessage "Not logged into Azure. Please run: az login"
         exit 1
     }
     Write-Success "Logged into Azure as $($account.user.name)"
@@ -175,83 +200,42 @@ function Get-UniqueResourceName {
 }
 
 function New-RandomPassword {
-    $length = 16
+    param(
+        [int]$Length = 16
+    )
     $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()'
-    $password = -join ((1..$length) | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
+    $password = -join ((1..$Length) | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
     # Ensure complexity requirements
     $password = 'A1!' + $password
     return $password
 }
 
-function New-DabConfigFile {
+function Update-DabConfigFile {
     param(
-        [string]$SqlServer,
-        [string]$SqlDatabase,
-        [string]$SqlUser,
-        [string]$SqlPassword,
+        [string]$SourceConfigPath,
+        [string]$ConnectionString,
         [string]$OutputPath
     )
     
-    # Build config as JSON string directly to avoid PowerShell hashtable issues
-    $configJson = @'
-{
-  "$schema": "https://github.com/Azure/data-api-builder/releases/latest/download/dab.draft.schema.json",
-  "data-source": {
-    "database-type": "mssql",
-    "connection-string": "@env('DATABASE_CONNECTION_STRING')"
-  },
-  "runtime": {
-    "rest": {
-      "enabled": true,
-      "path": "/api"
-    },
-    "graphql": {
-      "enabled": true,
-      "path": "/graphql",
-      "allow-introspection": true
-    },
-    "host": {
-      "mode": "production",
-      "cors": {
-        "origins": ["*"],
-        "allow-credentials": false
-      }
-    }
-  },
-  "entities": {
-    "Book": {
-      "source": "books",
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": ["create", "read", "update", "delete"]
-        }
-      ]
-    },
-    "Publisher": {
-      "source": "publishers",
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": ["create", "read", "update", "delete"]
-        }
-      ]
-    },
-    "Author": {
-      "source": "authors",
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": ["create", "read", "update", "delete"]
-        }
-      ]
-    }
-  }
-}
-'@
+    # Read the source config file
+    $configContent = Get-Content -Path $SourceConfigPath -Raw
     
-    $configJson | Set-Content -Path $OutputPath
-    Write-Success "Generated DAB config file: $OutputPath"
+    # Parse JSON
+    $config = $configContent | ConvertFrom-Json
+    
+    # Update the connection string
+    $config.'data-source'.'connection-string' = $ConnectionString
+    
+    # Ensure production mode for Container Apps
+    if ($config.runtime.host.mode -eq "development") {
+        $config.runtime.host.mode = "production"
+    }
+    
+    # Convert back to JSON and save
+    $configContent = $config | ConvertTo-Json -Depth 100
+    $configContent | Set-Content -Path $OutputPath -Encoding UTF8
+    
+    Write-Success "Updated DAB config file: $OutputPath"
 }
 
 # ============================================================================
@@ -274,17 +258,28 @@ while ($repoPath -and -not (Test-Path (Join-Path $repoPath "Dockerfile"))) {
 }
 
 if (-not $repoPath -or -not (Test-Path (Join-Path $repoPath "Dockerfile"))) {
-    Write-Error "Could not find data-api-builder repository root (looking for Dockerfile)"
+    Write-ErrorMessage "Could not find data-api-builder repository root (looking for Dockerfile)"
     exit 1
 }
 
 $sqlScriptPath = Join-Path $repoPath "src\Service.Tests\DatabaseSchema-MsSql.sql"
 if (-not (Test-Path $sqlScriptPath)) {
-    Write-Error "Could not find SQL script at: $sqlScriptPath"
+    Write-ErrorMessage "Could not find SQL script at: $sqlScriptPath"
+    exit 1
+}
+
+# Set default DAB config file path if not provided
+if (-not $DabConfigFile) {
+    $DabConfigFile = Join-Path $repoPath "src\Service.Tests\dab-config.MsSql.json"
+}
+
+if (-not (Test-Path $DabConfigFile)) {
+    Write-ErrorMessage "DAB config file not found at: $DabConfigFile"
     exit 1
 }
 
 Write-Success "Repository root: $repoPath"
+Write-Success "Using DAB config: $DabConfigFile"
 
 # Generate or validate parameters
 if (-not $ResourcePrefix) {
@@ -324,12 +319,35 @@ $acrImageTag = "latest"
 if (-not $SqlAdminPassword) {
     $generatedPassword = New-RandomPassword
     $SqlAdminPassword = ConvertTo-SecureString -String $generatedPassword -AsPlainText -Force
-    Write-Host "Generated SQL Server admin password (save this): $generatedPassword" -ForegroundColor Yellow
+    
+    # Store password to file for secure retrieval
+    $passwordFile = Join-Path $env:TEMP "dab-sql-password-$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
+    $generatedPassword | Out-File -FilePath $passwordFile -NoNewline
+    
+    # Restrict file permissions to current user only (requires elevated privileges)
+    try {
+        $acl = Get-Acl $passwordFile
+        $acl.SetAccessRuleProtection($true, $false)
+        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($env:USERNAME, "FullControl", "Allow")
+        $acl.SetAccessRule($accessRule)
+        Set-Acl $passwordFile $acl
+    }
+    catch {
+        Write-Warning "Could not restrict password file ACL permissions (requires admin rights)."
+    }
+    
+    Write-Warning "Auto-generated SQL password has been saved to: $passwordFile"
+    Write-Host "Please store this password securely and delete the file after saving it to your password manager." -ForegroundColor Yellow
 }
 
-$sqlAdminPasswordPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
-    [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SqlAdminPassword)
-)
+# Convert SecureString to plain text with proper memory management
+$bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SqlAdminPassword)
+try {
+    $sqlAdminPasswordPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+}
+finally {
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+}
 
 # Summary
 Write-Host "`nDeployment Configuration:" -ForegroundColor Cyan
@@ -425,22 +443,131 @@ try {
     Write-Step "Loading test data into database..."
     $sqlServer = "$sqlServerName.database.windows.net"
     
-    # Wait a moment for SQL server to be fully ready
-    Start-Sleep -Seconds 10
+    # Wait for firewall rules to propagate (Azure can take up to 5 minutes)
+    Write-Host "Waiting for firewall rules to propagate..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 30
     
-    try {
-        sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sqlDbName -i $sqlScriptPath -b
-        Write-Success "Test data loaded successfully"
+    $maxRetries = 3
+    $retryCount = 0
+    $dataLoaded = $false
+    
+    while (-not $dataLoaded -and $retryCount -lt $maxRetries) {
+        try {
+            if ($retryCount -gt 0) {
+                Write-Host "Retry attempt $retryCount of $maxRetries..." -ForegroundColor Yellow
+            }
+            
+$output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sqlDbName -i $sqlScriptPath -I -b 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                $dataLoaded = $true
+                Write-Success "Test data loaded successfully"
+            }
+            else {
+                throw "sqlcmd returned exit code $LASTEXITCODE"
+            }
+        }
+        catch {
+            $errorMessage = $_.Exception.Message
+            if ($output) { $errorMessage = $output | Out-String }
+            
+            # Check if error is due to IP not allowed
+            if ($errorMessage -match "Client with IP address '([0-9.]+)' is not allowed") {
+                $blockedIp = $matches[1]
+                Write-Warning "Connection blocked from IP: $blockedIp (detected IP was: $myIp)"
+                Write-Host "Adding blocked IP to firewall rules..." -ForegroundColor Yellow
+                
+                try {
+                    az sql server firewall-rule create `
+                        --resource-group $ResourceGroup `
+                        --server $sqlServerName `
+                        --name "ClientIP-Actual" `
+                        --start-ip-address $blockedIp `
+                        --end-ip-address $blockedIp | Out-Null
+                    
+                    Write-Host "Waiting for new firewall rule to propagate..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds 30
+                }
+                catch {
+                    Write-Warning "Failed to add blocked IP to firewall: $_"
+                }
+            }
+            elseif ($errorMessage -match "It may take up to five minutes") {
+                Write-Host "Firewall rules still propagating. Waiting 60 seconds..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 60
+            }
+            else {
+                Write-Warning "SQL connection error: $errorMessage"
+                if ($retryCount -lt $maxRetries - 1) {
+                    Write-Host "Waiting 30 seconds before retry..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds 30
+                }
+            }
+            
+            $retryCount++
+        }
     }
-    catch {
-        Write-Warning "Failed to load test data. You may need to run it manually."
-        Write-Host "Command: sqlcmd -S $sqlServer -U $sqlAdminUser -P *** -d $sqlDbName -i $sqlScriptPath" -ForegroundColor Yellow
+    
+    if (-not $dataLoaded) {
+        Write-Warning "Failed to load test data after $maxRetries attempts. You may need to run it manually."
+            Write-Host "Command: sqlcmd -S $sqlServer -U $sqlAdminUser -P *** -d $sqlDbName -i $sqlScriptPath -I" -ForegroundColor Yellow
     }
 
-    # Generate DAB config
-    Write-Step "Generating DAB configuration..."
+    # Prepare DAB config with actual connection string (same as ACI)
+    Write-Step "Preparing DAB configuration..."
     $dabConfigPath = Join-Path $env:TEMP "dab-config.json"
-    New-DabConfigFile -SqlServer $sqlServer -SqlDatabase $sqlDbName -SqlUser $sqlAdminUser -SqlPassword $sqlAdminPasswordPlain -OutputPath $dabConfigPath
+    $connectionString = "Server=$sqlServer,1433;Persist Security Info=False;User ID=$sqlAdminUser;Password=$sqlAdminPasswordPlain;Initial Catalog=$sqlDbName;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;"
+    
+    Update-DabConfigFile -SourceConfigPath $DabConfigFile -ConnectionString $connectionString -OutputPath $dabConfigPath
+
+    # Upload config to Azure Storage Account for container to download (same as ACI)
+    Write-Step "Creating storage account for config file..."
+    $storageAccountName = "dabstorage$(Get-Random -Minimum 10000 -Maximum 99999)"
+    
+    az storage account create `
+        --name $storageAccountName `
+        --resource-group $ResourceGroup `
+        --location $Location `
+        --sku Standard_LRS `
+        --kind StorageV2 | Out-Null
+    
+    Write-Success "Storage account created: $storageAccountName"
+    
+    # Get storage account key
+    $storageKey = az storage account keys list `
+        --resource-group $ResourceGroup `
+        --account-name $storageAccountName `
+        --query "[0].value" -o tsv
+    
+    # Create container (blob container, not ACA)
+    az storage container create `
+        --name "config" `
+        --account-name $storageAccountName `
+        --account-key $storageKey | Out-Null
+    
+    # Upload config file
+    az storage blob upload `
+        --account-name $storageAccountName `
+        --account-key $storageKey `
+        --container-name "config" `
+        --name "dab-config.json" `
+        --file $dabConfigPath `
+        --overwrite | Out-Null
+    
+    Write-Success "Config file uploaded to blob storage"
+    
+    # Generate SAS URL for the blob (valid for 1 year)
+    $expiryDate = (Get-Date).AddYears(1).ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $configUrl = az storage blob generate-sas `
+        --account-name $storageAccountName `
+        --account-key $storageKey `
+        --container-name "config" `
+        --name "dab-config.json" `
+        --permissions r `
+        --expiry $expiryDate `
+        --full-uri -o tsv
+    
+    Write-Success "Generated SAS URL for config download"
 
     # Create Container Apps Environment
     Write-Step "Creating Container Apps Environment..."
@@ -450,11 +577,11 @@ try {
         --location $Location | Out-Null
     Write-Success "Container Apps Environment created"
 
-    # Create connection string
-    $connectionString = "Server=$sqlServer;Database=$sqlDbName;User ID=$sqlAdminUser;Password=$sqlAdminPasswordPlain;TrustServerCertificate=true;"
-
-    # Deploy Container App
+    # Deploy Container App (same blob storage + curl approach as ACI)
     Write-Step "Deploying Container App..."
+    Write-Host "Note: Container will download config from blob storage on startup (same as ACI)" -ForegroundColor Yellow
+    
+    # Use secrets for CONFIG_URL to avoid command-line shell parsing of SAS URL special characters
     az containerapp create `
         --name $acaName `
         --resource-group $ResourceGroup `
@@ -470,15 +597,16 @@ try {
         --registry-server $acrLoginServer `
         --registry-username $acrName `
         --registry-password $acrPassword `
-        --secrets "db-connection-string=$connectionString" `
-        --env-vars "ASPNETCORE_URLS=http://+:$ContainerPort" "DATABASE_CONNECTION_STRING=secretref:db-connection-string" | Out-Null
+        --secrets "config-url=$configUrl" `
+        --env-vars "ASPNETCORE_URLS=http://+:$ContainerPort" "CONFIG_URL=secretref:config-url" `
+        --command "/bin/sh" "-c" "curl -o /App/dab-config.json \"\$CONFIG_URL\" && dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName /App/dab-config.json" | Out-Null
     
     Write-Success "Container App deployed"
 
     # Get app URL
     $appUrl = az containerapp show `
         --name $acaName `
-        --resource-group $resourceGroup `
+        --resource-group $ResourceGroup `
         --query "properties.configuration.ingress.fqdn" -o tsv
 
     # Display summary
@@ -502,7 +630,7 @@ try {
     Write-Host "  Server:             $sqlServer"
     Write-Host "  Database:           $sqlDbName"
     Write-Host "  Admin User:         $sqlAdminUser"
-    Write-Host "  Admin Password:     $sqlAdminPasswordPlain"
+    Write-Host "  Admin Password:     ********** (saved to file earlier)"
     Write-Host ""
     Write-Host "Try these commands:" -ForegroundColor Cyan
     Write-Host "  # List all publishers"
@@ -520,7 +648,7 @@ try {
 
 }
 catch {
-    Write-Error "Deployment failed: $_"
+    Write-ErrorMessage "Deployment failed: $_"
     Write-Host $_.Exception.Message -ForegroundColor Red
     Write-Host $_.ScriptStackTrace -ForegroundColor Red
     

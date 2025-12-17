@@ -341,7 +341,7 @@ public class ConfigurationHotReloadTests
         {
             Content = JsonContent.Create(payload)
         };
-        
+
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEnabled: gQLEnabled);
@@ -790,11 +790,11 @@ public class ConfigurationHotReloadTests
 
         // Assert - Verify the configuration hasn't changed by comparing properties
         Assert.IsNotNull(newRuntimeConfig, "RuntimeConfig should not be null after failed hot-reload.");
-        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.Runtime.Rest.Enabled, 
+        Assert.AreEqual(originalRestEnabled, newRuntimeConfig.Runtime.Rest.Enabled,
             "REST enabled setting should remain unchanged after hot-reload failure.");
-        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.Runtime.GraphQL.Enabled, 
+        Assert.AreEqual(originalGraphQLEnabled, newRuntimeConfig.Runtime.GraphQL.Enabled,
             "GraphQL enabled setting should remain unchanged after hot-reload failure.");
-        Assert.AreEqual(originalMcpEnabled, newRuntimeConfig.Runtime.Mcp.Enabled, 
+        Assert.AreEqual(originalMcpEnabled, newRuntimeConfig.Runtime.Mcp.Enabled,
             "MCP enabled setting should remain unchanged after hot-reload failure.");
     }
 

@@ -12,52 +12,82 @@ We provide two comprehensive PowerShell starter scripts that create a complete D
 Deploys DAB to **Azure Container Apps** with auto-scaling, HTTPS, and health monitoring.
 
 ```powershell
-# Quick start with auto-generated names
-.\azure-container-apps-dab-starter.ps1
+# Basic deployment (required parameters)
+$password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
+.\azure-container-apps-dab-starter.ps1 -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aca" `
+    -ResourcePrefix "mydab" `
+    -SqlAdminPassword $password
 
-# Custom deployment
-.\azure-container-apps-dab-starter.ps1 -ResourcePrefix "mydab" -Location "westus2"
+# Custom location and resources
+$password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
+.\azure-container-apps-dab-starter.ps1 -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aca" `
+    -ResourcePrefix "mydab" `
+    -SqlAdminPassword $password `
+    -Location "westus2" `
+    -ContainerCpu 1 `
+    -ContainerMemory 2
 ```
 
 **Features:**
-- ✅ Auto-scaling (configurable min/max replicas)
-- ✅ HTTPS enabled by default
-- ✅ Built-in health probes
-- ✅ Managed environment
+- ✅ Auto-scaling (configurable 0-30 replicas)
+- ✅ HTTPS enabled by default with automatic certificate management
+- ✅ Built-in health probes and monitoring
+- ✅ Managed Container Apps Environment with Log Analytics
+- ✅ Zero-downtime deployments with revision management
+- ✅ Configurable CPU (0.25-4 cores) and memory (0.5-8 GB)
+- ✅ Container startup command downloads config from Azure Blob Storage (SAS URL)
 - ✅ Better for production workloads
 
 #### **[azure-container-instances-dab-starter.ps1](./azure-container-instances-dab-starter.ps1)**
 Deploys DAB to **Azure Container Instances** for simpler, single-instance deployments.
 
 ```powershell
-# Quick start
-.\azure-container-instances-dab-starter.ps1
+# Basic deployment (required parameters)
+$password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
+.\azure-container-instances-dab-starter.ps1 -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aci" `
+    -ResourcePrefix "mydab" `
+    -SqlAdminPassword $password
 
-# With custom resources
-.\azure-container-instances-dab-starter.ps1 -ContainerCpu 2 -ContainerMemory 3
+# With custom CPU and memory
+$password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
+.\azure-container-instances-dab-starter.ps1 -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aci" `
+    -ResourcePrefix "mydab" `
+    -SqlAdminPassword $password `
+    -ContainerCpu 2 `
+    -ContainerMemory 3
 ```
 
 **Features:**
-- ✅ Simpler architecture
-- ✅ Faster startup
-- ✅ Lower cost for testing
-- ✅ Good for development/testing
+- ✅ Simpler architecture (single container)
+- ✅ Faster startup (~30 seconds)
+- ✅ Lower cost for testing and development
+- ✅ Configurable CPU (1-4 cores) and memory (0.5-16 GB)
+- ✅ ARM template-based deployment
+- ✅ Good for development, testing, and simple workloads
 
 ### What These Scripts Do
 
 Both starter scripts automatically:
 
-1. **Validate Prerequisites** - Check for Azure CLI, Docker, sqlcmd
-2. **Create Azure Resources**:
+1. **Validate Prerequisites** - Check for Azure CLI, Docker, sqlcmd, and verify Docker is running
+2. **Verify Subscription** - Set or confirm the Azure subscription to use
+3. **Create Azure Resources**:
    - Resource Group
-   - Azure Container Registry (ACR)
-   - MS SQL Server & Database
-   - Container deployment (Apps or Instances)
-3. **Build & Deploy** - Build DAB Docker image and push to ACR
-4. **Configure Security** - Set up SQL firewall rules (Azure services + your IP)
-5. **Load Test Data** - Import sample database schema and data from `src/Service.Tests/DatabaseSchema-MsSql.sql`
-6. **Generate Config** - Create a working DAB configuration file
-7. **Provide Endpoints** - Display all connection details and example commands
+   - Azure Container Registry (ACR) with admin user enabled
+   - MS SQL Server & Database (with configurable service tier)
+   - **Container Apps**: Storage Account (for config file), Container Apps Environment with Log Analytics, Container App
+   - **Container Instances**: Container Instance deployed via ARM template
+4. **Build & Deploy** - Build DAB Docker image from repository root and push to ACR
+5. **Configure Security** - Set up SQL firewall rules (Azure services + your public IP)
+6. **Load Test Data** - Import sample database schema and data from `src/Service.Tests/DatabaseSchema-MsSql.sql` using sqlcmd
+7. **Generate Config** - Create a working DAB configuration file with connection string and upload to blob storage (Container Apps) or embed in deployment (Container Instances)
+8. **Deploy Container** - Start container with proper startup command and environment variables
+9. **Verify Deployment** - Wait for resources to be ready and display status
+10. **Provide Endpoints** - Display all connection details, URLs, and example curl commands
 
 ### Prerequisites
 
@@ -75,40 +105,64 @@ Before running these scripts, ensure you have:
 # 1. Login to Azure
 az login
 
-# 2. Clone the repository (if not already done)
+# 2. Get your subscription ID (optional - script can use current subscription)
+az account show --query id -o tsv
+
+# 3. Clone the repository (if not already done)
 git clone https://github.com/Azure/data-api-builder.git
 cd data-api-builder/samples/azure
 
-# 3. Run the script
-.\azure-container-apps-dab-starter.ps1
+# 4. Prepare SQL password
+$password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
+
+# 5. Run the script with required parameters
+.\azure-container-apps-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-demo" `
+    -ResourcePrefix "dab" `
+    -SqlAdminPassword $password
 
 # The script will:
-# - Auto-generate resource names
+# - Validate prerequisites (Azure CLI, Docker, sqlcmd)
 # - Show a deployment summary
 # - Ask for confirmation before proceeding
-# - Display connection details after deployment
+# - Create all Azure resources
+# - Build and deploy DAB container
+# - Load test data from DatabaseSchema-MsSql.sql
+# - Display connection details and example commands
 ```
 
 ### Script Parameters
 
-Both scripts support extensive customization:
-
+#### Required Parameters (Both Scripts)
 ```powershell
-# Common Parameters
--SubscriptionId         # Azure subscription (uses current if not specified)
--ResourceGroup          # Resource group name (auto-generated if not provided)
+-SubscriptionId         # Azure subscription ID
+-ResourceGroup          # Resource group name
+-ResourcePrefix         # Prefix for all resource names (generates unique names)
+-SqlAdminPassword       # SQL Server admin password (SecureString)
+```
+
+#### Optional Parameters (Both Scripts)
+```powershell
 -Location               # Azure region (default: eastus)
--ResourcePrefix         # Prefix for all resource names (auto-generated if not provided)
--SqlAdminPassword       # SQL admin password (auto-generated if not provided)
+                        # Options: eastus, eastus2, westus, westus2, westus3, 
+                        #          centralus, northeurope, westeurope, uksouth, southeastasia
 -ContainerPort          # DAB container port (default: 5000)
 -SqlServiceTier         # SQL DB tier: Basic, S0, S1, S2, P1, P2 (default: S0)
+-DabConfigFile          # Path to DAB config file (default: src/Service.Tests/dab-config.MsSql.json)
 -SkipCleanup            # Keep resources even if deployment fails
+```
 
-# Container Apps Specific
--MinReplicas            # Minimum replicas (default: 1)
--MaxReplicas            # Maximum replicas (default: 3)
+#### Container Apps Specific Parameters
+```powershell
+-MinReplicas            # Minimum replicas: 0-30 (default: 1)
+-MaxReplicas            # Maximum replicas: 1-30 (default: 3)
+-ContainerCpu           # CPU cores: 0.25-4 (default: 0.5)
+-ContainerMemory        # Memory in GB: 0.5-8 (default: 1.0)
+```
 
-# Container Instances Specific
+#### Container Instances Specific Parameters
+```powershell
 -ContainerCpu           # CPU cores: 1-4 (default: 1)
 -ContainerMemory        # Memory in GB: 0.5-16 (default: 1.5)
 ```
@@ -116,23 +170,52 @@ Both scripts support extensive customization:
 ### Examples
 
 ```powershell
-# Minimal - uses all defaults with auto-generation
-.\azure-container-apps-dab-starter.ps1
+# Prepare password once
+$password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
 
-# Custom prefix and location
-.\azure-container-apps-dab-starter.ps1 -ResourcePrefix "mydab" -Location "westus2"
+# Basic Container Apps deployment
+.\azure-container-apps-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aca" `
+    -ResourcePrefix "mydab" `
+    -SqlAdminPassword $password
 
-# Specific subscription and resource group
-.\azure-container-apps-dab-starter.ps1 -SubscriptionId "xxx-xxx" -ResourceGroup "my-rg"
+# Custom location and region
+.\azure-container-apps-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-westus" `
+    -ResourcePrefix "mydab" `
+    -SqlAdminPassword $password `
+    -Location "westus2"
 
-# Production configuration with scaling
-.\azure-container-apps-dab-starter.ps1 -SqlServiceTier "S2" -MinReplicas 2 -MaxReplicas 10
+# Production configuration with scaling and higher tier SQL
+.\azure-container-apps-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-prod" `
+    -ResourcePrefix "proddb" `
+    -SqlAdminPassword $password `
+    -SqlServiceTier "S2" `
+    -MinReplicas 2 `
+    -MaxReplicas 10 `
+    -ContainerCpu 1 `
+    -ContainerMemory 2
 
 # High-performance Container Instance
-.\azure-container-instances-dab-starter.ps1 -ContainerCpu 4 -ContainerMemory 8
+.\azure-container-instances-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aci" `
+    -ResourcePrefix "mydab" `
+    -SqlAdminPassword $password `
+    -ContainerCpu 4 `
+    -ContainerMemory 8
 
 # Keep resources on failure for debugging
-.\azure-container-apps-dab-starter.ps1 -SkipCleanup
+.\azure-container-apps-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-debug" `
+    -ResourcePrefix "debug" `
+    -SqlAdminPassword $password `
+    -SkipCleanup
 ```
 
 ### After Deployment
@@ -146,20 +229,45 @@ Once deployed, you'll receive a summary with:
 
 Example output:
 ```
+==========================================================================
+  Deployment Summary
+==========================================================================
+
 DAB Endpoints:
-  App URL:            https://dab-aca-abc123.eastus.azurecontainerapps.io
-  REST API:           https://dab-aca-abc123.eastus.azurecontainerapps.io/api
-  GraphQL:            https://dab-aca-abc123.eastus.azurecontainerapps.io/graphql
-  Health Check:       https://dab-aca-abc123.eastus.azurecontainerapps.io/health
+  App URL:            https://mydab-aca-abc123.westus2.azurecontainerapps.io
+  Health Check:       https://mydab-aca-abc123.westus2.azurecontainerapps.io/
+  REST API:           https://mydab-aca-abc123.westus2.azurecontainerapps.io/api
+  GraphQL:            https://mydab-aca-abc123.westus2.azurecontainerapps.io/graphql
+
+Database Connection:
+  Server:             mydab-sql-xyz789.database.windows.net
+  Database:           dabdb
+  Username:           sqladmin
+  Password:           <stored in secure file>
+
+Container Configuration:
+  Image:              mydabacr123.azurecr.io/dab:latest
+  CPU:                1 cores
+  Memory:             2 GB
+  Replicas:           1-3 (min-max)
 
 Try these commands:
+  # Test health endpoint
+  curl https://mydab-aca-abc123.westus2.azurecontainerapps.io/
+
   # List all publishers
-  curl https://dab-aca-abc123.eastus.azurecontainerapps.io/api/Publisher
+  curl https://mydab-aca-abc123.westus2.azurecontainerapps.io/api/Publisher
+
+  # Get a specific book
+  curl https://mydab-aca-abc123.westus2.azurecontainerapps.io/api/Book/id/1
 
   # GraphQL query
-  curl https://dab-aca-abc123.eastus.azurecontainerapps.io/graphql \
+  curl https://mydab-aca-abc123.westus2.azurecontainerapps.io/graphql \
     -H 'Content-Type: application/json' \
-    -d '{"query":"{publishers{items{id name}}}"}'
+    -d '{"query":"{books{items{id title year}}}"}'  
+
+Cleanup:
+  az group delete --name rg-dab-aca --yes --no-wait
 ```
 
 ### Cleanup

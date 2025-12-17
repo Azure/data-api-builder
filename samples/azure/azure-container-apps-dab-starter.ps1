@@ -42,7 +42,16 @@
     Minimum number of container replicas. Default: 1
 
 .PARAMETER MaxReplicas
-    Maximum number of container replicas. Default: 3`n`n.PARAMETER DabConfigFile`n    Path to DAB configuration file. Default: src/Service.Tests/dab-config.MsSql.json
+    Maximum number of container replicas. Default: 3
+
+.PARAMETER ContainerCpu
+    Number of CPU cores for each container replica. Default: 0.5
+
+.PARAMETER ContainerMemory
+    Memory in GB for each container replica. Default: 1.0
+
+.PARAMETER DabConfigFile
+    Path to DAB configuration file. Default: src/Service.Tests/dab-config.MsSql.json
 
 .EXAMPLE
     .\azure-container-apps-dab-starter.ps1
@@ -51,6 +60,10 @@
 .EXAMPLE
     .\azure-container-apps-dab-starter.ps1 -ResourcePrefix "mydab" -Location "westus2"
     Deploys to West US 2 with custom prefix
+
+.EXAMPLE
+    .\azure-container-apps-dab-starter.ps1 -ContainerCpu 1 -ContainerMemory 2
+    Deploys with custom CPU and memory settings
 
 .EXAMPLE
     .\azure-container-apps-dab-starter.ps1 -SkipCleanup
@@ -102,6 +115,14 @@ param(
     [int]$MaxReplicas = 3,
     
     [Parameter(Mandatory=$false)]
+    [ValidateRange(0.25, 4)]
+    [double]$ContainerCpu = 0.5,
+    
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(0.5, 8)]
+    [double]$ContainerMemory = 1.0,
+    
+    [Parameter(Mandatory=$false)]
     [string]$DabConfigFile
 )
 
@@ -149,15 +170,9 @@ function Test-Prerequisites {
         exit 1
     }
     
-    # Check Azure CLI containerapp extension (ignore metadata permission errors)
-    $extensionCheck = az extension list --query "[?name=='containerapp'].name" -o tsv 2>$null
-    if ([string]::IsNullOrEmpty($extensionCheck)) {
-        Write-ErrorMessage "Azure CLI containerapp extension is not installed."
-        Write-Host "Please run: az extension add --name containerapp --upgrade --yes" -ForegroundColor Yellow
-        Write-Host "If permission errors occur, run PowerShell as Administrator." -ForegroundColor Yellow
-        exit 1
-    }
-    Write-Success "Azure CLI containerapp extension installed"
+    # Skip containerapp extension check due to known Azure CLI metadata bug
+    # The commands work despite the PermissionError on dist-info files
+    Write-Host "[INFO] Skipping containerapp extension check (Azure CLI metadata issue)" -ForegroundColor Yellow
     
     # Check if Docker is running
     try {
@@ -184,13 +199,23 @@ function Test-Prerequisites {
     }
     Write-Success "sqlcmd installed"
     
-    # Check if logged into Azure
-    $account = az account show 2>$null | ConvertFrom-Json
-    if (-not $account) {
+    # Check if logged into Azure (workaround for containerapp extension errors)
+    $oldErrorPref = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    $accountJson = az account show --only-show-errors 2>$null | Out-String
+    $ErrorActionPreference = $oldErrorPref
+    
+    if ($accountJson -and $accountJson -match '\{') {
+        try {
+            $account = $accountJson | ConvertFrom-Json
+            Write-Success "Logged into Azure as $($account.user.name)"
+        } catch {
+            Write-Warning "Azure CLI working but cannot parse account info (continuing anyway)"
+        }
+    } else {
         Write-ErrorMessage "Not logged into Azure. Please run: az login"
         exit 1
     }
-    Write-Success "Logged into Azure as $($account.user.name)"
 }
 
 function Get-UniqueResourceName {
@@ -362,6 +387,8 @@ Write-Host "  SQL Admin User:   $sqlAdminUser"
 Write-Host "  Container Port:   $ContainerPort"
 Write-Host "  Min Replicas:     $MinReplicas"
 Write-Host "  Max Replicas:     $MaxReplicas"
+Write-Host "  Container CPU:    $ContainerCpu cores"
+Write-Host "  Container Memory: $ContainerMemory GB"
 
 $confirmation = Read-Host "`nProceed with deployment? (y/N)"
 if ($confirmation -ne 'y') {
@@ -513,14 +540,14 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
             Write-Host "Command: sqlcmd -S $sqlServer -U $sqlAdminUser -P *** -d $sqlDbName -i $sqlScriptPath -I" -ForegroundColor Yellow
     }
 
-    # Prepare DAB config with actual connection string (same as ACI)
+    # Prepare DAB config with actual connection string
     Write-Step "Preparing DAB configuration..."
     $dabConfigPath = Join-Path $env:TEMP "dab-config.json"
     $connectionString = "Server=$sqlServer,1433;Persist Security Info=False;User ID=$sqlAdminUser;Password=$sqlAdminPasswordPlain;Initial Catalog=$sqlDbName;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;"
     
     Update-DabConfigFile -SourceConfigPath $DabConfigFile -ConnectionString $connectionString -OutputPath $dabConfigPath
 
-    # Upload config to Azure Storage Account for container to download (same as ACI)
+    # Upload config to Azure Storage Account for container to download
     Write-Step "Creating storage account for config file..."
     $storageAccountName = "dabstorage$(Get-Random -Minimum 10000 -Maximum 99999)"
     
@@ -539,7 +566,7 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
         --account-name $storageAccountName `
         --query "[0].value" -o tsv
     
-    # Create container (blob container, not ACA)
+    # Create blob container
     az storage container create `
         --name "config" `
         --account-name $storageAccountName `
@@ -558,14 +585,14 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
     
     # Generate SAS URL for the blob (valid for 1 year)
     $expiryDate = (Get-Date).AddYears(1).ToString("yyyy-MM-ddTHH:mm:ssZ")
-    $configUrl = az storage blob generate-sas `
+    $configUrl = (az storage blob generate-sas `
         --account-name $storageAccountName `
         --account-key $storageKey `
         --container-name "config" `
         --name "dab-config.json" `
         --permissions r `
         --expiry $expiryDate `
-        --full-uri -o tsv
+        --full-uri -o tsv 2>&1 | Where-Object { $_ -notmatch 'UserWarning' -and $_ -notmatch 'pkg_resources' }) -join ''
     
     Write-Success "Generated SAS URL for config download"
 
@@ -577,11 +604,39 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
         --location $Location | Out-Null
     Write-Success "Container Apps Environment created"
 
-    # Deploy Container App (same blob storage + curl approach as ACI)
+    # Deploy Container App with startup command to download config
     Write-Step "Deploying Container App..."
-    Write-Host "Note: Container will download config from blob storage on startup (same as ACI)" -ForegroundColor Yellow
+    Write-Host "Note: Container will download config from blob storage on startup" -ForegroundColor Yellow
     
-    # Use secrets for CONFIG_URL to avoid command-line shell parsing of SAS URL special characters
+    # Create a YAML configuration file for proper command/args setup
+    # Using YAML ensures command and args are properly formatted as arrays
+    $containerYamlPath = Join-Path $env:TEMP "container-app.yaml"
+    $containerYaml = @"
+properties:
+  template:
+    containers:
+    - name: $acaName
+      image: ${acrLoginServer}/${acrImageName}:${acrImageTag}
+      command:
+      - /bin/sh
+      args:
+      - -c
+      - curl -o /App/dab-config.json "`$CONFIG_URL" && dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName /App/dab-config.json
+      env:
+      - name: ASPNETCORE_URLS
+        value: http://+:$ContainerPort
+      - name: CONFIG_URL
+        value: $configUrl
+      resources:
+        cpu: $ContainerCpu
+        memory: ${ContainerMemory}Gi
+    scale:
+      minReplicas: $MinReplicas
+      maxReplicas: $MaxReplicas
+"@
+    $containerYaml | Out-File -FilePath $containerYamlPath -Encoding UTF8
+    
+    # Create the container app with basic settings first
     az containerapp create `
         --name $acaName `
         --resource-group $ResourceGroup `
@@ -590,16 +645,16 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
         --target-port $ContainerPort `
         --ingress external `
         --transport auto `
-        --min-replicas $MinReplicas `
-        --max-replicas $MaxReplicas `
-        --cpu 0.5 `
-        --memory 1.0Gi `
         --registry-server $acrLoginServer `
         --registry-username $acrName `
-        --registry-password $acrPassword `
-        --secrets "config-url=$configUrl" `
-        --env-vars "ASPNETCORE_URLS=http://+:$ContainerPort" "CONFIG_URL=secretref:config-url" `
-        --command "/bin/sh" "-c" "curl -o /App/dab-config.json \"\$CONFIG_URL\" && dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName /App/dab-config.json" | Out-Null
+        --registry-password $acrPassword | Out-Null
+    
+    # Update the container app with the YAML configuration for command/args/env
+    Write-Host "Configuring container startup command..." -ForegroundColor Yellow
+    az containerapp update `
+        --name $acaName `
+        --resource-group $ResourceGroup `
+        --yaml $containerYamlPath | Out-Null
     
     Write-Success "Container App deployed"
 
@@ -632,13 +687,26 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
     Write-Host "  Admin User:         $sqlAdminUser"
     Write-Host "  Admin Password:     ********** (saved to file earlier)"
     Write-Host ""
+    Write-Host "Container Resources:" -ForegroundColor Cyan
+    Write-Host "  Min Replicas:       $MinReplicas"
+    Write-Host "  Max Replicas:       $MaxReplicas"
+    Write-Host "  CPU:                $ContainerCpu cores"
+    Write-Host "  Memory:             $ContainerMemory GB"
+    Write-Host ""
     Write-Host "Try these commands:" -ForegroundColor Cyan
     Write-Host "  # List all publishers"
     Write-Host "  curl https://$appUrl/api/Publisher"
     Write-Host ""
     Write-Host "  # GraphQL query"
-    $curlCmd = '  curl https://{0}/graphql -H "Content-Type: application/json" -d "{\"query\":\"{{publishers{{items{{id name}}}}}}\""' -f $appUrl
-    Write-Host $curlCmd
+    Write-Host '  curl https://'$appUrl'/graphql -H "Content-Type: application/json" -d "{\"query\":\"{publishers{items{id name}}}\"}""'
+    Write-Host ""
+    Write-Host "  # View container logs"
+    Write-Host "  az containerapp logs show --name $acaName --resource-group $ResourceGroup --follow"
+    Write-Host ""
+    Write-Host "Storage Details:" -ForegroundColor Cyan
+    Write-Host "  Storage Account:    $storageAccountName"
+    Write-Host "  Blob Container:     config"
+    Write-Host "  Config File:        dab-config.json"
     Write-Host ""
     Write-Host "Configuration file generated at: $dabConfigPath" -ForegroundColor Yellow
     Write-Host ""

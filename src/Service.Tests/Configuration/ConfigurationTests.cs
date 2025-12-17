@@ -2606,7 +2606,7 @@ type Moon {
                 Assert.AreEqual(expectedStatusCodeForREST, restResponse.StatusCode, "The REST response is different from the expected result.");
 
                 // MCP request
-                HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client, configuration.Runtime.Mcp);
+                HttpStatusCode mcpResponseCode = await GetMcpResponse(client, configuration.Runtime.Mcp);
                 Assert.AreEqual(expectedStatusCodeForMcp, mcpResponseCode, "The MCP response is different from the expected result.");
             }
 
@@ -2628,7 +2628,7 @@ type Moon {
 
                 // TODO: Issue #3012 - Currently DAB is unable to start MCP with the hydration post-response.
                 // This needs to be fixed before uncommenting the MCP check
-                // HttpStatusCode mcpResponseCode = await GetMcpResponsePostConfigHydration(client, configuration.Runtime.Mcp);
+                // HttpStatusCode mcpResponseCode = await GetMcpResponse(client, configuration.Runtime.Mcp);
                 // Assert.AreEqual(expected: expectedStatusCodeForMcp, actual: mcpResponseCode, "The MCP hydration post-response is different from the expected result.");
             }
         }
@@ -5297,8 +5297,12 @@ type Planet @model(name:""PlanetAlias"") {
         /// else the response code from the REST request</returns>
         private static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient, RestRuntimeOptions rest)
         {
-            // Retry request RETRY_COUNT times in exponential increments to allow required services
-            // time to instantiate and hydrate permissions.
+            // Retry request RETRY_COUNT times in exponential increments to allow
+            // required services time to instantiate and hydrate permissions because
+            // the DAB services may take an unpredictable amount of time to become ready.
+            //
+            // The service might still fail due to the service not being available yet,
+            // but it is highly unlikely to be the case.
             int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
             while (retryCount < RETRY_COUNT)
@@ -5329,8 +5333,12 @@ type Planet @model(name:""PlanetAlias"") {
         /// else the response code from the GRAPHQL request</returns>
         private static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient, GraphQLRuntimeOptions graphQL)
         {
-            // Retry request RETRY_COUNT times in exponential increments to allow required services
-            // time to instantiate and hydrate permissions.
+            // Retry request RETRY_COUNT times in exponential increments to allow
+            // required services time to instantiate and hydrate permissions because
+            // the DAB services may take an unpredictable amount of time to become ready.
+            //
+            // The service might still fail due to the service not being available yet,
+            // but it is highly unlikely to be the case.
             int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
             while (retryCount < RETRY_COUNT)
@@ -5372,10 +5380,14 @@ type Planet @model(name:""PlanetAlias"") {
         /// <param name="httpClient">Client used for request execution.</param>	
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,	
         /// else the response code from the MCP request</returns>	
-        private static async Task<HttpStatusCode> GetMcpResponsePostConfigHydration(HttpClient httpClient, McpRuntimeOptions mcp)
+        public static async Task<HttpStatusCode> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
         {
-            // Retry request RETRY_COUNT times in exponential increments to allow required services
-            // time to instantiate and hydrate permissions.
+            // Retry request RETRY_COUNT times in exponential increments to allow
+            // required services time to instantiate and hydrate permissions because
+            // the DAB services may take an unpredictable amount of time to become ready.
+            //
+            // The service might still fail due to the service not being available yet,
+            // but it is highly unlikely to be the case.
             int retryCount = 0;
             HttpStatusCode responseCode = HttpStatusCode.ServiceUnavailable;
             while (retryCount < RETRY_COUNT)

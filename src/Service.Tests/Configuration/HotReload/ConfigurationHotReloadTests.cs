@@ -259,11 +259,11 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restPath: restPath,
             gQLPath: gQLPath);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
-            TimeSpan.FromSeconds(12),
+            TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
         // Act
@@ -305,7 +305,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: restEnabled);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
@@ -345,7 +345,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEnabled: gQLEnabled);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
@@ -391,7 +391,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             gQLEntityEnabled: gQLEntityEnabled);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
@@ -431,7 +431,7 @@ public class ConfigurationHotReloadTests
             sourceObject: newEntitySource,
             gQLEntitySingular: newEntityGQLSingular,
             gQLEntityPlural: newEntityGQLPlural);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
@@ -511,7 +511,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             entityBackingColumn: "title",
             entityExposedName: newMappingFieldName);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
@@ -595,7 +595,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             sessionContext: "false",
             connectionString: expectedConnectionString);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
@@ -638,7 +638,7 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             logFilter: expectedFilter);
-        
+
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
@@ -779,7 +779,7 @@ public class ConfigurationHotReloadTests
             restEnabled: "false",
             gQLEnabled: "false",
             mcpEnabled: "false");
-        
+
         // Wait for hot-reload to fail
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
@@ -826,7 +826,7 @@ public class ConfigurationHotReloadTests
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}",
             restEnabled: "invalid",
             gQLEnabled: "invalid");
-        
+
         // Wait for hot-reload to fail (parsing error should trigger failure message)
         await WaitForConditionAsync(
             () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),

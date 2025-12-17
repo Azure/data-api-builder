@@ -91,8 +91,8 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     configuration.Schema,
                     configuration.ConnectionString,
                     configuration.AccessToken,
-                    replaceEnvVar: false,
-                    replacementFailureMode: Config.Converters.EnvironmentVariableReplacementFailureMode.Ignore);
+                    replacementSettings: new(azureKeyVaultOptions: null, doReplaceEnvVar: false, doReplaceAkvVar: false, envFailureMode: Config.Converters.EnvironmentVariableReplacementFailureMode.Ignore)
+                );
 
                 if (initResult && _configurationProvider.TryGetConfig(out _))
                 {

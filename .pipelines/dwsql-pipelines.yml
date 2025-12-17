@@ -16,6 +16,18 @@ trigger:
     exclude:
     - docs
 
+pr:
+  branches:
+    include:
+    - main
+    - release/*
+  paths:
+    exclude:
+    - samples/**
+    - docs/**
+    - '*.md'
+    - templates/**
+
 jobs:
 - job: linux
   pool:

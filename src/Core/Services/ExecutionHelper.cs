@@ -592,7 +592,10 @@ namespace Azure.DataApiBuilder.Service.Services
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
-                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
+                // Include the parent field name in the key to distinguish between sibling relationships at the same depth.
+                // e.g., "/entity/items[0]/rel1/nested" and "/entity/items[0]/rel2/nested" should have different metadata keys.
+                string parentFieldName = ((NamePathSegment)context.Path.Parent).Name;
+                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth() + "::" + parentFieldName;
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
@@ -655,7 +658,10 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.
-            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
+            // Include the current field name in the key to distinguish between sibling relationships at the same depth.
+            // e.g., "/entity/items[0]/rel1" and "/entity/items[0]/rel2" should have different metadata keys.
+            string currentFieldName = context.Path is NamePathSegment nameSegment ? nameSegment.Name : string.Empty;
+            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth() + "::" + currentFieldName;
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.

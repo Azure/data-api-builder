@@ -1,0 +1,61 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: [
+    {
+      GetBookById: {
+        Source: {
+          Object: dbo.GetBookById,
+          Type: stored-procedure
+        },
+        GraphQL: {
+          Singular: GetBookById,
+          Plural: GetBookByIds,
+          Enabled: true,
+          Operation: Mutation
+        },
+        Rest: {
+          Methods: [
+            Post
+          ],
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Execute
+              }
+            ]
+          }
+        ],
+        Mcp: {
+          CustomToolEnabled: true,
+          DmlToolEnabled: true
+        }
+      }
+    }
+  ]
+}

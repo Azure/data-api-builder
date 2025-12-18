@@ -7,18 +7,17 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Serilog;
 
 namespace Azure.DataApiBuilder.Config.Converters;
+
 class FileSinkConverter : JsonConverter<FileSinkOptions>
 {
-    // Determines whether to replace environment variable with its
-    // value or not while deserializing.
-    private bool _replaceEnvVar;
+    // Settings for variable replacement during deserialization.
+    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
 
-    /// <param name="replaceEnvVar">
-    /// Whether to replace environment variable with its value or not while deserializing.
-    /// </param>
-    public FileSinkConverter(bool replaceEnvVar)
+    /// <param name="replacementSettings">Settings for variable replacement during deserialization.
+    /// If null, no variable replacement will be performed.</param>
+    public FileSinkConverter(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replaceEnvVar = replaceEnvVar;
+        _replacementSettings = replacementSettings;
     }
 
     /// <summary>
@@ -59,7 +58,7 @@ class FileSinkConverter : JsonConverter<FileSinkOptions>
                     case "path":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            path = reader.DeserializeString(_replaceEnvVar);
+                            path = reader.DeserializeString(_replacementSettings);
                         }
 
                         break;
@@ -67,7 +66,7 @@ class FileSinkConverter : JsonConverter<FileSinkOptions>
                     case "rolling-interval":
                         if (reader.TokenType is not JsonTokenType.Null)
                         {
-                            rollingInterval = EnumExtensions.Deserialize<RollingInterval>(reader.DeserializeString(_replaceEnvVar)!);
+                            rollingInterval = EnumExtensions.Deserialize<RollingInterval>(reader.DeserializeString(_replacementSettings)!);
                         }
 
                         break;

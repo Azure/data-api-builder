@@ -592,10 +592,17 @@ namespace Azure.DataApiBuilder.Service.Services
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
-                // Include the parent field name in the key to distinguish between sibling relationships at the same depth.
-                // e.g., "/entity/items[0]/rel1/nested" and "/entity/items[0]/rel2/nested" should have different metadata keys.
-                string parentFieldName = ((NamePathSegment)context.Path.Parent).Name;
-                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth() + "::" + parentFieldName;
+                string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
+
+                // When the parent's parent is an IndexerPathSegment, it means the parent is a direct child
+                // of items[n], and we stored metadata with the field name appended to distinguish siblings.
+                // e.g., for path "/entity/items[0]/rel1/nested", parent is "rel1" and parent.parent is "items[0]"
+                if (context.Path.Parent.Parent is IndexerPathSegment)
+                {
+                    string parentFieldName = ((NamePathSegment)context.Path.Parent).Name;
+                    objectParentName = objectParentName + "::" + parentFieldName;
+                }
+
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
 
@@ -658,10 +665,18 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.
-            // Include the current field name in the key to distinguish between sibling relationships at the same depth.
-            // e.g., "/entity/items[0]/rel1" and "/entity/items[0]/rel2" should have different metadata keys.
-            string currentFieldName = context.Path is NamePathSegment nameSegment ? nameSegment.Name : string.Empty;
-            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth() + "::" + currentFieldName;
+            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
+
+            // For relationship fields that are direct children of items[n] (parent is IndexerPathSegment),
+            // include the field name to distinguish between sibling relationships at the same depth.
+            // e.g., "/entity/items[0]/rel1" and "/entity/items[0]/rel2" both have depth 3,
+            // but should store separate metadata for their nested entities.
+            // This ensures that when retrieving metadata for "/entity/items[0]/rel1/nested",
+            // we get rel1's metadata, not rel2's (which would have overwritten it without the field name).
+            if (context.Path is NamePathSegment nameSegment && context.Path.Parent is IndexerPathSegment)
+            {
+                contextKey = contextKey + "::" + nameSegment.Name;
+            }
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.

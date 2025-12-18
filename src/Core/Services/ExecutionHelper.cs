@@ -592,15 +592,18 @@ namespace Azure.DataApiBuilder.Service.Services
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
+                // 
+                // To handle arbitrary nesting depths with sibling relationships, we need to include
+                // the relationship field path in the key. For example:
+                // - /entity/items[0]/rel1/nested uses key ::3::rel1
+                // - /entity/items[0]/rel2/nested uses key ::3::rel2
+                // - /entity/items[0]/rel1/nested/deeper uses key ::4::rel1
+                // - /entity/items[0]/rel1/nested2/deeper uses key ::4::rel1::nested2
                 string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
-
-                // When the parent's parent is an IndexerPathSegment, it means the parent is a direct child
-                // of items[n], and we stored metadata with the field name appended to distinguish siblings.
-                // e.g., for path "/entity/items[0]/rel1/nested", parent is "rel1" and parent.parent is "items[0]"
-                if (context.Path.Parent.Parent is IndexerPathSegment)
+                string relationshipPath = GetRelationshipPathSuffix(context.Path.Parent);
+                if (!string.IsNullOrEmpty(relationshipPath))
                 {
-                    string parentFieldName = ((NamePathSegment)context.Path.Parent).Name;
-                    objectParentName = objectParentName + "::" + parentFieldName;
+                    objectParentName = objectParentName + "::" + relationshipPath;
                 }
 
                 return (IMetadata)context.ContextData[objectParentName]!;
@@ -608,6 +611,54 @@ namespace Azure.DataApiBuilder.Service.Services
 
             string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
             return (IMetadata)context.ContextData[metadataKey]!;
+        }
+
+        /// <summary>
+        /// Builds a suffix representing the relationship path from the IndexerPathSegment (items[n])
+        /// up to (but not including) the current path segment. This is used to create unique metadata
+        /// keys for sibling relationships at any nesting depth.
+        /// </summary>
+        /// <param name="path">The path to build the suffix for</param>
+        /// <returns>
+        /// A string like "rel1" for /entity/items[0]/rel1, 
+        /// or "rel1::nested" for /entity/items[0]/rel1/nested,
+        /// or empty string if no IndexerPathSegment is found in the path ancestry.
+        /// </returns>
+        private static string GetRelationshipPathSuffix(HotChocolate.Path path)
+        {
+            List<string> pathParts = new();
+            HotChocolate.Path? current = path;
+
+            // Walk up the path collecting relationship field names until we hit an IndexerPathSegment
+            while (current is not null && !current.IsRoot)
+            {
+                if (current is IndexerPathSegment)
+                {
+                    // We've reached items[n], stop here
+                    break;
+                }
+
+                if (current is NamePathSegment nameSegment)
+                {
+                    // Don't include "items" in the path suffix
+                    if (nameSegment.Name != QueryBuilder.PAGINATION_FIELD_NAME)
+                    {
+                        pathParts.Add(nameSegment.Name);
+                    }
+                }
+
+                current = current.Parent;
+            }
+
+            // If we didn't find an IndexerPathSegment, return empty (this handles root-level queries)
+            if (current is not IndexerPathSegment)
+            {
+                return string.Empty;
+            }
+
+            // Reverse because we walked up the tree, but we want the path from root to leaf
+            pathParts.Reverse();
+            return string.Join("::", pathParts);
         }
 
         private static string GetMetadataKey(HotChocolate.Path path)
@@ -667,15 +718,14 @@ namespace Azure.DataApiBuilder.Service.Services
             // is 3 because depth is 0-indexed.
             string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
 
-            // For relationship fields that are direct children of items[n] (parent is IndexerPathSegment),
-            // include the field name to distinguish between sibling relationships at the same depth.
-            // e.g., "/entity/items[0]/rel1" and "/entity/items[0]/rel2" both have depth 3,
-            // but should store separate metadata for their nested entities.
-            // This ensures that when retrieving metadata for "/entity/items[0]/rel1/nested",
-            // we get rel1's metadata, not rel2's (which would have overwritten it without the field name).
-            if (context.Path is NamePathSegment nameSegment && context.Path.Parent is IndexerPathSegment)
+            // For relationship fields at any depth, include the relationship path suffix to distinguish
+            // between sibling relationships. This handles arbitrary nesting depths.
+            // e.g., "/entity/items[0]/rel1" gets key ::3::rel1
+            // e.g., "/entity/items[0]/rel1/nested" gets key ::4::rel1::nested
+            string relationshipPath = GetRelationshipPathSuffix(context.Path);
+            if (!string.IsNullOrEmpty(relationshipPath))
             {
-                contextKey = contextKey + "::" + nameSegment.Name;
+                contextKey = contextKey + "::" + relationshipPath;
             }
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since

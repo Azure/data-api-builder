@@ -28,20 +28,17 @@
   },
   Entities: [
     {
-      GetAllBooks: {
+      MyEntity: {
         Source: {
-          Type: stored-procedure
+          Object: MyTable,
+          Type: Table
         },
         GraphQL: {
-          Singular: GetAllBooks,
-          Plural: GetAllBooks,
-          Enabled: true,
-          Operation: Mutation
+          Singular: MyEntity,
+          Plural: MyEntities,
+          Enabled: true
         },
         Rest: {
-          Methods: [
-            Post
-          ],
           Enabled: true
         },
         Permissions: [
@@ -49,13 +46,13 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Execute
+                Action: *
               }
             ]
           }
         ],
         Mcp: {
-          CustomToolEnabled: true,
+          CustomToolEnabled: false,
           DmlToolEnabled: true
         }
       }

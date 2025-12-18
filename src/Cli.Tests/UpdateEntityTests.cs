@@ -1219,10 +1219,13 @@ namespace Cli.Tests
         #region MCP Entity Configuration Tests
 
         /// <summary>
-        /// Test updating table entity with MCP dml-tools enabled
+        /// Test updating table entity with MCP dml-tools from false to true, or true to false
+        /// Tests actual update scenario where existing MCP config is modified
         /// </summary>
-        [TestMethod]
-        public Task TestUpdateTableEntityWithMcpDmlToolsEnabled()
+        [DataTestMethod]
+        [DataRow("true", "false", DisplayName = "TestUpdateTableEntityWithMcpDmlToolsEnabled")]
+        [DataRow("false", "true", DisplayName = "TestUpdateTableEntityWithMcpDmlToolsDisabled")]
+        public Task TestUpdateTableEntityWithMcpDmlTools(string newMcpDmlTools, string initialMcpDmlTools)
         {
             UpdateOptions options = new(
                 source: null,
@@ -1259,7 +1262,7 @@ namespace Cli.Tests
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: null,
                 fieldsPrimaryKeyCollection: null,
-                mcpDmlTools: "true",
+                mcpDmlTools: newMcpDmlTools,
                 mcpCustomTool: null
             );
 
@@ -1272,78 +1275,20 @@ namespace Cli.Tests
                                         ""role"": ""anonymous"",
                                         ""actions"": [""*""]
                                     }
-                                ]
+                                ],
+                                ""mcp"": " + initialMcpDmlTools + @"
                             }
                         }
                     }";
 
-            return ExecuteVerifyTest(initialConfig, options);
+            VerifySettings settings = new();
+            settings.UseParameters(newMcpDmlTools);
+            return ExecuteVerifyTest(initialConfig, options, settings: settings);
         }
 
         /// <summary>
-        /// Test updating table entity with MCP dml-tools disabled
-        /// </summary>
-        [TestMethod]
-        public Task TestUpdateTableEntityWithMcpDmlToolsDisabled()
-        {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                relationshipFields: null,
-                map: null,
-                cacheEnabled: null,
-                cacheTtl: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null,
-                description: null,
-                parametersNameCollection: null,
-                parametersDescriptionCollection: null,
-                parametersRequiredCollection: null,
-                parametersDefaultCollection: null,
-                fieldsNameCollection: null,
-                fieldsAliasCollection: null,
-                fieldsDescriptionCollection: null,
-                fieldsPrimaryKeyCollection: null,
-                mcpDmlTools: "false",
-                mcpCustomTool: null
-            );
-
-            string initialConfig = GetInitialConfigString() + "," + @"
-                    ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [""*""]
-                                    }
-                                ]
-                            }
-                        }
-                    }";
-
-            return ExecuteVerifyTest(initialConfig, options);
-        }
-
-        /// <summary>
-        /// Test updating stored procedure with MCP custom-tool enabled
+        /// Test updating stored procedure with MCP custom-tool from false to true
+        /// Tests actual update scenario where existing MCP config is modified
         /// </summary>
         [TestMethod]
         public Task TestUpdateStoredProcedureWithMcpCustomToolEnabled()
@@ -1399,7 +1344,10 @@ namespace Cli.Tests
                                         ""role"": ""anonymous"",
                                         ""actions"": [""execute""]
                                     }
-                                ]
+                                ],
+                                ""mcp"": {
+                                    ""custom-tool"": false
+                                }
                             }
                         }
                     }";
@@ -1409,6 +1357,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Test updating stored procedure with both MCP properties
+        /// Updates from both true to custom-tool=true, dml-tools=false
         /// </summary>
         [TestMethod]
         public Task TestUpdateStoredProcedureWithBothMcpProperties()
@@ -1464,7 +1413,11 @@ namespace Cli.Tests
                                         ""role"": ""anonymous"",
                                         ""actions"": [""execute""]
                                     }
-                                ]
+                                ],
+                                ""mcp"": {
+                                    ""custom-tool"": false,
+                                    ""dml-tools"": true
+                                }
                             }
                         }
                     }";
@@ -1474,6 +1427,7 @@ namespace Cli.Tests
 
         /// <summary>
         /// Test updating stored procedure with both MCP properties enabled
+        /// Updates from both false to both true
         /// </summary>
         [TestMethod]
         public Task TestUpdateStoredProcedureWithBothMcpPropertiesEnabled()
@@ -1529,7 +1483,11 @@ namespace Cli.Tests
                                         ""role"": ""anonymous"",
                                         ""actions"": [""execute""]
                                     }
-                                ]
+                                ],
+                                ""mcp"": {
+                                    ""custom-tool"": false,
+                                    ""dml-tools"": false
+                                }
                             }
                         }
                     }";

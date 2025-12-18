@@ -14,6 +14,51 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
     [TestClass]
     public class EntityMcpConfigurationTests
     {
+        private const string BASE_CONFIG_TEMPLATE = @"{{
+            ""$schema"": ""test-schema"",
+            ""data-source"": {{
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""test""
+            }},
+            ""runtime"": {{
+                ""rest"": {{ ""enabled"": true, ""path"": ""/api"" }},
+                ""graphql"": {{ ""enabled"": true, ""path"": ""/graphql"" }},
+                ""host"": {{ ""mode"": ""development"" }}
+            }},
+            ""entities"": {{
+                {0}
+            }}
+        }}";
+
+        /// <summary>
+        /// Helper method to create a config with specified entities JSON
+        /// </summary>
+        private static string CreateConfig(string entitiesJson)
+        {
+            return string.Format(BASE_CONFIG_TEMPLATE, entitiesJson);
+        }
+
+        /// <summary>
+        /// Helper method to assert entity MCP configuration
+        /// </summary>
+        private static void AssertEntityMcp(Entity entity, bool? expectedDmlTools, bool? expectedCustomTool, string message = null)
+        {
+            if (expectedDmlTools == null && expectedCustomTool == null)
+            {
+                Assert.IsNull(entity.Mcp, "MCP options should be null when not specified");
+                return;
+            }
+
+            Assert.IsNotNull(entity.Mcp, message ?? "MCP options should be present");
+
+            bool actualDmlTools = entity.Mcp?.DmlToolEnabled ?? true; // Default is true
+            bool actualCustomTool = entity.Mcp?.CustomToolEnabled ?? false; // Default is false
+
+            Assert.AreEqual(expectedDmlTools ?? true, actualDmlTools,
+                $"DmlToolEnabled should be {expectedDmlTools ?? true}");
+            Assert.AreEqual(expectedCustomTool ?? false, actualCustomTool,
+                $"CustomToolEnabled should be {expectedCustomTool ?? false}");
+        }
         /// <summary>
         /// Test that deserializing boolean 'true' shorthand correctly sets dml-tools enabled.
         /// </summary>
@@ -21,25 +66,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpBooleanTrue_EnablesDmlToolsOnly()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""Book"": {
-                        ""source"": ""books"",
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
-                        ""mcp"": true
-                    }
+            string config = CreateConfig(@"
+                ""Book"": {
+                    ""source"": ""books"",
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
+                    ""mcp"": true
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -48,11 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-
-            Entity bookEntity = runtimeConfig.Entities["Book"];
-            Assert.IsNotNull(bookEntity.Mcp, "MCP options should be present");
-            Assert.IsTrue(bookEntity.Mcp.DmlToolEnabled, "DmlTools should be enabled");
-            Assert.IsFalse(bookEntity.Mcp.CustomToolEnabled, "CustomTool should be disabled (default)");
+            AssertEntityMcp(runtimeConfig.Entities["Book"], expectedDmlTools: true, expectedCustomTool: false);
         }
 
         /// <summary>
@@ -62,25 +91,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpBooleanFalse_DisablesDmlTools()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""Book"": {
-                        ""source"": ""books"",
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
-                        ""mcp"": false
-                    }
+            string config = CreateConfig(@"
+                ""Book"": {
+                    ""source"": ""books"",
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
+                    ""mcp"": false
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -89,11 +106,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-
-            Entity bookEntity = runtimeConfig.Entities["Book"];
-            Assert.IsNotNull(bookEntity.Mcp, "MCP options should be present");
-            Assert.IsFalse(bookEntity.Mcp.DmlToolEnabled, "DmlTools should be disabled");
-            Assert.IsFalse(bookEntity.Mcp.CustomToolEnabled, "CustomTool should be disabled (default)");
+            AssertEntityMcp(runtimeConfig.Entities["Book"], expectedDmlTools: false, expectedCustomTool: false);
         }
 
         /// <summary>
@@ -103,28 +116,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpObject_SetsBothProperties()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""GetBook"": {
-                        ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
-                        ""mcp"": {
-                            ""custom-tool"": true,
-                            ""dml-tools"": false
-                        }
+            string config = CreateConfig(@"
+                ""GetBook"": {
+                    ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
+                    ""mcp"": {
+                        ""custom-tool"": true,
+                        ""dml-tools"": false
                     }
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -133,11 +134,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-
-            Entity spEntity = runtimeConfig.Entities["GetBook"];
-            Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
-            Assert.IsTrue(spEntity.Mcp.CustomToolEnabled, "CustomTool should be enabled");
-            Assert.IsFalse(spEntity.Mcp.DmlToolEnabled, "DmlTools should be disabled");
+            AssertEntityMcp(runtimeConfig.Entities["GetBook"], expectedDmlTools: false, expectedCustomTool: true);
         }
 
         /// <summary>
@@ -147,27 +144,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpObjectWithDmlToolsOnly_WorksCorrectly()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""Book"": {
-                        ""source"": ""books"",
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
-                        ""mcp"": {
-                            ""dml-tools"": true
-                        }
+            string config = CreateConfig(@"
+                ""Book"": {
+                    ""source"": ""books"",
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
+                    ""mcp"": {
+                        ""dml-tools"": true
                     }
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -176,38 +161,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-
-            Entity bookEntity = runtimeConfig.Entities["Book"];
-            Assert.IsNotNull(bookEntity.Mcp, "MCP options should be present");
-            Assert.IsTrue(bookEntity.Mcp.DmlToolEnabled, "DmlTools should be enabled");
-            Assert.IsFalse(bookEntity.Mcp.CustomToolEnabled, "CustomTool should be disabled (default)");
+            AssertEntityMcp(runtimeConfig.Entities["Book"], expectedDmlTools: true, expectedCustomTool: false);
         }
 
         /// <summary>
-        /// Test that entity without MCP configuration has null MCP options.
+        /// Test that entity without MCP configuration has null Mcp property.
         /// </summary>
         [TestMethod]
         public void DeserializeConfig_NoMcp_HasNullMcpOptions()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""Book"": {
-                        ""source"": ""books"",
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }]
-                    }
+            string config = CreateConfig(@"
+                ""Book"": {
+                    ""source"": ""books"",
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }]
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -216,9 +185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-
-            Entity bookEntity = runtimeConfig.Entities["Book"];
-            Assert.IsNull(bookEntity.Mcp, "MCP options should be null when not specified");
+            Assert.IsNull(runtimeConfig.Entities["Book"].Mcp, "MCP options should be null when not specified");
         }
 
         /// <summary>
@@ -228,28 +195,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpObjectWithBothTrue_SetsCorrectly()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""GetBook"": {
-                        ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
-                        ""mcp"": {
-                            ""custom-tool"": true,
-                            ""dml-tools"": true
-                        }
+            string config = CreateConfig(@"
+                ""GetBook"": {
+                    ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
+                    ""mcp"": {
+                        ""custom-tool"": true,
+                        ""dml-tools"": true
                     }
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -258,11 +213,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-
-            Entity spEntity = runtimeConfig.Entities["GetBook"];
-            Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
-            Assert.IsTrue(spEntity.Mcp.CustomToolEnabled, "CustomTool should be enabled");
-            Assert.IsTrue(spEntity.Mcp.DmlToolEnabled, "DmlTools should be enabled");
+            AssertEntityMcp(runtimeConfig.Entities["GetBook"], expectedDmlTools: true, expectedCustomTool: true);
         }
 
         /// <summary>
@@ -272,28 +223,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpObjectWithBothFalse_SetsCorrectly()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""GetBook"": {
-                        ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
-                        ""mcp"": {
-                            ""custom-tool"": false,
-                            ""dml-tools"": false
-                        }
+            string config = CreateConfig(@"
+                ""GetBook"": {
+                    ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
+                    ""mcp"": {
+                        ""custom-tool"": false,
+                        ""dml-tools"": false
                     }
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -302,11 +241,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-
-            Entity spEntity = runtimeConfig.Entities["GetBook"];
-            Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
-            Assert.IsFalse(spEntity.Mcp.CustomToolEnabled, "CustomTool should be disabled");
-            Assert.IsFalse(spEntity.Mcp.DmlToolEnabled, "DmlTools should be disabled");
+            AssertEntityMcp(runtimeConfig.Entities["GetBook"], expectedDmlTools: false, expectedCustomTool: false);
         }
 
         /// <summary>
@@ -316,27 +251,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpObjectWithCustomToolOnly_WorksCorrectly()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""GetBook"": {
-                        ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
-                        ""mcp"": {
-                            ""custom-tool"": true
-                        }
+            string config = CreateConfig(@"
+                ""GetBook"": {
+                    ""source"": { ""type"": ""stored-procedure"", ""object"": ""dbo.GetBook"" },
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""execute""] }],
+                    ""mcp"": {
+                        ""custom-tool"": true
                     }
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig runtimeConfig);
@@ -345,11 +268,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(success, "Config should parse successfully");
             Assert.IsNotNull(runtimeConfig);
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-
-            Entity spEntity = runtimeConfig.Entities["GetBook"];
-            Assert.IsNotNull(spEntity.Mcp, "MCP options should be present");
-            Assert.IsTrue(spEntity.Mcp.CustomToolEnabled, "CustomTool should be enabled");
-            Assert.IsFalse(spEntity.Mcp.DmlToolEnabled, "DmlTools should be disabled (default is false)");
+            AssertEntityMcp(runtimeConfig.Entities["GetBook"], expectedDmlTools: true, expectedCustomTool: true);
         }
 
         /// <summary>
@@ -405,29 +324,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Book: mcp = true
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Book"));
-            Entity bookEntity = runtimeConfig.Entities["Book"];
-            Assert.IsNotNull(bookEntity.Mcp);
-            Assert.IsTrue(bookEntity.Mcp.DmlToolEnabled);
-            Assert.IsFalse(bookEntity.Mcp.CustomToolEnabled);
+            AssertEntityMcp(runtimeConfig.Entities["Book"], expectedDmlTools: true, expectedCustomTool: false);
 
             // Author: mcp = false
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Author"));
-            Entity authorEntity = runtimeConfig.Entities["Author"];
-            Assert.IsNotNull(authorEntity.Mcp);
-            Assert.IsFalse(authorEntity.Mcp.DmlToolEnabled);
-            Assert.IsFalse(authorEntity.Mcp.CustomToolEnabled);
+            AssertEntityMcp(runtimeConfig.Entities["Author"], expectedDmlTools: false, expectedCustomTool: false);
 
-            // Publisher: no mcp
+            // Publisher: no mcp (null)
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("Publisher"));
-            Entity publisherEntity = runtimeConfig.Entities["Publisher"];
-            Assert.IsNull(publisherEntity.Mcp);
+            Assert.IsNull(runtimeConfig.Entities["Publisher"].Mcp, "Mcp should be null when not specified");
 
             // GetBook: mcp object
             Assert.IsTrue(runtimeConfig.Entities.ContainsKey("GetBook"));
-            Entity spEntity = runtimeConfig.Entities["GetBook"];
-            Assert.IsNotNull(spEntity.Mcp);
-            Assert.IsTrue(spEntity.Mcp.CustomToolEnabled);
-            Assert.IsFalse(spEntity.Mcp.DmlToolEnabled);
+            AssertEntityMcp(runtimeConfig.Entities["GetBook"], expectedDmlTools: false, expectedCustomTool: true);
         }
 
         /// <summary>
@@ -437,25 +346,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_InvalidMcpValue_FailsGracefully()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""Book"": {
-                        ""source"": ""books"",
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
-                        ""mcp"": ""invalid""
-                    }
+            string config = CreateConfig(@"
+                ""Book"": {
+                    ""source"": ""books"",
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
+                    ""mcp"": ""invalid""
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out _);
@@ -471,28 +368,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void DeserializeConfig_McpObjectWithUnknownProperty_FailsGracefully()
         {
             // Arrange
-            string config = @"{
-                ""$schema"": ""test-schema"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""test""
-                },
-                ""runtime"": {
-                    ""rest"": { ""enabled"": true, ""path"": ""/api"" },
-                    ""graphql"": { ""enabled"": true, ""path"": ""/graphql"" },
-                    ""host"": { ""mode"": ""development"" }
-                },
-                ""entities"": {
-                    ""Book"": {
-                        ""source"": ""books"",
-                        ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
-                        ""mcp"": {
-                            ""dml-tools"": true,
-                            ""unknown-property"": true
-                        }
+            string config = CreateConfig(@"
+                ""Book"": {
+                    ""source"": ""books"",
+                    ""permissions"": [{ ""role"": ""anonymous"", ""actions"": [""*""] }],
+                    ""mcp"": {
+                        ""dml-tools"": true,
+                        ""unknown-property"": true
                     }
                 }
-            }";
+            ");
 
             // Act
             bool success = RuntimeConfigLoader.TryParseConfig(config, out _);

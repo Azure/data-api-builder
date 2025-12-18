@@ -637,15 +637,17 @@ namespace Cli.Tests
         #region MCP Entity Configuration Tests
 
         /// <summary>
-        /// Test adding table entity with MCP dml-tools enabled (should serialize as boolean true)
+        /// Test adding table entity with MCP dml-tools enabled or disabled
         /// </summary>
-        [TestMethod]
-        public Task AddTableEntityWithMcpDmlToolsEnabled()
+        [DataTestMethod]
+        [DataRow("true", "books", "Book", DisplayName = "AddTableEntityWithMcpDmlToolsEnabled")]
+        [DataRow("false", "authors", "Author", DisplayName = "AddTableEntityWithMcpDmlToolsDisabled")]
+        public Task AddTableEntityWithMcpDmlTools(string mcpDmlTools, string source, string entity)
         {
             AddOptions options = new(
-                source: "books",
+                source: source,
                 permissions: new string[] { "anonymous", "*" },
-                entity: "Book",
+                entity: entity,
                 description: null,
                 sourceType: "table",
                 sourceParameters: null,
@@ -669,49 +671,13 @@ namespace Cli.Tests
                 fieldsAliasCollection: [],
                 fieldsDescriptionCollection: [],
                 fieldsPrimaryKeyCollection: [],
-                mcpDmlTools: "true",
+                mcpDmlTools: mcpDmlTools,
                 mcpCustomTool: null
             );
-            return ExecuteVerifyTest(options);
-        }
 
-        /// <summary>
-        /// Test adding table entity with MCP dml-tools disabled (should serialize as boolean false)
-        /// </summary>
-        [TestMethod]
-        public Task AddTableEntityWithMcpDmlToolsDisabled()
-        {
-            AddOptions options = new(
-                source: "authors",
-                permissions: new string[] { "anonymous", "*" },
-                entity: "Author",
-                description: null,
-                sourceType: "table",
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: Array.Empty<string>(),
-                fieldsToExclude: Array.Empty<string>(),
-                policyRequest: null,
-                policyDatabase: null,
-                cacheEnabled: null,
-                cacheTtl: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null,
-                parametersNameCollection: null,
-                parametersDescriptionCollection: null,
-                parametersRequiredCollection: null,
-                parametersDefaultCollection: null,
-                fieldsNameCollection: [],
-                fieldsAliasCollection: [],
-                fieldsDescriptionCollection: [],
-                fieldsPrimaryKeyCollection: [],
-                mcpDmlTools: "false",
-                mcpCustomTool: null
-            );
-            return ExecuteVerifyTest(options);
+            VerifySettings settings = new();
+            settings.UseParameters(mcpDmlTools, source);
+            return ExecuteVerifyTest(options, settings: settings);
         }
 
         /// <summary>

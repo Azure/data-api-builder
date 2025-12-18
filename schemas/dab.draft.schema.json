@@ -966,7 +966,7 @@
               "oneOf": [
                 {
                   "type": "boolean",
-                  "description": "Boolean shorthand: true enables dml-tools, false disables dml-tools."
+                  "description": "Boolean shorthand: true enables dml-tools only (custom-tool remains false), false disables all MCP functionality."
                 },
                 {
                   "type": "object",
@@ -1195,7 +1195,7 @@
                     "required": ["type"]
                   }
                 },
-                "errorMessage": "custom-tool can only be enabled for entities with source type 'stored-procedure'"
+                "errorMessage": "custom-tool can only be enabled for entities with source type 'stored-procedure'."
               }
             }
           ]

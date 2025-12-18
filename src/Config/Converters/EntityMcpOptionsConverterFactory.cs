@@ -59,7 +59,7 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
                     {
-                        break;
+                        return new EntityMcpOptions(customToolEnabled, dmlToolsEnabled);
                     }
 
                     if (reader.TokenType == JsonTokenType.PropertyName)
@@ -80,8 +80,6 @@ internal class EntityMcpOptionsConverterFactory : JsonConverterFactory
                         }
                     }
                 }
-
-                return new EntityMcpOptions(customToolEnabled, dmlToolsEnabled);
             }
 
             throw new JsonException($"Unexpected token type {reader.TokenType} for EntityMcpOptions");

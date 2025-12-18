@@ -5,7 +5,7 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /,
+      Path: /api,
       RequestBodyStrict: true
     },
     GraphQL: {
@@ -18,30 +18,23 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps,
-        Jwt: {
-          Audience: ,
-          Issuer: 
-        }
+        Provider: StaticWebApps
       }
     }
   },
   Entities: [
     {
-      GetAllBooks: {
+      Book: {
         Source: {
-          Type: stored-procedure
+          Object: books,
+          Type: Table
         },
         GraphQL: {
-          Singular: GetAllBooks,
-          Plural: GetAllBooks,
-          Enabled: true,
-          Operation: Mutation
+          Singular: Book,
+          Plural: Books,
+          Enabled: true
         },
         Rest: {
-          Methods: [
-            Post
-          ],
           Enabled: true
         },
         Permissions: [
@@ -49,13 +42,13 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Execute
+                Action: *
               }
             ]
           }
         ],
         Mcp: {
-          CustomToolEnabled: true,
+          CustomToolEnabled: false,
           DmlToolEnabled: true
         }
       }

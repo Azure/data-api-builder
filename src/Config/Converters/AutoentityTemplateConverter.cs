@@ -33,6 +33,10 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
             JsonConverter<EntityGraphQLOptions> graphQLOptionsConverter = (JsonConverter<EntityGraphQLOptions>)(graphQLOptionsConverterFactory.CreateConverter(typeof(EntityGraphQLOptions), options)
                 ?? throw new JsonException("Unable to create converter for EntityGraphQLOptions"));
 
+            EntityMcpOptionsConverterFactory mcpOptionsConverterFactory = new();
+            JsonConverter<EntityMcpOptions> mcpOptionsConverter = (JsonConverter<EntityMcpOptions>)(mcpOptionsConverterFactory.CreateConverter(typeof(EntityMcpOptions), options)
+                ?? throw new JsonException("Unable to create converter for EntityMcpOptions"));
+
             EntityHealthOptionsConvertorFactory healthOptionsConverterFactory = new();
             JsonConverter<EntityHealthCheckConfig> healthOptionsConverter = (JsonConverter<EntityHealthCheckConfig>)(healthOptionsConverterFactory.CreateConverter(typeof(EntityHealthCheckConfig), options)
                 ?? throw new JsonException("Unable to create converter for EntityHealthCheckConfig"));
@@ -44,6 +48,7 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
             // Initialize all sub-properties to null.
             EntityRestOptions? rest = null;
             EntityGraphQLOptions? graphQL = null;
+            EntityMcpOptions? mcp = null;
             EntityHealthCheckConfig? health = null;
             EntityCacheOptions? cache = null;
 
@@ -51,7 +56,7 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    return new AutoentityTemplate(rest, graphQL, health, cache);
+                    return new AutoentityTemplate(rest, graphQL, mcp, health, cache);
                 }
 
                 string? propertyName = reader.GetString();
@@ -68,7 +73,7 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
                         break;
 
                     case "mcp":
-                        mcpd=
+                        mcp = mcpOptionsConverter.Read(ref reader, typeof(EntityMcpOptions), options);
                         break;
 
                     case "health":

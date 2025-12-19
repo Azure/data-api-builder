@@ -1,4 +1,4 @@
-# Azure Deployment Samples for Data API Builder
+# Azure Deployment Samples for Data API builder
 
 This directory contains scripts and samples for deploying Data API builder (DAB) to various Azure services.
 
@@ -326,10 +326,10 @@ sqlcmd -S <server>.database.windows.net -U sqladmin -P <password> -d dabdb -i sr
 For manual deployments with existing configurations:
 
 ### [azure-deploy.sh](./azure-deploy.sh)
-Deploy Data API builder to Azure Container Instance as described in [Running Data API Builder in Azure](https://learn.microsoft.com/azure/data-api-builder/running-in-azure)
+Deploy Data API builder to Azure Container Instance as described in [Running Data API builder in Azure](https://learn.microsoft.com/azure/data-api-builder/running-in-azure)
 
 ### [azure-container-apps-deploy.sh](./azure-container-apps-deploy.sh)
-Deploy Data API builder to Azure Container Apps as described in [Running Data API Builder in Azure](https://learn.microsoft.com/azure/data-api-builder/running-in-azure)
+Deploy Data API builder to Azure Container Apps as described in [Running Data API builder in Azure](https://learn.microsoft.com/azure/data-api-builder/running-in-azure)
 
 **Note:** These scripts require a valid `dab-config.json` file in the same directory.
 
@@ -351,7 +351,7 @@ Deploy Data API builder to Azure Container Apps as described in [Running Data AP
 
 ## Additional Resources
 
-- [Data API Builder Documentation](https://learn.microsoft.com/azure/data-api-builder/)
+- [Data API builder Documentation](https://learn.microsoft.com/azure/data-api-builder/)
 - [Running DAB in Azure](https://learn.microsoft.com/azure/data-api-builder/running-in-azure)
 - [Azure Container Apps Documentation](https://learn.microsoft.com/azure/container-apps/)
 - [Azure Container Instances Documentation](https://learn.microsoft.com/azure/container-instances/)

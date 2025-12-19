@@ -218,17 +218,6 @@ function Get-UniqueResourceName {
     return "$Prefix-$Type-$random".ToLower()
 }
 
-function New-RandomPassword {
-    param(
-        [int]$Length = 16
-    )
-    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()'
-    $password = -join ((1..$Length) | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
-    # Ensure complexity requirements
-    $password = 'A1!' + $password
-    return $password
-}
-
 function Update-DabConfigFile {
     param(
         [string]$SourceConfigPath,
@@ -334,31 +323,6 @@ $dnsLabel = Get-UniqueResourceName -Prefix $ResourcePrefix -Type "dab"
 $dnsLabel = $dnsLabel -replace "[^a-zA-Z0-9-]", "" # DNS labels must be alphanumeric with hyphens
 $acrImageName = "dab"
 $acrImageTag = "latest"
-
-# Generate SQL password if not provided
-if (-not $SqlAdminPassword) {
-    $generatedPassword = New-RandomPassword
-    $SqlAdminPassword = ConvertTo-SecureString -String $generatedPassword -AsPlainText -Force
-    
-    # Store password to file for secure retrieval
-    $passwordFile = Join-Path $env:TEMP "dab-sql-password-$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
-    $generatedPassword | Out-File -FilePath $passwordFile -NoNewline
-    
-    # Restrict file permissions to current user only (requires elevated privileges)
-    try {
-        $acl = Get-Acl $passwordFile
-        $acl.SetAccessRuleProtection($true, $false)
-        $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($env:USERNAME, "FullControl", "Allow")
-        $acl.SetAccessRule($accessRule)
-        Set-Acl $passwordFile $acl
-    }
-    catch {
-        Write-Warning "Could not restrict password file ACL permissions (requires admin rights)."
-    }
-    
-    Write-Warning "Auto-generated SQL password has been saved to: $passwordFile"
-    Write-Host "Please store this password securely and delete the file after saving it to your password manager." -ForegroundColor Yellow
-}
 
 # Convert SecureString to plain text with proper memory management
 $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SqlAdminPassword)

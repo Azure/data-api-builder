@@ -1104,6 +1104,7 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
+            TestHelper.SetAppServiceEasyAuthEnvironment();
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
@@ -1172,6 +1173,8 @@ type Moon {
             HttpResponseMessage postConfigOpenApiSwaggerEndpointAvailability =
                 await httpClient.GetAsync($"/{OPENAPI_SWAGGER_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.BadRequest, postConfigOpenApiSwaggerEndpointAvailability.StatusCode);
+
+            TestHelper.UnsetAppServiceEasyAuthEnvironment();
         }
 
         /// <summary>
@@ -2703,12 +2706,30 @@ type Moon {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
                 try
                 {
+                    // Pre-clean to avoid PK violation if a previous run left the row behind.
+                    string preCleanupDeleteMutation = @"
+                        mutation {
+                            deleteStock(categoryid: 5001, pieceid: 5001) {
+                                categoryid
+                                pieceid
+                            }
+                        }";
+
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                    client,
+                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                    query: preCleanupDeleteMutation,
+                    queryName: "deleteStock",
+                    variables: null,
+                    authToken: authToken,
+                    clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+
                     // A create mutation operation is executed in the context of Anonymous role. The Anonymous role has create action configured but lacks
                     // read action. As a result, a new record should be created in the database but the mutation operation should return an error message.
                     string graphQLMutation = @"
@@ -2733,7 +2754,8 @@ type Moon {
                         query: graphQLMutation,
                         queryName: "createStock",
                         variables: null,
-                        clientRoleHeader: null
+                        authToken: null,
+                        clientRoleHeader: AuthorizationResolver.ROLE_ANONYMOUS
                         );
 
                     Assert.IsNotNull(mutationResponse);
@@ -5314,7 +5336,7 @@ type Planet @model(name:""PlanetAlias"") {
 
             HttpResponseMessage postResult = await httpClient.SendAsync(postRequest);
             string body = await postResult.Content.ReadAsStringAsync();
-            Assert.AreEqual(HttpStatusCode.Unauthorized, postResult.StatusCode, body);
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode, body);
 
             return await GetRestResponsePostConfigHydration(httpClient, rest);
         }

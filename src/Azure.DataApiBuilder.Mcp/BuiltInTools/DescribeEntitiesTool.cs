@@ -111,15 +111,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
-                // Get authorization services to determine current user's role
-                IAuthorizationResolver authResolver = serviceProvider.GetRequiredService<IAuthorizationResolver>();
-                IHttpContextAccessor httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-                HttpContext? httpContext = httpContextAccessor.HttpContext;
-
                 // Get current user's role for permission filtering
                 // For discovery tools like describe_entities, we use the first valid role from the header
                 // This differs from operation-specific tools that check permissions per entity per operation
-                string? currentUserRole = null;
                 if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
                 {
                     string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();

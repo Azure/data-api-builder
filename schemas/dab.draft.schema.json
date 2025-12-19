@@ -853,7 +853,7 @@
     },
     "entities": {
       "type": "object",
-      "description": "Entities that will be exposed via REST and/or GraphQL",
+      "description": "Entities that will be exposed via REST, GraphQL and/or MCP",
       "patternProperties": {
         "^.*$": {
           "type": "object",
@@ -1119,6 +1119,31 @@
                   "default": 5
                 }
               }
+            },
+            "mcp": {
+              "oneOf": [
+                {
+                  "type": "boolean",
+                  "description": "Boolean shorthand: true enables dml-tools only (custom-tool remains false), false disables all MCP functionality."
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dml-tools": {
+                      "type": "boolean",
+                      "description": "Enable MCP DML (Data Manipulation Language) tools for this entity. Allows CRUD operations via MCP.",
+                      "default": true
+                    },
+                    "custom-tool": {
+                      "type": "boolean",
+                      "description": "Enable MCP custom tool for this entity. Only valid for stored procedures.",
+                      "default": false
+                    }
+                  }
+                }
+              ],
+              "description": "Model Context Protocol (MCP) configuration for this entity. Controls whether the entity is exposed via MCP tools."
             }
           },
           "if": {
@@ -1302,6 +1327,33 @@
                     { "properties": { "source": { "properties": { "key-fields": { } }, "required": ["key-fields"] } } }
                   ]
                 }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "mcp": {
+                    "properties": {
+                      "custom-tool": {
+                        "const": true
+                      }
+                    }
+                  }
+                },
+                "required": ["mcp"]
+              },
+              "then": {
+                "properties": {
+                  "source": {
+                    "properties": {
+                      "type": {
+                        "const": "stored-procedure"
+                      }
+                    },
+                    "required": ["type"]
+                  }
+                },
+                "errorMessage": "custom-tool can only be enabled for entities with source type 'stored-procedure'."
               }
             }
           ]

@@ -633,5 +633,259 @@ namespace Cli.Tests
 
             return Verify(updatedRuntimeConfig, settings);
         }
+
+        #region MCP Entity Configuration Tests
+
+        /// <summary>
+        /// Test adding table entity with MCP dml-tools enabled or disabled
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("true", "books", "Book", DisplayName = "AddTableEntityWithMcpDmlToolsEnabled")]
+        [DataRow("false", "authors", "Author", DisplayName = "AddTableEntityWithMcpDmlToolsDisabled")]
+        public Task AddTableEntityWithMcpDmlTools(string mcpDmlTools, string source, string entity)
+        {
+            AddOptions options = new(
+                source: source,
+                permissions: new string[] { "anonymous", "*" },
+                entity: entity,
+                description: null,
+                sourceType: "table",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: Array.Empty<string>(),
+                fieldsToExclude: Array.Empty<string>(),
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: [],
+                mcpDmlTools: mcpDmlTools,
+                mcpCustomTool: null
+            );
+
+            VerifySettings settings = new();
+            settings.UseParameters(mcpDmlTools, source);
+            return ExecuteVerifyTest(options, settings: settings);
+        }
+
+        /// <summary>
+        /// Test adding stored procedure with MCP custom-tool enabled (should serialize as object)
+        /// </summary>
+        [TestMethod]
+        public Task AddStoredProcedureWithMcpCustomToolEnabled()
+        {
+            AddOptions options = new(
+                source: "dbo.GetBookById",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "GetBookById",
+                description: null,
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: Array.Empty<string>(),
+                fieldsToExclude: Array.Empty<string>(),
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: [],
+                mcpDmlTools: null,
+                mcpCustomTool: "true"
+            );
+            return ExecuteVerifyTest(options);
+        }
+
+        /// <summary>
+        /// Test adding stored procedure with both MCP properties set to different values (should serialize as object with both)
+        /// </summary>
+        [TestMethod]
+        public Task AddStoredProcedureWithBothMcpProperties()
+        {
+            AddOptions options = new(
+                source: "dbo.UpdateBook",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "UpdateBook",
+                description: null,
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: Array.Empty<string>(),
+                fieldsToExclude: Array.Empty<string>(),
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: [],
+                mcpDmlTools: "false",
+                mcpCustomTool: "true"
+            );
+            return ExecuteVerifyTest(options);
+        }
+
+        /// <summary>
+        /// Test adding stored procedure with both MCP properties enabled (common use case)
+        /// </summary>
+        [TestMethod]
+        public Task AddStoredProcedureWithBothMcpPropertiesEnabled()
+        {
+            AddOptions options = new(
+                source: "dbo.GetAllBooks",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "GetAllBooks",
+                description: null,
+                sourceType: "stored-procedure",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: Array.Empty<string>(),
+                fieldsToExclude: Array.Empty<string>(),
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: [],
+                mcpDmlTools: "true",
+                mcpCustomTool: "true"
+            );
+            return ExecuteVerifyTest(options);
+        }
+
+        /// <summary>
+        /// Test that adding table entity with custom-tool fails validation
+        /// </summary>
+        [TestMethod]
+        public void AddTableEntityWithInvalidMcpCustomTool()
+        {
+            AddOptions options = new(
+                source: "reviews",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "Review",
+                description: null,
+                sourceType: "table",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: Array.Empty<string>(),
+                fieldsToExclude: Array.Empty<string>(),
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: [],
+                mcpDmlTools: null,
+                mcpCustomTool: "true"
+            );
+
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig _),
+                "Should fail to add table entity with custom-tool enabled");
+        }
+
+        /// <summary>
+        /// Test that invalid MCP option value fails
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("invalid", null, DisplayName = "Invalid dml-tools value")]
+        [DataRow(null, "invalid", DisplayName = "Invalid custom-tool value")]
+        [DataRow("yes", "no", DisplayName = "Invalid boolean-like values")]
+        public void AddEntityWithInvalidMcpOptions(string? mcpDmlTools, string? mcpCustomTool)
+        {
+            AddOptions options = new(
+                source: "MyTable",
+                permissions: new string[] { "anonymous", "*" },
+                entity: "MyEntity",
+                description: null,
+                sourceType: "table",
+                sourceParameters: null,
+                sourceKeyFields: null,
+                restRoute: null,
+                graphQLType: null,
+                fieldsToInclude: Array.Empty<string>(),
+                fieldsToExclude: Array.Empty<string>(),
+                policyRequest: null,
+                policyDatabase: null,
+                cacheEnabled: null,
+                cacheTtl: null,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: null,
+                graphQLOperationForStoredProcedure: null,
+                parametersNameCollection: null,
+                parametersDescriptionCollection: null,
+                parametersRequiredCollection: null,
+                parametersDefaultCollection: null,
+                fieldsNameCollection: [],
+                fieldsAliasCollection: [],
+                fieldsDescriptionCollection: [],
+                fieldsPrimaryKeyCollection: [],
+                mcpDmlTools: mcpDmlTools,
+                mcpCustomTool: mcpCustomTool
+            );
+
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryAddNewEntity(options, runtimeConfig!, out RuntimeConfig _),
+                "Should fail with invalid MCP option values");
+        }
+
+        #endregion MCP Entity Configuration Tests
     }
 }

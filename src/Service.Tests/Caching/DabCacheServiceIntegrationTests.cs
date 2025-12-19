@@ -760,13 +760,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             });
 
             Mock<RuntimeConfig> mockRuntimeConfig = new(
-                string.Empty,
-                dataSource,
-                entities,
-                null,
-                null,
-                null,
-                null
+                string.Empty,       // Schema
+                dataSource,         // DataSource
+                entities,           // Entities
+                null,               // Autoentities
+                null,               // Runtime
+                null,               // DataSourceFiles
+                null                // AzureKeyVault
             );
             mockRuntimeConfig
                 .Setup(c => c.GetDataSourceFromDataSourceName(It.IsAny<string>()))

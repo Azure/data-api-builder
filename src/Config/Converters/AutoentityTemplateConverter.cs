@@ -68,7 +68,7 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
                         break;
 
                     case "mcp":
-                        // TODO: Add MCP support for autoentities needed.
+                        mcpd=
                         break;
 
                     case "health":

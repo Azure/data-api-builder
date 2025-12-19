@@ -695,20 +695,18 @@
     },
     "autoentities": {
       "type": "object",
-      "description": "Auto-entity definitions for pattern matching",
+      "description": "Defines automatic entity generation rules for MSSQL tables based on include/exclude patterns and defaults.",
       "patternProperties": {
         "^.*$": {
           "type": "object",
-          "additionalProperties": false,
           "properties": {
             "patterns": {
               "type": "object",
               "description": "Pattern matching rules for including/excluding database objects",
-              "additionalProperties": false,
               "properties": {
                 "include": {
                   "type": "array",
-                  "description": "T-SQL LIKE pattern to include database objects (e.g., '%.%')",
+                  "description": "MSSQL LIKE pattern for objects to include (e.g., '%.%'). Null includes all.",
                   "items": {
                     "type": "string"
                   },
@@ -716,7 +714,7 @@
                 },
                 "exclude": {
                   "type": "array",
-                  "description": "T-SQL LIKE pattern to exclude database objects (e.g., 'sales.%')",
+                  "description": "MSSQL LIKE pattern for objects to exclude (e.g., 'sales.%'). Null excludes none.",
                   "items": {
                     "type": "string"
                   },
@@ -724,7 +722,7 @@
                 },
                 "name": {
                   "type": "string",
-                  "description": "Interpolation syntax for entity naming, must be unique for every entity inside the pattern",
+                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {object}. Must be unique for every entity inside the pattern",
                   "default": "{object}"
                 }
               }

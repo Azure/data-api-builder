@@ -14,49 +14,76 @@
     - Generates DAB configuration file
 
 .PARAMETER SubscriptionId
-    Azure subscription ID. If not provided, uses the current active subscription.
+    [Required] Azure subscription ID where all resources will be deployed.
+    You can find this with: az account show --query id -o tsv
 
 .PARAMETER ResourceGroup
-    Name of the resource group. Auto-generates if not provided.
+    [Required] Name of the resource group to create or use for all deployed resources.
+    If the resource group exists, resources will be added to it. If not, it will be created.
 
 .PARAMETER Location
-    Azure region (e.g., eastus, westus2). Default: eastus
+    [Optional] Azure region where resources will be deployed. Default: eastus
+    Supported regions: eastus, eastus2, westus, westus2, westus3, centralus, 
+    northeurope, westeurope, uksouth, southeastasia
 
 .PARAMETER ResourcePrefix
-    Prefix for resource names. Auto-generates if not provided.
+    [Optional] Prefix used to generate unique names for all Azure resources. Default: ACI
+    Example: 'mydab' creates resources like mydab-acr-a1b2c3, mydab-sql-a1b2c3, mydab-aci-a1b2c3
+    If not provided, uses 'ACI' as the prefix for Azure Container Instances deployment.
 
 .PARAMETER SqlAdminPassword
-    SQL Server admin password. Auto-generates a secure password if not provided.
+    [Required] SQL Server administrator password as a SecureString.
+    Must meet Azure SQL Server password requirements: 8-128 characters, mix of uppercase, 
+    lowercase, numbers, and special characters.
+    Create with: $password = ConvertTo-SecureString "YourPassword" -AsPlainText -Force
 
 .PARAMETER SkipCleanup
-    If set, resources won't be deleted on errors.
+    [Optional] Switch to keep resources even if deployment fails.
+    By default, the script cleans up resources on errors. Use this flag to preserve 
+    resources for debugging.
 
 .PARAMETER ContainerPort
-    Port for the DAB container. Default: 5000
+    [Optional] Port number where DAB will listen for HTTP requests. Default: 5000
+    This is exposed publicly via the container's FQDN on HTTP (no HTTPS support in ACI).
 
 .PARAMETER SqlServiceTier
-    SQL Database service tier. Default: S0
+    [Optional] Azure SQL Database service tier/SKU. Default: S0
+    Options: Basic, S0, S1, S2, P1, P2
+    - Basic: 5 DTUs, up to 2GB storage
+    - S0: 10 DTUs, up to 250GB storage
+    - S1: 20 DTUs, up to 250GB storage
+    - S2: 50 DTUs, up to 250GB storage
+    - P1: 125 DTUs, up to 500GB storage
+    - P2: 250 DTUs, up to 500GB storage
 
 .PARAMETER ContainerCpu
-    Number of CPU cores for the container. Default: 1
+    [Optional] Number of CPU cores allocated to the container. Default: 1, Range: 1-4
+    Options: 1, 2, 3, 4
+    Note: Container Instances only supports integer CPU values (no fractional cores).
+    Higher values provide better performance but increase costs.
 
 .PARAMETER ContainerMemory
-    Memory in GB for the container. Default: 1.5
+    [Optional] Memory in GB allocated to the container. Default: 1.5, Range: 0.5-16
+    Common values: 0.5, 1.0, 1.5, 2.0, 4.0, 8.0, 16.0
+    Must be paired appropriately with CPU (minimum 0.5 GB per CPU core recommended).
 
 .PARAMETER DabConfigFile
-    Path to DAB configuration file. Default: src/Service.Tests/dab-config.MsSql.json
+    [Optional] Path to the DAB configuration JSON file. Default: src/Service.Tests/dab-config.MsSql.json
+    The script will replace the connection string placeholder with actual SQL Server credentials.
+    Use a custom config file if you need different entity mappings or security settings.
 
 .EXAMPLE
-    .\azure-container-instances-dab-starter.ps1
-    Runs with auto-generated values and prompts for confirmation
+    $password = ConvertTo-SecureString "YourPassword123!" -AsPlainText -Force
+    .\azure-container-instances-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -SqlAdminPassword $password
+    Basic deployment using default 'ACI' prefix
 
 .EXAMPLE
-    .\azure-container-instances-dab-starter.ps1 -ResourcePrefix "mydab" -Location "westus2"
+    .\azure-container-instances-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -ResourcePrefix "mydab" -SqlAdminPassword $password -Location "westus2"
     Deploys to West US 2 with custom prefix
 
 .EXAMPLE
-    .\azure-container-instances-dab-starter.ps1 -ContainerCpu 2 -ContainerMemory 3
-    Deploys with custom CPU and memory settings
+    .\azure-container-instances-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -SqlAdminPassword $password -ContainerCpu 4 -ContainerMemory 8
+    Deploys with high-performance CPU and memory configuration
 
 .NOTES
     Prerequisites:
@@ -79,7 +106,7 @@ param(
     [ValidateSet('eastus', 'eastus2', 'westus', 'westus2', 'westus3', 'centralus', 'northeurope', 'westeurope', 'uksouth', 'southeastasia')]
     [string]$Location = "eastus",
     
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [string]$ResourcePrefix,
     
     [Parameter(Mandatory=$true)]
@@ -109,6 +136,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+# Auto-generate ResourcePrefix if not provided
+if ([string]::IsNullOrEmpty($ResourcePrefix)) {
+    $ResourcePrefix = "ACI"
+    Write-Host "[INFO] Using default ResourcePrefix: $ResourcePrefix" -ForegroundColor Yellow
+}
 
 # ============================================================================
 # HELPER FUNCTIONS

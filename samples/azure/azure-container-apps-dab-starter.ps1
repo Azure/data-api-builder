@@ -15,58 +15,88 @@
     - Generates DAB configuration file
 
 .PARAMETER SubscriptionId
-    Azure subscription ID. If not provided, uses the current active subscription.
+    [Required] Azure subscription ID where all resources will be deployed.
+    You can find this with: az account show --query id -o tsv
 
 .PARAMETER ResourceGroup
-    Name of the resource group. Auto-generates if not provided.
+    [Required] Name of the resource group to create or use for all deployed resources.
+    If the resource group exists, resources will be added to it. If not, it will be created.
 
 .PARAMETER Location
-    Azure region (e.g., eastus, westus2). Default: eastus
+    [Optional] Azure region where resources will be deployed. Default: eastus
+    Supported regions: eastus, eastus2, westus, westus2, westus3, centralus, 
+    northeurope, westeurope, uksouth, southeastasia
 
 .PARAMETER ResourcePrefix
-    Prefix for resource names. Auto-generates if not provided.
+    [Optional] Prefix used to generate unique names for all Azure resources. Default: ACA
+    Example: 'mydab' creates resources like mydab-acr-a1b2c3, mydab-sql-a1b2c3, mydab-aca-a1b2c3
+    If not provided, uses 'ACA' as the prefix for Azure Container Apps deployment.
 
 .PARAMETER SqlAdminPassword
-    SQL Server admin password. Auto-generates a secure password if not provided.
+    [Required] SQL Server administrator password as a SecureString.
+    Must meet Azure SQL Server password requirements: 8-128 characters, mix of uppercase, 
+    lowercase, numbers, and special characters.
+    Create with: $password = ConvertTo-SecureString "YourPassword" -AsPlainText -Force
 
 .PARAMETER SkipCleanup
-    If set, resources won't be deleted on errors.
+    [Optional] Switch to keep resources even if deployment fails.
+    By default, the script cleans up resources on errors. Use this flag to preserve 
+    resources for debugging.
 
 .PARAMETER ContainerPort
-    Port for the DAB container. Default: 5000
+    [Optional] Port number where DAB will listen for HTTP requests. Default: 5000
+    This is the internal container port. External access is via HTTPS on port 443.
 
 .PARAMETER SqlServiceTier
-    SQL Database service tier. Default: S0
+    [Optional] Azure SQL Database service tier/SKU. Default: S0
+    Options: Basic, S0, S1, S2, P1, P2
+    - Basic: 5 DTUs, up to 2GB storage
+    - S0: 10 DTUs, up to 250GB storage
+    - S1: 20 DTUs, up to 250GB storage
+    - S2: 50 DTUs, up to 250GB storage
+    - P1: 125 DTUs, up to 500GB storage
+    - P2: 250 DTUs, up to 500GB storage
 
 .PARAMETER MinReplicas
-    Minimum number of container replicas. Default: 1
+    [Optional] Minimum number of container replicas to maintain. Default: 1, Range: 0-30
+    Set to 0 to scale to zero when idle (saves costs but adds cold start latency).
+    Container Apps will automatically scale between MinReplicas and MaxReplicas based on load.
 
 .PARAMETER MaxReplicas
-    Maximum number of container replicas. Default: 3
+    [Optional] Maximum number of container replicas for auto-scaling. Default: 3, Range: 1-30
+    Container Apps will scale up to this number based on CPU, memory, or HTTP request load.
+    Must be greater than or equal to MinReplicas.
 
 .PARAMETER ContainerCpu
-    Number of CPU cores for each container replica. Default: 0.5
+    [Optional] Number of CPU cores allocated to each container replica. Default: 0.5, Range: 0.25-4
+    Options: 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 3.5, 4.0
+    Higher values provide better performance but increase costs.
 
 .PARAMETER ContainerMemory
-    Memory in GB for each container replica. Default: 1.0
+    [Optional] Memory in GB allocated to each container replica. Default: 1.0, Range: 0.5-8
+    Must be paired appropriately with CPU (e.g., 0.5 CPU can use 0.5-4 GB memory).
+    Minimum ratio: 0.5 GB per 0.25 CPU cores.
 
 .PARAMETER DabConfigFile
-    Path to DAB configuration file. Default: src/Service.Tests/dab-config.MsSql.json
+    [Optional] Path to the DAB configuration JSON file. Default: src/Service.Tests/dab-config.MsSql.json
+    The script will replace the connection string placeholder with actual SQL Server credentials.
+    Use a custom config file if you need different entity mappings or security settings.
 
 .EXAMPLE
-    .\azure-container-apps-dab-starter.ps1
-    Runs with auto-generated values and prompts for confirmation
+    $password = ConvertTo-SecureString "YourPassword123!" -AsPlainText -Force
+    .\azure-container-apps-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -SqlAdminPassword $password
+    Basic deployment using default 'ACA' prefix
 
 .EXAMPLE
-    .\azure-container-apps-dab-starter.ps1 -ResourcePrefix "mydab" -Location "westus2"
+    .\azure-container-apps-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -ResourcePrefix "mydab" -SqlAdminPassword $password -Location "westus2"
     Deploys to West US 2 with custom prefix
 
 .EXAMPLE
-    .\azure-container-apps-dab-starter.ps1 -ContainerCpu 1 -ContainerMemory 2
-    Deploys with custom CPU and memory settings
+    .\azure-container-apps-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -SqlAdminPassword $password -ContainerCpu 1 -ContainerMemory 2 -MinReplicas 2 -MaxReplicas 10
+    Deploys with custom CPU, memory, and scaling configuration
 
 .EXAMPLE
-    .\azure-container-apps-dab-starter.ps1 -SkipCleanup
+    .\azure-container-apps-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -SqlAdminPassword $password -SkipCleanup
     Deploys and keeps resources even if errors occur
 
 .NOTES
@@ -90,7 +120,7 @@ param(
     [ValidateSet('eastus', 'eastus2', 'westus', 'westus2', 'westus3', 'centralus', 'northeurope', 'westeurope', 'uksouth', 'southeastasia')]
     [string]$Location = "eastus",
     
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [string]$ResourcePrefix,
     
     [Parameter(Mandatory=$true)]
@@ -128,6 +158,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+# Auto-generate ResourcePrefix if not provided
+if ([string]::IsNullOrEmpty($ResourcePrefix)) {
+    $ResourcePrefix = "ACA"
+    Write-Host "[INFO] Using default ResourcePrefix: $ResourcePrefix" -ForegroundColor Yellow
+}
 
 # Validate replica configuration
 if ($MaxReplicas -lt $MinReplicas) {
@@ -585,14 +621,24 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
     
     # Generate SAS URL for the blob (valid for 1 year)
     $expiryDate = (Get-Date).AddYears(1).ToString("yyyy-MM-ddTHH:mm:ssZ")
-    $configUrl = (az storage blob generate-sas `
+    $ErrorActionPreference = "Continue"
+    $sasOutput = az storage blob generate-sas `
         --account-name $storageAccountName `
         --account-key $storageKey `
         --container-name "config" `
         --name "dab-config.json" `
         --permissions r `
         --expiry $expiryDate `
-        --full-uri -o tsv 2>&1 | Where-Object { $_ -notmatch 'UserWarning' -and $_ -notmatch 'pkg_resources' }) -join ''
+        --full-uri -o tsv 2>&1
+    $ErrorActionPreference = "Stop"
+    
+    # Filter out Python warnings and get only the URL
+    $configUrl = ($sasOutput | Where-Object { $_ -notmatch 'UserWarning' -and $_ -notmatch 'pkg_resources' -and $_ -notmatch 'Lib\\site-packages' -and $_.Length -gt 0 }) -join ''
+    
+    if (-not $configUrl -or $configUrl -notmatch '^https://') {
+        Write-ErrorMessage "Failed to generate valid SAS URL"
+        throw "SAS URL generation failed"
+    }
     
     Write-Success "Generated SAS URL for config download"
 
@@ -608,11 +654,25 @@ $output = sqlcmd -S $sqlServer -U $sqlAdminUser -P $sqlAdminPasswordPlain -d $sq
     Write-Step "Deploying Container App..."
     Write-Host "Note: Container will download config from blob storage on startup" -ForegroundColor Yellow
     
-    # Create a YAML configuration file for proper command/args setup
-    # Using YAML ensures command and args are properly formatted as arrays
+    # Create complete YAML configuration file for container app
+    # Using YAML ensures command, args, and env vars are properly formatted
     $containerYamlPath = Join-Path $env:TEMP "container-app.yaml"
     $containerYaml = @"
+location: $Location
 properties:
+  managedEnvironmentId: /subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.App/managedEnvironments/$envName
+  configuration:
+    ingress:
+      external: true
+      targetPort: $ContainerPort
+      transport: auto
+    registries:
+    - server: $acrLoginServer
+      username: $acrName
+      passwordSecretRef: acr-password
+    secrets:
+    - name: acr-password
+      value: $acrPassword
   template:
     containers:
     - name: $acaName
@@ -636,22 +696,9 @@ properties:
 "@
     $containerYaml | Out-File -FilePath $containerYamlPath -Encoding UTF8
     
-    # Create the container app with basic settings first
+    # Create the container app with complete YAML configuration
+    Write-Host "Creating container app with startup command..." -ForegroundColor Yellow
     az containerapp create `
-        --name $acaName `
-        --resource-group $ResourceGroup `
-        --environment $envName `
-        --image "${acrLoginServer}/${acrImageName}:${acrImageTag}" `
-        --target-port $ContainerPort `
-        --ingress external `
-        --transport auto `
-        --registry-server $acrLoginServer `
-        --registry-username $acrName `
-        --registry-password $acrPassword | Out-Null
-    
-    # Update the container app with the YAML configuration for command/args/env
-    Write-Host "Configuring container startup command..." -ForegroundColor Yellow
-    az containerapp update `
         --name $acaName `
         --resource-group $ResourceGroup `
         --yaml $containerYamlPath | Out-Null
@@ -698,7 +745,7 @@ properties:
     Write-Host "  curl https://$appUrl/api/Publisher"
     Write-Host ""
     Write-Host "  # GraphQL query"
-    Write-Host '  curl https://'$appUrl'/graphql -H "Content-Type: application/json" -d "{\"query\":\"{publishers{items{id name}}}\"}""'
+    Write-Host "  curl https://$appUrl/graphql -H `"Content-Type: application/json`" -d `"{\`"query\`":\`"{publishers{items{id name}}}`\"}"
     Write-Host ""
     Write-Host "  # View container logs"
     Write-Host "  az containerapp logs show --name $acaName --resource-group $ResourceGroup --follow"

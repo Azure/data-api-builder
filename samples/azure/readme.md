@@ -105,21 +105,25 @@ Before running these scripts, ensure you have:
 # 1. Login to Azure
 az login
 
-# 2. Get your subscription ID (optional - script can use current subscription)
+# 2. Get your subscription ID
 az account show --query id -o tsv
 
-# 3. Clone the repository (if not already done)
+# 3. Clone the repository
 git clone https://github.com/Azure/data-api-builder.git
 cd data-api-builder/samples/azure
 
-# 4. Prepare SQL password
+# 4. Run the script with required parameters
 $password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
-
-# 5. Run the script with required parameters
 .\azure-container-apps-dab-starter.ps1 `
     -SubscriptionId "<your-subscription-id>" `
     -ResourceGroup "rg-dab-demo" `
-    -ResourcePrefix "dab" `
+    -SqlAdminPassword $password
+
+# Or with custom prefix:
+.\azure-container-apps-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-demo" `
+    -ResourcePrefix "mydab" `
     -SqlAdminPassword $password
 
 # The script will:
@@ -138,12 +142,12 @@ $password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
 ```powershell
 -SubscriptionId         # Azure subscription ID
 -ResourceGroup          # Resource group name
--ResourcePrefix         # Prefix for all resource names (generates unique names)
 -SqlAdminPassword       # SQL Server admin password (SecureString)
 ```
 
 #### Optional Parameters (Both Scripts)
 ```powershell
+-ResourcePrefix         # Prefix for all resource names (default: 'ACA' for Container Apps, 'ACI' for Container Instances)
 -Location               # Azure region (default: eastus)
                         # Options: eastus, eastus2, westus, westus2, westus3, 
                         #          centralus, northeurope, westeurope, uksouth, southeastasia
@@ -170,10 +174,16 @@ $password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
 ### Examples
 
 ```powershell
-# Prepare password once
+# Prepare password for all examples
 $password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
 
-# Basic Container Apps deployment
+# Basic Container Apps deployment (uses default 'ACA' prefix)
+.\azure-container-apps-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aca" `
+    -SqlAdminPassword $password
+
+# Container Apps deployment with custom prefix
 .\azure-container-apps-dab-starter.ps1 `
     -SubscriptionId "<your-subscription-id>" `
     -ResourceGroup "rg-dab-aca" `
@@ -200,7 +210,13 @@ $password = ConvertTo-SecureString "<YourSecurePassword>" -AsPlainText -Force
     -ContainerCpu 1 `
     -ContainerMemory 2
 
-# High-performance Container Instance
+# Basic Container Instance deployment (uses default 'ACI' prefix)
+.\azure-container-instances-dab-starter.ps1 `
+    -SubscriptionId "<your-subscription-id>" `
+    -ResourceGroup "rg-dab-aci" `
+    -SqlAdminPassword $password
+
+# High-performance Container Instance with custom prefix
 .\azure-container-instances-dab-starter.ps1 `
     -SubscriptionId "<your-subscription-id>" `
     -ResourceGroup "rg-dab-aci" `

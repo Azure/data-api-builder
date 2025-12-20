@@ -1,4 +1,4 @@
-# Deploying Data API Builder (DAB) MCP Server and Integrating with Azure AI Foundry
+# Deploying SQL MCP Server implemented in Data API builder and Integrating with Azure AI Foundry
 
 This document provides an end‑to‑end guide to stand up a **Data API Builder (DAB)** container that exposes **REST**, **GraphQL**, and **Model Context Protocol (MCP)** endpoints, and to integrate those endpoints with an **Azure AI Foundry Agent**. 
 

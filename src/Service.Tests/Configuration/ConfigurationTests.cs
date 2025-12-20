@@ -1104,7 +1104,6 @@ type Moon {
         [DataRow(CONFIGURATION_ENDPOINT_V2)]
         public async Task TestSqlSettingPostStartupConfigurations(string configurationEndpoint)
         {
-            TestHelper.SetAppServiceEasyAuthEnvironment();
             TestServer server = new(Program.CreateWebHostFromInMemoryUpdatableConfBuilder(Array.Empty<string>()));
             HttpClient httpClient = server.CreateClient();
 
@@ -1173,8 +1172,6 @@ type Moon {
             HttpResponseMessage postConfigOpenApiSwaggerEndpointAvailability =
                 await httpClient.GetAsync($"/{OPENAPI_SWAGGER_ENDPOINT}");
             Assert.AreEqual(HttpStatusCode.BadRequest, postConfigOpenApiSwaggerEndpointAvailability.StatusCode);
-
-            TestHelper.UnsetAppServiceEasyAuthEnvironment();
         }
 
         /// <summary>

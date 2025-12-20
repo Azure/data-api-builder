@@ -55,7 +55,10 @@ BEGIN
     FROM Products
     WHERE Category = @Category;
 END;
+```
+
 ## 4. Install DAB CLI and Bootstrap Configuration
+
 ```
 dotnet tool install --global Microsoft.DataApiBuilder --version 1.7.81
 export DATABASE_CONNECTION_STRING="Server=<server>.database.windows.net;Database=<db>;User ID=<user>;Password=<pwd>;Encrypt=True;"
@@ -71,12 +74,146 @@ dab init \
  
 ```
   
-## 5. Add entities and stored procedure to `dab-config.json` and enable MCP tools in the config
+## 5. Add all required entities (tables and stored procedures) to `dab-config.json` and enable MCP tools in the config
+
+Here is how to add a table entity and a stored procedure to your `dab-config.json`, and ensure MCP tools are enabled:
+
+1. **Open your `dab-config.json` file.**
+
+2. **Add an entity (table) definition** under the `"entities"` section. For example, to expose a `Customers` table:
+   ```
+   "entities": {
+     "Customers": {
+       "source": "Customers",
+       "rest": true,
+       "graphql": true,
+       "mcp": true,
+       "permissions": [
+         {
+           "role": "anonymous",
+           "actions": [ "read", "create", "update", "delete" ]
+         }
+       ]
+     }
+   }
+   ```
+
+3. **Add a stored procedure** under the "entities" section. For example, to expose a stored procedure called GetCustomerOrders:
+
+  ```
+  "GetCustomerOrders": {
+    "source": {
+      "object": "GetCustomerOrders",
+      "type": "stored-procedure"
+    },
+    "rest": true,
+    "graphql": true,
+    "mcp": true,
+    "permissions": [
+      {
+        "role": "anonymous",
+        "actions": [ "execute" ]
+      }
+    ]
+  }
+  ```
+
+Note: Make sure the "entities" section is a valid JSON object. If you have multiple entities, separate them with commas.
+
+4. **Ensure MCP is enabled in the "runtime" section:**
+
+```
+"runtime": {
+  "rest": { "enabled": true },
+  "graphql": { "enabled": true },
+  "mcp": {
+    "enabled": true,
+    "path": "/mcp"
+  }
+}
+```
+
+5. **Example dab-config.json structure:**
+
+```
+{
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('DATABASE_CONNECTION_STRING')"
+  },
+  "entities": {
+    "Customers": {
+      "source": "Customers",
+      "rest": true,
+      "graphql": true,
+      "mcp": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read", "create", "update", "delete" ]
+        }
+      ]
+    },
+    "GetCustomerOrders": {
+      "source": {
+        "object": "GetCustomerOrders",
+        "type": "stored-procedure"
+      },
+      "rest": true,
+      "graphql": true,
+      "mcp": true,
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "execute" ]
+        }
+      ]
+    }
+  },
+  "runtime": {
+    "rest": { "enabled": true },
+    "graphql": { "enabled": true },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    }
+  }
+}
+```
+
+6. **Save the file.**
 
 ## 6. Store dab-config.json in Azure Files
-- Create a Storage Account and File Share.
-- Upload dab-config.json.
-- Record account name and key for mounting in ACI.
+
+1. **Create a Storage Account** (if you don't have one):
+az storage account create
+--name
+--resource-group
+--location
+--sku Standard_LRS
+
+
+2. **Create a File Share**:
+az storage share create
+--name
+--account-name
+
+
+3. **Upload `dab-config.json` to the File Share**:
+az storage file upload
+--account-name
+--share-name
+--source ./dab-config.json
+--path dab-config.json
+
+
+4. **Retrieve the Storage Account key** (needed for mounting in ACI):
+az storage account keys list
+--account-name
+--resource-group
+
+Use the value of `key1` or `key2` as `<StorageAccountKey>` in the next step.
+
 
 ## 7. Deploy DAB to Azure Container Instances
 
@@ -92,11 +229,12 @@ az container create \
   --azure-file-volume-share-name <FileShareName> \
   --azure-file-volume-account-name <StorageAccountName> \
   --azure-file-volume-account-key <StorageAccountKey> \
-  --azure-file-volume-mount-path "/aci"
+  --azure-file-volume-mount-path "/aci" \
   --os-type Linux \
   --cpu 1 \
   --memory 1.5 \
   --command-line "dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName $DAB_CONFIG_PATH --LogLevel Debug"
+```
 
 ## 8. Integrate with Azure AI Foundry
 

@@ -15,7 +15,7 @@ This document provides an end‑to‑end guide to stand up a **SQL MCP Server** 
 **Flow**
 1. DAB starts in ACI → reads `dab-config.json` from the mounted Azure Files share.  
 2. DAB exposes `/api` (REST), `/graphql` (GraphQL), and `/mcp` (MCP).  
-3. Azure AI Foundry Agent invokes MCP tools to read/update data via DAB’s surface (entities and stored procedures).
+3. Azure AI Foundry Agent invokes MCP tools to read/update data via DAB’s surface (tables, views and stored procedures).
 
 
 ## 2. Prerequisites

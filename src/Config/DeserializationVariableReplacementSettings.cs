@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Config
                 }
                 else
                 {
-                _akvClient = CreateSecretClient(_azureKeyVaultOptions);
+                    _akvClient = CreateSecretClient(_azureKeyVaultOptions);
                 }
 
                 ReplacementStrategies.Add(
@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Config
                 if (string.IsNullOrEmpty(line) || line.StartsWith('#'))
                 {
                     continue;
-        }
+                }
 
                 int eqIndex = line.IndexOf('=');
                 if (eqIndex <= 0)

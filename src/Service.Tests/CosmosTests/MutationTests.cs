@@ -797,13 +797,6 @@ mutation {{
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
 
-            Console.WriteLine($"patchPlanet raw response: {response}");
-
-            if (response.ValueKind == JsonValueKind.Array)
-            {
-                Assert.Fail($"Expected patchPlanet to return a single result object, but got an array: {response}");
-            }
-
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
             Assert.AreEqual(newName, response.GetProperty("name").GetString());

@@ -2513,7 +2513,7 @@ type Moon {
         {
             const string CUSTOM_CONFIG = "custom-config.json";
             string runtimeBaseRoute = "/base-route";
-            TestHelper.ConstructNewConfigWithSpecifiedHostModeStaticWebApps(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute, "StaticWebApps");
             string[] args = new[]
             {
                     $"--ConfigFileName={CUSTOM_CONFIG}"

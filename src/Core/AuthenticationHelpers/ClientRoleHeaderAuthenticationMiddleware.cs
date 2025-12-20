@@ -62,31 +62,10 @@ public class ClientRoleHeaderAuthenticationMiddleware
         // Determine the authentication scheme to use based on dab-config.json.
         // Compatible with both ConfigureAuthentication and ConfigureAuthenticationV2 in startup.cs.
         // This means that this code is resilient to whether or not the default authentication scheme is set in startup.
-        string scheme;
-
-        if (_runtimeConfigProvider.IsLateConfigured)
+        string scheme = EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
+        if (!_runtimeConfigProvider.IsLateConfigured)
         {
-            // Hosted/late-config: prefer App Service when its EasyAuth is enabled via env;
-            // otherwise keep legacy SWA behavior.
-            bool appServiceEnabled =
-                string.Equals(
-                    Environment.GetEnvironmentVariable(AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR),
-                    "true",
-                    StringComparison.OrdinalIgnoreCase);
-
-            // Hosted scenario: fall back to env-driven App Service if enabled, otherwise SWA.
-            if (appServiceEnabled)
-            {
-                scheme = EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME;
-            }
-            else
-            {
-                scheme = EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
-            }
-        }
-        else
-        {
-            var dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
+            AuthenticationOptions? dabAuthNOptions = _runtimeConfigProvider.GetConfig().Runtime?.Host?.Authentication;
             scheme = ResolveConfiguredAuthNScheme(dabAuthNOptions?.Provider);
         }
 

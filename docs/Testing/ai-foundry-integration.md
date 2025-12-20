@@ -96,7 +96,7 @@ az container create \
   --os-type Linux \
   --cpu 1 \
   --memory 1.5 \
-  --command-line "dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName $configFile --LogLevel Debug"
+  --command-line "dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName $DAB_CONFIG_PATH --LogLevel Debug"
 
 ## 8. Integrate with Azure AI Foundry
 

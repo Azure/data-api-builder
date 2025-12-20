@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -75,10 +76,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 // Sends a GET request to a protected entity which requires a specific role to access.
                 // Authorization checks
                 HttpRequestMessage message = new(method: HttpMethod.Get, requestUri: $"/health");
-                string swaTokenPayload = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(
-                    addAuthenticated: true,
-                    specificRole: STARTUP_CONFIG_ROLE);
-                message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, swaTokenPayload);
+                string appServiceTokenPayload = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                        roleClaimType: AuthenticationOptions.ROLE_CLAIM_TYPE,
+                        additionalClaims: !string.IsNullOrEmpty(STARTUP_CONFIG_ROLE)
+                            ?
+                            [
+                                new AppServiceClaim
+                                {
+                                    Typ = AuthenticationOptions.ROLE_CLAIM_TYPE,
+                                    Val = STARTUP_CONFIG_ROLE
+                                }
+                            ]
+                            : null);
+
+                message.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, appServiceTokenPayload);
                 message.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, STARTUP_CONFIG_ROLE);
                 HttpResponseMessage authorizedResponse = await client.SendAsync(message);
 

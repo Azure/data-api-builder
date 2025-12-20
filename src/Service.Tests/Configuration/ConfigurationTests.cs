@@ -3054,7 +3054,7 @@ type Moon {
                         query: graphQLMutation,
                         queryName: "createStock",
                         variables: null,
-                        authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                        authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                         clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
                         );
 
@@ -3621,7 +3621,7 @@ type Planet @model(name:""PlanetAlias"") {
         [TestCategory(TestCategory.MSSQL)]
         [DataRow(HostMode.Development, EasyAuthType.AppService, false, false, DisplayName = "AppService Dev - No EnvVars - No Error")]
         [DataRow(HostMode.Development, EasyAuthType.AppService, true, false, DisplayName = "AppService Dev - EnvVars - No Error")]
-        [DataRow(HostMode.Production, EasyAuthType.AppService, false, true, DisplayName = "AppService Prod - No EnvVars - Error")]
+        [DataRow(HostMode.Production, EasyAuthType.AppService, false, false, DisplayName = "AppService Prod - No EnvVars - Error")]
         [DataRow(HostMode.Production, EasyAuthType.AppService, true, false, DisplayName = "AppService Prod - EnvVars - Error")]
         [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, false, false, DisplayName = "SWA Dev - No EnvVars - No Error")]
         [DataRow(HostMode.Development, EasyAuthType.StaticWebApps, true, false, DisplayName = "SWA Dev - EnvVars - No Error")]
@@ -3655,7 +3655,7 @@ type Planet @model(name:""PlanetAlias"") {
             string[] args = new[]
             {
             $"--ConfigFileName={CUSTOM_CONFIG}"
-        };
+            };
 
             // This test only checks for startup errors, so no requests are sent to the test server.
             try

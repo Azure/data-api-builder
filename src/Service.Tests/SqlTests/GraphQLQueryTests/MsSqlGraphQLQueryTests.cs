@@ -4,7 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -285,13 +287,182 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     "GraphQL response should not contain KeyNotFoundException when resolving nested sibling relationships.");
             }
 
-            string response = actual.ToString();
-            // 2) Ensure nested branches are actually materialized
-            Assert.IsTrue(
-                response.Contains("\"websiteplacement\"", StringComparison.OrdinalIgnoreCase) &&
-                response.Contains("\"reviews\"", StringComparison.OrdinalIgnoreCase) &&
-                response.Contains("\"authors\"", StringComparison.OrdinalIgnoreCase),
-                "Expected nested websiteplacement, reviews and authors data to be present in the GraphQL response.");
+            // 2) Compare the materialized nested branches against an equivalent SQL JSON query
+            string dbQuery = @"
+                SELECT TOP 2 [table0].[id] AS [id]
+                    ,[table0].[title] AS [title]
+                    ,JSON_QUERY([website_subq].[data]) AS [websiteplacement]
+                    ,JSON_QUERY(COALESCE([reviews_subq].[data], '[]')) AS [reviews]
+                    ,JSON_QUERY(COALESCE([authors_subq].[data], '[]')) AS [authors]
+                FROM [dbo].[books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [w].[price] AS [price]
+                    FROM [dbo].[book_website_placements] AS [w]
+                    WHERE [w].[book_id] = [table0].[id]
+                    ORDER BY [w].[id] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                        ,WITHOUT_ARRAY_WRAPPER
+                ) AS [website_subq]([data])
+                OUTER APPLY (
+                    SELECT [r].[id] AS [id], [r].[content] AS [content]
+                    FROM [dbo].[reviews] AS [r]
+                    WHERE [r].[book_id] = [table0].[id]
+                    ORDER BY [r].[id] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                ) AS [reviews_subq]([data])
+                OUTER APPLY (
+                    SELECT [a].[name] AS [name]
+                    FROM [dbo].[book_author_link] AS [l]
+                    JOIN [dbo].[authors] AS [a] ON [a].[id] = [l].[author_id]
+                    WHERE [l].[book_id] = [table0].[id]
+                    ORDER BY [a].[id] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                ) AS [authors_subq]([data])
+                WHERE [table0].[id] IN (1, 2)
+                ORDER BY [table0].[id] ASC
+                FOR JSON PATH
+                    ,INCLUDE_NULL_VALUES";
+
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            // Normalize the GraphQL response to match the SQL JSON shape by
+            // unwrapping connection objects (reviews/authors.items).
+            JsonArray normalizedBooks = new();
+            foreach (JsonElement book in actual.GetProperty("items").EnumerateArray())
+            {
+                JsonObject normalizedBook = new()
+                {
+                    ["id"] = JsonNode.Parse(book.GetProperty("id").GetRawText()),
+                    ["title"] = JsonNode.Parse(book.GetProperty("title").GetRawText()),
+                    ["websiteplacement"] = JsonNode.Parse(book.GetProperty("websiteplacement").GetRawText()),
+                    ["reviews"] = JsonNode.Parse(book.GetProperty("reviews").GetProperty("items").GetRawText()),
+                    ["authors"] = JsonNode.Parse(book.GetProperty("authors").GetProperty("items").GetRawText())
+                };
+
+                normalizedBooks.Add(normalizedBook);
+            }
+
+            string normalizedActual = normalizedBooks.ToJsonString();
+
+            SqlTestHelper.PerformTestEqualJsonStrings(
+                expected,
+                normalizedActual);
+        }
+
+        /// <summary>
+        /// Verifies that the nested reviews connection under books correctly paginates
+        /// when there are more than 100 reviews for a single book. The first page
+        /// should contain 100 reviews and the endCursor should encode the id of the
+        /// last review on that page.
+        /// </summary>
+        [TestMethod]
+        public async Task NestedReviewsConnection_PaginatesMoreThanHundredItems()
+        {
+            // Seed > 100 reviews for book id 1. Use a distinct id range so we can
+            // clean up without impacting existing rows used by other tests.
+            StringBuilder sb = new();
+            sb.AppendLine("SET IDENTITY_INSERT reviews ON;");
+            sb.AppendLine("INSERT INTO reviews(id, book_id, content) VALUES");
+
+            for (int id = 2000; id <= 2100; id++)
+            {
+                string line = $"    ({id}, 1, 'Bulk review {id}')";
+                if (id < 2100)
+                {
+                    line += ",";
+                }
+                else
+                {
+                    line += ";";
+                }
+
+                sb.AppendLine(line);
+            }
+
+            sb.AppendLine("SET IDENTITY_INSERT reviews OFF;");
+            string seedReviewsSql = sb.ToString();
+
+            string cleanupReviewsSql = "DELETE FROM reviews WHERE id BETWEEN 2000 AND 2100;";
+
+            try
+            {
+                // Seed additional data for this test only.
+                await _queryExecutor.ExecuteQueryAsync<object>(
+                    seedReviewsSql,
+                    dataSourceName: string.Empty,
+                    parameters: null,
+                    dataReaderHandler: null);
+
+                string graphQLQueryName = "books";
+                string graphQLQuery = @"query {
+                    books(filter: { id: { eq: 1 } }) {
+                        items {
+                            id
+                            reviews(first: 100) {
+                                items {
+                                    id
+                                }
+                                endCursor
+                                hasNextPage
+                            }
+                        }
+                    }
+                }";
+
+                JsonElement actual = await ExecuteGraphQLRequestAsync(
+                    graphQLQuery,
+                    graphQLQueryName,
+                    isAuthenticated: true,
+                    clientRoleHeader: "authenticated");
+
+                JsonElement book = actual.GetProperty("items")[0];
+                JsonElement reviewsConnection = book.GetProperty("reviews");
+                JsonElement reviewItems = reviewsConnection.GetProperty("items");
+
+                // First page should contain exactly 100 reviews when more than 100 exist.
+                Assert.AreEqual(100, reviewItems.GetArrayLength(), "Expected first page of reviews to contain 100 items.");
+
+                bool hasNextPage = reviewsConnection.GetProperty("hasNextPage").GetBoolean();
+                Assert.IsTrue(hasNextPage, "Expected hasNextPage to be true when more than 100 reviews exist.");
+
+                string endCursor = reviewsConnection.GetProperty("endCursor").GetString();
+                Assert.IsFalse(string.IsNullOrEmpty(endCursor), "Expected endCursor to be populated when hasNextPage is true.");
+
+                // Decode the opaque cursor and verify it encodes the id of the
+                // last review on the first page.
+                int lastReviewIdOnPage = reviewItems[reviewItems.GetArrayLength() - 1].GetProperty("id").GetInt32();
+
+                string decodedCursorJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(endCursor));
+                using JsonDocument cursorDoc = JsonDocument.Parse(decodedCursorJson);
+                JsonElement cursorArray = cursorDoc.RootElement;
+
+                bool foundIdFieldInCursor = false;
+                foreach (JsonElement field in cursorArray.EnumerateArray())
+                {
+                    if (field.GetProperty("FieldName").GetString() == "id")
+                    {
+                        int cursorId = field.GetProperty("FieldValue").GetInt32();
+                        Assert.AreEqual(lastReviewIdOnPage, cursorId, "endCursor should encode the id of the last review on the first page.");
+                        foundIdFieldInCursor = true;
+                        break;
+                    }
+                }
+
+                Assert.IsTrue(foundIdFieldInCursor, "endCursor payload should include a pagination field for id.");
+            }
+            finally
+            {
+                // Clean up the seeded reviews so other tests relying on the base
+                // fixture data remain unaffected.
+                await _queryExecutor.ExecuteQueryAsync<object>(
+                    cleanupReviewsSql,
+                    dataSourceName: string.Empty,
+                    parameters: null,
+                    dataReaderHandler: null);
+            }
         }
 
         /// <summary>

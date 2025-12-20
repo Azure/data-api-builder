@@ -97,10 +97,6 @@ az container create \
   --cpu 1 \
   --memory 1.5 \
   --command-line "dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName $configFile --LogLevel Debug"
-```
-REST: http://<fqdn>/api/<EntityName>
-GraphQL: http://<fqdn>/graphql
-MCP: http://<fqdn>/mcp
 
 ## 8. Integrate with Azure AI Foundry
 - Create or open a Project.

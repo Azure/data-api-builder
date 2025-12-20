@@ -230,6 +230,68 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Integration-style regression test for nested sibling relationships
+        /// under RBAC. This exercises the HotChocolate pipeline, SQL query
+        /// engine and pagination metadata together.
+        ///
+        /// It uses the existing Book graph:
+        ///   Book -> websiteplacement (one)
+        ///        -> reviews (many)
+        ///        -> authors (many)
+        /// and ensures that querying multiple nested navigation branches in a
+        /// single GraphQL request while authenticated does not result in a
+        /// KeyNotFoundException and that nested data is present.
+        /// </summary>
+        [TestMethod]
+        public async Task NestedSiblingRelationshipsWithRbac_DoNotThrowAndMaterialize()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"query {
+                                        books(first: 2) {
+                                            items {
+                                            id
+                                            title
+                                            websiteplacement {
+                                                price
+                                            }
+                                            reviews {
+                                                items {
+                                                id
+                                                content
+                                                }
+                                            }
+                                            authors {
+                                                items {
+                                                name
+                                                }
+                                            }
+                                            }
+                                        }
+                                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                graphQLQuery,
+                graphQLQueryName,
+                isAuthenticated: true,
+                clientRoleHeader: "authenticated");
+
+            string response = actual.ToString();
+
+            // 1) No KeyNotFoundException (historic bug signature)
+            Assert.IsFalse(
+                response.Contains("KeyNotFoundException", StringComparison.OrdinalIgnoreCase) ||
+                response.Contains("The given key", StringComparison.OrdinalIgnoreCase),
+                "GraphQL response should not contain KeyNotFoundException when resolving nested sibling relationships.");
+
+            // 2) Ensure nested branches are actually materialized
+            Assert.IsTrue(
+                response.Contains("\"websiteplacement\"", StringComparison.OrdinalIgnoreCase) &&
+                response.Contains("\"reviews\"", StringComparison.OrdinalIgnoreCase) &&
+                response.Contains("\"authors\"", StringComparison.OrdinalIgnoreCase),
+                "Expected nested websiteplacement, reviews and authors data to be present in the GraphQL response.");
+        }
+
+        /// <summary>
         /// Test query on One-To-One relationship when the fields defining
         /// the relationship in the entity include fields that are mapped in
         /// that same entity.

@@ -71,7 +71,7 @@ dab init \
  
 ```
   
-## 5. Add entities and stored procedure to `dab-config.json` and enable MCP tools in the config.
+## 5. Add entities and stored procedure to `dab-config.json` and enable MCP tools in the config
 
 ## 6. Store dab-config.json in Azure Files
 - Create a Storage Account and File Share.

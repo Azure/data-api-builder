@@ -10,7 +10,7 @@ This document provides an end‑to‑end guide to stand up a **SQL MCP Server** 
   - reads `dab-config.json` from an **Azure Files** share at startup,
   - exposes **REST**, **GraphQL**, and **MCP** endpoints.
 - **Azure Storage (Files)** to store and version `dab-config.json`.
-- **Azure AI Foundry Agent** configured with an **MCP tool** pointing to the DAB MCP endpoint.
+- **Azure AI Foundry Agent** configured with an **MCP tool** pointing to the SQL MCP Server endpoint.
 
 **Flow**
 1. DAB starts in ACI → reads `dab-config.json` from the mounted Azure Files share.  

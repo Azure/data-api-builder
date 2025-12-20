@@ -99,7 +99,37 @@ az container create \
   --command-line "dotnet Azure.DataApiBuilder.Service.dll --ConfigFileName $configFile --LogLevel Debug"
 
 ## 8. Integrate with Azure AI Foundry
-- Create or open a Project.
-- Add an Agent.
-- Add MCP tool with URL: http://<fqdn>/mcp.
-- Test in Playground
+
+Follow these steps to connect your DAB MCP endpoint to Azure AI Foundry and test the integration:
+
+1. **Create or Open a Project**
+   - Navigate to the [Azure AI Foundry portal](https://ai.azure.com/foundry) and sign in.
+   - On the dashboard, click **Projects** in the left navigation pane.
+   - To create a new project, click **New Project**, enter a name (e.g., `DAB-MCP-Demo`), and click **Create**.
+   - To use an existing project, select it from the list.
+
+2. **Add an Agent**
+   - Within your project, go to the **Agents** tab.
+   - Click **Add Agent**.
+   - Enter an agent name (e.g., `DAB-MCP-Agent`).
+   - (Optional) Add a description.
+   - Click **Create**.
+
+3. **Configure the MCP Tool**
+   - In the agent's configuration page, go to the **Tools** section.
+   - Click **Add Tool** and select **MCP** from the tool type dropdown.
+   - In the **MCP Endpoint URL** field, enter your DAB MCP endpoint, e.g., `http://<fqdn>/mcp`.
+   - (Optional) Configure authentication if your endpoint requires it.
+   - Click **Save** to add the tool.
+
+4. **Test in Playground**
+   - Go to the **Playground** tab in your project.
+   - Select the agent you created from the agent dropdown.
+   - In the input box, enter a prompt that will trigger the MCP tool, such as:
+     ```
+     Get all records from the Customers entity.
+     ```
+   - Click **Run**.
+   - The agent should invoke the MCP tool, which will call your DAB MCP endpoint and return the results.
+   - **Expected Result:** You should see the data returned from your DAB instance displayed in the Playground output panel.
+   - If there are errors, check the DAB container logs and ensure the MCP endpoint is reachable from Azure AI Foundry.

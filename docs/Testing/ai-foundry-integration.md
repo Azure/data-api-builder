@@ -27,10 +27,34 @@ This document provides an end‑to‑end guide to stand up a **SQL MCP Server** 
 
 
 ## 3. Prepare the Database
-Create tables and stored procedures:
-- Tables
-- Stored Procedures
 
+You need to create the necessary tables and stored procedures in your Azure SQL Database. Below is an example of how to create a simple `Products` table and a stored procedure to retrieve products by category.
+
+**Example:**
+
+1. Connect to your Azure SQL Database using Azure Data Studio, SQL Server Management Studio, or the Azure Portal's Query Editor.
+
+2. Run the following SQL script to create a sample table and stored procedure:
+
+```sql
+-- Create Products table
+CREATE TABLE Products (
+    ProductID INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL,
+    Category NVARCHAR(50) NOT NULL,
+    Price DECIMAL(10,2) NOT NULL
+);
+
+-- Create stored procedure to get products by category
+CREATE PROCEDURE GetProductsByCategory
+    @Category NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT ProductID, Name, Category, Price
+    FROM Products
+    WHERE Category = @Category;
+END;
 ## 4. Install DAB CLI and Bootstrap Configuration
 ```
 dotnet tool install --global Microsoft.DataApiBuilder --version 1.7.81

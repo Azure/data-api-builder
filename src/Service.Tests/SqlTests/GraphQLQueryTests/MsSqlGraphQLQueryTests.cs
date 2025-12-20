@@ -275,14 +275,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 isAuthenticated: true,
                 clientRoleHeader: "authenticated");
 
-            string response = actual.ToString();
-
             // 1) No KeyNotFoundException (historic bug signature)
-            Assert.IsFalse(
-                response.Contains("KeyNotFoundException", StringComparison.OrdinalIgnoreCase) ||
-                response.Contains("The given key", StringComparison.OrdinalIgnoreCase),
-                "GraphQL response should not contain KeyNotFoundException when resolving nested sibling relationships.");
+            if (actual.TryGetProperty("errors", out JsonElement errors))
+            {
+                string errorsText = errors.ToString();
+                Assert.IsFalse(
+                    errorsText.Contains("KeyNotFoundException", StringComparison.OrdinalIgnoreCase) ||
+                    errorsText.Contains("The given key", StringComparison.OrdinalIgnoreCase),
+                    "GraphQL response should not contain KeyNotFoundException when resolving nested sibling relationships.");
+            }
 
+            string response = actual.ToString();
             // 2) Ensure nested branches are actually materialized
             Assert.IsTrue(
                 response.Contains("\"websiteplacement\"", StringComparison.OrdinalIgnoreCase) &&

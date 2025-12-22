@@ -251,22 +251,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             string graphQLQuery = @"query {
                                         books(first: 2) {
                                             items {
-                                            id
-                                            title
-                                            websiteplacement {
-                                                price
-                                            }
-                                            reviews {
-                                                items {
                                                 id
-                                                content
+                                                title
+                                                websiteplacement {
+                                                    price
                                                 }
-                                            }
-                                            authors {
-                                                items {
-                                                name
+                                                reviews {
+                                                    items {
+                                                    id
+                                                    content
+                                                    }
                                                 }
-                                            }
+                                                authors {
+                                                    items {
+                                                    name
+                                                    }
+                                                }
                                             }
                                         }
                                     }";

@@ -564,6 +564,94 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             return runtimeConfig;
         }
 
+        /// <summary>
+        /// Verifies that stored procedures are excluded from health check results.
+        /// Creates a config with both a table entity and a stored procedure entity,
+        /// then validates that only the table entity appears in the health endpoint response.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task HealthEndpoint_ExcludesStoredProcedures()
+        {
+            // Create a table entity
+            Entity tableEntity = new(
+                Health: new(enabled: true),
+                Source: new("books", EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: new(Enabled: true),
+                GraphQL: new("book", "bookLists", true),
+                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            // Create a stored procedure entity - using an actual stored procedure from test schema
+            Entity storedProcEntity = new(
+                Health: new(enabled: true),
+                Source: new("get_books", EntitySourceType.StoredProcedure, null, null),
+                Fields: null,
+                Rest: new(Enabled: true),
+                GraphQL: new("executeGetBooks", "executeGetBooksList", true),
+                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", tableEntity },
+                { "GetBooks", storedProcEntity }
+            };
+
+            RuntimeConfig runtimeConfig = CreateRuntimeConfig(
+                entityMap,
+                enableGlobalRest: true,
+                enableGlobalGraphql: true,
+                enabledGlobalMcp: true,
+                enableGlobalHealth: true,
+                enableDatasourceHealth: true,
+                hostMode: HostMode.Development);
+
+            WriteToCustomConfigFile(runtimeConfig);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpRequestMessage healthRequest = new(HttpMethod.Get, $"{BASE_DAB_URL}/health");
+                HttpResponseMessage response = await client.SendAsync(healthRequest);
+
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, "Health endpoint should return OK");
+
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+
+                // Get the checks array
+                Assert.IsTrue(responseProperties.TryGetValue("checks", out JsonElement checksElement), "Response should contain 'checks' property");
+                Assert.AreEqual(JsonValueKind.Array, checksElement.ValueKind, "Checks should be an array");
+
+                // Get all entity names from the health check results
+                List<string> entityNamesInHealthCheck = new();
+                foreach (JsonElement check in checksElement.EnumerateArray())
+                {
+                    if (check.TryGetProperty("name", out JsonElement nameElement))
+                    {
+                        entityNamesInHealthCheck.Add(nameElement.GetString());
+                    }
+                }
+
+                // Verify that the table entity (Book) appears in health checks
+                Assert.IsTrue(entityNamesInHealthCheck.Contains("Book"),
+                    "Table entity 'Book' should be included in health check results");
+
+                // Verify that the stored procedure entity (GetBooks) does NOT appear in health checks
+                Assert.IsFalse(entityNamesInHealthCheck.Contains("GetBooks"),
+                    "Stored procedure entity 'GetBooks' should be excluded from health check results");
+            }
+        }
+
         private static void WriteToCustomConfigFile(RuntimeConfig runtimeConfig)
         {
             File.WriteAllText(

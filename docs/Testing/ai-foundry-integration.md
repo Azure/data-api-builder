@@ -256,7 +256,7 @@ Follow these steps to connect your DAB MCP endpoint to Azure AI Foundry and test
 3. **Configure the MCP Tool**
    - In the agent's configuration page, go to the **Tools** section.
    - Click **Add Tool** and select **MCP** from the tool type dropdown.
-   - In the **MCP Endpoint URL** field, enter your DAB MCP endpoint, e.g., `http://<fqdn>/mcp`.
+   - In the **MCP Endpoint URL** field, enter your SQL MCP endpoint in DAB, e.g., `http://<fqdn>/mcp`.
    - (Optional) Configure authentication if your endpoint requires it.
    - Click **Save** to add the tool.
 

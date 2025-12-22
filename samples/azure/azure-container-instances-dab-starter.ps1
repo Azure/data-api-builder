@@ -73,7 +73,7 @@
     Use a custom config file if you need different entity mappings or security settings.
 
 .EXAMPLE
-    $password = ConvertTo-SecureString "YourPassword123!" -AsPlainText -Force
+    $password = ConvertTo-SecureString "XXXX" -AsPlainText -Force
     .\azure-container-instances-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -SqlAdminPassword $password
     Basic deployment using default 'ACI' prefix
 
@@ -288,17 +288,6 @@ if (-not (Test-Path $DabConfigFile)) {
 
 Write-Success "Repository root: $repoPath"
 Write-Success "Using DAB config: $DabConfigFile"
-
-# Generate or validate parameters
-if (-not $ResourcePrefix) {
-    $ResourcePrefix = "dab$(Get-Random -Maximum 9999)"
-    Write-Host "Generated resource prefix: $ResourcePrefix" -ForegroundColor Yellow
-}
-
-if (-not $ResourceGroup) {
-    $ResourceGroup = "rg-$ResourcePrefix"
-    Write-Host "Generated resource group: $ResourceGroup" -ForegroundColor Yellow
-}
 
 # Set subscription
 if ($SubscriptionId) {

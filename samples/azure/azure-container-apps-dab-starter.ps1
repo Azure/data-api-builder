@@ -83,7 +83,7 @@
     Use a custom config file if you need different entity mappings or security settings.
 
 .EXAMPLE
-    $password = ConvertTo-SecureString "YourPassword123!" -AsPlainText -Force
+    $password = ConvertTo-SecureString "XXXX" -AsPlainText -Force
     .\azure-container-apps-dab-starter.ps1 -SubscriptionId "abc123" -ResourceGroup "rg-dab" -SqlAdminPassword $password
     Basic deployment using default 'ACA' prefix
 
@@ -330,17 +330,6 @@ if (-not (Test-Path $DabConfigFile)) {
 
 Write-Success "Repository root: $repoPath"
 Write-Success "Using DAB config: $DabConfigFile"
-
-# Generate or validate parameters
-if (-not $ResourcePrefix) {
-    $ResourcePrefix = "dab$(Get-Random -Maximum 9999)"
-    Write-Host "Generated resource prefix: $ResourcePrefix" -ForegroundColor Yellow
-}
-
-if (-not $ResourceGroup) {
-    $ResourceGroup = "rg-$ResourcePrefix"
-    Write-Host "Generated resource group: $ResourceGroup" -ForegroundColor Yellow
-}
 
 # Set subscription
 if ($SubscriptionId) {
@@ -709,7 +698,7 @@ properties:
     Write-Host "  curl https://$appUrl/api/Publisher"
     Write-Host ""
     Write-Host "  # GraphQL query"
-    Write-Host "  curl https://$appUrl/graphql -H `"Content-Type: application/json`" -d `"{\`"query\`":\`"{publishers{items{id name}}}`\"}"
+    Write-Host "  curl https://$appUrl/graphql -H `"Content-Type: application/json`" -d `"{\`"query\`":\`"{publishers{items{id name}}}`\`"}`"
     Write-Host ""
     Write-Host "  # View container logs"
     Write-Host "  az containerapp logs show --name $acaName --resource-group $ResourceGroup --follow"

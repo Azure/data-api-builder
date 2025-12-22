@@ -238,7 +238,7 @@ az container create \
 
 ## 8. Integrate with Azure AI Foundry
 
-Follow these steps to connect your DAB MCP endpoint to Azure AI Foundry and test the integration:
+Follow these steps to connect your SQL MCP endpoint deployed in DAB to Azure AI Foundry and test the integration:
 
 1. **Create or Open a Project**
    - Navigate to the [Azure AI Foundry portal](https://ai.azure.com/foundry) and sign in.

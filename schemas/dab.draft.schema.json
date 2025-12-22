@@ -699,10 +699,12 @@
       "patternProperties": {
         "^.*$": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "patterns": {
               "type": "object",
               "description": "Pattern matching rules for including/excluding database objects",
+              "additionalProperties": false,
               "properties": {
                 "include": {
                   "type": "array",

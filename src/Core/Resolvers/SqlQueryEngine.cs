@@ -224,12 +224,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parentMetadata = paginationObjectMetadata;
                 }
 
-                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name];
-                metadata = currentMetadata;
-
-                if (currentMetadata.IsPaginated)
+                // In some scenarios (for example when RBAC removes a relationship
+                // or when multiple sibling nested entities are present), we may not
+                // have pagination metadata for the current field. In those cases we
+                // should simply return the element as-is instead of throwing.
+                if (parentMetadata.Subqueries.TryGetValue(fieldSchema.Name, out PaginationMetadata? currentMetadata))
                 {
-                    return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+                    metadata = currentMetadata;
+
+                    if (currentMetadata.IsPaginated)
+                    {
+                        return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
+                    }
                 }
             }
 

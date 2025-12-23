@@ -141,6 +141,14 @@ Note: Make sure the "entities" section is a valid JSON object. If you have multi
     "database-type": "mssql",
     "connection-string": "@env('DATABASE_CONNECTION_STRING')"
   },
+  "runtime": {
+    "rest": { "enabled": true },
+    "graphql": { "enabled": true },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    }
+  },
   "entities": {
     "Customers": {
       "source": "Customers",
@@ -168,14 +176,6 @@ Note: Make sure the "entities" section is a valid JSON object. If you have multi
           "actions": [ "execute" ]
         }
       ]
-    }
-  },
-  "runtime": {
-    "rest": { "enabled": true },
-    "graphql": { "enabled": true },
-    "mcp": {
-      "enabled": true,
-      "path": "/mcp"
     }
   }
 }

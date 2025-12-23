@@ -199,10 +199,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         // Updates the Entity Health Check Results in the response.
         // Goes through the entities one by one and executes the rest and graphql checks (if enabled).
+        // Stored procedures are excluded from health checks because they require parameters and are not guaranteed to be deterministic.
         private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport report, RuntimeConfig runtimeConfig)
         {
             List<KeyValuePair<string, Entity>> enabledEntities = runtimeConfig.Entities.Entities
-                .Where(e => e.Value.IsEntityHealthEnabled)
+                .Where(e => e.Value.IsEntityHealthEnabled && e.Value.Source.Type != EntitySourceType.StoredProcedure)
                 .ToList();
 
             if (enabledEntities.Count == 0)

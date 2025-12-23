@@ -43,12 +43,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         /// Builds an error response for MCP tools.
         /// </summary>
         public static CallToolResult BuildErrorResult(
+            string toolName,
             string errorType,
             string message,
             ILogger? logger = null)
         {
             Dictionary<string, object?> errorObj = new()
             {
+                ["toolName"] = toolName,
                 ["status"] = "error",
                 ["error"] = new Dictionary<string, object?>
                 {
@@ -98,6 +100,22 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 default:
                     return "{}";
             }
+        }
+
+        /// <summary>
+        /// Extracts value from a JsonElement.
+        /// </summary>
+        public static object? GetJsonValue(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.String => element.GetString(),
+                JsonValueKind.Number => element.TryGetInt64(out long l) ? l : element.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => null,
+                _ => element.GetRawText()
+            };
         }
     }
 }

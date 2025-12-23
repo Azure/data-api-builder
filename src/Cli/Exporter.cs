@@ -44,7 +44,8 @@ namespace Cli
             }
 
             // Load the runtime configuration from the file
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
+            DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, replacementSettings: replacementSettings))
             {
                 logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
                 return false;
@@ -109,7 +110,13 @@ namespace Cli
             }
             else
             {
-                StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
+                StartOptions startOptions = new(
+                    verbose: false,
+                    logLevel: LogLevel.None,
+                    isHttpsRedirectionDisabled: false,
+                    config: options.Config!,
+                    mcpStdio: false,
+                    mcpRole: null);
 
                 Task dabService = Task.Run(() =>
                 {

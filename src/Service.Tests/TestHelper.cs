@@ -8,7 +8,6 @@ using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Configurations;
 using Humanizer;
 using Microsoft.Extensions.Logging;
@@ -28,36 +27,6 @@ namespace Azure.DataApiBuilder.Service.Tests
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
-        }
-
-        /// <summary>
-        /// Sets environment variables to simulate an Azure App Service EasyAuth environment.
-        /// WEBSITE_AUTH_ENABLED = true
-        /// WEBSITE_AUTH_DEFAULT_PROVIDER = AzureActiveDirectory
-        /// </summary>
-        public static void SetAppServiceEasyAuthEnvironment()
-        {
-            Environment.SetEnvironmentVariable(
-                AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR,
-                "true");
-
-            Environment.SetEnvironmentVariable(
-                AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR,
-                "AzureActiveDirectory");
-        }
-
-        /// <summary>
-        /// Clears the App Service EasyAuth simulation environment variables.
-        /// </summary>
-        public static void UnsetAppServiceEasyAuthEnvironment()
-        {
-            Environment.SetEnvironmentVariable(
-                AppServiceAuthenticationInfo.APPSERVICESAUTH_ENABLED_ENVVAR,
-                null);
-
-            Environment.SetEnvironmentVariable(
-                AppServiceAuthenticationInfo.APPSERVICESAUTH_IDENTITYPROVIDER_ENVVAR,
-                null);
         }
 
         /// <summary>

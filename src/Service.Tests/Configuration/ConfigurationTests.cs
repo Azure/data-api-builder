@@ -3657,6 +3657,8 @@ type Planet @model(name:""PlanetAlias"") {
             $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
+            // When host is in Production mode with AppService as Identity Provider and the environment variables are not set
+            // we do not throw an exception any longer(PR: 2943), instead log a warning to the user. In this case expectError is false.
             // This test only checks for startup errors, so no requests are sent to the test server.
             try
             {

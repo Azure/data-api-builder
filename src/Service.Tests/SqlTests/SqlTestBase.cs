@@ -86,7 +86,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             bool isRestBodyStrict = true)
         {
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
-            TestHelper.SetAppServiceEasyAuthEnvironment();
 
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();

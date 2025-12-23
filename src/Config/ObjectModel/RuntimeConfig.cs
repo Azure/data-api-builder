@@ -25,6 +25,8 @@ public record RuntimeConfig
     [JsonPropertyName("azure-key-vault")]
     public AzureKeyVaultOptions? AzureKeyVault { get; init; }
 
+    public RuntimeAutoentities? Autoentities { get; init; }
+
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
@@ -257,6 +259,7 @@ public record RuntimeConfig
         string? Schema,
         DataSource DataSource,
         RuntimeEntities Entities,
+        RuntimeAutoentities? Autoentities = null,
         RuntimeOptions? Runtime = null,
         DataSourceFiles? DataSourceFiles = null,
         AzureKeyVaultOptions? AzureKeyVault = null)
@@ -266,6 +269,7 @@ public record RuntimeConfig
         this.Runtime = Runtime;
         this.AzureKeyVault = AzureKeyVault;
         this.Entities = Entities;
+        this.Autoentities = Autoentities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         if (this.DataSource is null)

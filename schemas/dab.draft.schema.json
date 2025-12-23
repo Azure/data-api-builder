@@ -693,6 +693,166 @@
         }
       }
     },
+    "autoentities": {
+      "type": "object",
+      "description": "Defines automatic entity generation rules for MSSQL tables based on include/exclude patterns and defaults.",
+      "patternProperties": {
+        "^.*$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "patterns": {
+              "type": "object",
+              "description": "Pattern matching rules for including/excluding database objects",
+              "additionalProperties": false,
+              "properties": {
+                "include": {
+                  "type": "array",
+                  "description": "MSSQL LIKE pattern for objects to include (e.g., '%.%'). Null includes all.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [ "%.%" ]
+                },
+                "exclude": {
+                  "type": "array",
+                  "description": "MSSQL LIKE pattern for objects to exclude (e.g., 'sales.%'). Null excludes none.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": null
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Entity name interpolation pattern using {schema} and {object}. Null defaults to {object}. Must be unique for every entity inside the pattern",
+                  "default": "{object}"
+                }
+              }
+            },
+            "template": {
+              "type": "object",
+              "description": "Template configuration for generated entities",
+              "additionalProperties": false,
+              "properties": {
+                "mcp": {
+                  "type": "object",
+                  "description": "MCP endpoint configuration",
+                  "additionalProperties": false,
+                  "properties": {
+                    "dml-tools": {
+                      "type": "boolean",
+                      "description": "Enable/disable all DML tools with default settings."
+                    }
+                  }
+                },
+                "rest": {
+                  "type": "object",
+                  "description": "REST endpoint configuration",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Enable/disable REST endpoint",
+                      "default": true
+                    }
+                  }
+                },
+                "graphql": {
+                  "type": "object",
+                  "description": "GraphQL endpoint configuration",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Enable/disable GraphQL endpoint",
+                      "default": true
+                    }
+                  }
+                },
+                "health": {
+                  "type": "object",
+                  "description": "Health check configuration",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Enable/disable health check endpoint",
+                      "default": true
+                    }
+                  }
+                },
+                "cache": {
+                  "type": "object",
+                  "description": "Cache configuration",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Enable/disable caching",
+                      "default": false
+                    },
+                    "ttl-seconds": {
+                      "type": [ "integer", "null" ],
+                      "description": "Time-to-live for cached responses in seconds",
+                      "default": null,
+                      "minimum": 1
+                    },
+                    "level": {
+                      "type": "string",
+                      "description": "Cache level (L1 or L1L2)",
+                      "enum": [ "L1", "L1L2", null ],
+                      "default": "L1L2"
+                    }
+                  }
+                }
+              }
+            },
+            "permissions": {
+              "type": "array",
+              "description": "Permissions assigned to this object",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "role": {
+                    "type": "string"
+                  },
+                  "actions": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "[*]"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/$defs/action"
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "action": {
+                                  "$ref": "#/$defs/action"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "uniqueItems": true
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [ "role", "actions" ]
+            }
+          }
+        }
+      }
+    },
     "entities": {
       "type": "object",
       "description": "Entities that will be exposed via REST, GraphQL and/or MCP",

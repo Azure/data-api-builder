@@ -643,6 +643,8 @@ namespace Cli
             DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
             DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
+            bool includeVectorFieldsByDefault = runtimeConfig.DataSource.IncludeVectorFieldsByDefault;
+            bool userProvidedIncludeVectorFieldsByDefault = runtimeConfig.DataSource.UserProvidedIncludeVectorFieldsByDefault;
 
             if (options.DataSourceDatabaseType is not null)
             {
@@ -684,8 +686,24 @@ namespace Cli
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
+            if (options.DataSourceIncludeVectorFieldsByDefault is not null)
+            {
+                if (!DatabaseType.MSSQL.Equals(dbType))
+                {
+                    _logger.LogError("include-vector-fields-by-default option is only applicable for MSSQL database type.");
+                    return false;
+                }
+
+                includeVectorFieldsByDefault = options.DataSourceIncludeVectorFieldsByDefault.Value;
+                userProvidedIncludeVectorFieldsByDefault = true;
+                _logger.LogInformation("Updated RuntimeConfig with data-source.include-vector-fields-by-default as '{updatedValue}'", includeVectorFieldsByDefault);
+            }
+
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
-            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig);
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig, includeVectorFieldsByDefault)
+            {
+                UserProvidedIncludeVectorFieldsByDefault = userProvidedIncludeVectorFieldsByDefault
+            };
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 
             return runtimeConfig != null;

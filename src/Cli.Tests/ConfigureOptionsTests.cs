@@ -927,6 +927,100 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --data-source.include-vector-fields-by-default true" on a MSSQL config
+        /// correctly updates the include-vector-fields-by-default property to true.
+        /// </summary>
+        [TestMethod]
+        public void TestAddIncludeVectorFieldsByDefaultForMSSQL()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to add include-vector-fields-by-default option
+            ConfigureOptions options = new(
+                dataSourceIncludeVectorFieldsByDefault: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the include-vector-fields-by-default is added
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsTrue(config.DataSource.IncludeVectorFieldsByDefault);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --data-source.include-vector-fields-by-default false" on a MSSQL config
+        /// correctly updates the include-vector-fields-by-default property to false.
+        /// </summary>
+        [TestMethod]
+        public void TestSetIncludeVectorFieldsByDefaultToFalseForMSSQL()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to set include-vector-fields-by-default to false
+            ConfigureOptions options = new(
+                dataSourceIncludeVectorFieldsByDefault: false,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the include-vector-fields-by-default is set to false
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsFalse(config.DataSource.IncludeVectorFieldsByDefault);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --data-source.include-vector-fields-by-default true" on a non-MSSQL config
+        /// (e.g., MySQL) fails with an error as this option is only applicable for MSSQL.
+        /// </summary>
+        [TestMethod]
+        public void TestFailureWhenAddingIncludeVectorFieldsByDefaultToMySQLDatabase()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to set include-vector-fields-by-default on MySQL database type
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: "mysql",
+                dataSourceIncludeVectorFieldsByDefault: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure --data-source.include-vector-fields-by-default true" on a PostgreSQL config
+        /// fails with an error as this option is only applicable for MSSQL.
+        /// </summary>
+        [TestMethod]
+        public void TestFailureWhenAddingIncludeVectorFieldsByDefaultToPostgreSQLDatabase()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to set include-vector-fields-by-default on PostgreSQL database type
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: "postgresql",
+                dataSourceIncludeVectorFieldsByDefault: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
         /// Sets up the mock file system with an initial configuration file.
         /// This method adds a config file to the mock file system and verifies its existence.
         /// It also attempts to parse the config file to ensure it is valid.

@@ -101,6 +101,17 @@ public record RuntimeConfig
         EasyAuthType.StaticWebApps.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// A shorthand method to determine whether App Service is configured for the current authentication provider.
+    /// </summary>
+    /// <returns>True if the authentication provider is enabled for App Service, otherwise false.</returns>
+    [JsonIgnore]
+    public bool IsAppServiceIdentityProvider =>
+        Runtime is null ||
+        Runtime.Host is null ||
+        Runtime.Host.Authentication is null ||
+        EasyAuthType.AppService.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// The path at which Rest APIs are available
     /// </summary>
     [JsonIgnore]

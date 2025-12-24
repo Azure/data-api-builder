@@ -370,7 +370,7 @@
                       "description": "Custom authentication provider defined by the user. Use the JWT property to configure the custom provider."
                     }
                   ],
-                  "default": "StaticWebApps"
+                  "default": "AppService"
                 },
                 "jwt": {
                   "type": "object",

@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -232,134 +231,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Integration-style regression test for nested sibling relationships
-        /// under RBAC. This exercises the HotChocolate pipeline, SQL query
-        /// engine and pagination metadata together.
-        ///
-        /// It uses the existing Book graph:
-        ///   Book -> websiteplacement (one)
-        ///        -> reviews (many)
-        ///        -> authors (many)
-        /// and ensures that querying multiple nested navigation branches in a
-        /// single GraphQL request while authenticated does not result in a
-        /// KeyNotFoundException and that nested data is present.
-        /// </summary>
-        [TestMethod]
-        public async Task NestedSiblingRelationshipsWithRbac_DoNotThrowAndMaterialize()
-        {
-            string graphQLQueryName = "books";
-            string graphQLQuery = @"query {
-                                        books(first: 2) {
-                                            items {
-                                                id
-                                                title
-                                                websiteplacement {
-                                                    price
-                                                }
-                                                reviews {
-                                                    items {
-                                                    id
-                                                    content
-                                                    }
-                                                }
-                                                authors {
-                                                    items {
-                                                    name
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(
-                graphQLQuery,
-                graphQLQueryName,
-                isAuthenticated: true,
-                clientRoleHeader: "authenticated");
-
-            // 1) No KeyNotFoundException (historic bug signature)
-            if (actual.TryGetProperty("errors", out JsonElement errors))
-            {
-                string errorsText = errors.ToString();
-                Assert.IsFalse(
-                    errorsText.Contains("KeyNotFoundException", StringComparison.OrdinalIgnoreCase) ||
-                    errorsText.Contains("The given key", StringComparison.OrdinalIgnoreCase),
-                    "GraphQL response should not contain KeyNotFoundException when resolving nested sibling relationships.");
-            }
-
-            // 2) Compare the materialized nested branches against an equivalent SQL JSON query
-            string dbQuery = @"
-                SELECT TOP 2 [table0].[id] AS [id]
-                    ,[table0].[title] AS [title]
-                    ,JSON_QUERY([website_subq].[data]) AS [websiteplacement]
-                    ,JSON_QUERY(COALESCE([reviews_subq].[data], '[]')) AS [reviews]
-                    ,JSON_QUERY(COALESCE([authors_subq].[data], '[]')) AS [authors]
-                FROM [dbo].[books] AS [table0]
-                OUTER APPLY (
-                    SELECT TOP 1 [w].[price] AS [price]
-                    FROM [dbo].[book_website_placements] AS [w]
-                    WHERE [w].[book_id] = [table0].[id]
-                    ORDER BY [w].[id] ASC
-                    FOR JSON PATH
-                        ,INCLUDE_NULL_VALUES
-                        ,WITHOUT_ARRAY_WRAPPER
-                ) AS [website_subq]([data])
-                OUTER APPLY (
-                    SELECT [r].[id] AS [id], [r].[content] AS [content]
-                    FROM [dbo].[reviews] AS [r]
-                    WHERE [r].[book_id] = [table0].[id]
-                    ORDER BY [r].[id] ASC
-                    FOR JSON PATH
-                        ,INCLUDE_NULL_VALUES
-                ) AS [reviews_subq]([data])
-                OUTER APPLY (
-                    SELECT [a].[name] AS [name]
-                    FROM [dbo].[book_author_link] AS [l]
-                    JOIN [dbo].[authors] AS [a] ON [a].[id] = [l].[author_id]
-                    WHERE [l].[book_id] = [table0].[id]
-                    ORDER BY [a].[id] ASC
-                    FOR JSON PATH
-                        ,INCLUDE_NULL_VALUES
-                ) AS [authors_subq]([data])
-                WHERE [table0].[id] IN (1, 2)
-                ORDER BY [table0].[id] ASC
-                FOR JSON PATH
-                    ,INCLUDE_NULL_VALUES";
-
-            string expected = await GetDatabaseResultAsync(dbQuery);
-
-            // Normalize the GraphQL response to match the SQL JSON shape by
-            // unwrapping connection objects (reviews/authors.items).
-            JsonArray normalizedBooks = new();
-            foreach (JsonElement book in actual.GetProperty("items").EnumerateArray())
-            {
-                JsonObject normalizedBook = new()
-                {
-                    ["id"] = JsonNode.Parse(book.GetProperty("id").GetRawText()),
-                    ["title"] = JsonNode.Parse(book.GetProperty("title").GetRawText()),
-                    ["websiteplacement"] = JsonNode.Parse(book.GetProperty("websiteplacement").GetRawText()),
-                    ["reviews"] = JsonNode.Parse(book.GetProperty("reviews").GetProperty("items").GetRawText()),
-                    ["authors"] = JsonNode.Parse(book.GetProperty("authors").GetProperty("items").GetRawText())
-                };
-
-                normalizedBooks.Add(normalizedBook);
-            }
-
-            string normalizedActual = normalizedBooks.ToJsonString();
-
-            SqlTestHelper.PerformTestEqualJsonStrings(
-                expected,
-                normalizedActual);
-        }
-
-        /// <summary>
         /// Verifies that the nested reviews connection under books correctly paginates
-        /// when there are more than 100 reviews for a single book. The first page
-        /// should contain 100 reviews and the endCursor should encode the id of the
-        /// last review on that page.
+        /// when there are more than 100 reviews for a single book, while also
+        /// exercising sibling navigation properties (websiteplacement and authors)
+        /// under RBAC in the same request. The first page should contain 100 reviews
+        /// and the endCursor should encode the id of the last review on that page.
         /// </summary>
         [TestMethod]
-        public async Task NestedReviewsConnection_PaginatesMoreThanHundredItems()
+        public async Task NestedReviewsConnection_WithSiblings_PaginatesMoreThanHundredItems()
         {
             // Seed > 100 reviews for book id 1. Use a distinct id range so we can
             // clean up without impacting existing rows used by other tests.
@@ -401,12 +280,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     books(filter: { id: { eq: 1 } }) {
                         items {
                             id
+                            title
+                            websiteplacement {
+                                price
+                            }
                             reviews(first: 100) {
                                 items {
                                     id
                                 }
                                 endCursor
                                 hasNextPage
+                            }
+                            authors {
+                                items {
+                                    name
+                                }
                             }
                         }
                     }
@@ -419,6 +307,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     clientRoleHeader: "authenticated");
 
                 JsonElement book = actual.GetProperty("items")[0];
+                JsonElement websiteplacement = book.GetProperty("websiteplacement");
+                JsonElement authorsConnection = book.GetProperty("authors");
                 JsonElement reviewsConnection = book.GetProperty("reviews");
                 JsonElement reviewItems = reviewsConnection.GetProperty("items");
 
@@ -452,6 +342,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 }
 
                 Assert.IsTrue(foundIdFieldInCursor, "endCursor payload should include a pagination field for id.");
+
+                // Also validate that sibling navigation properties under RBAC are
+                // materialized as part of the same query.
+                Assert.AreEqual(JsonValueKind.Object, websiteplacement.ValueKind, "Expected websiteplacement object to be materialized.");
+
+                JsonElement authorsItems = authorsConnection.GetProperty("items");
+                Assert.IsTrue(authorsItems.GetArrayLength() > 0, "Expected authors collection to be materialized with at least one author.");
             }
             finally
             {

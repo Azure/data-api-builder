@@ -381,7 +381,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string testCategory = TestCategory.MSSQL)
         {
             DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
-            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.StaticWebApps), null);
+            Config.ObjectModel.AuthenticationOptions authenticationOptions = new(Provider: nameof(EasyAuthType.AppService), null);
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "IntegrationTestMinimalSchema",

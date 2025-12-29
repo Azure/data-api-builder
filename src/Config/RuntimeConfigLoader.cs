@@ -314,6 +314,9 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
         options.Converters.Add(new EntityCacheOptionsConverterFactory(replacementSettings));
+        options.Converters.Add(new AutoentityConverter(replacementSettings));
+        options.Converters.Add(new AutoentityPatternsConverter(replacementSettings));
+        options.Converters.Add(new AutoentityTemplateConverter(replacementSettings));
         options.Converters.Add(new EntityMcpOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheLevel2OptionsConverterFactory());

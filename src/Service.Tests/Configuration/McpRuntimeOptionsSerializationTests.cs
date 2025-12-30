@@ -41,9 +41,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Assert
             Assert.IsTrue(parseSuccess, "Failed to deserialize config with MCP description");
             Assert.IsNotNull(deserializedConfig.Runtime?.Mcp, "MCP options should not be null");
-            Assert.AreEqual(description, deserializedConfig.Runtime.Mcp.Description, "Description should match");
             Assert.IsTrue(json.Contains("\"description\""), "JSON should contain description field");
             Assert.IsTrue(json.Contains(description), "JSON should contain description value");
+            Assert.AreEqual(description, deserializedConfig.Runtime.Mcp.Description, "Description should match");
         }
 
         /// <summary>

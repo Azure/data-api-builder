@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 },
                 serverInfo = new
                 {
-                    name = "Data API Builder",
+                    name = "SQL MCP Server",
                     version = "1.0.0"
                 },
                 instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null

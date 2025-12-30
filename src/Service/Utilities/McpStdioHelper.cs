@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,9 +16,9 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// Determines if MCP stdio mode should be run based on command line arguments.
         /// </summary>
         /// <param name="args"> The command line arguments.</param>
-        /// <param name="mcpRole"> The role for MCP stdio mode, if specified.</param>
-        /// <returns></returns>
-        public static bool ShouldRunMcpStdio(string[] args, out string? mcpRole)
+        /// <param name="mcpRole"> The role for MCP stdio mode. When this method returns true, the role is guaranteed to be non-null.</param>
+        /// <returns>True when MCP stdio mode should be enabled; otherwise false.</returns>
+        public static bool ShouldRunMcpStdio(string[] args, [NotNullWhen(true)] out string? mcpRole)
         {
             mcpRole = null;
 
@@ -42,6 +43,11 @@ namespace Azure.DataApiBuilder.Service.Utilities
                     mcpRole = roleValue;
                 }
             }
+
+            // Ensure that when MCP stdio is enabled, mcpRole is always non-null.
+            // This matches the NotNullWhen(true) contract and avoids nullable warnings
+            // for callers while still allowing an implicit default when no role is provided.
+            mcpRole ??= "anonymous";
 
             return true;
         }
@@ -76,17 +82,13 @@ namespace Azure.DataApiBuilder.Service.Utilities
 
             foreach (Mcp.Model.IMcpTool tool in tools)
             {
-                _ = tool.GetToolMetadata();
                 registry.RegisterTool(tool);
             }
 
-            IServiceScopeFactory scopeFactory =
-                host.Services.GetRequiredService<IServiceScopeFactory>();
-            using IServiceScope scope = scopeFactory.CreateScope();
             IHostApplicationLifetime lifetime =
-                scope.ServiceProvider.GetRequiredService<IHostApplicationLifetime>();
+                host.Services.GetRequiredService<IHostApplicationLifetime>();
             Mcp.Core.IMcpStdioServer stdio =
-                scope.ServiceProvider.GetRequiredService<Mcp.Core.IMcpStdioServer>();
+                host.Services.GetRequiredService<Mcp.Core.IMcpStdioServer>();
 
             stdio.RunAsync(lifetime.ApplicationStopping).GetAwaiter().GetResult();
             host.StopAsync().GetAwaiter().GetResult();

@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 if (line.Length > MAX_LINE_LENGTH)
                 {
-                    WriteError(id: null, code: -32600, message: "Request too large");
+                    WriteError(id: null, code: JsonRpcErrorCodes.INVALIDREQUEST, message: "Request too large");
                     continue;
                 }
 
@@ -77,13 +77,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 catch (JsonException jsonEx)
                 {
                     Console.Error.WriteLine($"[MCP DEBUG] JSON parse error: {jsonEx.Message}");
-                    WriteError(id: null, code: -32700, message: "Parse error");
+                    WriteError(id: null, code: JsonRpcErrorCodes.PARSEERROR, message: "Parse error");
                     continue;
                 }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"[MCP DEBUG] Unexpected error parsing request: {ex.Message}");
-                    WriteError(id: null, code: -32603, message: "Internal error");
+                    WriteError(id: null, code: JsonRpcErrorCodes.INTERNALERROR, message: "Internal error");
                     continue;
                 }
 
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                     if (!root.TryGetProperty("method", out JsonElement methodEl))
                     {
-                        WriteError(id, -32600, "Invalid Request");
+                        WriteError(id, JsonRpcErrorCodes.INVALIDREQUEST, "Invalid Request");
                         continue;
                     }
 
@@ -133,13 +133,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 return;
 
                             default:
-                                WriteError(id, -32601, $"Method not found: {method}");
+                                WriteError(id, JsonRpcErrorCodes.METHODNOTFOUND, $"Method not found: {method}");
                                 break;
                         }
                     }
                     catch (Exception)
                     {
-                        WriteError(id, -32603, "Internal error");
+                        WriteError(id, JsonRpcErrorCodes.INTERNALERROR, "Internal error");
                     }
                 }
             }
@@ -158,32 +158,22 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </remarks>
         private void HandleInitialize(JsonElement? id)
         {
-            // Extract the actual id value from the request
-            object? requestId = id.HasValue ? GetIdValue(id.Value) : null;
-
-            // Create the initialize response
-            var response = new
+            var result = new
             {
-                jsonrpc = "2.0",
-                id = requestId,
-                result = new
+                protocolVersion = _protocolVersion,
+                capabilities = new
                 {
-                    protocolVersion = _protocolVersion,
-                    capabilities = new
-                    {
-                        tools = new { listChanged = true },
-                        logging = new { }
-                    },
-                    serverInfo = new
-                    {
-                        name = "Data API Builder",
-                        version = "1.0.0"
-                    }
+                    tools = new { listChanged = true },
+                    logging = new { }
+                },
+                serverInfo = new
+                {
+                    name = "SQL MCP Server",
+                    version = "1.0.0"
                 }
             };
 
-            string json = JsonSerializer.Serialize(response);
-            Console.Out.WriteLine(json);
+            WriteResult(id, result);
         }
 
         /// <summary>
@@ -225,7 +215,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             if (!root.TryGetProperty("params", out JsonElement @params) || @params.ValueKind != JsonValueKind.Object)
             {
-                WriteError(id, -32602, "Missing params");
+                WriteError(id, JsonRpcErrorCodes.INVALIDPARAMS, "Missing params");
                 return;
             }
 
@@ -247,14 +237,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (string.IsNullOrWhiteSpace(toolName))
             {
                 Console.Error.WriteLine("[MCP DEBUG] callTool → missing tool name.");
-                WriteError(id, -32602, "Missing tool name");
+                WriteError(id, JsonRpcErrorCodes.INVALIDPARAMS, "Missing tool name");
                 return;
             }
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {
                 Console.Error.WriteLine($"[MCP DEBUG] callTool → tool not found: {toolName}");
-                WriteError(id, -32602, $"Tool not found: {toolName}");
+                WriteError(id, JsonRpcErrorCodes.INVALIDPARAMS, $"Tool not found: {toolName}");
                 return;
             }
 

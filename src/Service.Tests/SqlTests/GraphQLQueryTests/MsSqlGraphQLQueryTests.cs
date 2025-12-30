@@ -344,11 +344,53 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 Assert.IsTrue(foundIdFieldInCursor, "endCursor payload should include a pagination field for id.");
 
                 // Also validate that sibling navigation properties under RBAC are
-                // materialized as part of the same query.
+                // materialized as part of the same query and that their results
+                // match the outcome of equivalent SQL JSON queries.
                 Assert.AreEqual(JsonValueKind.Object, websiteplacement.ValueKind, "Expected websiteplacement object to be materialized.");
 
                 JsonElement authorsItems = authorsConnection.GetProperty("items");
                 Assert.IsTrue(authorsItems.GetArrayLength() > 0, "Expected authors collection to be materialized with at least one author.");
+
+                // 1) websiteplacement branch: compare GraphQL result with SQL JSON.
+                string websiteplacementSql = @"
+                    SELECT TOP 1 [table1].[price] AS [price]
+                    FROM [dbo].[book_website_placements] AS [table1]
+                    WHERE [table1].[book_id] = 1
+                    ORDER BY [table1].[id] ASC
+                    FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+                string expectedWebsiteplacementJson = await GetDatabaseResultAsync(websiteplacementSql);
+                SqlTestHelper.PerformTestEqualJsonStrings(
+                    expectedWebsiteplacementJson,
+                    websiteplacement.ToString());
+
+                // 2) authors branch: compare authors connection items with SQL JSON.
+                string authorsSql = @"
+                    SELECT [a].[name] AS [name]
+                    FROM [dbo].[authors] AS [a]
+                    INNER JOIN [dbo].[book_author_link] AS [bal]
+                        ON [bal].[author_id] = [a].[id]
+                    WHERE [bal].[book_id] = 1
+                    ORDER BY [a].[id] ASC
+                    FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+                string expectedAuthorsJson = await GetDatabaseResultAsync(authorsSql);
+                SqlTestHelper.PerformTestEqualJsonStrings(
+                    expectedAuthorsJson,
+                    authorsItems.ToString());
+
+                // 3) reviews branch: compare first page of review ids with SQL JSON.
+                string reviewsSql = @"
+                    SELECT TOP 100 [r].[id] AS [id]
+                    FROM [dbo].[reviews] AS [r]
+                    WHERE [r].[book_id] = 1
+                    ORDER BY [r].[id] ASC
+                    FOR JSON PATH, INCLUDE_NULL_VALUES";
+
+                string expectedReviewsJson = await GetDatabaseResultAsync(reviewsSql);
+                SqlTestHelper.PerformTestEqualJsonStrings(
+                    expectedReviewsJson,
+                    reviewItems.ToString());
             }
             finally
             {

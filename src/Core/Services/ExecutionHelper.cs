@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -698,11 +699,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (current is NamePathSegment nameSegment)
                 {
-                    // Don't include "items" in the path suffix
-                    if (nameSegment.Name != QueryBuilder.PAGINATION_FIELD_NAME)
-                    {
-                        pathParts.Add(nameSegment.Name);
-                    }
+                    pathParts.Add(nameSegment.Name);
                 }
 
                 current = current.Parent;
@@ -760,7 +757,11 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.
-            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
+            StringBuilder contextKeyBuilder = new();
+            contextKeyBuilder
+                .Append(GetMetadataKey(context.Path))
+                .Append("::")
+                .Append(context.Path.Depth());
 
             // For relationship fields at any depth, include the relationship path suffix to distinguish
             // between sibling relationships. This handles arbitrary nesting depths.
@@ -769,8 +770,12 @@ namespace Azure.DataApiBuilder.Service.Services
             string relationshipPath = GetRelationshipPathSuffix(context.Path);
             if (!string.IsNullOrEmpty(relationshipPath))
             {
-                contextKey = contextKey + "::" + relationshipPath;
+                contextKeyBuilder
+                    .Append("::")
+                    .Append(relationshipPath);
             }
+
+            string contextKey = contextKeyBuilder.ToString();
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.

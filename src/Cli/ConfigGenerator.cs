@@ -1273,7 +1273,8 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.StaticWebApps);
+                    // Default to AppService when provider string is not provided
+                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.AppService);
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {

@@ -2,8 +2,7 @@
 
 This document provides an end‑to‑end guide to stand up a **SQL MCP Server** with **Model Context Protocol (MCP)** tools implemented in **Data API builder (DAB)** container that also exposes **REST** and **GraphQL** endpoints, and to integrate those MCP tools with an **Azure AI Foundry Agent**.
 
-<img width="2398" height="2178" alt="image" src="https://github.com/user-attachments/assets/9ba6877a-e5d9-4068-862f-36d988370c67" />
-
+<img width="2398" height="2178" alt="image" src="https://github.com/Azure/data-api-builder/blob/95cd0c1f83b3caa8fcafec64d4c399d9c58e31e2/docs/media/Architecture.png" />
 
 ## 1. Architecture Overview
 

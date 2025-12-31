@@ -351,46 +351,76 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 JsonElement authorsItems = authorsConnection.GetProperty("items");
                 Assert.IsTrue(authorsItems.GetArrayLength() > 0, "Expected authors collection to be materialized with at least one author.");
 
-                // 1) websiteplacement branch: compare GraphQL result with SQL JSON.
-                string websiteplacementSql = @"
-                    SELECT TOP 1 [table1].[price] AS [price]
-                    FROM [dbo].[book_website_placements] AS [table1]
-                    WHERE [table1].[book_id] = 1
-                    ORDER BY [table1].[id] ASC
-                    FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
-
-                string expectedWebsiteplacementJson = await GetDatabaseResultAsync(websiteplacementSql);
-                SqlTestHelper.PerformTestEqualJsonStrings(
-                    expectedWebsiteplacementJson,
-                    websiteplacement.ToString());
-
-                // 2) authors branch: compare authors connection items with SQL JSON.
-                string authorsSql = @"
-                    SELECT [a].[name] AS [name]
-                    FROM [dbo].[authors] AS [a]
-                    INNER JOIN [dbo].[book_author_link] AS [bal]
-                        ON [bal].[author_id] = [a].[id]
-                    WHERE [bal].[book_id] = 1
-                    ORDER BY [a].[id] ASC
+                // Compare the full nested tree (id, title, websiteplacement, authors.items, reviews.items)
+                // against an equivalent SQL JSON query.
+                string fullTreeSql = @"
+                    SELECT
+                        [b].[id] AS [id],
+                        [b].[title] AS [title],
+                        JSON_QUERY((
+                            SELECT TOP 1 [wp].[price] AS [price]
+                            FROM [dbo].[book_website_placements] AS [wp]
+                            WHERE [wp].[book_id] = [b].[id]
+                            ORDER BY [wp].[id] ASC
+                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                        )) AS [websiteplacement],
+                        JSON_QUERY((
+                            SELECT
+                                JSON_QUERY((
+                                    SELECT [a].[name] AS [name]
+                                    FROM [dbo].[authors] AS [a]
+                                    INNER JOIN [dbo].[book_author_link] AS [bal]
+                                        ON [bal].[author_id] = [a].[id]
+                                    WHERE [bal].[book_id] = [b].[id]
+                                    ORDER BY [a].[id] ASC
+                                    FOR JSON PATH, INCLUDE_NULL_VALUES
+                                )) AS [items]
+                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                        )) AS [authors],
+                        JSON_QUERY((
+                            SELECT
+                                JSON_QUERY((
+                                    SELECT TOP 100 [r].[id] AS [id]
+                                    FROM [dbo].[reviews] AS [r]
+                                    WHERE [r].[book_id] = [b].[id]
+                                    ORDER BY [r].[id] ASC
+                                    FOR JSON PATH, INCLUDE_NULL_VALUES
+                                )) AS [items]
+                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                        )) AS [reviews]
+                    FROM [dbo].[books] AS [b]
+                    WHERE [b].[id] = 1
                     FOR JSON PATH, INCLUDE_NULL_VALUES";
 
-                string expectedAuthorsJson = await GetDatabaseResultAsync(authorsSql);
-                SqlTestHelper.PerformTestEqualJsonStrings(
-                    expectedAuthorsJson,
-                    authorsItems.ToString());
+                string expectedFullTreeJson = await GetDatabaseResultAsync(fullTreeSql);
 
-                // 3) reviews branch: compare first page of review ids with SQL JSON.
-                string reviewsSql = @"
-                    SELECT TOP 100 [r].[id] AS [id]
-                    FROM [dbo].[reviews] AS [r]
-                    WHERE [r].[book_id] = 1
-                    ORDER BY [r].[id] ASC
-                    FOR JSON PATH, INCLUDE_NULL_VALUES";
+                // Project the GraphQL result to the same shape as the SQL JSON.
+                int bookId = book.GetProperty("id").GetInt32();
+                string bookTitle = book.GetProperty("title").GetString();
 
-                string expectedReviewsJson = await GetDatabaseResultAsync(reviewsSql);
+                var fullTree = new[]
+                {
+                    new
+                    {
+                        id = bookId,
+                        title = bookTitle,
+                        websiteplacement,
+                        reviews = new
+                        {
+                            items = reviewItems
+                        },
+                        authors = new
+                        {
+                            items = authorsItems
+                        }
+                    }
+                };
+
+                string actualFullTreeJson = JsonSerializer.Serialize(fullTree);
+
                 SqlTestHelper.PerformTestEqualJsonStrings(
-                    expectedReviewsJson,
-                    reviewItems.ToString());
+                    expectedFullTreeJson,
+                    actualFullTreeJson);
             }
             finally
             {

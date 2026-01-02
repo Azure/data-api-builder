@@ -139,7 +139,7 @@ public class ConfigGeneratorTests
             setSessionContext: false,
             hostMode: HostMode.Production,
             corsOrigin: null,
-            authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+            authenticationProvider: EasyAuthType.AppService.ToString(),
             config: TEST_RUNTIME_CONFIG_FILE);
 
         StringBuilder expectedRuntimeConfigJson = new(
@@ -166,14 +166,14 @@ public class ConfigGeneratorTests
                  ""mcp"": {
                  ""enabled"": true,
                  ""path"": ""/mcp""
-                 },
+                },
                 ""host"": {
                   ""cors"": {
                     ""origins"": [],
                     ""allow-credentials"": false
                         },
                   ""authentication"": {
-                    ""provider"": ""StaticWebApps""
+                    ""provider"": ""AppService""
                         },
                   ""mode"": ""production""
                   }

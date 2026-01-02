@@ -893,6 +893,57 @@ namespace Cli
         }
 
         /// <summary>
+        /// Constructs the EntityMcpOptions for Add/Update.
+        /// </summary>
+        /// <param name="mcpDmlTools">String value that defines if DML tools are enabled for MCP.</param>
+        /// <param name="mcpCustomTool">String value that defines if custom tool is enabled for MCP.</param>
+        /// <param name="isStoredProcedure">Whether the entity is a stored procedure.</param>
+        /// <returns>EntityMcpOptions if values are provided, null otherwise.</returns>
+        public static EntityMcpOptions? ConstructMcpOptions(string? mcpDmlTools, string? mcpCustomTool, bool isStoredProcedure)
+        {
+            if (mcpDmlTools is null && mcpCustomTool is null)
+            {
+                return null;
+            }
+
+            bool? dmlToolsEnabled = null;
+            bool? customToolEnabled = null;
+
+            // Parse dml-tools option
+            if (mcpDmlTools is not null)
+            {
+                if (!bool.TryParse(mcpDmlTools, out bool dmlValue))
+                {
+                    _logger.LogError("Invalid format for --mcp.dml-tools. Accepted values are true/false.");
+                    return null;
+                }
+
+                dmlToolsEnabled = dmlValue;
+            }
+
+            // Parse custom-tool option
+            if (mcpCustomTool is not null)
+            {
+                if (!bool.TryParse(mcpCustomTool, out bool customValue))
+                {
+                    _logger.LogError("Invalid format for --mcp.custom-tool. Accepted values are true/false.");
+                    return null;
+                }
+
+                // Validate that custom-tool can only be used with stored procedures
+                if (customValue && !isStoredProcedure)
+                {
+                    _logger.LogError("--mcp.custom-tool can only be enabled for stored procedures.");
+                    return null;
+                }
+
+                customToolEnabled = customValue;
+            }
+
+            return new EntityMcpOptions(customToolEnabled, dmlToolsEnabled);
+        }
+
+        /// <summary>
         /// Check if add/update command has Entity provided. Return false otherwise.
         /// </summary>
         public static bool IsEntityProvided(string? entity, ILogger cliLogger, string command)

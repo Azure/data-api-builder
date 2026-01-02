@@ -15,7 +15,23 @@
     },
     Mcp: {
       Enabled: true,
-      Path: /mcp
+      Path: /mcp,
+      DmlTools: {
+        AllToolsEnabled: true,
+        DescribeEntities: true,
+        CreateRecord: true,
+        ReadRecords: true,
+        UpdateRecord: true,
+        DeleteRecord: true,
+        ExecuteEntity: true,
+        UserProvidedAllTools: false,
+        UserProvidedDescribeEntities: false,
+        UserProvidedCreateRecord: false,
+        UserProvidedReadRecords: false,
+        UserProvidedUpdateRecord: false,
+        UserProvidedDeleteRecord: false,
+        UserProvidedExecuteEntity: false
+      }
     },
     Host: {
       Cors: {
@@ -26,7 +42,7 @@
         AllowCredentials: false
       },
       Authentication: {
-        Provider: StaticWebApps
+        Provider: AppService
       }
     }
   },

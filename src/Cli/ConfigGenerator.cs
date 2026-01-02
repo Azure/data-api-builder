@@ -449,6 +449,18 @@ namespace Cli
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityMcpOptions? mcpOptions = null;
+
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
+
+                if (mcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
 
             // Create new entity.
             Entity entity = new(
@@ -460,7 +472,8 @@ namespace Cli
                 Relationships: null,
                 Mappings: null,
                 Cache: cacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description);
+                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
+                Mcp: mcpOptions);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
@@ -1260,7 +1273,8 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.StaticWebApps);
+                    // Default to AppService when provider string is not provided
+                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.AppService);
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {
@@ -1621,6 +1635,26 @@ namespace Cli
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
             EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
+            // Determine if the entity is or will be a stored procedure
+            bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
+
+            // Construct and validate MCP options if provided
+            EntityMcpOptions? updatedMcpOptions = null;
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
+                if (updatedMcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
+            else
+            {
+                // Keep existing MCP options if no updates provided
+                updatedMcpOptions = entity.Mcp;
+            }
+
             if (!updatedGraphQLDetails.Enabled)
             {
                 _logger.LogWarning("Disabling GraphQL for this entity will restrict its usage in relationships");
@@ -1857,7 +1891,8 @@ namespace Cli
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description
+                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description,
+                Mcp: updatedMcpOptions
                 );
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {
@@ -2359,6 +2394,17 @@ namespace Cli
                 args.Add(Startup.NO_HTTPS_REDIRECT_FLAG);
             }
 
+            // If MCP stdio was requested, append the stdio-specific switches.
+            if (options.McpStdio)
+            {
+                string effectiveRole = string.IsNullOrWhiteSpace(options.McpRole)
+                    ? "anonymous"
+                    : options.McpRole;
+
+                args.Add("--mcp-stdio");
+                args.Add(effectiveRole);
+            }
+
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
         }
 
@@ -2700,9 +2746,10 @@ namespace Cli
                 // Azure Key Vault Endpoint
                 if (options.AzureKeyVaultEndpoint is not null)
                 {
+                    // Ensure endpoint flag is marked user provided so converter writes it.
                     updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
-                        ? updatedAzureKeyVaultOptions with { Endpoint = options.AzureKeyVaultEndpoint }
-                        : new AzureKeyVaultOptions { Endpoint = options.AzureKeyVaultEndpoint };
+                        ? updatedAzureKeyVaultOptions with { Endpoint = options.AzureKeyVaultEndpoint, UserProvidedEndpoint = true }
+                        : new AzureKeyVaultOptions(endpoint: options.AzureKeyVaultEndpoint);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.endpoint as '{endpoint}'", options.AzureKeyVaultEndpoint);
                 }
 
@@ -2711,7 +2758,7 @@ namespace Cli
                 {
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { Mode = options.AzureKeyVaultRetryPolicyMode.Value, UserProvidedMode = true }
-                        : new AKVRetryPolicyOptions { Mode = options.AzureKeyVaultRetryPolicyMode.Value, UserProvidedMode = true };
+                        : new AKVRetryPolicyOptions(mode: options.AzureKeyVaultRetryPolicyMode.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.mode as '{mode}'", options.AzureKeyVaultRetryPolicyMode.Value);
                 }
 
@@ -2726,7 +2773,7 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { MaxCount = options.AzureKeyVaultRetryPolicyMaxCount.Value, UserProvidedMaxCount = true }
-                        : new AKVRetryPolicyOptions { MaxCount = options.AzureKeyVaultRetryPolicyMaxCount.Value, UserProvidedMaxCount = true };
+                        : new AKVRetryPolicyOptions(maxCount: options.AzureKeyVaultRetryPolicyMaxCount.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-count as '{maxCount}'", options.AzureKeyVaultRetryPolicyMaxCount.Value);
                 }
 
@@ -2741,7 +2788,7 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { DelaySeconds = options.AzureKeyVaultRetryPolicyDelaySeconds.Value, UserProvidedDelaySeconds = true }
-                        : new AKVRetryPolicyOptions { DelaySeconds = options.AzureKeyVaultRetryPolicyDelaySeconds.Value, UserProvidedDelaySeconds = true };
+                        : new AKVRetryPolicyOptions(delaySeconds: options.AzureKeyVaultRetryPolicyDelaySeconds.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.delay-seconds as '{delaySeconds}'", options.AzureKeyVaultRetryPolicyDelaySeconds.Value);
                 }
 
@@ -2756,7 +2803,7 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { MaxDelaySeconds = options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value, UserProvidedMaxDelaySeconds = true }
-                        : new AKVRetryPolicyOptions { MaxDelaySeconds = options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value, UserProvidedMaxDelaySeconds = true };
+                        : new AKVRetryPolicyOptions(maxDelaySeconds: options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.max-delay-seconds as '{maxDelaySeconds}'", options.AzureKeyVaultRetryPolicyMaxDelaySeconds.Value);
                 }
 
@@ -2771,16 +2818,17 @@ namespace Cli
 
                     updatedRetryPolicyOptions = updatedRetryPolicyOptions is not null
                         ? updatedRetryPolicyOptions with { NetworkTimeoutSeconds = options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value, UserProvidedNetworkTimeoutSeconds = true }
-                        : new AKVRetryPolicyOptions { NetworkTimeoutSeconds = options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value, UserProvidedNetworkTimeoutSeconds = true };
+                        : new AKVRetryPolicyOptions(networkTimeoutSeconds: options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value);
                     _logger.LogInformation("Updated RuntimeConfig with azure-key-vault.retry-policy.network-timeout-seconds as '{networkTimeoutSeconds}'", options.AzureKeyVaultRetryPolicyNetworkTimeoutSeconds.Value);
                 }
 
-                // Update Azure Key Vault options with retry policy if retry policy was modified
+                // Update Azure Key Vault options with retry policy if modified
                 if (updatedRetryPolicyOptions is not null)
                 {
+                    // Ensure outer AKV object marks retry policy as user provided so it serializes.
                     updatedAzureKeyVaultOptions = updatedAzureKeyVaultOptions is not null
-                        ? updatedAzureKeyVaultOptions with { RetryPolicy = updatedRetryPolicyOptions }
-                        : new AzureKeyVaultOptions { RetryPolicy = updatedRetryPolicyOptions };
+                        ? updatedAzureKeyVaultOptions with { RetryPolicy = updatedRetryPolicyOptions, UserProvidedRetryPolicy = true }
+                        : new AzureKeyVaultOptions(retryPolicy: updatedRetryPolicyOptions);
                 }
 
                 // Update runtime config if Azure Key Vault options were modified

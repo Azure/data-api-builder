@@ -221,7 +221,7 @@ namespace Cli.Commands
         [Option("runtime.host.cors.allow-credentials", Required = false, HelpText = "Set value for Access-Control-Allow-Credentials header in Host.Cors. Default: false (boolean).")]
         public bool? RuntimeHostCorsAllowCredentials { get; }
 
-        [Option("runtime.host.authentication.provider", Required = false, HelpText = "Configure the name of authentication provider. Default: StaticWebApps.")]
+        [Option("runtime.host.authentication.provider", Required = false, HelpText = "Configure the name of authentication provider. Default: AppService.")]
         public string? RuntimeHostAuthenticationProvider { get; }
 
         [Option("runtime.host.authentication.jwt.audience", Required = false, HelpText = "Configure the intended recipient(s) of the Jwt Token.")]

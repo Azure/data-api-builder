@@ -111,6 +111,30 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     }
                 }
 
+                // Get current user's role for permission filtering
+                // For discovery tools like describe_entities, we use the first valid role from the header
+                // This differs from operation-specific tools that check permissions per entity per operation
+                if (httpContext != null && authResolver.IsValidRoleContext(httpContext))
+                {
+                    string roleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
+                    if (!string.IsNullOrWhiteSpace(roleHeader))
+                    {
+                        string[] roles = roleHeader
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                        if (roles.Length > 1)
+                        {
+                            logger?.LogWarning("Multiple roles detected in request header: [{Roles}]. Using first role '{FirstRole}' for entity discovery. " +
+                                "Consider using a single role for consistent permission reporting.",
+                                string.Join(", ", roles), roles[0]);
+                        }
+
+                        // For discovery operations, take the first role from comma-separated list
+                        // This provides a consistent view of available entities for the primary role
+                        currentUserRole = roles.FirstOrDefault();
+                    }
+                }
+
                 (bool nameOnly, HashSet<string>? entityFilter) = ParseArguments(arguments, logger);
 
                 if (currentUserRole == null)

@@ -26,7 +26,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "StaticWebApps"
+        "provider": "AppService"
       },
       "mode": "development"
     }

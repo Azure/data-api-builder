@@ -73,16 +73,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
                 writer.WritePropertyName(prop.Name);
                 object? propVal = prop.GetValue(value);
-                Type propType = prop.PropertyType;
 
-                // Only escape columns for properties whose type is exactly SourceDefinition (not subclasses).
-                // This is because, we do not want unnecessary mutation of subclasses of SourceDefinition unless needed.
-                if (IsSourceDefinitionProperty(prop) && propVal is SourceDefinition sourceDef && propVal.GetType() == typeof(SourceDefinition))
+                // Only escape columns for properties whose type is exactly SourceDefinition.
+                if (IsSourceDefinitionProperty(prop) && propVal is SourceDefinition sourceDef)
                 {
                     EscapeDollaredColumns(sourceDef);
                 }
 
-                JsonSerializer.Serialize(writer, propVal, propType, options);
+                JsonSerializer.Serialize(writer, propVal, options);
             }
 
             writer.WriteEndObject();
@@ -90,8 +88,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
         private static bool IsSourceDefinitionProperty(PropertyInfo prop)
         {
-            // Only return true for properties whose type is exactly SourceDefinition (not subclasses)
-            return prop.PropertyType == typeof(SourceDefinition);
+            // Return true for properties whose type is SourceDefinition or any class derived from SourceDefinition
+            return typeof(SourceDefinition).IsAssignableFrom(prop.PropertyType);
         }
 
         /// <summary>

@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 writer.WritePropertyName(prop.Name);
                 object? propVal = prop.GetValue(value);
 
-                // Only escape columns for properties whose type is exactly SourceDefinition.
+                // Only escape columns for properties whose type(derived type) is SourceDefinition.
                 if (IsSourceDefinitionProperty(prop) && propVal is SourceDefinition sourceDef)
                 {
                     EscapeDollaredColumns(sourceDef);

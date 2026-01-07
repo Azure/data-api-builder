@@ -38,8 +38,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Auto-discover and register all MCP tools
             RegisterAllMcpTools(services);
 
-            // Configure MCP server
-            services.ConfigureMcpServer();
+            // Configure MCP server with runtime config
+            services.ConfigureMcpServer(runtimeConfig);
 
             return services;
         }

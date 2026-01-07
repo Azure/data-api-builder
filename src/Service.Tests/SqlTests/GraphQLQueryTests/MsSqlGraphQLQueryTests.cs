@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -351,8 +352,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                 JsonElement authorsItems = authorsConnection.GetProperty("items");
                 Assert.IsTrue(authorsItems.GetArrayLength() > 0, "Expected authors collection to be materialized with at least one author.");
 
-                // Compare the full nested tree (id, title, websiteplacement, authors.items, reviews.items)
-                // against an equivalent SQL JSON query.
+                // Compare the full nested tree (id, title, websiteplacement, reviews.items, authors.items)
+                // against an equivalent SQL JSON query. Shape the SQL JSON to match the GraphQL
+                // "book" object so we can use the actual result directly for comparison.
                 string fullTreeSql = @"
                     SELECT
                         [b].[id] AS [id],
@@ -367,6 +369,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                         JSON_QUERY((
                             SELECT
                                 JSON_QUERY((
+                                    SELECT TOP 100 [r].[id] AS [id]
+                                    FROM [dbo].[reviews] AS [r]
+                                    WHERE [r].[book_id] = [b].[id]
+                                    ORDER BY [r].[id] ASC
+                                    FOR JSON PATH, INCLUDE_NULL_VALUES
+                                )) AS [items]
+                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                        )) AS [reviews],
+                        JSON_QUERY((
+                            SELECT
+                                JSON_QUERY((
                                     SELECT [a].[name] AS [name]
                                     FROM [dbo].[authors] AS [a]
                                     INNER JOIN [dbo].[book_author_link] AS [bal]
@@ -376,51 +389,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                                     FOR JSON PATH, INCLUDE_NULL_VALUES
                                 )) AS [items]
                             FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
-                        )) AS [authors],
-                        JSON_QUERY((
-                            SELECT
-                                JSON_QUERY((
-                                    SELECT TOP 100 [r].[id] AS [id]
-                                    FROM [dbo].[reviews] AS [r]
-                                    WHERE [r].[book_id] = [b].[id]
-                                    ORDER BY [r].[id] ASC
-                                    FOR JSON PATH, INCLUDE_NULL_VALUES
-                                )) AS [items]
-                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
-                        )) AS [reviews]
+                        )) AS [authors]
                     FROM [dbo].[books] AS [b]
                     WHERE [b].[id] = 1
-                    FOR JSON PATH, INCLUDE_NULL_VALUES";
+                    FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
 
                 string expectedFullTreeJson = await GetDatabaseResultAsync(fullTreeSql);
 
-                // Project the GraphQL result to the same shape as the SQL JSON.
-                int bookId = book.GetProperty("id").GetInt32();
-                string bookTitle = book.GetProperty("title").GetString();
-
-                var fullTree = new[]
+                // Use the actual GraphQL "book" object for comparison, trimming pagination metadata
+                // (endCursor, hasNextPage) that cannot be reproduced via SQL.
+                JsonNode actualBookNode = JsonNode.Parse(book.ToString());
+                if (actualBookNode is JsonObject bookObject &&
+                    bookObject["reviews"] is JsonObject reviewsObject)
                 {
-                    new
-                    {
-                        id = bookId,
-                        title = bookTitle,
-                        websiteplacement,
-                        reviews = new
-                        {
-                            items = reviewItems
-                        },
-                        authors = new
-                        {
-                            items = authorsItems
-                        }
-                    }
-                };
+                    reviewsObject.Remove("endCursor");
+                    reviewsObject.Remove("hasNextPage");
+                }
 
-                string actualFullTreeJson = JsonSerializer.Serialize(fullTree);
+                string actualComparableJson = actualBookNode.ToJsonString();
 
                 SqlTestHelper.PerformTestEqualJsonStrings(
                     expectedFullTreeJson,
-                    actualFullTreeJson);
+                    actualComparableJson);
             }
             finally
             {

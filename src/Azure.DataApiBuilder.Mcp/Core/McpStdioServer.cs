@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             // Create the initialize response
-            var result = new
+            object result = new
             {
                 protocolVersion = _protocolVersion,
                 capabilities = new
@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
             };
 
-            var response = new
+            object response = new
             {
                 jsonrpc = "2.0",
                 id = requestId,

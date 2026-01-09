@@ -116,6 +116,15 @@ public class RuntimeConfigValidator : IConfigValidator
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization));
             }
+
+            // include-vector-fields-by-default is only valid for mssql database type
+            if (dataSource.IncludeVectorFieldsByDefault && dataSource.DatabaseType != DatabaseType.MSSQL)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "The include-vector-fields-by-default option is only valid for MSSQL database type.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
         }
 
         ValidateDatabaseType(runtimeConfig, fileSystem, logger);

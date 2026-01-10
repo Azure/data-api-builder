@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 object? propVal = prop.GetValue(value);
 
                 // Only escape columns for properties whose type(derived type) is SourceDefinition.
-                if (IsSourceDefinitionProperty(prop) && propVal is SourceDefinition sourceDef)
+                if (IsSourceDefinitionOrDerivedClassProperty(prop) && propVal is SourceDefinition sourceDef)
                 {
                     EscapeDollaredColumns(sourceDef);
                 }
@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
             writer.WriteEndObject();
         }
 
-        private static bool IsSourceDefinitionProperty(PropertyInfo prop)
+        private static bool IsSourceDefinitionOrDerivedClassProperty(PropertyInfo prop)
         {
             // Return true for properties whose type is SourceDefinition or any class derived from SourceDefinition
             return typeof(SourceDefinition).IsAssignableFrom(prop.PropertyType);

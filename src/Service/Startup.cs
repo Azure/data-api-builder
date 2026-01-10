@@ -3,6 +3,8 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -435,7 +437,7 @@ namespace Azure.DataApiBuilder.Service
                         else
                         {
                             // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
-                            Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(level2CacheOptions.ConnectionString);
+                            Task<IConnectionMultiplexer> connectionMultiplexerTask = CreateConnectionMultiplexerAsync(level2CacheOptions.ConnectionString);
 
                             fusionCacheBuilder
                                 .WithSerializer(new FusionCacheSystemTextJsonSerializer())
@@ -468,6 +470,33 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 
             services.AddControllers();
+        }
+
+        /// <summary>
+        /// Creates a ConnectionMultiplexer for Redis with support for Azure Entra authentication.
+        /// </summary>
+        /// <param name="connectionString">The Redis connection string.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the connected IConnectionMultiplexer.</returns>
+        private static async Task<IConnectionMultiplexer> CreateConnectionMultiplexerAsync(string connectionString)
+        {
+            ConfigurationOptions options = ConfigurationOptions.Parse(connectionString);
+
+            // Determine if an endpoint is localhost/loopback
+            static bool IsLocalhostEndpoint(EndPoint ep) => ep switch
+            {
+                DnsEndPoint dns => string.Equals(dns.Host, "localhost", StringComparison.OrdinalIgnoreCase),
+                IPEndPoint ip => IPAddress.IsLoopback(ip.Address),
+                _ => false,
+            };
+
+            // If no password is provided, and the endpoint (or at least one of them) is non-localhost,
+            // attempt to use Entra authentication.
+            if (string.IsNullOrEmpty(options.Password) && !options.EndPoints.Any(IsLocalhostEndpoint))
+            {
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+            }
+
+            return await ConnectionMultiplexer.ConnectAsync(options);
         }
 
         /// <summary>

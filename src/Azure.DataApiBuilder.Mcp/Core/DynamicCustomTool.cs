@@ -262,7 +262,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (_entity.Source.Parameters != null && _entity.Source.Parameters.Any())
             {
                 var properties = (Dictionary<string, object>)schema["properties"];
-                
+
                 foreach (var param in _entity.Source.Parameters)
                 {
                     properties[param.Name] = new Dictionary<string, object>

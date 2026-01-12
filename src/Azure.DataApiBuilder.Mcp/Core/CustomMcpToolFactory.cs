@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     {
                         DynamicCustomTool tool = new(entityName, entity);
                         customToolCount++;
-                        
+
                         logger?.LogInformation(
                             "Created custom MCP tool '{ToolName}' for stored procedure entity '{EntityName}'",
                             tool.GetToolMetadata().Name,

@@ -23,7 +23,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using static Azure.DataApiBuilder.Mcp.Model.McpEnums;
 
-namespace Azure.DataApiBuilder.Mcp.BuiltInTools
+namespace Azure.DataApiBuilder.Mcp.Core
 {
     /// <summary>
     /// Dynamic custom MCP tool generated from stored procedure entity configuration.
@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 RuntimeConfigProvider runtimeConfigProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
                 RuntimeConfig config = runtimeConfigProvider.GetConfig();
 
-                // 2) Parse arguments - for POC, accept simple object format
+                // 2) Parse arguments from the request
                 Dictionary<string, object?> parameters = new();
                 if (arguments != null)
                 {

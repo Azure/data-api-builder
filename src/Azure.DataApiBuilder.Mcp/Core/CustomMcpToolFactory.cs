@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Mcp.BuiltInTools;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.Logging;
 

@@ -1,8 +1,8 @@
-﻿{
+{
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=tcp:localhost,1433;Persist Security Info=False;Initial Catalog=Library;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=30;",
+    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;",
     "options": {
       "set-session-context": true
     }
@@ -2855,7 +2855,6 @@
       }
     },
     "GetBooks": {
-      "description": "Retrieves all books from the library database with their titles and publisher information",
       "source": {
         "object": "get_books",
         "type": "stored-procedure"
@@ -2894,17 +2893,9 @@
       ]
     },
     "GetBook": {
-      "description": "Retrieves a specific book by its unique identifier",
       "source": {
         "object": "get_book_by_id",
-        "type": "stored-procedure",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "description": "The unique identifier of the book to retrieve"
-          }
-        ]
+        "type": "stored-procedure"
       },
       "graphql": {
         "enabled": false,
@@ -2937,10 +2928,7 @@
             }
           ]
         }
-      ],
-      "mcp": {
-        "custom-tool": true
-      }
+      ]
     },
     "GetPublisher": {
       "source": {
@@ -2981,24 +2969,13 @@
       ]
     },
     "InsertBook": {
-      "description": "Adds a new book to the library database with the specified title and publisher",
       "source": {
         "object": "insert_book",
         "type": "stored-procedure",
-        "parameters": [
-          {
-            "name": "title",
-            "required": true,
-            "default": "randomX",
-            "description": "The title of the book to insert"
-          },
-          {
-            "name": "publisher_id",
-            "required": false,
-            "default": "1234",
-            "description": "The unique identifier of the publisher"
-          }
-        ]
+        "parameters": {
+          "title": "randomX",
+          "publisher_id": 1234
+        }
       },
       "graphql": {
         "enabled": true,
@@ -3031,13 +3008,9 @@
             }
           ]
         }
-      ],
-      "mcp": {
-        "custom-tool": true
-      }
+      ]
     },
     "CountBooks": {
-      "description": "Returns the total count of books in the library database",
       "source": {
         "object": "count_books",
         "type": "stored-procedure"
@@ -3073,10 +3046,7 @@
             }
           ]
         }
-      ],
-      "mcp": {
-        "custom-tool": true
-      }
+      ]
     },
     "DeleteLastInsertedBook": {
       "source": {

@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
                 DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(document, concreteType, options)!;
 
-                foreach (PropertyInfo prop in objA.GetType().GetProperties().Where(IsSourceDefinitionProperty))
+                foreach (PropertyInfo prop in objA.GetType().GetProperties().Where(IsSourceDefinitionOrDerivedClassProperty))
                 {
                     SourceDefinition? sourceDef = (SourceDefinition?)prop.GetValue(objA);
                     if (sourceDef is not null)

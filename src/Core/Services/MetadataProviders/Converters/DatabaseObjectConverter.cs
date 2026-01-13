@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         {
             for (int i = 0; i < columnList.Count; i++)
             {
-                if (columnList[i].StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
+                if (columnList[i] != null && columnList[i].StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
                 {
                     columnList[i] = ESCAPED_DOLLARCHAR + columnList[i][1..];
                 }
@@ -194,7 +194,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         {
             for (int i = 0; i < columnList.Count; i++)
             {
-                if (columnList[i].StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
+                if (columnList[i] != null && columnList[i].StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
                 {
                     columnList[i] = DOLLAR_CHAR + columnList[i][11..];
                 }

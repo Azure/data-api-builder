@@ -7,9 +7,9 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Config.Converters;
 
 /// <summary>
-/// Custom string json converter factory to replace environment variables and other variable patterns
-/// during deserialization using the DeserializationVariableReplacementSettings.
-/// </summary>
+/// JSON converter for boolean values that also supports string representations such as
+/// "true", "false", "1", and "0". Any environment variable replacement is handled by
+/// other converters (for example, the string converter) before the value is parsed here.
 public class BoolJsonConverter : JsonConverter<bool>
 {
     

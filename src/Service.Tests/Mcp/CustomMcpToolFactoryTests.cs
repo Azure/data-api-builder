@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Mcp.Core;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Mcp
 {

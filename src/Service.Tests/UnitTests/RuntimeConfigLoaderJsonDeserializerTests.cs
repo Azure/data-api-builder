@@ -219,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// or through environment variables
         /// </summary>
         [TestMethod]
-        [DataRow(true, true, DisplayName = "Config with enabled set to true ")]
+        [DataRow(true, true, DisplayName = "Config with enabled set to true")]
         [DataRow(true, false, DisplayName = "Config with enabled set to false")]
         [DataRow(false, true,  DisplayName = "Replace environment variables containing boolean value with true")]
         [DataRow(false, false, DisplayName = "Replace environment variables containing boolean value with false")]

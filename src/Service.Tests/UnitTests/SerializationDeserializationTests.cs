@@ -277,7 +277,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates serialization and deserilization of Dictionary containing DatabaseTable
+        /// Validates serialization and deserialization of Dictionary containing DatabaseTable
         /// The table will have dollar sign prefix ($) in the column name
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
         /// </summary>
@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates serialization and deserilization of Dictionary containing DatabaseView
+        /// Validates serialization and deserialization of Dictionary containing DatabaseView
         /// The table will have dollar sign prefix ($) in the column name
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
         /// </summary>
@@ -348,7 +348,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates serialization and deserilization of Dictionary containing DatabaseStoredProcedure
+        /// Validates serialization and deserialization of Dictionary containing DatabaseStoredProcedure
         /// The table will have dollar sign prefix ($) in the column name
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
         /// </summary>

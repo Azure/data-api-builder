@@ -28,7 +28,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
 
             List<IMcpTool> customTools = new();
-            int customToolCount = 0;
 
             foreach ((string entityName, Entity entity) in config.Entities)
             {
@@ -39,7 +38,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         DynamicCustomTool tool = new(entityName, entity);
-                        customToolCount++;
 
                         logger?.LogInformation(
                             "Created custom MCP tool '{ToolName}' for stored procedure entity '{EntityName}'",
@@ -58,7 +56,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
             }
 
-            logger?.LogInformation("Custom MCP tool generation complete. Created {Count} custom tools.", customToolCount);
+            logger?.LogInformation("Custom MCP tool generation complete. Created {Count} custom tools.", customTools.Count);
             return customTools;
         }
     }

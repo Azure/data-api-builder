@@ -28,6 +28,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// <summary>
     /// Dynamic custom MCP tool generated from stored procedure entity configuration.
     /// Each custom tool represents a single stored procedure exposed as a dedicated MCP tool.
+    /// 
+    /// Note: The entity configuration is captured at tool construction time. If the RuntimeConfig
+    /// is hot-reloaded, GetToolMetadata() will return cached metadata (name, description, parameters)
+    /// from the original configuration. This is acceptable because:
+    /// 1. MCP clients typically call tools/list once at startup
+    /// 2. ExecuteAsync always validates against the current runtime configuration
+    /// 3. Cached metadata improves performance for repeated metadata requests
     /// </summary>
     public class DynamicCustomTool : IMcpTool
     {
@@ -64,7 +71,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public Tool GetToolMetadata()
         {
             string toolName = ConvertToToolName(_entityName);
-            string description = _entity.Description ?? $"Execute {_entityName} stored procedure";
+            string description = _entity.Description ?? $"Executes the {toolName} stored procedure";
 
             // Build input schema based on parameters
             JsonElement inputSchema = BuildInputSchema();
@@ -265,9 +272,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 foreach (var param in _entity.Source.Parameters)
                 {
+                    // Note: Parameter type information is not available in ParameterMetadata,
+                    // so we allow multiple JSON types to match the behavior of GetParameterValue
+                    // that handles string, number, boolean, and null values.
                     properties[param.Name] = new Dictionary<string, object>
                     {
-                        ["type"] = "string",
+                        ["type"] = new[] { "string", "number", "boolean", "null" },
                         ["description"] = param.Description ?? $"Parameter {param.Name}"
                     };
                 }

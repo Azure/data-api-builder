@@ -228,7 +228,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // Arrange
             const string envVarName = "APP_INSIGHTS_ENABLED";
-             string envVarValue = expected.ToString();
+            string envVarValue = expected.ToString();
 
             
             // Set up the environment variable

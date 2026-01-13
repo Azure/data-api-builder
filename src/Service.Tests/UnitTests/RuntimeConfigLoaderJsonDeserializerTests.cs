@@ -214,6 +214,71 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test method to validate that environment variable replacement works correctly
+        /// for the telemetry.application-insights.enabled property when set through config
+        /// or through environment variables
+        /// </summary>
+        [TestMethod]
+        [DataRow(true, true, DisplayName = "Config with enabled set to true ")]
+        [DataRow(true, false, DisplayName = "Config with enabled set to false")]
+        [DataRow(false, true,  DisplayName = "Replace environment variables containing boolean value with true")]
+        [DataRow(false, false, DisplayName = "Replace environment variables containing boolean value with false")]
+
+        public void TestTelemetryApplicationInsightsEnabledWithEnvironmentVariable(bool hardcoded, bool expected)
+        {
+            // Arrange
+            const string envVarName = "APP_INSIGHTS_ENABLED";
+             string envVarValue = expected.ToString();
+
+            
+            // Set up the environment variable
+            Environment.SetEnvironmentVariable(envVarName, envVarValue);
+            string configValue = hardcoded ? expected.ToString().ToLower() : "\"@env('APP_INSIGHTS_ENABLED')\"";
+            try
+            {
+                string configJson = @"{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                    ""data-source"": {
+                        ""database-type"": ""mssql"",
+                        ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                    },
+                    ""runtime"": {
+                        ""telemetry"": {
+                            ""application-insights"": {
+                                ""enabled"": " + configValue + @",
+                                ""connection-string"": ""InstrumentationKey=test-key""
+                            }
+                        }
+                    },
+                    ""entities"": { }
+                }";
+                
+                // Act
+                bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
+                    configJson,
+                    out RuntimeConfig runtimeConfig,
+                    replacementSettings: new DeserializationVariableReplacementSettings(
+                        azureKeyVaultOptions: null,
+                        doReplaceEnvVar: true,
+                        doReplaceAkvVar: false));
+                
+                // Assert
+                Assert.IsTrue(isParsingSuccessful, "Config parsing should succeed");
+                Assert.IsNotNull(runtimeConfig, "Runtime config should not be null");
+                Assert.IsNotNull(runtimeConfig.Runtime, "Runtime section should not be null");
+                Assert.IsNotNull(runtimeConfig.Runtime.Telemetry, "Telemetry section should not be null");
+                Assert.IsNotNull(runtimeConfig.Runtime.Telemetry.ApplicationInsights, "ApplicationInsights section should not be null");
+                Assert.AreEqual("InstrumentationKey=test-key", runtimeConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString, "Connection string should be preserved");
+                Assert.AreEqual(expected, runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled, "ApplicationInsights enabled value should match expected value");
+            }
+            finally
+            {
+                // Cleanup
+                Environment.SetEnvironmentVariable(envVarName, null);
+            }
+        }
+
+        /// <summary>
         /// Method to validate that comments are skipped in config file (and are ignored during deserialization).
         /// </summary>
         [TestMethod]

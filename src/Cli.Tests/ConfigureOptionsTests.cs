@@ -934,7 +934,7 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow("This MCP provides access to the Products database and should be used to answer product-related or inventory-related questions from the user.", DisplayName = "Set MCP description.")]
         [DataRow("Use this server for customer data queries.", DisplayName = "Set MCP description with short text.")]
-        public void TestUpdateDescriptionForMcpSettings(string descriptionValue)
+        public void TestConfigureDescriptionForMcpSettings(string descriptionValue)
         {
             // Arrange -> all the setup which includes creating options.
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
@@ -947,35 +947,6 @@ namespace Cli.Tests
             bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
 
             // Assert: Validate the Description is updated
-            Assert.IsTrue(isSuccess);
-            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
-            Assert.IsNotNull(runtimeConfig.Runtime?.Mcp?.Description);
-            Assert.AreEqual(descriptionValue, runtimeConfig.Runtime.Mcp.Description);
-        }
-
-        /// <summary>
-        /// Tests that the MCP description can be added to a config that doesn't already have one
-        /// </summary>
-        [TestMethod]
-        public void TestAddDescriptionToMcpSettings()
-        {
-            // Arrange
-            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
-
-            // Initial config should not have a description
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config));
-            Assert.IsNull(config.Runtime?.Mcp?.Description);
-
-            // Act: Add description
-            string descriptionValue = "This is a test description for MCP server.";
-            ConfigureOptions options = new(
-                runtimeMcpDescription: descriptionValue,
-                config: TEST_RUNTIME_CONFIG_FILE
-            );
-            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
-
-            // Assert: Validate the Description is added
             Assert.IsTrue(isSuccess);
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));

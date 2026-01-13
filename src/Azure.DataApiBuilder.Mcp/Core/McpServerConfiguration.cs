@@ -18,16 +18,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <summary>
         /// Configures the MCP server with tool capabilities
         /// </summary>
-        internal static IServiceCollection ConfigureMcpServer(this IServiceCollection services, RuntimeConfig runtimeConfig)
+        internal static IServiceCollection ConfigureMcpServer(this IServiceCollection services)
         {
             services.AddMcpServer(options =>
             {
                 options.ServerInfo = new() { Name = "SQL MCP Server", Version = "1.0.0" };
-                
-                // Note: The ModelContextProtocol.AspNetCore library does not currently support
-                // setting instructions on the server options. The description from
-                // runtimeConfig.Runtime.Mcp.Description is available for future use when
-                // the library adds support for instructions in the initialize response.
                 
                 options.Capabilities = new()
                 {

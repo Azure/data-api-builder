@@ -78,9 +78,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 if (IsSourceDefinitionOrDerivedClassProperty(prop) && propVal is SourceDefinition sourceDef)
                 {
                     EscapeDollaredColumns(sourceDef);
+                    JsonSerializer.Serialize(writer, propVal, options);
+                    // Immediately unescape to restore the original state
+                    UnescapeDollaredColumns(sourceDef);
                 }
-
-                JsonSerializer.Serialize(writer, propVal, options);
+                else
+                {
+                    JsonSerializer.Serialize(writer, propVal, options);
+                }
             }
 
             writer.WriteEndObject();
@@ -97,21 +102,50 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         /// </summary>
         private static void EscapeDollaredColumns(SourceDefinition sourceDef)
         {
-            if (sourceDef.Columns is null || sourceDef.Columns.Count == 0)
+            // Escape column names in the Columns dictionary
+            if (sourceDef.Columns is not null && sourceDef.Columns.Count > 0)
             {
-                return;
+                List<string> keysToEscape = sourceDef.Columns.Keys
+                    .Where(k => k.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
+                    .ToList();
+
+                foreach (string key in keysToEscape)
+                {
+                    ColumnDefinition col = sourceDef.Columns[key];
+                    sourceDef.Columns.Remove(key);
+                    string newKey = ESCAPED_DOLLARCHAR + key[1..];
+                    sourceDef.Columns[newKey] = col;
+                }
             }
 
-            List<string> keysToEscape = sourceDef.Columns.Keys
-                .Where(k => k.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
-                .ToList();
-
-            foreach (string key in keysToEscape)
+            // Escape column names in SourceEntityRelationshipMap
+            if (sourceDef.SourceEntityRelationshipMap is not null && sourceDef.SourceEntityRelationshipMap.Count > 0)
             {
-                ColumnDefinition col = sourceDef.Columns[key];
-                sourceDef.Columns.Remove(key);
-                string newKey = ESCAPED_DOLLARCHAR + key[1..];
-                sourceDef.Columns[newKey] = col;
+                foreach (RelationshipMetadata relationshipMetadata in sourceDef.SourceEntityRelationshipMap.Values)
+                {
+                    foreach (List<ForeignKeyDefinition> fkDefinitions in relationshipMetadata.TargetEntityToFkDefinitionMap.Values)
+                    {
+                        foreach (ForeignKeyDefinition fkDef in fkDefinitions)
+                        {
+                            EscapeColumnList(fkDef.ReferencedColumns);
+                            EscapeColumnList(fkDef.ReferencingColumns);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Escapes column names in a list that start with '$' to 'DAB_ESCAPE$' prefix.
+        /// </summary>
+        private static void EscapeColumnList(List<string> columnList)
+        {
+            for (int i = 0; i < columnList.Count; i++)
+            {
+                if (columnList[i].StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
+                {
+                    columnList[i] = ESCAPED_DOLLARCHAR + columnList[i][1..];
+                }
             }
         }
 
@@ -120,21 +154,50 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         /// </summary>
         private static void UnescapeDollaredColumns(SourceDefinition sourceDef)
         {
-            if (sourceDef.Columns is null || sourceDef.Columns.Count == 0)
+            // Unescape column names in the Columns dictionary
+            if (sourceDef.Columns is not null && sourceDef.Columns.Count > 0)
             {
-                return;
+                List<string> keysToUnescape = sourceDef.Columns.Keys
+                    .Where(k => k.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
+                    .ToList();
+
+                foreach (string key in keysToUnescape)
+                {
+                    ColumnDefinition col = sourceDef.Columns[key];
+                    sourceDef.Columns.Remove(key);
+                    string newKey = DOLLAR_CHAR + key[11..];
+                    sourceDef.Columns[newKey] = col;
+                }
             }
 
-            List<string> keysToUnescape = sourceDef.Columns.Keys
-                .Where(k => k.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
-                .ToList();
-
-            foreach (string key in keysToUnescape)
+            // Unescape column names in SourceEntityRelationshipMap
+            if (sourceDef.SourceEntityRelationshipMap is not null && sourceDef.SourceEntityRelationshipMap.Count > 0)
             {
-                ColumnDefinition col = sourceDef.Columns[key];
-                sourceDef.Columns.Remove(key);
-                string newKey = DOLLAR_CHAR + key[11..];
-                sourceDef.Columns[newKey] = col;
+                foreach (RelationshipMetadata relationshipMetadata in sourceDef.SourceEntityRelationshipMap.Values)
+                {
+                    foreach (List<ForeignKeyDefinition> fkDefinitions in relationshipMetadata.TargetEntityToFkDefinitionMap.Values)
+                    {
+                        foreach (ForeignKeyDefinition fkDef in fkDefinitions)
+                        {
+                            UnescapeColumnList(fkDef.ReferencedColumns);
+                            UnescapeColumnList(fkDef.ReferencingColumns);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Unescapes column names in a list that start with 'DAB_ESCAPE$' prefix to '$'.
+        /// </summary>
+        private static void UnescapeColumnList(List<string> columnList)
+        {
+            for (int i = 0; i < columnList.Count; i++)
+            {
+                if (columnList[i].StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
+                {
+                    columnList[i] = DOLLAR_CHAR + columnList[i][11..];
+                }
             }
         }
 

@@ -381,6 +381,72 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseSP.StoredProcedureDefinition, _databaseStoredProcedure.StoredProcedureDefinition, "$FirstName", true);
         }
 
+        /// <summary>
+        /// Validates serialization and deserialization of SourceDefinition with dollar-prefixed columns
+        /// in SourceEntityRelationshipMap (ForeignKeyDefinition ReferencedColumns and ReferencingColumns).
+        /// Ensures that dollar-prefixed column names in relationship metadata are properly escaped during
+        /// serialization and unescaped during deserialization.
+        /// </summary>
+        [TestMethod]
+        public void TestSourceDefinitionRelationshipMapSerializationDeserialization_WithDollarColumn()
+        {
+            InitializeObjects(generateDollaredColumn: true);
+
+            RelationShipPair pair = GetRelationShipPair();
+
+            // Create ForeignKeyDefinition with dollar-prefixed columns
+            ForeignKeyDefinition foreignKeyDefinition = new()
+            {
+                Pair = pair,
+                ReferencedColumns = new List<string> { "$Index" },
+                ReferencingColumns = new List<string> { "$FirstName" }
+            };
+
+            RelationshipMetadata metadata = new();
+            metadata.TargetEntityToFkDefinitionMap.Add("customers", new List<ForeignKeyDefinition> { foreignKeyDefinition });
+
+            _databaseTable.TableDefinition.SourceEntityRelationshipMap.Add("persons", metadata);
+
+            // Configure serialization options with ReferenceHandler.Preserve for cyclic objects
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter(),
+                },
+                ReferenceHandler = ReferenceHandler.Preserve,
+            };
+
+            // Create a dictionary to serialize the DatabaseTable (this triggers DatabaseObjectConverter)
+            Dictionary<string, DatabaseObject> dict = new() { { "person", _databaseTable } };
+
+            // Serialize and verify that dollar-prefixed columns in relationship metadata are escaped
+            string serializedDict = JsonSerializer.Serialize(dict, _options);
+            Assert.IsTrue(serializedDict.Contains("DAB_ESCAPE$Index"),
+                "Serialized JSON should contain escaped dollar-prefixed column name in ReferencedColumns.");
+            Assert.IsTrue(serializedDict.Contains("DAB_ESCAPE$FirstName"),
+                "Serialized JSON should contain escaped dollar-prefixed column name in ReferencingColumns and Columns.");
+
+            // Deserialize and verify that dollar-prefixed columns are properly unescaped
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serializedDict, _options)!;
+            DatabaseTable deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
+
+            // Verify the ForeignKeyDefinition
+            ForeignKeyDefinition expectedForeignKeyDefinition = _databaseTable.TableDefinition.SourceEntityRelationshipMap["persons"].TargetEntityToFkDefinitionMap["customers"][0];
+            ForeignKeyDefinition deserializedForeignKeyDefinition = deserializedDatabaseTable.TableDefinition.SourceEntityRelationshipMap["persons"].TargetEntityToFkDefinitionMap["customers"][0];
+
+            // Verify that columns were properly unescaped
+            Assert.AreEqual(1, deserializedForeignKeyDefinition.ReferencedColumns.Count);
+            Assert.AreEqual("$Index", deserializedForeignKeyDefinition.ReferencedColumns[0],
+                "ReferencedColumns should be unescaped back to original dollar-prefixed name.");
+            Assert.AreEqual(1, deserializedForeignKeyDefinition.ReferencingColumns.Count);
+            Assert.AreEqual("$FirstName", deserializedForeignKeyDefinition.ReferencingColumns[0],
+                "ReferencingColumns should be unescaped back to original dollar-prefixed name.");
+
+            // Verify RelationShipPair equality
+            Assert.IsTrue(expectedForeignKeyDefinition.Equals(deserializedForeignKeyDefinition));
+        }
+
         private void InitializeObjects(bool generateDollaredColumn = false)
         {
             string columnName = generateDollaredColumn ? "$FirstName" : "FirstName";

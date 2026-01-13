@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Act
             string json = config.ToJson();
-            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig? deserializedConfig);
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig deserializedConfig);
 
             // Assert
             Assert.IsTrue(parseSuccess, "Failed to deserialize config with MCP description");
@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Act
             string json = config.ToJson();
-            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig? deserializedConfig);
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig deserializedConfig);
 
             // Assert
             Assert.IsTrue(parseSuccess, "Failed to deserialize config without MCP description");
@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Act
             string json = config.ToJson();
-            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig? deserializedConfig);
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig deserializedConfig);
 
             // Assert
             Assert.IsTrue(parseSuccess, "Failed to deserialize config with empty MCP description");
@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Act
             string json = config.ToJson();
-            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig? deserializedConfig);
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig deserializedConfig);
 
             // Assert
             Assert.IsTrue(parseSuccess, "Failed to deserialize config with long MCP description");
@@ -152,7 +152,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Act
             string json = config.ToJson();
-            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig? deserializedConfig);
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig deserializedConfig);
 
             // Assert
             Assert.IsTrue(parseSuccess, $"Failed to deserialize config with special character description: {description}");
@@ -184,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }";
 
             // Act
-            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig? deserializedConfig);
+            bool parseSuccess = RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig);
 
             // Assert
             Assert.IsTrue(parseSuccess, "Failed to deserialize config without description field");

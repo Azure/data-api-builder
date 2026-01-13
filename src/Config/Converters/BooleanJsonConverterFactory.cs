@@ -30,7 +30,7 @@ public class BoolJsonConverter : JsonConverter<bool>
             {
                 "true" or "1" => true,
                 "false" or "0" => false,
-                _ => throw new JsonException($"Invalid enabled value: {tempBoolean}. Specify either true or false."),
+                _ => throw new JsonException($"Invalid boolean value: {tempBoolean}. Specify either true or false."),
             };
 
             return result;

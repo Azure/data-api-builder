@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         }
 
         /// <summary>
-        /// Escapes column keys that start with '$' to '_$' for serialization.
+        /// Escapes column keys that start with '$' by prefixing them with 'DAB_ESCAPE$' for serialization.
         /// </summary>
         private static void EscapeDollaredColumns(SourceDefinition sourceDef)
         {
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         }
 
         /// <summary>
-        /// Unescapes column keys that start with '_$' to '$' for deserialization.
+        /// Unescapes column keys that start with 'DAB_ESCAPE$' by removing the prefix and restoring the original '$' for deserialization.
         /// </summary>
         private static void UnescapeDollaredColumns(SourceDefinition sourceDef)
         {

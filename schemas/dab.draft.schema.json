@@ -1399,10 +1399,10 @@
       "oneOf":[
         {
           "type": [ "boolean", "string" ],
-          "pattern": "^(true|false|1|0|@env('.?')|@akv('.?'))$"
+          "pattern": "^(true|false|1|0|@env\\('.*'\\)|@akv\\('.*'\\))$"
         }
       ]
-    }
+    },
     "action": {
       "oneOf": [
         {

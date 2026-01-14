@@ -663,6 +663,34 @@ type Moon {
                                     },
                                     ""entities"":{ }
                                 }";
+        public const string CONFIG_FILE_WITH_BOOLEAN_AS_ENV = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""sample-conn-string""
+                                    },
+                                    ""runtime"": {
+                                        ""health"": {
+                                            ""enabled"": <REPLACE_VALUE>
+                                        },
+                                        ""rest"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/api""
+                                        },
+                                        ""graphql"": {
+                                            ""enabled"": true,
+                                            ""path"": ""/graphql"",
+                                            ""allow-introspection"": true
+                                        },
+                                        ""host"": {
+                                            ""authentication"": {
+                                                ""provider"": ""AppService""
+                                            }
+                                        }
+                                    },
+                                    ""entities"":{ }
+                                }";
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -1816,12 +1844,46 @@ type Moon {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
-
+        
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
             JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
-            Assert.IsTrue(result.IsValid);
+            Assert.AreEqual("", String.Join('\n', result.ValidationErrors?.Select(s => $"{s.Message} at {s.Path} {s.LineNumber} {s.LinePosition}") ?? []) , "Expected no validation errors.");
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            
+            Assert.IsTrue(result.IsValid);
+            schemaValidatorLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
+        [DataTestMethod]     
+        [DataRow("true", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
+        [DataRow("false", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
+        [DataRow("\"true\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
+        [DataRow("\"false\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
+        [DataRow("\"@env('SAMPLE')\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
+        [DataRow("\"@akv('SAMPLE')\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
+        public void TestBasicConfigSchemaWithFlexibleBoolean(string Value)
+        {
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            string jsonData = CONFIG_FILE_WITH_BOOLEAN_AS_ENV.Replace("<REPLACE_VALUE>", Value);
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
+            Assert.AreEqual("", String.Join('\n', result.ValidationErrors?.Select(s => $"{s.Message} at {s.Path} {s.LineNumber} {s.LinePosition}") ?? []), "Expected no validation errors.");
+
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+
+            Assert.IsTrue(result.IsValid);
             schemaValidatorLogger.Verify(
                 x => x.Log(
                     LogLevel.Information,
@@ -3368,7 +3430,7 @@ type Moon {
                 HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Post);
                 string requestBody = @"{
                         ""title"": ""Harry Potter and the Order of Phoenix"",
-                        ""publisher_id"": 1234";
+                        ""publisher_id"": 1234 }";
 
                 if (includeExtraneousFieldInRequestBody)
                 {

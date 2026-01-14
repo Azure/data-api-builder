@@ -28,11 +28,22 @@ public class BoolJsonConverter : JsonConverter<bool>
 
             bool result = tempBoolean?.ToLower() switch
             {
-                "true" or "1" => true,
+                //numeric values have to be checked here as they may come from string replacement 
+                "true" or "1"=> true,
                 "false" or "0" => false,
                 _ => throw new JsonException($"Invalid boolean value: {tempBoolean}. Specify either true or false."),
             };
 
+            return result;
+        }
+        else if (reader.TokenType == JsonTokenType.Number)
+        {
+            bool result = reader.GetInt32() switch
+            {
+                1 => true,
+                0 => false,
+                _  => throw new JsonException($"Invalid boolean value. Specify either true or false."),
+            };
             return result;
         }
         else

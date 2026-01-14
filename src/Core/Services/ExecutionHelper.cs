@@ -632,7 +632,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // the relationship field path in the key. For example:
                 // - /entity/items[0]/rel1/nested uses key ::3::rel1
                 // - /entity/items[0]/rel2/nested uses key ::3::rel2
-                // - /entity/items[0]/rel1/nested/deeper uses key ::4::rel1
+                // - /entity/items[0]/rel1/nested/deeper uses key ::4::rel1::nested
                 // - /entity/items[0]/rel1/nested2/deeper uses key ::4::rel1::nested2
                 string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
                 string relationshipPath = GetRelationshipPathSuffix(context.Path.Parent);

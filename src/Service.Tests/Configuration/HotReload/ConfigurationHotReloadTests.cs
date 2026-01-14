@@ -90,7 +90,7 @@ public class ConfigurationHotReloadTests
                             ""allow-credentials"": false
                           },
                           ""authentication"": {
-                            ""provider"": ""StaticWebApps""
+                            ""provider"": ""AppService""
                           },
                           ""mode"": ""development""
                         },

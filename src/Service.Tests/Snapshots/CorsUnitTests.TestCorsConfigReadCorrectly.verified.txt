@@ -3,6 +3,6 @@
     AllowCredentials: false
   },
   Authentication: {
-    Provider: StaticWebApps
+    Provider: AppService
   }
 }

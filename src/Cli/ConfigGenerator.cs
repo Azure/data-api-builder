@@ -688,13 +688,14 @@ namespace Cli
             if (options.DataSourceHealthName is not null)
             {
                 // If there's no existing health config, create one with the name
+                // Note: passing enabled: null uses the default value (true) from the base constructor
                 if (datasourceHealthCheckConfig is null)
                 {
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
                 }
                 else
                 {
-                    // Update the existing health config with the new name
+                    // Update the existing health config with the new name while preserving other settings
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
                         enabled: datasourceHealthCheckConfig.Enabled,
                         name: options.DataSourceHealthName,

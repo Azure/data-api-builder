@@ -41,8 +41,8 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean",
-              "description": "Enable health check endpoint",
+              "$ref": "#/$defs/boolean-or-string",
+              "description": "Enable health check endpoint for something",
               "default": true,
               "additionalProperties": false
             },
@@ -618,7 +618,7 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Enable health check endpoint globally",
               "default": true,
               "additionalProperties": false
@@ -1391,10 +1391,18 @@
               "type": "string"
             }
           },
-          "required": ["singular"]
+          "required": [ "singular" ]
         }
       ]
     },
+    "boolean-or-string": {
+      "oneOf":[
+        {
+          "type": [ "boolean", "string" ],
+          "pattern": "^(true|false|1|0|@env('.?')|@akv('.?'))$"
+        }
+      ]
+    }
     "action": {
       "oneOf": [
         {

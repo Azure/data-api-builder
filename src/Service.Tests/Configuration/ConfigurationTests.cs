@@ -663,23 +663,27 @@ type Moon {
                                     },
                                     ""entities"":{ }
                                 }";
-        public const string CONFIG_FILE_WITH_BOOLEAN_AS_ENV = @"{
+
+        public  const string CONFIG_FILE_WITH_BOOLEAN_AS_ENV = @"{
                                     // Link for latest draft schema.
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
                                     ""data-source"": {
-                                    ""database-type"": ""mssql"",
-                                    ""connection-string"": ""sample-conn-string""
+                                        ""database-type"": ""mssql"",
+                                        ""connection-string"": ""sample-conn-string"",
+                                        ""health"": {
+                                            ""enabled"": <REPLACE_VALUE>
+                                        }
                                     },
                                     ""runtime"": {
                                         ""health"": {
                                             ""enabled"": <REPLACE_VALUE>
                                         },
                                         ""rest"": {
-                                            ""enabled"": true,
+                                            ""enabled"": <REPLACE_VALUE>,
                                             ""path"": ""/api""
                                         },
                                         ""graphql"": {
-                                            ""enabled"": true,
+                                            ""enabled"": <REPLACE_VALUE>,
                                             ""path"": ""/graphql"",
                                             ""allow-introspection"": true
                                         },
@@ -687,10 +691,18 @@ type Moon {
                                             ""authentication"": {
                                                 ""provider"": ""AppService""
                                             }
+                                        },
+                                        ""telemetry"": {
+                                            ""application-insights"":{
+                                                ""enabled"":  <REPLACE_VALUE>,
+                                                ""connection-string"":""sample-ai-connection-string""
+                                            }
+
                                         }
+
                                     },
                                     ""entities"":{ }
-                                }";
+                                }" ;
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -1863,12 +1875,14 @@ type Moon {
         }
 
         [DataTestMethod]     
-        [DataRow("true", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
-        [DataRow("false", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
-        [DataRow("\"true\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
-        [DataRow("\"false\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
-        [DataRow("\"@env('SAMPLE')\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
-        [DataRow("\"@akv('SAMPLE')\"", DisplayName = "Validates schema of the config file with boolean values set using environment variables.")]
+        [DataRow("true", DisplayName = "Validates variable boolean schema for true value")]
+        [DataRow("false", DisplayName = "Validates variable boolean schema for false value.")]
+        [DataRow("\"true\"", DisplayName = "Validates variable boolean schema for true as string.")]
+        [DataRow("\"false\"", DisplayName = "Validates variable boolean schema for false as string.")]
+        [DataRow("\"1\"", DisplayName = "Validates variable boolean schema for 1 as string.")]
+        [DataRow("\"0\"", DisplayName = "Validates variable boolean schema for 0as string.")]
+        [DataRow("\"@env('SAMPLE')\"", DisplayName = "Validates variable boolean schema for environment variables.")]
+        [DataRow("\"@akv('SAMPLE')\"", DisplayName = "Validates variable boolean schema for keyvaul variables.")]
         public void TestBasicConfigSchemaWithFlexibleBoolean(string Value)
         {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
@@ -1881,9 +1895,9 @@ type Moon {
             JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.AreEqual("", String.Join('\n', result.ValidationErrors?.Select(s => $"{s.Message} at {s.Path} {s.LineNumber} {s.LinePosition}") ?? []), "Expected no validation errors.");
 
-            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors),"Validation Erros null of empty");
 
-            Assert.IsTrue(result.IsValid);
+            Assert.IsTrue(result.IsValid,"Result should be valid");
             schemaValidatorLogger.Verify(
                 x => x.Log(
                     LogLevel.Information,

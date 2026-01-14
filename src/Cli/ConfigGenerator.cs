@@ -688,7 +688,7 @@ namespace Cli
             if (options.DataSourceHealthName is not null)
             {
                 // If there's no existing health config, create one with the name
-                // Note: passing enabled: null uses the default value (true) from the base constructor
+                // Note: passing enabled: null triggers the base constructor logic that sets Enabled = true
                 if (datasourceHealthCheckConfig is null)
                 {
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
@@ -696,10 +696,12 @@ namespace Cli
                 else
                 {
                     // Update the existing health config with the new name while preserving other settings
+                    // Preserve threshold only if it was explicitly set by the user
+                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs ? datasourceHealthCheckConfig.ThresholdMs : null;
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
                         enabled: datasourceHealthCheckConfig.Enabled,
                         name: options.DataSourceHealthName,
-                        thresholdMs: datasourceHealthCheckConfig.UserProvidedThresholdMs ? datasourceHealthCheckConfig.ThresholdMs : null);
+                        thresholdMs: thresholdToPreserve);
                 }
             }
 

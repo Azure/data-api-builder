@@ -596,5 +596,157 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
             return new(_databaseTable, table2);
         }
+
+        /// <summary>
+        /// Tests the edge case where a column name starts with the escape sequence 'DAB_ESCAPE$'.
+        /// This validates the double-encoding mechanism:
+        /// - Original: 'DAB_ESCAPE$FirstName' -> Serialized: 'DAB_ESCAPE$DAB_ESCAPE$FirstName' -> Deserialized: 'DAB_ESCAPE$FirstName'
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTableSerializationDeserialization_WithEscapeSequenceInColumnName()
+        {
+            // Create a column with the escape sequence in its name
+            ColumnDefinition columnDef = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test"), false);
+            string columnName = "DAB_ESCAPE$FirstName";
+            SourceDefinition sourceDef = new()
+            {
+                IsInsertDMLTriggerEnabled = false,
+                IsUpdateDMLTriggerEnabled = false,
+                PrimaryKey = new List<string>() { columnName },
+            };
+            sourceDef.Columns.Add(columnName, columnDef);
+
+            DatabaseTable databaseTable = new DatabaseTable()
+            {
+                Name = "test_table",
+                SourceType = EntitySourceType.Table,
+                SchemaName = "dbo",
+                TableDefinition = sourceDef,
+            };
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                }
+            };
+
+            // Serialize and verify double-escaping
+            string serialized = JsonSerializer.Serialize(databaseTable, _options);
+            Assert.IsTrue(serialized.Contains("DAB_ESCAPE$DAB_ESCAPE$FirstName"),
+                "Serialized JSON should contain double-escaped column name.");
+
+            // Deserialize and verify the column name is correctly restored
+            DatabaseTable deserialized = JsonSerializer.Deserialize<DatabaseTable>(serialized, _options)!;
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("DAB_ESCAPE$FirstName"),
+                "Deserialized table should have the original column name with escape sequence.");
+            Assert.AreEqual(1, deserialized.TableDefinition.Columns.Count,
+                "Should have exactly one column.");
+        }
+
+        /// <summary>
+        /// Tests the edge case with multiple columns having different patterns:
+        /// - Regular column: 'RegularColumn'
+        /// - Dollar-prefixed column: '$DollarColumn'
+        /// - Escape-sequence-prefixed column: 'DAB_ESCAPE$EscapeColumn'
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTableSerializationDeserialization_WithMixedColumnNames()
+        {
+            ColumnDefinition columnDef1 = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test1"), false);
+            ColumnDefinition columnDef2 = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test2"), false);
+            ColumnDefinition columnDef3 = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test3"), false);
+
+            SourceDefinition sourceDef = new()
+            {
+                IsInsertDMLTriggerEnabled = false,
+                IsUpdateDMLTriggerEnabled = false,
+                PrimaryKey = new List<string>() { "RegularColumn", "$DollarColumn", "DAB_ESCAPE$EscapeColumn" },
+            };
+            sourceDef.Columns.Add("RegularColumn", columnDef1);
+            sourceDef.Columns.Add("$DollarColumn", columnDef2);
+            sourceDef.Columns.Add("DAB_ESCAPE$EscapeColumn", columnDef3);
+
+            DatabaseTable databaseTable = new DatabaseTable()
+            {
+                Name = "test_table",
+                SourceType = EntitySourceType.Table,
+                SchemaName = "dbo",
+                TableDefinition = sourceDef,
+            };
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                }
+            };
+
+            // Serialize
+            string serialized = JsonSerializer.Serialize(databaseTable, _options);
+
+            // Verify serialization patterns
+            Assert.IsTrue(serialized.Contains("RegularColumn"),
+                "Regular column should remain unchanged in serialization.");
+            Assert.IsTrue(serialized.Contains("DAB_ESCAPE$DollarColumn"),
+                "Dollar-prefixed column should be escaped.");
+            Assert.IsTrue(serialized.Contains("DAB_ESCAPE$DAB_ESCAPE$EscapeColumn"),
+                "Escape-sequence-prefixed column should be double-escaped.");
+
+            // Deserialize and verify all columns are correctly restored
+            DatabaseTable deserialized = JsonSerializer.Deserialize<DatabaseTable>(serialized, _options)!;
+            Assert.AreEqual(3, deserialized.TableDefinition.Columns.Count, "Should have three columns.");
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("RegularColumn"),
+                "Should have RegularColumn.");
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("$DollarColumn"),
+                "Should have $DollarColumn.");
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("DAB_ESCAPE$EscapeColumn"),
+                "Should have DAB_ESCAPE$EscapeColumn.");
+        }
+
+        /// <summary>
+        /// Tests the edge case where a column name is exactly 'DAB_ESCAPE$'.
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTableSerializationDeserialization_WithExactEscapeSequence()
+        {
+            ColumnDefinition columnDef = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test"), false);
+            string columnName = "DAB_ESCAPE$";
+            SourceDefinition sourceDef = new()
+            {
+                IsInsertDMLTriggerEnabled = false,
+                IsUpdateDMLTriggerEnabled = false,
+                PrimaryKey = new List<string>() { columnName },
+            };
+            sourceDef.Columns.Add(columnName, columnDef);
+
+            DatabaseTable databaseTable = new DatabaseTable()
+            {
+                Name = "test_table",
+                SourceType = EntitySourceType.Table,
+                SchemaName = "dbo",
+                TableDefinition = sourceDef,
+            };
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                }
+            };
+
+            // Serialize and deserialize
+            string serialized = JsonSerializer.Serialize(databaseTable, _options);
+            DatabaseTable deserialized = JsonSerializer.Deserialize<DatabaseTable>(serialized, _options)!;
+
+            // Verify the column name is correctly restored
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("DAB_ESCAPE$"),
+                "Deserialized table should have the exact escape sequence as column name.");
+            Assert.AreEqual(1, deserialized.TableDefinition.Columns.Count,
+                "Should have exactly one column.");
+        }
     }
 }

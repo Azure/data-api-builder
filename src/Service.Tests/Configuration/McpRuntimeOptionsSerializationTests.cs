@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public void TestMcpRuntimeOptionsSerializationWithLongDescription()
         {
             // Arrange
-            string longDescription = new string('A', 5000); // 5000 character description
+            string longDescription = new('A', 5000); // 5000 character description
             McpRuntimeOptions mcpOptions = new(
                 Enabled: true,
                 Path: "/mcp",

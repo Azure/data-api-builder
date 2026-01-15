@@ -282,10 +282,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     };
                 }
             }
-            else
-            {
-                schema["properties"] = new Dictionary<string, object>();
-            }
 
             return JsonSerializer.SerializeToElement(schema);
         }
@@ -322,9 +318,10 @@ namespace Azure.DataApiBuilder.Mcp.Core
             Dictionary<string, object?> responseData = new()
             {
                 ["entity"] = entityName,
-                ["message"] = "Execution successful"
+                ["message"] = "Stored procedure executed successfully"
             };
 
+            // Include parameters if any were provided
             if (parameters?.Count > 0)
             {
                 responseData["parameters"] = parameters;
@@ -333,6 +330,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             // Handle different result types
             if (queryResult is OkObjectResult okResult && okResult.Value != null)
             {
+                // Extract the actual data from the action result
                 if (okResult.Value is JsonDocument jsonDoc)
                 {
                     JsonElement root = jsonDoc.RootElement;
@@ -344,6 +342,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
+                    // Serialize the value directly
                     JsonElement serialized = JsonSerializer.SerializeToElement(okResult.Value);
                     responseData["value"] = serialized;
                 }
@@ -358,10 +357,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
             else if (queryResult is UnauthorizedObjectResult)
             {
-                return McpErrorHelpers.PermissionDenied(toolName, entityName, "execute", "Unauthorized", logger);
+                return McpErrorHelpers.PermissionDenied(toolName, entityName, "execute", "You do not have permission to execute this entity", logger);
             }
             else
             {
+                // Empty or unknown result
                 responseData["value"] = JsonSerializer.SerializeToElement(Array.Empty<object>());
             }
 

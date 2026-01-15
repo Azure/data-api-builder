@@ -4,7 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -227,6 +229,199 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ,INCLUDE_NULL_VALUES";
 
             await InFilterOneToOneJoinQuery(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Verifies that the nested reviews connection under books correctly paginates
+        /// when there are more than 100 reviews for a single book, while also
+        /// exercising sibling navigation properties (websiteplacement and authors)
+        /// under RBAC in the same request. The first page should contain 100 reviews
+        /// and the endCursor should encode the id of the last review on that page.
+        /// </summary>
+        [TestMethod]
+        public async Task NestedReviewsConnection_WithSiblings_PaginatesMoreThanHundredItems()
+        {
+            // Seed > 100 reviews for book id 1. Use a distinct id range so we can
+            // clean up without impacting existing rows used by other tests.
+            StringBuilder sb = new();
+            sb.AppendLine("SET IDENTITY_INSERT reviews ON;");
+            sb.AppendLine("INSERT INTO reviews(id, book_id, content) VALUES");
+
+            for (int id = 2000; id <= 2100; id++)
+            {
+                string line = $"    ({id}, 1, 'Bulk review {id}')";
+                if (id < 2100)
+                {
+                    line += ",";
+                }
+                else
+                {
+                    line += ";";
+                }
+
+                sb.AppendLine(line);
+            }
+
+            sb.AppendLine("SET IDENTITY_INSERT reviews OFF;");
+            string seedReviewsSql = sb.ToString();
+
+            string cleanupReviewsSql = "DELETE FROM reviews WHERE id BETWEEN 2000 AND 2100;";
+
+            try
+            {
+                // Seed additional data for this test only.
+                await _queryExecutor.ExecuteQueryAsync<object>(
+                    seedReviewsSql,
+                    dataSourceName: string.Empty,
+                    parameters: null,
+                    dataReaderHandler: null);
+
+                string graphQLQueryName = "books";
+                string graphQLQuery = @"query {
+                    books(filter: { id: { eq: 1 } }) {
+                        items {
+                            id
+                            title
+                            websiteplacement {
+                                price
+                            }
+                            reviews(first: 100) {
+                                items {
+                                    id
+                                }
+                                endCursor
+                                hasNextPage
+                            }
+                            authors {
+                                items {
+                                    name
+                                }
+                            }
+                        }
+                    }
+                }";
+
+                JsonElement actual = await ExecuteGraphQLRequestAsync(
+                    graphQLQuery,
+                    graphQLQueryName,
+                    isAuthenticated: true,
+                    clientRoleHeader: "authenticated");
+
+                JsonElement book = actual.GetProperty("items")[0];
+                JsonElement websiteplacement = book.GetProperty("websiteplacement");
+                JsonElement authorsConnection = book.GetProperty("authors");
+                JsonElement reviewsConnection = book.GetProperty("reviews");
+                JsonElement reviewItems = reviewsConnection.GetProperty("items");
+
+                // First page should contain exactly 100 reviews when more than 100 exist.
+                Assert.AreEqual(100, reviewItems.GetArrayLength(), "Expected first page of reviews to contain 100 items.");
+
+                bool hasNextPage = reviewsConnection.GetProperty("hasNextPage").GetBoolean();
+                Assert.IsTrue(hasNextPage, "Expected hasNextPage to be true when more than 100 reviews exist.");
+
+                string endCursor = reviewsConnection.GetProperty("endCursor").GetString();
+                Assert.IsFalse(string.IsNullOrEmpty(endCursor), "Expected endCursor to be populated when hasNextPage is true.");
+
+                // Decode the opaque cursor and verify it encodes the id of the
+                // last review on the first page.
+                int lastReviewIdOnPage = reviewItems[reviewItems.GetArrayLength() - 1].GetProperty("id").GetInt32();
+
+                string decodedCursorJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(endCursor));
+                using JsonDocument cursorDoc = JsonDocument.Parse(decodedCursorJson);
+                JsonElement cursorArray = cursorDoc.RootElement;
+
+                bool foundIdFieldInCursor = false;
+                foreach (JsonElement field in cursorArray.EnumerateArray())
+                {
+                    if (field.GetProperty("FieldName").GetString() == "id")
+                    {
+                        int cursorId = field.GetProperty("FieldValue").GetInt32();
+                        Assert.AreEqual(lastReviewIdOnPage, cursorId, "endCursor should encode the id of the last review on the first page.");
+                        foundIdFieldInCursor = true;
+                        break;
+                    }
+                }
+
+                Assert.IsTrue(foundIdFieldInCursor, "endCursor payload should include a pagination field for id.");
+
+                // Also validate that sibling navigation properties under RBAC are
+                // materialized as part of the same query and that their results
+                // match the outcome of equivalent SQL JSON queries.
+                Assert.AreEqual(JsonValueKind.Object, websiteplacement.ValueKind, "Expected websiteplacement object to be materialized.");
+
+                JsonElement authorsItems = authorsConnection.GetProperty("items");
+                Assert.IsTrue(authorsItems.GetArrayLength() > 0, "Expected authors collection to be materialized with at least one author.");
+
+                // Compare the full nested tree (id, title, websiteplacement, reviews.items, authors.items)
+                // against an equivalent SQL JSON query. Shape the SQL JSON to match the GraphQL
+                // "book" object so we can use the actual result directly for comparison.
+                string fullTreeSql = @"
+                    SELECT
+                        [b].[id] AS [id],
+                        [b].[title] AS [title],
+                        JSON_QUERY((
+                            SELECT TOP 1 [wp].[price] AS [price]
+                            FROM [dbo].[book_website_placements] AS [wp]
+                            WHERE [wp].[book_id] = [b].[id]
+                            ORDER BY [wp].[id] ASC
+                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                        )) AS [websiteplacement],
+                        JSON_QUERY((
+                            SELECT
+                                JSON_QUERY((
+                                    SELECT TOP 100 [r].[id] AS [id]
+                                    FROM [dbo].[reviews] AS [r]
+                                    WHERE [r].[book_id] = [b].[id]
+                                    ORDER BY [r].[id] ASC
+                                    FOR JSON PATH, INCLUDE_NULL_VALUES
+                                )) AS [items]
+                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                        )) AS [reviews],
+                        JSON_QUERY((
+                            SELECT
+                                JSON_QUERY((
+                                    SELECT [a].[name] AS [name]
+                                    FROM [dbo].[authors] AS [a]
+                                    INNER JOIN [dbo].[book_author_link] AS [bal]
+                                        ON [bal].[author_id] = [a].[id]
+                                    WHERE [bal].[book_id] = [b].[id]
+                                    ORDER BY [a].[id] ASC
+                                    FOR JSON PATH, INCLUDE_NULL_VALUES
+                                )) AS [items]
+                            FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                        )) AS [authors]
+                    FROM [dbo].[books] AS [b]
+                    WHERE [b].[id] = 1
+                    FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER";
+
+                string expectedFullTreeJson = await GetDatabaseResultAsync(fullTreeSql);
+
+                // Use the actual GraphQL "book" object for comparison, trimming pagination metadata
+                // (endCursor, hasNextPage) that cannot be reproduced via SQL.
+                JsonNode actualBookNode = JsonNode.Parse(book.ToString());
+                if (actualBookNode is JsonObject bookObject &&
+                    bookObject["reviews"] is JsonObject reviewsObject)
+                {
+                    reviewsObject.Remove("endCursor");
+                    reviewsObject.Remove("hasNextPage");
+                }
+
+                string actualComparableJson = actualBookNode.ToJsonString();
+
+                SqlTestHelper.PerformTestEqualJsonStrings(
+                    expectedFullTreeJson,
+                    actualComparableJson);
+            }
+            finally
+            {
+                // Clean up the seeded reviews so other tests relying on the base
+                // fixture data remain unaffected.
+                await _queryExecutor.ExecuteQueryAsync<object>(
+                    cleanupReviewsSql,
+                    dataSourceName: string.Empty,
+                    parameters: null,
+                    dataReaderHandler: null);
+            }
         }
 
         /// <summary>

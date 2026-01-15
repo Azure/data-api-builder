@@ -51,7 +51,7 @@ public class BoolJsonConverter : JsonConverter<bool>
             return reader.GetBoolean();
         }
 
-        throw new JsonException();
+        throw new JsonException("Invalid JSON value. Expected a boolean literal or a valid @expression.");
     }
 
     public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options)

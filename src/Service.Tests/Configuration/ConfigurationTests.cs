@@ -664,7 +664,7 @@ type Moon {
                                     ""entities"":{ }
                                 }";
 
-        public  const string CONFIG_FILE_WITH_BOOLEAN_AS_ENV = @"{
+        public const string CONFIG_FILE_WITH_BOOLEAN_AS_ENV = @"{
                                     // Link for latest draft schema.
                                     ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
                                     ""data-source"": {
@@ -702,7 +702,7 @@ type Moon {
 
                                     },
                                     ""entities"":{ }
-                                }" ;
+                                }";
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -1856,13 +1856,13 @@ type Moon {
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
-        
+
             JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
 
             JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
-            Assert.AreEqual("", String.Join('\n', result.ValidationErrors?.Select(s => $"{s.Message} at {s.Path} {s.LineNumber} {s.LinePosition}") ?? []) , "Expected no validation errors.");
+            Assert.AreEqual("", String.Join('\n', result.ValidationErrors?.Select(s => $"{s.Message} at {s.Path} {s.LineNumber} {s.LinePosition}") ?? []), "Expected no validation errors.");
             Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
-            
+
             Assert.IsTrue(result.IsValid);
             schemaValidatorLogger.Verify(
                 x => x.Log(
@@ -1874,7 +1874,7 @@ type Moon {
                 Times.Once);
         }
 
-        [DataTestMethod]     
+        [DataTestMethod]
         [DataRow("true", DisplayName = "Validates variable boolean schema for true value")]
         [DataRow("false", DisplayName = "Validates variable boolean schema for false value.")]
         [DataRow("\"true\"", DisplayName = "Validates variable boolean schema for true as string.")]
@@ -1895,9 +1895,9 @@ type Moon {
             JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
             Assert.AreEqual("", String.Join('\n', result.ValidationErrors?.Select(s => $"{s.Message} at {s.Path} {s.LineNumber} {s.LinePosition}") ?? []), "Expected no validation errors.");
 
-            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors),"Validation Erros null of empty");
+            Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors), "Validation Erros null of empty");
 
-            Assert.IsTrue(result.IsValid,"Result should be valid");
+            Assert.IsTrue(result.IsValid, "Result should be valid");
             schemaValidatorLogger.Verify(
                 x => x.Log(
                     LogLevel.Information,

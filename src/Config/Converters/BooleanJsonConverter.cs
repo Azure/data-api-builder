@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// other converters (for example, the string converter) before the value is parsed here.
 public class BoolJsonConverter : JsonConverter<bool>
 {
-    
+
     public override bool Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType is JsonTokenType.Null)
@@ -29,7 +29,7 @@ public class BoolJsonConverter : JsonConverter<bool>
             bool result = tempBoolean?.ToLower() switch
             {
                 //numeric values have to be checked here as they may come from string replacement 
-                "true" or "1"=> true,
+                "true" or "1" => true,
                 "false" or "0" => false,
                 _ => throw new JsonException($"Invalid boolean value: {tempBoolean}. Specify either true or false."),
             };
@@ -42,7 +42,7 @@ public class BoolJsonConverter : JsonConverter<bool>
             {
                 1 => true,
                 0 => false,
-                _  => throw new JsonException($"Invalid boolean value. Specify either true or false."),
+                _ => throw new JsonException($"Invalid boolean value. Specify either true or false."),
             };
             return result;
         }

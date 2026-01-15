@@ -14,8 +14,8 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         [DataRow(true, DisplayName = "ApplicationInsights.Enabled set to true (literal bool)")]
         [DataRow(false, DisplayName = "ApplicationInsights.Enabled set to false (literal bool)")]
-        public void TestTelemetryApplicationInsightsEnabled( bool expected)
+        public void TestTelemetryApplicationInsightsEnabled(bool expected)
         {
             TestTelemetryApplicationInsightsEnabledInternal(expected.ToString().ToLower(), expected);
         }
@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("0", false, DisplayName = "ApplicationInsights.Enabled from string '0'")]
         public void TestTelemetryApplicationInsightsEnabledFromString(string configSetting, bool expected)
         {
-            
+
             TestTelemetryApplicationInsightsEnabledInternal($"\"{configSetting}\"", expected);
         }
 
@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
         }
-        public static  void TestTelemetryApplicationInsightsEnabledInternal(string configValue, bool expected)
+        public static void TestTelemetryApplicationInsightsEnabledInternal(string configValue, bool expected)
         {
             string configJson = @"{
                     ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
@@ -324,7 +324,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }";
 
             // Arrange
-            Mock    <ILogger> mockLogger = new();
+            Mock<ILogger> mockLogger = new();
 
             // Act
             bool isParsed = RuntimeConfigLoader.TryParseConfig(
@@ -340,11 +340,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(isParsed);
             Assert.IsNull(runtimeConfig);
 
-            Assert.AreEqual(1,mockLogger.Invocations.Count, "Should raise 1 exception");
-            Assert.AreEqual(5,mockLogger.Invocations[0].Arguments.Count, "Log should have 4 arguments");
+            Assert.AreEqual(1, mockLogger.Invocations.Count, "Should raise 1 exception");
+            Assert.AreEqual(5, mockLogger.Invocations[0].Arguments.Count, "Log should have 4 arguments");
             var ConfigException = mockLogger.Invocations[0].Arguments[3] as JsonException;
             Assert.IsInstanceOfType(ConfigException, typeof(JsonException), "Should have raised a Json Exception");
-            Assert.AreEqual(ConfigException.Message,message);
+            Assert.AreEqual(ConfigException.Message, message);
         }
 
         /// <summary>

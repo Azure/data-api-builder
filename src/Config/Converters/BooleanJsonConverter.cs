@@ -18,7 +18,7 @@ public class BoolJsonConverter : JsonConverter<bool>
         if (reader.TokenType is JsonTokenType.Null)
         {
 
-            throw new JsonException();
+            throw new JsonException("Unexpected null JSON token. Expected a boolean literal or a valid @expression.");
         }
 
         if (reader.TokenType == JsonTokenType.String)

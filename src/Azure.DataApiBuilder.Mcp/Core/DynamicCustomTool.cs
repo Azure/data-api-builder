@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </summary>
         private JsonElement BuildInputSchema()
         {
-            var schema = new Dictionary<string, object>
+            Dictionary<string, object> schema = new()
             {
                 ["type"] = "object",
                 ["properties"] = new Dictionary<string, object>()
@@ -268,9 +268,9 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             if (_entity.Source.Parameters != null && _entity.Source.Parameters.Any())
             {
-                var properties = (Dictionary<string, object>)schema["properties"];
+                Dictionary<string, object> properties = (Dictionary<string, object>)schema["properties"];
 
-                foreach (var param in _entity.Source.Parameters)
+                foreach (ParameterMetadata param in _entity.Source.Parameters)
                 {
                     // Note: Parameter type information is not available in ParameterMetadata,
                     // so we allow multiple JSON types to match the behavior of GetParameterValue

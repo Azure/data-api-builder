@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DynamicCustomTool tool = new(entityName, entity);
 
             // Act
-            var metadata = tool.GetToolMetadata();
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
 
             // Assert
             Assert.AreEqual(expectedToolName, metadata.Name);
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DynamicCustomTool tool = new("GetBook", entity);
 
             // Act
-            var metadata = tool.GetToolMetadata();
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
 
             // Assert
             Assert.AreEqual(description, metadata.Description);
@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DynamicCustomTool tool = new("GetBook", entity);
 
             // Act
-            var metadata = tool.GetToolMetadata();
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
 
             // Assert
             Assert.IsTrue(metadata.Description?.Contains("get_book") ?? false);
@@ -136,13 +136,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DynamicCustomTool tool = new("GetBooks", entity);
 
             // Act
-            var metadata = tool.GetToolMetadata();
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
 
             // Assert
             Assert.IsNotNull(metadata.InputSchema);
-            var schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
-            Assert.IsTrue(schemaObj.RootElement.TryGetProperty("properties", out var props));
+            JsonDocument schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
+            Assert.IsTrue(schemaObj.RootElement.TryGetProperty("properties", out JsonElement props));
             Assert.AreEqual(JsonValueKind.Object, props.ValueKind);
+            Assert.AreEqual(0, props.EnumerateObject().Count());
         }
 
         /// <summary>
@@ -152,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public void GetToolMetadata_GeneratesSchemaWithParameters_WhenParametersProvided()
         {
             // Arrange
-            var parameters = new[]
+            ParameterMetadata[] parameters = new[]
             {
                 new ParameterMetadata { Name = "id", Description = "The book ID" },
                 new ParameterMetadata { Name = "title", Description = "The book title" }
@@ -161,16 +162,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DynamicCustomTool tool = new("GetBook", entity);
 
             // Act
-            var metadata = tool.GetToolMetadata();
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
 
             // Assert
-            var schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
-            Assert.IsTrue(schemaObj.RootElement.TryGetProperty("properties", out var props));
-            Assert.IsTrue(props.TryGetProperty("id", out var idParam));
-            Assert.IsTrue(idParam.TryGetProperty("description", out var idDesc));
+            JsonDocument schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
+            Assert.IsTrue(schemaObj.RootElement.TryGetProperty("properties", out JsonElement props));
+            Assert.IsTrue(props.TryGetProperty("id", out JsonElement idParam));
+            Assert.IsTrue(idParam.TryGetProperty("description", out JsonElement idDesc));
             Assert.AreEqual("The book ID", idDesc.GetString());
-            Assert.IsTrue(props.TryGetProperty("title", out var titleParam));
-            Assert.IsTrue(titleParam.TryGetProperty("description", out var titleDesc));
+            Assert.IsTrue(props.TryGetProperty("title", out JsonElement titleParam));
+            Assert.IsTrue(titleParam.TryGetProperty("description", out JsonElement titleDesc));
             Assert.AreEqual("The book title", titleDesc.GetString());
         }
 
@@ -181,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public void GetToolMetadata_UsesDefaultParameterDescription_WhenNotProvided()
         {
             // Arrange
-            var parameters = new[]
+            ParameterMetadata[] parameters = new[]
             {
                 new ParameterMetadata { Name = "userId" }
             };
@@ -189,13 +190,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             DynamicCustomTool tool = new("GetUser", entity);
 
             // Act
-            var metadata = tool.GetToolMetadata();
+            ModelContextProtocol.Protocol.Tool metadata = tool.GetToolMetadata();
 
             // Assert
-            var schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
-            Assert.IsTrue(schemaObj.RootElement.TryGetProperty("properties", out var props));
-            Assert.IsTrue(props.TryGetProperty("userId", out var userIdParam));
-            Assert.IsTrue(userIdParam.TryGetProperty("description", out var desc));
+            JsonDocument schemaObj = JsonDocument.Parse(metadata.InputSchema.GetRawText());
+            Assert.IsTrue(schemaObj.RootElement.TryGetProperty("properties", out JsonElement props));
+            Assert.IsTrue(props.TryGetProperty("userId", out JsonElement userIdParam));
+            Assert.IsTrue(userIdParam.TryGetProperty("description", out JsonElement desc));
             Assert.IsTrue(desc.GetString()!.Contains("userId"));
         }
 

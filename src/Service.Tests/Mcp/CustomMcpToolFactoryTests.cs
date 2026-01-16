@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public void CreateCustomTools_ReturnsEmptyCollection_WhenConfigIsNull()
         {
             // Act
-            var tools = CustomMcpToolFactory.CreateCustomTools(null!);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(null!);
 
             // Assert
             Assert.IsNotNull(tools);
@@ -38,10 +38,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public void CreateCustomTools_ReturnsEmptyCollection_WhenNoEntities()
         {
             // Arrange
-            var config = CreateEmptyConfig();
+            RuntimeConfig config = CreateEmptyConfig();
 
             // Act
-            var tools = CustomMcpToolFactory.CreateCustomTools(config);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config);
 
             // Assert
             Assert.IsNotNull(tools);
@@ -56,10 +56,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public void CreateCustomTools_FiltersEntitiesCorrectly()
         {
             // Arrange
-            var config = CreateConfigWithMixedEntities();
+            RuntimeConfig config = CreateConfigWithMixedEntities();
 
             // Act
-            var tools = CustomMcpToolFactory.CreateCustomTools(config);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config);
 
             // Assert
             Assert.IsNotNull(tools);
@@ -69,38 +69,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Test that CreateCustomTools continues processing when one entity fails.
-        /// </summary>
-        [TestMethod]
-        public void CreateCustomTools_ContinuesOnFailure()
-        {
-            // Arrange
-            var config = CreateConfigWithInvalidEntity();
-
-            // Act
-            var tools = CustomMcpToolFactory.CreateCustomTools(config);
-
-            // Assert
-            Assert.IsNotNull(tools);
-            // Should skip invalid entities and continue
-            Assert.AreEqual(1, tools.Count());
-        }
-
-        /// <summary>
         /// Test that CreateCustomTools generates correct metadata for tools.
         /// </summary>
         [TestMethod]
         public void CreateCustomTools_GeneratesCorrectMetadata()
         {
             // Arrange
-            var config = CreateConfigWithDescribedEntity();
+            RuntimeConfig config = CreateConfigWithDescribedEntity();
 
             // Act
-            var tools = CustomMcpToolFactory.CreateCustomTools(config);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config);
 
             // Assert
             Assert.AreEqual(1, tools.Count());
-            var metadata = tools.First().GetToolMetadata();
+            ModelContextProtocol.Protocol.Tool metadata = tools.First().GetToolMetadata();
             Assert.AreEqual("get_user", metadata.Name);
             Assert.AreEqual("Gets user by ID", metadata.Description);
         }
@@ -124,7 +106,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         private static RuntimeConfig CreateConfigWithMixedEntities()
         {
-            var entities = new Dictionary<string, Entity>
+            Dictionary<string, Entity> entities = new()
             {
                 // Table entity - should be filtered out
                 ["Book"] = new Entity(
@@ -173,39 +155,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             );
         }
 
-        private static RuntimeConfig CreateConfigWithInvalidEntity()
-        {
-            var entities = new Dictionary<string, Entity>
-            {
-                // Valid SP
-                ["GetBook"] = new Entity(
-                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("GetBook", "GetBook"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null)
-                )
-            };
-
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: null,
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
-        }
-
         private static RuntimeConfig CreateConfigWithDescribedEntity()
         {
-            var entities = new Dictionary<string, Entity>
+            Dictionary<string, Entity> entities = new()
             {
                 ["GetUser"] = new Entity(
                     Source: new("get_user", EntitySourceType.StoredProcedure, null, null),

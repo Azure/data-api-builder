@@ -543,7 +543,7 @@ namespace Cli.Tests
         /// <summary>
         /// Tests that running "dab configure --runtime.compression.level {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for compression.level and
-        /// validates whether the runtime config reflects those updated values
+        /// validates whether the runtime config reflects those updated values.
         [DataTestMethod]
         [DataRow(CompressionLevel.Fastest, DisplayName = "Update Compression.Level to fastest.")]
         [DataRow(CompressionLevel.Optimal, DisplayName = "Update Compression.Level to optimal.")]

@@ -73,6 +73,11 @@ internal class CompressionOptionsConverterFactory : JsonConverterFactory
                             }
                         }
                     }
+                    else
+                    {
+                        // Skip unknown properties and their values (including objects/arrays)
+                        reader.Skip();
+                    }
                 }
             }
 

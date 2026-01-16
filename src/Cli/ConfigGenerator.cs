@@ -1238,7 +1238,7 @@ namespace Cli
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to update RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
+                _logger.LogError("Failed to configure RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

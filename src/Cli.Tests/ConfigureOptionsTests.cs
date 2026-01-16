@@ -927,6 +927,103 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests adding data-source.health.name to a config that doesn't have a health section.
+        /// This method verifies that the health.name can be added to a data source configuration
+        /// that doesn't previously have a health section.
+        /// Command: dab configure --data-source.health.name "My Data Source"
+        /// </summary>
+        [TestMethod]
+        public void TestAddDataSourceHealthName()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceHealthName: "My Data Source",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.Health);
+            Assert.AreEqual("My Data Source", config.DataSource.Health.Name);
+            Assert.IsTrue(config.DataSource.Health.Enabled); // Default value
+        }
+
+        /// <summary>
+        /// Tests updating data-source.health.name on a config that already has a health section.
+        /// This method verifies that the health.name can be updated while preserving other health settings.
+        /// Command: dab configure --data-source.health.name "Updated Name"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("New Name", DisplayName = "Update health name with a simple string")]
+        [DataRow("This is the value", DisplayName = "Update health name with the example from the issue")]
+        public void TestUpdateDataSourceHealthName(string healthName)
+        {
+            // Arrange - Config with existing health section
+            string configWithHealth = @"
+            {
+                ""$schema"": ""test"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""health"": {
+                        ""enabled"": false,
+                        ""threshold-ms"": 2000
+                    }
+                },
+                ""runtime"": {
+                    ""rest"": {
+                        ""enabled"": true,
+                        ""path"": ""/api""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""path"": ""/graphql"",
+                        ""allow-introspection"": true
+                    },
+                    ""host"": {
+                        ""mode"": ""development"",
+                        ""cors"": {
+                            ""origins"": [],
+                            ""allow-credentials"": false
+                        },
+                        ""authentication"": {
+                            ""provider"": ""StaticWebApps""
+                        }
+                    }
+                },
+                ""entities"": {}
+            }";
+            SetupFileSystemWithInitialConfig(configWithHealth);
+
+            ConfigureOptions options = new(
+                dataSourceHealthName: healthName,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.Health);
+            Assert.AreEqual(healthName, config.DataSource.Health.Name);
+            // Verify existing health settings are preserved
+            Assert.IsFalse(config.DataSource.Health.Enabled);
+            Assert.AreEqual(2000, config.DataSource.Health.ThresholdMs);
+        }
+
+        /// <summary>
         /// Sets up the mock file system with an initial configuration file.
         /// This method adds a config file to the mock file system and verifies its existence.
         /// It also attempts to parse the config file to ensure it is valid.

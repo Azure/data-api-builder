@@ -114,7 +114,11 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, DatasourceHealthCheckConfig value, JsonSerializerOptions options)
         {
-            if (value?.UserProvidedEnabled is true)
+            // Write the health object if any of these conditions are met:
+            // - enabled was explicitly provided by the user
+            // - name property has a value
+            // - threshold was explicitly provided by the user
+            if (value?.UserProvidedEnabled is true || value?.Name is not null || value?.UserProvidedThresholdMs is true)
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("enabled");

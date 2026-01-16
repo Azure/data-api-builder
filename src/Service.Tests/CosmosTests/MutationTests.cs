@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -278,7 +280,18 @@ mutation {{
         name
     }}
 }}";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            // For App Service, the effective role must be present as a role
+            // claim on the principal (in addition to X-MS-API-ROLE) so that
+            // DAB authZ can evaluate permissions consistently with SWA tests.
+            AppServiceClaim roleClaim = new()
+            {
+                Val = roleName,
+                Typ = ClaimTypes.Role
+            };
+
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                additionalClaims: [roleClaim]);
+
             JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetAgain", mutation, variables: new(), authToken: authToken, clientRoleHeader: roleName);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -317,10 +330,21 @@ mutation {{
         name
     }}
 }}";
+            // For App Service, the effective role must be present as a role
+            // claim on the principal (in addition to X-MS-API-ROLE) so that
+            // DAB authZ can evaluate permissions consistently with SWA tests.
+            AppServiceClaim roleClaim = new()
+            {
+                Val = roleName,
+                Typ = ClaimTypes.Role
+            };
+
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                additionalClaims: [roleClaim]);
 
             JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
+                authToken: authToken,
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
 
             // Making sure item is created successfully
@@ -340,7 +364,6 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetAgainInput!)
                 name = "new_name"
             };
 
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "updatePlanetAgain",
                 query: mutation,
@@ -384,9 +407,21 @@ mutation {{
     }}
 }}";
 
+            // For App Service, the effective role must be present as a role
+            // claim on the principal (in addition to X-MS-API-ROLE) so that
+            // DAB authZ can evaluate permissions consistently with SWA tests.
+            AppServiceClaim roleClaim = new()
+            {
+                Val = roleName,
+                Typ = ClaimTypes.Role
+            };
+
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(
+                additionalClaims: [roleClaim]);
+
             JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
+                authToken: authToken,
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
 
             // Making sure item is created successfully
@@ -400,7 +435,6 @@ mutation ($id: ID!, $partitionKeyValue: String!) {
         name
      }
 }";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "deletePlanetAgain",
                 query: mutation,
@@ -563,7 +597,7 @@ type Planet @model(name:""Planet"") {
             };
 
             string id = Guid.NewGuid().ToString();
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
@@ -713,7 +747,7 @@ type Planet @model(name:""Planet"") {
                         query: _createPlanetMutation,
                         queryName: "createPlanet",
                         variables: new() { { "item", input } },
-                        authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                        authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                         clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
                         );
 
@@ -762,6 +796,7 @@ mutation {{
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
+
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
@@ -906,7 +941,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
         public async Task CanPatchMoreThan10AttributesInAnItemWithVariables()
         {
             string roleName = "anonymous";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
 
             // Run mutation Add planet;
             string id = Guid.NewGuid().ToString();

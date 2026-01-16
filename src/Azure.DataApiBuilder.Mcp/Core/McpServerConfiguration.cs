@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             services.AddMcpServer(options =>
             {
                 options.ServerInfo = new() { Name = "SQL MCP Server", Version = "1.0.0" };
-                
+
                 options.Capabilities = new()
                 {
                     Tools = new()

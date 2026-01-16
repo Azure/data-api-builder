@@ -1260,7 +1260,8 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.StaticWebApps);
+                    // Default to AppService when provider string is not provided
+                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.AppService);
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {
@@ -2357,6 +2358,17 @@ namespace Cli
             if (options.IsHttpsRedirectionDisabled)
             {
                 args.Add(Startup.NO_HTTPS_REDIRECT_FLAG);
+            }
+
+            // If MCP stdio was requested, append the stdio-specific switches.
+            if (options.McpStdio)
+            {
+                string effectiveRole = string.IsNullOrWhiteSpace(options.McpRole)
+                    ? "anonymous"
+                    : options.McpRole;
+
+                args.Add("--mcp-stdio");
+                args.Add(effectiveRole);
             }
 
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());

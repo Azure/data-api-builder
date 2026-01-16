@@ -85,6 +85,42 @@ dab init
 
 DAB supports tables, views, and stored procedures. It works with SQL Server, Azure Cosmos DB, PostgreSQL, MySQL, and SQL Data Warehouse. Security is engine-level, but permissions are per entity.
 
+The file `dab-config.json` is automatically created through this process. These are the resulting contents:
+
+```json
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v1.5.56/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('my-connection-string')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api",
+      "request-body-strict": true
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "AppService"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": { }
+}
 ```
 dab add Actor
   --source "dbo.Actor"

@@ -1399,7 +1399,7 @@
       "oneOf":[
         {
           "type": [ "boolean", "string" ],
-          "pattern": "^(?:true|false|1|0|@.{3}\\('.*'\\))$"
+          "pattern": "^(?:true|false|1|0|@env\\('.*'\\)|@akv\\('.*'\\))$"
         }
       ]
     },

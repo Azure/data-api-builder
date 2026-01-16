@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Utilities
         /// Determines if MCP stdio mode should be run based on command line arguments.
         /// </summary>
         /// <param name="args"> The command line arguments.</param>
-        /// <param name="mcpRole"> The role for MCP stdio mode. When this method returns true, the role is guaranteed to be non-null.</param>
+        /// <param name="mcpRole"> The role for MCP stdio mode. When this method returns true, the role defaults to anonymous.</param>
         /// <returns>True when MCP stdio mode should be enabled; otherwise false.</returns>
         public static bool ShouldRunMcpStdio(string[] args, [NotNullWhen(true)] out string? mcpRole)
         {

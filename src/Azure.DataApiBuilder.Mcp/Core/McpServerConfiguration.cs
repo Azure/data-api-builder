@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;

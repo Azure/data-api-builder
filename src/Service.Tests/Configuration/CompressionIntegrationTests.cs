@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 "Response should have gzip Content-Encoding header");
             
             // Verify response body exists by checking if we can read it
-            using (var reader = new StreamReader(returnContext.Response.Body, leaveOpen: false))
+            using (var reader = new StreamReader(returnContext.Response.Body))
             {
                 string content = await reader.ReadToEndAsync();
                 Assert.IsTrue(content.Length > 0, "Response body should not be empty");
@@ -295,7 +295,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (var gzipStream = new GZipStream(compressedStream, CompressionMode.Decompress))
             using (var resultStream = new MemoryStream())
             {
-                gzipStream.CopyTo(resultStream);
+                gzipStream.CopyToAsync(resultStream).Wait();
                 return Encoding.UTF8.GetString(resultStream.ToArray());
             }
         }

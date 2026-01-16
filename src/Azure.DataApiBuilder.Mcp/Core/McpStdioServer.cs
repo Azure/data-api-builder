@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 if (line.Length > MAX_LINE_LENGTH)
                 {
-                    WriteError(id: null, code: -32600, message: "Request too large");
+                    WriteError(id: null, code: McpStdioJsonRpcErrorCodes.INVALID_REQUEST, message: "Request too large");
                     continue;
                 }
 
@@ -79,13 +79,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 catch (JsonException jsonEx)
                 {
                     Console.Error.WriteLine($"[MCP DEBUG] JSON parse error: {jsonEx.Message}");
-                    WriteError(id: null, code: -32700, message: "Parse error");
+                    WriteError(id: null, code: McpStdioJsonRpcErrorCodes.PARSE_ERROR, message: "Parse error");
                     continue;
                 }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"[MCP DEBUG] Unexpected error parsing request: {ex.Message}");
-                    WriteError(id: null, code: -32603, message: "Internal error");
+                    WriteError(id: null, code: McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, message: "Internal error");
                     continue;
                 }
 
@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                     if (!root.TryGetProperty("method", out JsonElement methodEl))
                     {
-                        WriteError(id, -32600, "Invalid Request");
+                        WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_REQUEST, "Invalid Request");
                         continue;
                     }
 
@@ -135,13 +135,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                 return;
 
                             default:
-                                WriteError(id, -32601, $"Method not found: {method}");
+                                WriteError(id, McpStdioJsonRpcErrorCodes.METHOD_NOT_FOUND, $"Method not found: {method}");
                                 break;
                         }
                     }
                     catch (Exception)
                     {
-                        WriteError(id, -32603, "Internal error");
+                        WriteError(id, McpStdioJsonRpcErrorCodes.INTERNAL_ERROR, "Internal error");
                     }
                 }
             }
@@ -192,8 +192,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 },
                 serverInfo = new
                 {
-                    name = "SQL MCP Server",
-                    version = "1.0.0"
+                    name = McpProtocolDefaults.MCP_SERVER_NAME,
+                    version = McpProtocolDefaults.MCP_SERVER_VERSION
                 },
                 instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
             };
@@ -205,8 +205,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 result
             };
 
-            string json = JsonSerializer.Serialize(response);
-            Console.Out.WriteLine(json);
+            WriteResult(id, result);
         }
 
         /// <summary>
@@ -248,7 +247,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             if (!root.TryGetProperty("params", out JsonElement @params) || @params.ValueKind != JsonValueKind.Object)
             {
-                WriteError(id, -32602, "Missing params");
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing params");
                 return;
             }
 
@@ -270,14 +269,14 @@ namespace Azure.DataApiBuilder.Mcp.Core
             if (string.IsNullOrWhiteSpace(toolName))
             {
                 Console.Error.WriteLine("[MCP DEBUG] callTool → missing tool name.");
-                WriteError(id, -32602, "Missing tool name");
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, "Missing tool name");
                 return;
             }
 
             if (!_toolRegistry.TryGetTool(toolName!, out IMcpTool? tool) || tool is null)
             {
                 Console.Error.WriteLine($"[MCP DEBUG] callTool → tool not found: {toolName}");
-                WriteError(id, -32602, $"Tool not found: {toolName}");
+                WriteError(id, McpStdioJsonRpcErrorCodes.INVALID_PARAMS, $"Tool not found: {toolName}");
                 return;
             }
 

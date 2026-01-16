@@ -10,6 +10,7 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// JSON converter for boolean values that also supports string representations such as
 /// "true", "false", "1", and "0". Any environment variable replacement is handled by
 /// other converters (for example, the string converter) before the value is parsed here.
+/// </summary>
 public class BoolJsonConverter : JsonConverter<bool>
 {
 
@@ -31,7 +32,7 @@ public class BoolJsonConverter : JsonConverter<bool>
                 //numeric values have to be checked here as they may come from string replacement 
                 "true" or "1" => true,
                 "false" or "0" => false,
-                _ => throw new JsonException($"Invalid boolean value: {tempBoolean}. Specify either true or false."),
+                _ => throw new JsonException($"Invalid boolean value: {tempBoolean}. Specify either true or 1 for true, false or 0 for false"),
             };
 
             return result;
@@ -50,8 +51,6 @@ public class BoolJsonConverter : JsonConverter<bool>
         {
             return reader.GetBoolean();
         }
-
-        throw new JsonException("Invalid JSON value. Expected a boolean literal or a valid @expression.");
     }
 
     public override void Write(Utf8JsonWriter writer, bool value, JsonSerializerOptions options)

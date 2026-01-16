@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 byte[] compressedData = ms.ToArray();
                 
                 // Decompress
-                string decompressedContent = DecompressGzip(compressedData);
+                string decompressedContent = await DecompressGzipAsync(compressedData);
                 Assert.IsFalse(string.IsNullOrEmpty(decompressedContent), "Decompressed content should not be empty");
                 
                 // Verify it's valid JSON matching our sample
@@ -289,13 +289,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <summary>
         /// Decompresses gzip-compressed data.
         /// </summary>
-        private static string DecompressGzip(byte[] data)
+        private static async Task<string> DecompressGzipAsync(byte[] data)
         {
             using (var compressedStream = new MemoryStream(data))
             using (var gzipStream = new GZipStream(compressedStream, CompressionMode.Decompress))
             using (var resultStream = new MemoryStream())
             {
-                gzipStream.CopyToAsync(resultStream).Wait();
+                await gzipStream.CopyToAsync(resultStream);
                 return Encoding.UTF8.GetString(resultStream.ToArray());
             }
         }

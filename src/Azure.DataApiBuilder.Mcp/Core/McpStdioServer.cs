@@ -198,13 +198,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
             };
 
-            object response = new
-            {
-                jsonrpc = "2.0",
-                id = requestId,
-                result
-            };
-
             WriteResult(id, result);
         }
 

@@ -222,11 +222,24 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
 
                 // Explicitly handle OpenAPI description document retrieval requests.
+                // Supports /openapi (superset of all roles) and /openapi/{role} (role-specific)
                 if (string.Equals(routeAfterPathBase, OpenApiDocumentor.OPENAPI_ROUTE, StringComparison.OrdinalIgnoreCase))
                 {
                     if (_openApiDocumentor.TryGetDocument(out string? document))
                     {
                         return Content(document, MediaTypeNames.Application.Json);
+                    }
+
+                    return NotFound();
+                }
+
+                // Handle /openapi/{role} route for role-specific OpenAPI documents
+                if (routeAfterPathBase.StartsWith(OpenApiDocumentor.OPENAPI_ROUTE + "/", StringComparison.OrdinalIgnoreCase))
+                {
+                    string role = Uri.UnescapeDataString(routeAfterPathBase.Substring(OpenApiDocumentor.OPENAPI_ROUTE.Length + 1));
+                    if (!string.IsNullOrEmpty(role) && _openApiDocumentor.TryGetDocumentForRole(role, out string? roleDocument))
+                    {
+                        return Content(roleDocument, MediaTypeNames.Application.Json);
                     }
 
                     return NotFound();

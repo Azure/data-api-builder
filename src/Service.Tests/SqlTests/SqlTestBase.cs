@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 request.Headers.Add(AuthorizationResolver.CLIENT_ROLE_HEADER, clientRoleHeader);
 
                 // Detect runtime auth provider once per call
-                var configProvider = _application.Services.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfigProvider configProvider = _application.Services.GetRequiredService<RuntimeConfigProvider>();
                 string provider = configProvider.GetConfig().Runtime.Host.Authentication.Provider;
 
                 if (string.Equals(provider, nameof(EasyAuthType.AppService), StringComparison.OrdinalIgnoreCase))

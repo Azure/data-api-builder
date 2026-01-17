@@ -11,6 +11,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using Azure.DataApiBuilder.Core.Services;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -60,12 +61,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null,
+            ISemanticCache? semanticCache = null,
+            IEmbeddingService? embeddingService = null)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
                   httpContextAccessor,
-                  handler)
+                  handler,
+                  semanticCache,
+                  embeddingService)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;

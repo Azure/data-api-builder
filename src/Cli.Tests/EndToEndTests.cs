@@ -1271,4 +1271,97 @@ public class EndToEndTests
         // Assert
         Assert.AreEqual(isSuccess, isError == 0);
     }
+
+    /// <summary>
+    /// Test to verify configuring semantic cache settings via CLI.
+    /// Command: dab configure --runtime.semantic-cache.* {values}
+    /// </summary>
+    [TestMethod]
+    public void TestConfigureSemanticCache()
+    {
+        // Initialize the config file
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+        Assert.IsNotNull(runtimeConfig.Runtime);
+
+        // Act: Configure semantic cache with all options
+        string[] configureArgs = {
+            "configure", "-c", TEST_RUNTIME_CONFIG_FILE,
+            "--runtime.semantic-cache.enabled", "true",
+            "--runtime.semantic-cache.similarity-threshold", "0.85",
+            "--runtime.semantic-cache.max-results", "5",
+            "--runtime.semantic-cache.expire-seconds", "3600",
+            "--runtime.semantic-cache.azure-managed-redis.connection-string", "localhost:6379,ssl=True",
+            "--runtime.semantic-cache.azure-managed-redis.vector-index", "dab-semantic-index",
+            "--runtime.semantic-cache.azure-managed-redis.key-prefix", "dab:sc:",
+            "--runtime.semantic-cache.embedding-provider.type", "azure-openai",
+            "--runtime.semantic-cache.embedding-provider.endpoint", "https://test.openai.azure.com",
+            "--runtime.semantic-cache.embedding-provider.api-key", "test-key",
+            "--runtime.semantic-cache.embedding-provider.model", "text-embedding-ada-002"
+        };
+
+        int result = Program.Execute(configureArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Verify command succeeded
+        Assert.AreEqual(0, result, "Configure command should succeed");
+
+        // Assert: Verify config was updated correctly
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedConfig));
+        Assert.IsNotNull(updatedConfig);
+        Assert.IsNotNull(updatedConfig.Runtime);
+        Assert.IsNotNull(updatedConfig.Runtime.SemanticCache);
+
+        SemanticCacheOptions semanticCache = updatedConfig.Runtime.SemanticCache;
+        Assert.IsTrue(semanticCache.Enabled);
+        Assert.AreEqual(0.85, semanticCache.SimilarityThreshold);
+        Assert.AreEqual(5, semanticCache.MaxResults);
+        Assert.AreEqual(3600, semanticCache.ExpireSeconds);
+
+        Assert.IsNotNull(semanticCache.AzureManagedRedis);
+        Assert.AreEqual("localhost:6379,ssl=True", semanticCache.AzureManagedRedis.ConnectionString);
+        Assert.AreEqual("dab-semantic-index", semanticCache.AzureManagedRedis.VectorIndex);
+        Assert.AreEqual("dab:sc:", semanticCache.AzureManagedRedis.KeyPrefix);
+
+        Assert.IsNotNull(semanticCache.EmbeddingProvider);
+        Assert.AreEqual("azure-openai", semanticCache.EmbeddingProvider.Type);
+        Assert.AreEqual("https://test.openai.azure.com", semanticCache.EmbeddingProvider.Endpoint);
+        Assert.AreEqual("test-key", semanticCache.EmbeddingProvider.ApiKey);
+        Assert.AreEqual("text-embedding-ada-002", semanticCache.EmbeddingProvider.Model);
+    }
+
+    /// <summary>
+    /// Test to verify that semantic cache configuration validation works correctly.
+    /// Tests invalid values for similarity-threshold, max-results, and expire-seconds.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("--runtime.semantic-cache.similarity-threshold", "1.5", false, DisplayName = "Failure: similarity-threshold > 1.0")]
+    [DataRow("--runtime.semantic-cache.similarity-threshold", "-0.1", false, DisplayName = "Failure: similarity-threshold < 0.0")]
+    [DataRow("--runtime.semantic-cache.similarity-threshold", "0.85", true, DisplayName = "Success: valid similarity-threshold")]
+    [DataRow("--runtime.semantic-cache.max-results", "0", false, DisplayName = "Failure: max-results = 0")]
+    [DataRow("--runtime.semantic-cache.max-results", "-5", false, DisplayName = "Failure: max-results < 0")]
+    [DataRow("--runtime.semantic-cache.max-results", "10", true, DisplayName = "Success: valid max-results")]
+    [DataRow("--runtime.semantic-cache.expire-seconds", "0", false, DisplayName = "Failure: expire-seconds = 0")]
+    [DataRow("--runtime.semantic-cache.expire-seconds", "-100", false, DisplayName = "Failure: expire-seconds < 0")]
+    [DataRow("--runtime.semantic-cache.expire-seconds", "3600", true, DisplayName = "Success: valid expire-seconds")]
+    public void TestSemanticCacheValidation(string option, string value, bool isSuccess)
+    {
+        // Initialize the config file
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the semantic cache option
+        string[] configureArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, option, value };
+        int result = Program.Execute(configureArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the operation succeeded as expected
+        Assert.AreEqual(isSuccess, result == 0);
+    }
 }

@@ -589,8 +589,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (dbResultSetRow.Columns.Count > 0)
                 {
-                    JsonElement result =
-                        JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbResultSetRow.Columns));
+                    // Use a memory stream to serialize the columns
+                    using MemoryStream ms = new();
+                    using (Utf8JsonWriter writer = new(ms))
+                    {
+                        JsonSerializer.Serialize(writer, dbResultSetRow.Columns);
+                    }
+
+                    ms.Position = 0;
+                    using JsonDocument doc = JsonDocument.Parse(ms);
+                    JsonElement result = doc.RootElement.Clone();
+
                     // FromJsonElement() added to address .NET8 regression where the .Add() throws:
                     // System.InvalidOperationException: "The element cannot be an object or array."
                     resultArray.Add(FromJsonElement(result));

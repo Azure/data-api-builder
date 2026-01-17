@@ -95,7 +95,7 @@ We use `dotnet format` to enforce code conventions. It is run automatically in C
 
 #### Enforcing code style with git hooks
 
-You can copy paste the following commands to install a git pre-commit hook. This will cause a commit to fail if you forgot to run `dotnet format`. If you have run on save enabled in your editor this is not necessary.
+You can copy paste the following commands to install a git pre-commit hook (creates a pre-commit file in your .git folder, which isn't shown in vs code).  This will cause a commit to fail if you forgot to run `dotnet format`. If you have run on save enabled in your editor this is not necessary.
 
 ```bash
 cat > .git/hooks/pre-commit << __EOF__
@@ -112,17 +112,42 @@ if [ "\$(get_files)" = '' ]; then
 fi
 
 get_files |
-    xargs dotnet format src/Azure.DataApiBuilder.Service.sln \\
-        --check \\
-        --fix-whitespace --fix-style warn --fix-analyzers warn \\
+    xargs dotnet format src/Azure.DataApiBuilder.sln \\
+        --verify-no-changes
         --include \\
     || {
         get_files |
-            xargs dotnet format src/Azure.DataApiBuilder.Service.sln \\
-                --fix-whitespace --fix-style warn --fix-analyzers warn \\
+            xargs dotnet format src/Azure.DataApiBuilder.sln \\
                 --include
         exit 1
 }
 __EOF__
 chmod +x .git/hooks/pre-commit
+```
+
+The file should look like this
+
+``` bash
+#!/bin/bash
+set -euo pipefail
+
+get_files() {
+    git diff --cached --name-only --diff-filter=ACMR |  \
+        grep '\.cs$'
+}
+
+if [ "$(get_files)" = '' ]; then
+    exit 0
+fi
+
+get_files |
+    xargs dotnet format src/Azure.DataApiBuilder.sln \
+        --verify-no-changes \
+        --include \
+    || {
+        get_files |
+            xargs dotnet format src/Azure.DataApiBuilder.sln \
+                --include
+        exit 1
+}
 ```

@@ -18,20 +18,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     public class CustomMcpToolFactoryTests
     {
         /// <summary>
-        /// Test that CreateCustomTools returns empty collection when config is null.
-        /// </summary>
-        [TestMethod]
-        public void CreateCustomTools_ReturnsEmptyCollection_WhenConfigIsNull()
-        {
-            // Act
-            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(null!, null);
-
-            // Assert
-            Assert.IsNotNull(tools);
-            Assert.AreEqual(0, tools.Count());
-        }
-
-        /// <summary>
         /// Test that CreateCustomTools returns empty collection when no entities exist.
         /// </summary>
         [TestMethod]

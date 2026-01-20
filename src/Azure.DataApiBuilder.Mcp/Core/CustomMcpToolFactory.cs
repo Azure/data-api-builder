@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <returns>Enumerable of custom tools generated from configuration.</returns>
         public static IEnumerable<IMcpTool> CreateCustomTools(RuntimeConfig config, ILogger? logger = null)
         {
-            if (config?.Entities == null)
+            if (config.Entities == null)
             {
                 logger?.LogWarning("No entities found in runtime configuration for custom tool generation.");
                 return Enumerable.Empty<IMcpTool>();

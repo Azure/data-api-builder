@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         public void CreateCustomTools_ReturnsEmptyCollection_WhenConfigIsNull()
         {
             // Act
-            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(null!);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(null!, null);
 
             // Assert
             Assert.IsNotNull(tools);
@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             RuntimeConfig config = CreateEmptyConfig();
 
             // Act
-            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config, null);
 
             // Assert
             Assert.IsNotNull(tools);
@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             RuntimeConfig config = CreateConfigWithMixedEntities();
 
             // Act
-            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config, null);
 
             // Assert
             Assert.IsNotNull(tools);
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             RuntimeConfig config = CreateConfigWithDescribedEntity();
 
             // Act
-            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config);
+            System.Collections.Generic.IEnumerable<Azure.DataApiBuilder.Mcp.Model.IMcpTool> tools = CustomMcpToolFactory.CreateCustomTools(config, null);
 
             // Assert
             Assert.AreEqual(1, tools.Count());

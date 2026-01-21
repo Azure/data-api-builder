@@ -25,6 +25,8 @@ public record RuntimeConfig
     [JsonPropertyName("azure-key-vault")]
     public AzureKeyVaultOptions? AzureKeyVault { get; init; }
 
+    public RuntimeAutoentities? Autoentities { get; init; }
+
     public virtual RuntimeEntities Entities { get; init; }
 
     public DataSourceFiles? DataSourceFiles { get; init; }
@@ -97,6 +99,17 @@ public record RuntimeConfig
         Runtime.Host is null ||
         Runtime.Host.Authentication is null ||
         EasyAuthType.StaticWebApps.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A shorthand method to determine whether App Service is configured for the current authentication provider.
+    /// </summary>
+    /// <returns>True if the authentication provider is enabled for App Service, otherwise false.</returns>
+    [JsonIgnore]
+    public bool IsAppServiceIdentityProvider =>
+        Runtime is null ||
+        Runtime.Host is null ||
+        Runtime.Host.Authentication is null ||
+        EasyAuthType.AppService.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The path at which Rest APIs are available
@@ -246,6 +259,7 @@ public record RuntimeConfig
         string? Schema,
         DataSource DataSource,
         RuntimeEntities Entities,
+        RuntimeAutoentities? Autoentities = null,
         RuntimeOptions? Runtime = null,
         DataSourceFiles? DataSourceFiles = null,
         AzureKeyVaultOptions? AzureKeyVault = null)
@@ -255,6 +269,7 @@ public record RuntimeConfig
         this.Runtime = Runtime;
         this.AzureKeyVault = AzureKeyVault;
         this.Entities = Entities;
+        this.Autoentities = Autoentities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         if (this.DataSource is null)

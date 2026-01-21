@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                   ""allow-credentials"": false
                 },
                 ""authentication"": {
-                  ""provider"": ""StaticWebApps""
+                  ""provider"": ""AppService""
                 }
               }
             },
@@ -217,7 +217,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                   ""allow-credentials"": false
                 },
                 ""authentication"": {
-                  ""provider"": ""StaticWebApps""
+                  ""provider"": ""AppService""
                 }
               }
             },
@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                   ""allow-credentials"": false
                 },
                 ""authentication"": {
-                  ""provider"": ""StaticWebApps""
+                  ""provider"": ""AppService""
                 }
               }
             }" + "," +
@@ -330,27 +330,39 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <param name="hostModeType">HostMode for the engine</param>
         /// <param name="databaseType">Database type</param>
         /// <param name="runtimeBaseRoute">Base route for API requests.</param>
-        public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType, string runtimeBaseRoute = "/")
+        /// <param name="provider">Provider for authentication</param>
+        public static void ConstructNewConfigWithSpecifiedHostMode(
+            string configFileName,
+            HostMode hostModeType,
+            string databaseType,
+            string runtimeBaseRoute = "/",
+            string provider = "AppService")
         {
             SetupDatabaseEnvironment(databaseType);
             RuntimeConfigProvider configProvider = GetRuntimeConfigProvider(GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 
+            AuthenticationOptions auth = config.Runtime?.Host?.Authentication with { Provider = provider };
+
+            bool isStaticWebApps = string.Equals(provider, "StaticWebApps", StringComparison.OrdinalIgnoreCase);
+
             RuntimeConfig configWithCustomHostMode =
-                config
-                with
+                config with
                 {
-                    Runtime = config.Runtime
-                with
+                    Runtime = config.Runtime with
                     {
-                        Host = config.Runtime?.Host
-                with
-                        { Mode = hostModeType },
-                        BaseRoute = runtimeBaseRoute
+                        Host = config.Runtime?.Host with
+                        {
+                            Mode = hostModeType,
+                            // For tests that explicitly set SWA, we’ll keep BaseRoute.
+                            // For others (AppService), BaseRoute will be null.
+                            Authentication = auth
+                        },
+                        BaseRoute = isStaticWebApps ? runtimeBaseRoute : null
                     }
                 };
-            File.WriteAllText(configFileName, configWithCustomHostMode.ToJson());
 
+            File.WriteAllText(configFileName, configWithCustomHostMode.ToJson());
         }
 
         /// <summary>

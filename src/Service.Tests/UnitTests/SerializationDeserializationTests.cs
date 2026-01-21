@@ -277,8 +277,114 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "FirstName");
         }
 
-        private void InitializeObjects()
+        /// <summary>
+        /// Validates serialization and deserilization of Dictionary containing DatabaseTable
+        /// The table will have dollar sign prefix ($) in the column name
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// </summary>
+        [TestMethod]
+        public void TestDictionaryDatabaseObjectSerializationDeserialization_WithDollarColumn()
         {
+            InitializeObjects(generateDollaredColumn: true);
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                },
+                ReferenceHandler = ReferenceHandler.Preserve
+            };
+
+            Dictionary<string, DatabaseObject> dict = new() { { "person", _databaseTable } };
+
+            string serializedDict = JsonSerializer.Serialize(dict, _options);
+            // Assert that the serialized JSON contains the escaped dollar sign in column name
+            Assert.IsTrue(serializedDict.Contains("DAB_ESCAPE$FirstName"),
+                "Serialized JSON should contain the dollar-prefixed column name in SourceDefinition's Columns.");
+
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serializedDict, _options)!;
+            DatabaseTable deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
+
+            Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
+            Assert.AreEqual(deserializedDatabaseTable.FullName, _databaseTable.FullName);
+            deserializedDatabaseTable.Equals(_databaseTable);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.SourceDefinition, _databaseTable.SourceDefinition, "$FirstName");
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "$FirstName");
+        }
+
+        /// <summary>
+        /// Validates serialization and deserilization of Dictionary containing DatabaseView
+        /// The table will have dollar sign prefix ($) in the column name
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseViewSerializationDeserialization_WithDollarColumn()
+        {
+            InitializeObjects(generateDollaredColumn: true);
+
+            TestTypeNameChanges(_databaseView, "DatabaseView");
+
+            Dictionary<string, DatabaseObject> dict = new();
+            dict.Add("person", _databaseView);
+
+            // Test to catch if there is change in number of properties/fields
+            // Note: On Addition of property make sure it is added in following object creation _databaseView and include in serialization
+            // and deserialization test.
+            int fields = typeof(DatabaseView).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
+            Assert.AreEqual(fields, 6);
+
+            string serializedDatabaseView = JsonSerializer.Serialize(dict, _options);
+            // Assert that the serialized JSON contains the escaped dollar sign in column name
+            Assert.IsTrue(serializedDatabaseView.Contains("DAB_ESCAPE$FirstName"),
+                "Serialized JSON should contain the dollar-prefixed column name in SourceDefinition's Columns.");
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serializedDatabaseView, _options)!;
+
+            DatabaseView deserializedDatabaseView = (DatabaseView)deserializedDict["person"];
+
+            Assert.AreEqual(deserializedDatabaseView.SourceType, _databaseView.SourceType);
+            deserializedDatabaseView.Equals(_databaseView);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseView.SourceDefinition, _databaseView.SourceDefinition, "$FirstName");
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseView.ViewDefinition, _databaseView.ViewDefinition, "$FirstName");
+        }
+
+        /// <summary>
+        /// Validates serialization and deserilization of Dictionary containing DatabaseStoredProcedure
+        /// The table will have dollar sign prefix ($) in the column name
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseStoredProcedureSerializationDeserialization_WithDollarColumn()
+        {
+            InitializeObjects(generateDollaredColumn: true);
+
+            TestTypeNameChanges(_databaseStoredProcedure, "DatabaseStoredProcedure");
+
+            Dictionary<string, DatabaseObject> dict = new();
+            dict.Add("person", _databaseStoredProcedure);
+
+            // Test to catch if there is change in number of properties/fields
+            // Note: On Addition of property make sure it is added in following object creation _databaseStoredProcedure and include in serialization
+            // and deserialization test.
+            int fields = typeof(DatabaseStoredProcedure).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
+            Assert.AreEqual(fields, 6);
+
+            string serializedDatabaseSP = JsonSerializer.Serialize(dict, _options);
+            // Assert that the serialized JSON contains the escaped dollar sign in column name
+            Assert.IsTrue(serializedDatabaseSP.Contains("DAB_ESCAPE$FirstName"),
+                "Serialized JSON should contain the dollar-prefixed column name in SourceDefinition's Columns.");
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serializedDatabaseSP, _options)!;
+            DatabaseStoredProcedure deserializedDatabaseSP = (DatabaseStoredProcedure)deserializedDict["person"];
+
+            Assert.AreEqual(deserializedDatabaseSP.SourceType, _databaseStoredProcedure.SourceType);
+            deserializedDatabaseSP.Equals(_databaseStoredProcedure);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseSP.SourceDefinition, _databaseStoredProcedure.SourceDefinition, "$FirstName", true);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseSP.StoredProcedureDefinition, _databaseStoredProcedure.StoredProcedureDefinition, "$FirstName", true);
+        }
+
+        private void InitializeObjects(bool generateDollaredColumn = false)
+        {
+            string columnName = generateDollaredColumn ? "$FirstName" : "FirstName";
             _options = new()
             {
                 // ObjectConverter behavior different in .NET8 most likely due to
@@ -290,10 +396,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     new DatabaseObjectConverter(),
                     new TypeConverter()
                 }
+
             };
 
             _columnDefinition = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("John"), false);
-            _sourceDefinition = GetSourceDefinition(false, false, new List<string>() { "FirstName" }, _columnDefinition);
+            _sourceDefinition = GetSourceDefinition(false, false, new List<string>() { columnName }, _columnDefinition);
 
             _databaseTable = new DatabaseTable()
             {
@@ -312,10 +419,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     IsInsertDMLTriggerEnabled = false,
                     IsUpdateDMLTriggerEnabled = false,
-                    PrimaryKey = new List<string>() { "FirstName" },
+                    PrimaryKey = new List<string>() { columnName },
                 },
             };
-            _databaseView.ViewDefinition.Columns.Add("FirstName", _columnDefinition);
+            _databaseView.ViewDefinition.Columns.Add(columnName, _columnDefinition);
 
             _parameterDefinition = new()
             {
@@ -332,10 +439,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
-                    PrimaryKey = new List<string>() { "FirstName" },
+                    PrimaryKey = new List<string>() { columnName },
                 }
             };
-            _databaseStoredProcedure.StoredProcedureDefinition.Columns.Add("FirstName", _columnDefinition);
+            _databaseStoredProcedure.StoredProcedureDefinition.Columns.Add(columnName, _columnDefinition);
             _databaseStoredProcedure.StoredProcedureDefinition.Parameters.Add("Id", _parameterDefinition);
         }
 

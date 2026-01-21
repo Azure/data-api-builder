@@ -43,7 +43,7 @@ public class BoolJsonConverter : JsonConverter<bool>
             {
                 1 => true,
                 0 => false,
-                _ => throw new JsonException($"Invalid boolean value. Specify either true or false."),
+                _ => throw new JsonException($"Invalid value for boolean attribute. Specify either 1 or 0."),
             };
             return result;
         }

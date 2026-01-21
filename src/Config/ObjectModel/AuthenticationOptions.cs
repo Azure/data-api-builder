@@ -32,9 +32,17 @@ public record AuthenticationOptions(string Provider = nameof(EasyAuthType.AppSer
     /// <returns>True when development mode should authenticate all requests.</returns>
     public bool IsAuthenticationSimulatorEnabled() => Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
 
+    public const string UNAUTHENTICATED_AUTHENTICATION = "Unauthenticated";
+
+    /// <summary>
+    /// Returns whether the configured Provider value matches the unauthenticated authentication type.
+    /// </summary>
+    /// <returns>True when all operations run as anonymous.</returns>
+    public bool IsUnauthenticatedAuthenticationProvider() => Provider.Equals(UNAUTHENTICATED_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// A shorthand method to determine whether JWT is configured for the current authentication provider.
     /// </summary>
     /// <returns>True if the provider is enabled for JWT, otherwise false.</returns>
-    public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled();
+    public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled() && !IsUnauthenticatedAuthenticationProvider();
 };

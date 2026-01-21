@@ -14,12 +14,23 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="ConnectionString">Connection string to access the database.</param>
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
 /// <param name="Health">Health check configuration for the datasource.</param>
+/// <param name="IncludeVectorFieldsByDefault">When false (default), vector-type columns are omitted from results. Only applicable to mssql.</param>
 public record DataSource(
     DatabaseType DatabaseType,
     string ConnectionString,
     Dictionary<string, object?>? Options = null,
-    DatasourceHealthCheckConfig? Health = null)
+    DatasourceHealthCheckConfig? Health = null,
+    bool IncludeVectorFieldsByDefault = false)
 {
+    /// <summary>
+    /// Flag which informs CLI and JSON serializer whether to write include-vector-fields-by-default
+    /// property and value to the runtime config file.
+    /// When user doesn't provide the property/value, which signals DAB to use the default (false),
+    /// the DAB CLI should not write the default value to a serialized config.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool UserProvidedIncludeVectorFieldsByDefault { get; init; } = false;
+
     [JsonIgnore]
     public bool IsDatasourceHealthEnabled =>
         Health is null || Health.Enabled;

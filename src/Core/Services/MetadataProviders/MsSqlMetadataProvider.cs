@@ -113,6 +113,14 @@ namespace Azure.DataApiBuilder.Core.Services
                     columnDefinition.DbType = TypeHelper.GetDbTypeFromSystemType(columnDefinition.SystemType);
 
                     string sqlDbTypeName = (string)columnInfo["DATA_TYPE"];
+
+                    // Detect vector type columns (SQL Server 2025+)
+                    // Vector types are identified by the "vector" data type name
+                    if (string.Equals(sqlDbTypeName, "vector", StringComparison.OrdinalIgnoreCase))
+                    {
+                        columnDefinition.IsVectorType = true;
+                    }
+
                     if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
                     {
                         // The DbType enum in .NET does not distinguish between VarChar and NVarChar. Both are mapped to DbType.String.

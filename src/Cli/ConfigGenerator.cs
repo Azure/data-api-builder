@@ -684,6 +684,27 @@ namespace Cli
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
+            // Handle health.name option
+            if (options.DataSourceHealthName is not null)
+            {
+                // If there's no existing health config, create one with the name
+                // Note: passing enabled: null triggers the base constructor logic that sets Enabled = true
+                if (datasourceHealthCheckConfig is null)
+                {
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
+                }
+                else
+                {
+                    // Update the existing health config with the new name while preserving other settings
+                    // Preserve threshold only if it was explicitly set by the user
+                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs ? datasourceHealthCheckConfig.ThresholdMs : null;
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
+                        enabled: datasourceHealthCheckConfig.Enabled,
+                        name: options.DataSourceHealthName,
+                        thresholdMs: thresholdToPreserve);
+                }
+            }
+
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
             DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };

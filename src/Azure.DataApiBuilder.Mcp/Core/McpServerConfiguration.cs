@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         {
             services.AddMcpServer(options =>
             {
-                options.ServerInfo = new() { Name = "Data API builder MCP Server", Version = "1.0.0" };
+                options.ServerInfo = new() { Name = McpProtocolDefaults.MCP_SERVER_NAME, Version = McpProtocolDefaults.MCP_SERVER_VERSION };
                 options.Capabilities = new()
                 {
                     Tools = new()

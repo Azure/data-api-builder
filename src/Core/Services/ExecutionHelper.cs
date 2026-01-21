@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -534,7 +535,24 @@ namespace Azure.DataApiBuilder.Service.Services
                 // /books/items/items[idx]/authors -> Depth: 3 (0-indexed) which maps to the
                 // pagination metadata for the "authors/items" subquery.
                 string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth();
-                return (IMetadata?)context.ContextData[paginationObjectParentName];
+
+                // For nested list fields under relationships (e.g. reviews.items, authors.items),
+                // include the relationship path suffix so we look up the same key that
+                // SetNewMetadataChildren stored ("::depth::relationshipPath").
+                string relationshipPath = GetRelationshipPathSuffix(context.Path.Parent);
+                if (!string.IsNullOrEmpty(relationshipPath))
+                {
+                    paginationObjectParentName = paginationObjectParentName + "::" + relationshipPath;
+                }
+
+                if (context.ContextData.TryGetValue(key: paginationObjectParentName, out object? itemsPaginationMetadata) && itemsPaginationMetadata is not null)
+                {
+                    return (IMetadata)itemsPaginationMetadata;
+                }
+
+                // If metadata is missing (e.g. Cosmos DB or pruned relationship), return an empty
+                // pagination metadata object to avoid KeyNotFoundException.
+                return PaginationMetadata.MakeEmptyPaginationMetadata();
             }
 
             // This section would be reached when processing a Cosmos query of the form:
@@ -582,7 +600,24 @@ namespace Azure.DataApiBuilder.Service.Services
                 // pagination metadata from context.ContextData
                 // The PaginationMetadata fetched has subquery metadata for "authors" from path "/books/items/authors"
                 string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Parent.Depth();
-                return (IMetadata)context.ContextData[objectParentName]!;
+
+                // Include relationship path suffix (for example, "addresses" or "phoneNumbers") so
+                // we look up the same key that SetNewMetadataChildren stored
+                // ("::depth::relationshipPath").
+                string relationshipPath = GetRelationshipPathSuffix(context.Path.Parent.Parent);
+                if (!string.IsNullOrEmpty(relationshipPath))
+                {
+                    objectParentName = objectParentName + "::" + relationshipPath;
+                }
+
+                if (context.ContextData.TryGetValue(objectParentName, out object? indexerMetadata) && indexerMetadata is not null)
+                {
+                    return (IMetadata)indexerMetadata;
+                }
+
+                // If no metadata is present (for example, for non-paginated relationships or when
+                // RBAC prunes a branch), return an empty pagination metadata object.
+                return PaginationMetadata.MakeEmptyPaginationMetadata();
             }
 
             if (!context.Path.IsRootField() && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
@@ -592,12 +627,35 @@ namespace Azure.DataApiBuilder.Service.Services
                 // e.g. metadata for index 4 will not exist. only 3.
                 // Depth: /  0   / 1  /   2    /   3      /   4
                 // Path:  /books/items/items[0]/publishers/books
+                // 
+                // To handle arbitrary nesting depths with sibling relationships, we need to include
+                // the relationship field path in the key. For example:
+                // - /entity/items[0]/rel1/nested uses key ::3::rel1
+                // - /entity/items[0]/rel2/nested uses key ::3::rel2
+                // - /entity/items[0]/rel1/nested/deeper uses key ::4::rel1::nested
+                // - /entity/items[0]/rel1/nested2/deeper uses key ::4::rel1::nested2
                 string objectParentName = GetMetadataKey(context.Path.Parent) + "::" + context.Path.Parent.Depth();
-                return (IMetadata)context.ContextData[objectParentName]!;
+                string relationshipPath = GetRelationshipPathSuffix(context.Path.Parent);
+                if (!string.IsNullOrEmpty(relationshipPath))
+                {
+                    objectParentName = objectParentName + "::" + relationshipPath;
+                }
+
+                if (context.ContextData.TryGetValue(objectParentName, out object? nestedMetadata) && nestedMetadata is not null)
+                {
+                    return (IMetadata)nestedMetadata;
+                }
+
+                return PaginationMetadata.MakeEmptyPaginationMetadata();
             }
 
             string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
-            return (IMetadata)context.ContextData[metadataKey]!;
+            if (context.ContextData.TryGetValue(metadataKey, out object? rootMetadata) && rootMetadata is not null)
+            {
+                return (IMetadata)rootMetadata;
+            }
+
+            return PaginationMetadata.MakeEmptyPaginationMetadata();
         }
 
         private static string GetMetadataKey(HotChocolate.Path path)
@@ -612,6 +670,50 @@ namespace Azure.DataApiBuilder.Service.Services
             // like the following where there exists a Parent path element:
             // "/entity/items -> current.Parent: "entity"
             return GetMetadataKey(path: path.Parent);
+        }
+
+        /// <summary>
+        /// Builds a suffix representing the relationship path from the IndexerPathSegment (items[n])
+        /// up to (but not including) the current path segment. This is used to create unique metadata
+        /// keys for sibling relationships at any nesting depth.
+        /// </summary>
+        /// <param name="path">The path to build the suffix for</param>
+        /// <returns>
+        /// A string like "rel1" for /entity/items[0]/rel1,
+        /// or "rel1::nested" for /entity/items[0]/rel1/nested,
+        /// or empty string if no IndexerPathSegment is found in the path ancestry.
+        /// </returns>
+        private static string GetRelationshipPathSuffix(HotChocolate.Path path)
+        {
+            List<string> pathParts = new();
+            HotChocolate.Path? current = path;
+
+            // Walk up the path collecting relationship field names until we hit an IndexerPathSegment
+            while (current is not null && !current.IsRoot)
+            {
+                if (current is IndexerPathSegment)
+                {
+                    // We've reached items[n], stop here
+                    break;
+                }
+
+                if (current is NamePathSegment nameSegment)
+                {
+                    pathParts.Add(nameSegment.Name);
+                }
+
+                current = current.Parent;
+            }
+
+            // If we didn't find an IndexerPathSegment, return empty (this handles root-level queries)
+            if (current is not IndexerPathSegment)
+            {
+                return string.Empty;
+            }
+
+            // Reverse because we walked up the tree, but we want the path from root to leaf
+            pathParts.Reverse();
+            return string.Join("::", pathParts);
         }
 
         /// <summary>
@@ -655,7 +757,25 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.
-            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth();
+            StringBuilder contextKeyBuilder = new();
+            contextKeyBuilder
+                .Append(GetMetadataKey(context.Path))
+                .Append("::")
+                .Append(context.Path.Depth());
+
+            // For relationship fields at any depth, include the relationship path suffix to distinguish
+            // between sibling relationships. This handles arbitrary nesting depths.
+            // e.g., "/entity/items[0]/rel1" gets key ::3::rel1
+            // e.g., "/entity/items[0]/rel1/nested" gets key ::4::rel1::nested
+            string relationshipPath = GetRelationshipPathSuffix(context.Path);
+            if (!string.IsNullOrEmpty(relationshipPath))
+            {
+                contextKeyBuilder
+                    .Append("::")
+                    .Append(relationshipPath);
+            }
+
+            string contextKey = contextKeyBuilder.ToString();
 
             // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.

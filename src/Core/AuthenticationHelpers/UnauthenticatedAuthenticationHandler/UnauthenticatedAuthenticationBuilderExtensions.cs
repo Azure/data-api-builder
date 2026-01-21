@@ -8,7 +8,7 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthent
 /// <summary>
 /// Extension methods related to Unauthenticated authentication.
 /// This class allows setting up Unauthenticated authentication in the startup class with
-/// a single call to .AddAuthentiction(scheme).AddUnauthenticatedAuthentication()
+/// a single call to .AddAuthentication(scheme).AddUnauthenticatedAuthentication()
 /// </summary>
 public static class UnauthenticatedAuthenticationBuilderExtensions
 {

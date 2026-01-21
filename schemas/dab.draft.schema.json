@@ -368,6 +368,10 @@
                     {
                       "const": "Custom",
                       "description": "Custom authentication provider defined by the user. Use the JWT property to configure the custom provider."
+                    },
+                    {
+                      "const": "Unauthenticated",
+                      "description": "Unauthenticated provider where all operations run as anonymous. Use when Data API builder is behind an app gateway or APIM where authentication is handled externally."
                     }
                   ],
                   "default": "AppService"

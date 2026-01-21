@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Serilog;
@@ -358,5 +359,37 @@ public class ValidateConfigTests
         Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
         JsonSchemaValidationResult result = await validator.ValidateConfigSchema(config, TEST_RUNTIME_CONFIG_FILE, mockLoggerFactory.Object);
         Assert.IsFalse(result.IsValid);
+    }
+
+    /// <summary>
+    /// Test that the Unauthenticated provider is correctly identified by the IsUnauthenticatedAuthenticationProvider method.
+    /// </summary>
+    [TestMethod]
+    public void TestIsUnauthenticatedAuthenticationProviderMethod()
+    {
+        // Test with Unauthenticated provider
+        AuthenticationOptions unauthenticatedOptions = new(Provider: "Unauthenticated");
+        Assert.IsTrue(unauthenticatedOptions.IsUnauthenticatedAuthenticationProvider());
+
+        // Test case-insensitivity
+        AuthenticationOptions unauthenticatedOptionsLower = new(Provider: "unauthenticated");
+        Assert.IsTrue(unauthenticatedOptionsLower.IsUnauthenticatedAuthenticationProvider());
+
+        // Test that other providers are not identified as Unauthenticated
+        AuthenticationOptions appServiceOptions = new(Provider: "AppService");
+        Assert.IsFalse(appServiceOptions.IsUnauthenticatedAuthenticationProvider());
+
+        AuthenticationOptions simulatorOptions = new(Provider: "Simulator");
+        Assert.IsFalse(simulatorOptions.IsUnauthenticatedAuthenticationProvider());
+    }
+
+    /// <summary>
+    /// Test that Unauthenticated provider does not require JWT configuration.
+    /// </summary>
+    [TestMethod]
+    public void TestUnauthenticatedProviderDoesNotRequireJwt()
+    {
+        AuthenticationOptions unauthenticatedOptions = new(Provider: "Unauthenticated");
+        Assert.IsFalse(unauthenticatedOptions.IsJwtConfiguredIdentityProvider());
     }
 }

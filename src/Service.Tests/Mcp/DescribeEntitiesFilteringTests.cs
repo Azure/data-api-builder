@@ -149,6 +149,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Config has 3 entities: Book (table), BookView (view), GetBook (custom-tool SP)
             // Only 2 should be returned (custom-tool SP excluded)
             Assert.AreEqual(2, entityCount);
+
+            // Verify the count field in the response matches the filtered entity array length
+            Assert.IsTrue(content.TryGetProperty("count", out JsonElement countElement));
+            Assert.AreEqual(entityCount, countElement.GetInt32());
         }
 
         /// <summary>

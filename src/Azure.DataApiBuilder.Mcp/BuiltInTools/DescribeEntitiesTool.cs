@@ -200,8 +200,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             $"No entities found matching the filter: {string.Join(", ", entityFilter)}",
                             logger));
                     }
-                    // All entities were filtered because they're custom tools - provide specific guidance
-                    else if (filteredCustomToolCount > 0)
+                    // All entities were filtered because they're custom tools - only return this specific error
+                    // if ALL configured entities were filtered (not just some). This prevents misleading errors
+                    // when entities fail to build for other reasons (e.g., exceptions in Build*EntityInfo).
+                    else if (filteredCustomToolCount > 0 &&
+                             runtimeConfig.Entities != null &&
+                             filteredCustomToolCount == runtimeConfig.Entities.Entities.Count)
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
                             toolName,
@@ -209,7 +213,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             $"All {filteredCustomToolCount} configured entities are stored procedures exposed as custom tools. Custom tools appear in tools/list, not describe_entities. Use the tools/list endpoint to discover available custom tools.",
                             logger));
                     }
-                    // Truly no entities configured in the runtime config
+                    // Truly no entities configured in the runtime config, or entities failed to build for other reasons
                     else
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(

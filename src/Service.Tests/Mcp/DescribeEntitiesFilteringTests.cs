@@ -218,6 +218,42 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(message.Contains("No entities are configured"));
         }
 
+        /// <summary>
+        /// CRITICAL TEST: Verifies that stored procedures with BOTH custom-tool AND dml-tools enabled
+        /// appear in describe_entities. This validates the truth table scenario:
+        /// custom-tool: true, dml-tools: true → ✔ describe_entities + ✔ tools/list
+        /// 
+        /// This test ensures the filtering logic only filters when dml-tools is FALSE,
+        /// not just when custom-tool is TRUE.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_IncludesCustomToolWithDmlEnabled()
+        {
+            // Arrange
+            RuntimeConfig config = CreateConfigWithCustomToolAndDmlEnabled();
+            IServiceProvider serviceProvider = CreateServiceProvider(config);
+            DescribeEntitiesTool tool = new();
+
+            // Act
+            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+
+            // Assert
+            Assert.IsTrue(result.IsError == false || result.IsError == null);
+            JsonElement content = GetContentFromResult(result);
+            Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
+
+            List<string> entityNames = entities.EnumerateArray()
+                .Select(e => e.GetProperty("name").GetString()!)
+                .ToList();
+
+            // GetBook has custom-tool: true AND dml-tools: true, so it should APPEAR in describe_entities
+            Assert.IsTrue(entityNames.Contains("GetBook"),
+                "SP with custom-tool:true + dml-tools:true should appear in describe_entities");
+
+            // Should have exactly 1 entity
+            Assert.AreEqual(1, entities.GetArrayLength());
+        }
+
         #region Helper Methods
 
         /// <summary>
@@ -236,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
                     Mappings: null,
                     Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null)
+                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false)
                 )
             };
 
@@ -281,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
                     Mappings: null,
                     Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null)
+                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false)
                 )
             };
 
@@ -336,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
                     Mappings: null,
                     Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: null)
+                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false)
                 )
             };
 
@@ -370,6 +406,39 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
                 ),
                 Entities: new(new Dictionary<string, Entity>())
+            );
+        }
+
+        /// <summary>
+        /// Creates a runtime config with a stored procedure that has BOTH custom-tool and dml-tools enabled.
+        /// Used to test the truth table scenario: custom-tool:true + dml-tools:true → should appear in describe_entities.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithCustomToolAndDmlEnabled()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["GetBook"] = new Entity(
+                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
+                    GraphQL: new("GetBook", "GetBook"),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
+                    Mappings: null,
+                    Relationships: null,
+                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: true)
+                )
+            };
+
+            return new RuntimeConfig(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
+                ),
+                Entities: new(entities)
             );
         }
 

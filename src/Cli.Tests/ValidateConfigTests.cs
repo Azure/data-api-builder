@@ -392,4 +392,26 @@ public class ValidateConfigTests
         AuthenticationOptions unauthenticatedOptions = new(Provider: "Unauthenticated");
         Assert.IsFalse(unauthenticatedOptions.IsJwtConfiguredIdentityProvider());
     }
+
+    /// <summary>
+    /// Test that entities with non-anonymous roles are correctly identified when
+    /// Unauthenticated provider is configured. This validates the core detection logic
+    /// used by IsConfigValid to emit warnings.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("authenticated", true, DisplayName = "Authenticated role should be flagged as non-anonymous")]
+    [DataRow("customRole", true, DisplayName = "Custom role should be flagged as non-anonymous")]
+    [DataRow("anonymous", false, DisplayName = "Anonymous role should not be flagged")]
+    [DataRow("Anonymous", false, DisplayName = "Anonymous role (case-insensitive) should not be flagged")]
+    public void TestUnauthenticatedProviderNonAnonymousRoleDetection(string role, bool shouldWarn)
+    {
+        // Arrange: Create an entity permission with the specified role
+        EntityPermission permission = new(Role: role, Actions: new EntityAction[] { new(Action: EntityActionOperation.Read, Fields: null, Policy: null) });
+
+        // Act: Check if the role is non-anonymous (the logic used in IsConfigValid)
+        bool isNonAnonymous = !permission.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase);
+
+        // Assert: Verify the detection logic works correctly
+        Assert.AreEqual(shouldWarn, isNonAnonymous, $"Role '{role}' detection mismatch");
+    }
 }

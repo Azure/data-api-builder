@@ -2448,21 +2448,15 @@ namespace Cli
                     // Warn if Unauthenticated provider is used with authenticated or custom roles
                     if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
                     {
-                        foreach (KeyValuePair<string, Entity> entity in config.Entities)
+                        foreach (KeyValuePair<string, Entity> entity in config.Entities.Where(e => e.Value.Permissions is not null))
                         {
-                            if (entity.Value.Permissions is not null)
+                            foreach (EntityPermission permission in entity.Value.Permissions!.Where(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase)))
                             {
-                                foreach (EntityPermission permission in entity.Value.Permissions)
-                                {
-                                    if (!permission.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        _logger.LogWarning(
-                                            "Entity '{EntityName}' has permission configured for role '{Role}' but authentication provider is 'Unauthenticated'. " +
-                                            "All requests will be treated as anonymous.",
-                                            entity.Key,
-                                            permission.Role);
-                                    }
-                                }
+                                _logger.LogWarning(
+                                    "Entity '{EntityName}' has permission configured for role '{Role}' but authentication provider is 'Unauthenticated'. " +
+                                    "All requests will be treated as anonymous.",
+                                    entity.Key,
+                                    permission.Role);
                             }
                         }
                     }

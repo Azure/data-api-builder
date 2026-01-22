@@ -146,6 +146,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 List<Dictionary<string, object?>> entityList = new();
 
+                // Track how many stored procedures were filtered out because they're exposed as custom tools.
+                // This helps provide a more specific error message when all entities are filtered.
+                int filteredCustomToolCount = 0;
+
                 if (runtimeConfig.Entities != null)
                 {
                     foreach (KeyValuePair<string, Entity> entityEntry in runtimeConfig.Entities)
@@ -155,10 +159,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         string entityName = entityEntry.Key;
                         Entity entity = entityEntry.Value;
 
-                        // Skip stored procedures exposed as custom tools - they appear in tools/list instead
+                        // Filter out stored procedures that are exposed as custom tools to prevent duplication.
+                        // These entities appear in the MCP tools/list endpoint as dedicated tools (e.g., get_books, insert_book)
+                        // and should not also appear in describe_entities which is for data entities (tables, views, regular SPs).
                         if (entity.Source.Type == EntitySourceType.StoredProcedure &&
                             entity.Mcp?.CustomToolEnabled == true)
                         {
+                            filteredCustomToolCount++;
                             continue;
                         }
 
@@ -184,6 +191,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (entityList.Count == 0)
                 {
+                    // No entities matched the filter criteria
                     if (entityFilter != null && entityFilter.Count > 0)
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
@@ -192,6 +200,16 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             $"No entities found matching the filter: {string.Join(", ", entityFilter)}",
                             logger));
                     }
+                    // All entities were filtered because they're custom tools - provide specific guidance
+                    else if (filteredCustomToolCount > 0)
+                    {
+                        return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                            toolName,
+                            "AllEntitiesFilteredAsCustomTools",
+                            $"All {filteredCustomToolCount} configured entities are stored procedures exposed as custom tools. Custom tools appear in tools/list, not describe_entities. Use the tools/list endpoint to discover available custom tools.",
+                            logger));
+                    }
+                    // Truly no entities configured in the runtime config
                     else
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(

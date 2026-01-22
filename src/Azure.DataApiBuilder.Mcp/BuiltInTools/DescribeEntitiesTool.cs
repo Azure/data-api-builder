@@ -155,6 +155,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         string entityName = entityEntry.Key;
                         Entity entity = entityEntry.Value;
 
+                        // Skip stored procedures exposed as custom tools - they appear in tools/list instead
+                        if (entity.Source.Type == EntitySourceType.StoredProcedure &&
+                            entity.Mcp?.CustomToolEnabled == true)
+                        {
+                            continue;
+                        }
+
                         if (!ShouldIncludeEntity(entityName, entityFilter))
                         {
                             continue;

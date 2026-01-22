@@ -60,6 +60,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc/>
         public override async Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
         {
+            
             string enumerateEnabledTriggers = SqlQueryBuilder.BuildFetchEnabledTriggersQuery();
             Dictionary<string, DbConnectionParam> parameters = new()
             {

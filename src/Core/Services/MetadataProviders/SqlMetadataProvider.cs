@@ -307,6 +307,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
+            GenerateAutoentitiesIntoEntities();
             GenerateDatabaseObjectForEntities();
             if (_isValidateOnly)
             {
@@ -683,6 +684,26 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach ((string entityName, Entity entity) in _entities)
             {
                 PopulateDatabaseObjectForEntity(entity, entityName, sourceObjects);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void GenerateAutoentitiesIntoEntities()
+        {
+            if (GetDatabaseType() != DatabaseType.MSSQL)
+            {
+                return;
+            }
+
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            if (runtimeConfig.Autoentities is not null)
+            {
+                foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
+                {
+                    
+                }
             }
         }
 

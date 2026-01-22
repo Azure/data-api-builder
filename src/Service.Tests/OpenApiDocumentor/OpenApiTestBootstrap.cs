@@ -27,22 +27,30 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// <param name="runtimeEntities"></param>
         /// <param name="configFileName"></param>
         /// <param name="databaseEnvironment"></param>
+        /// <param name="requestBodyStrict">Optional value for request-body-strict setting. If null, uses default (true).</param>
         /// <returns>Generated OpenApiDocument</returns>
         internal static async Task<OpenApiDocument> GenerateOpenApiDocumentAsync(
             RuntimeEntities runtimeEntities,
             string configFileName,
-            string databaseEnvironment)
+            string databaseEnvironment,
+            bool? requestBodyStrict = null)
         {
             TestHelper.SetupDatabaseEnvironment(databaseEnvironment);
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             loader.TryLoadKnownConfig(out RuntimeConfig config);
 
+            // Create Rest options with the specified request-body-strict setting
+            RestRuntimeOptions restOptions = requestBodyStrict.HasValue
+                ? config.Runtime?.Rest with { RequestBodyStrict = requestBodyStrict.Value } ?? new RestRuntimeOptions(RequestBodyStrict: requestBodyStrict.Value)
+                : config.Runtime?.Rest ?? new RestRuntimeOptions();
+
             RuntimeConfig configWithCustomHostMode = config with
             {
                 Runtime = config.Runtime with
                 {
-                    Host = config.Runtime?.Host with { Mode = HostMode.Production }
+                    Host = config.Runtime?.Host with { Mode = HostMode.Production },
+                    Rest = restOptions
                 },
                 Entities = runtimeEntities
             };

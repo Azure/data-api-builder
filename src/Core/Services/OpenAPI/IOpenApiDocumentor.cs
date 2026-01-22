@@ -13,10 +13,19 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         /// <summary>
         /// Attempts to return the OpenAPI description document, if generated.
+        /// Returns the superset of all roles' permissions.
         /// </summary>
         /// <param name="document">String representation of JSON OpenAPI description document.</param>
         /// <returns>True (plus string representation of document), when document exists. False, otherwise.</returns>
         public bool TryGetDocument([NotNullWhen(true)] out string? document);
+
+        /// <summary>
+        /// Attempts to return a role-specific OpenAPI description document.
+        /// </summary>
+        /// <param name="role">The role name to filter permissions.</param>
+        /// <param name="document">String representation of JSON OpenAPI description document.</param>
+        /// <returns>True if role exists and document generated. False if role not found.</returns>
+        public bool TryGetDocumentForRole(string role, [NotNullWhen(true)] out string? document);
 
         /// <summary>
         /// Creates an OpenAPI description document using OpenAPI.NET.

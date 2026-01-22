@@ -356,6 +356,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Test Nested Filter for Self-Referencing relationship
+        /// Tests that nested filters work correctly on self-referencing relationships (e.g., parent/child hierarchy).
+        /// Uses DimAccount table with parent_account relationship.
+        /// </summary>
+        [TestMethod]
+        public async Task TestNestedFilterSelfReferencing()
+        {
+            // This query should find all accounts whose parent account has AccountKey = 1
+            // Expected to return account with AccountKey 2 (direct child of account 1)
+            string existsPredicate = $@"
+                EXISTS( SELECT 1
+                        FROM {GetPreIndentDefaultSchema()}[DimAccount] AS [table1]
+                        WHERE [table1].[AccountKey] = 1
+                        AND [table0].[ParentAccountKey] = [table1].[AccountKey] )";
+
+            string graphQLQueryName = "dbo_DimAccounts";
+            // Gets all the accounts that have a parent account with AccountKey = 1
+            string gqlQuery = @"{
+                dbo_DimAccounts (" + QueryBuilder.FILTER_FIELD_NAME + ": {" +
+                    @"parent_account: { AccountKey: { eq: 1 }}})
+                    {
+                      items {
+                        AccountKey
+                        ParentAccountKey
+                      }
+                    }
+                }";
+
+            string dbQuery = MakeQueryOn(
+                table: "DimAccount",
+                queriedColumns: new List<string> { "AccountKey", "ParentAccountKey" },
+                existsPredicate,
+                GetDefaultSchema(),
+                pkColumns: new List<string> { "AccountKey" });
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                gqlQuery,
+                graphQLQueryName,
+                isAuthenticated: false);
+
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Gets the default schema for
         /// MsSql.
         /// </summary>

@@ -3,13 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -379,11 +377,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             ServiceCollection services = new();
 
-            // Create RuntimeConfigProvider with a test loader
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            TestRuntimeConfigProvider configProvider = new(config, loader);
-            services.AddSingleton<RuntimeConfigProvider>(configProvider);
+            // Use shared test helper to create RuntimeConfigProvider
+            RuntimeConfigProvider configProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(config);
+            services.AddSingleton(configProvider);
 
             // Mock IAuthorizationResolver
             Mock<IAuthorizationResolver> mockAuthResolver = new();
@@ -415,37 +411,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsNotNull(result.Content);
             Assert.IsTrue(result.Content.Count > 0);
 
-            ModelContextProtocol.Protocol.TextContentBlock firstContent = (ModelContextProtocol.Protocol.TextContentBlock)result.Content[0];
+            // Verify the content block is the expected type before casting
+            Assert.IsInstanceOfType(result.Content[0], typeof(TextContentBlock),
+                "Expected first content block to be TextContentBlock");
+
+            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             Assert.IsNotNull(firstContent.Text);
 
             return JsonDocument.Parse(firstContent.Text).RootElement;
         }
 
         #endregion
-    }
-
-    /// <summary>
-    /// Test implementation of RuntimeConfigProvider that returns a fixed configuration.
-    /// Used in unit tests to provide controlled RuntimeConfig instances without file system dependencies.
-    /// </summary>
-    internal class TestRuntimeConfigProvider : RuntimeConfigProvider
-    {
-        private readonly RuntimeConfig _config;
-
-        /// <summary>
-        /// Initializes a new instance with the specified configuration.
-        /// </summary>
-        /// <param name="config">The RuntimeConfig to return from GetConfig().</param>
-        /// <param name="loader">The FileSystemRuntimeConfigLoader (required by base class).</param>
-        public TestRuntimeConfigProvider(RuntimeConfig config, FileSystemRuntimeConfigLoader loader)
-            : base(loader)
-        {
-            _config = config;
-        }
-
-        /// <summary>
-        /// Returns the fixed configuration provided during construction.
-        /// </summary>
-        public override RuntimeConfig GetConfig() => _config;
     }
 }

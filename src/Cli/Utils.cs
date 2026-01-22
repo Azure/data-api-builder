@@ -516,7 +516,7 @@ namespace Cli
             string? issuer)
         {
             if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
-                || AuthenticationOptions.SIMULATOR_AUTHENTICATION == authenticationProvider
+                || AuthenticationOptions.SIMULATOR_AUTHENTICATION.Equals(authenticationProvider, StringComparison.OrdinalIgnoreCase)
                 || AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION.Equals(authenticationProvider, StringComparison.OrdinalIgnoreCase))
             {
                 if (!(string.IsNullOrWhiteSpace(audience)) || !(string.IsNullOrWhiteSpace(issuer)))

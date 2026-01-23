@@ -265,6 +265,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
         public static void TestTelemetryApplicationInsightsEnabledInternal(string configValue, bool expected)
         {
+            const string AppInsightsConnectionString = "InstrumentationKey=test-key";
+
             string configJson = @"{
                     ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
                     ""data-source"": {
@@ -275,7 +277,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         ""telemetry"": {
                             ""application-insights"": {
                                 ""enabled"": " + configValue + @",
-                                ""connection-string"": ""InstrumentationKey=test-key""
+                                ""connection-string"": """ + AppInsightsConnectionString + @"""
                             }
                         }
                     },
@@ -293,7 +295,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert
             Assert.IsTrue(IsParsed);
-            Assert.AreEqual("InstrumentationKey=test-key", runtimeConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString, "Connection string should be preserved");
+            Assert.AreEqual(AppInsightsConnectionString, runtimeConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString, "Connection string should be preserved");
             Assert.AreEqual(expected, runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled, "ApplicationInsights enabled value should match expected value");
         }
 
@@ -303,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="configValue">Value to set in the config to cause error</param>
         /// <param name="message">Error message</param>
         [TestMethod]
-        [DataRow("somenonboolean", "Invalid boolean value: somenonboolean. Specify either true or false.", DisplayName = "ApplicationInsights.Enabled invalid value should error")]
+        [DataRow("somenonboolean", "Invalid boolean value: somenonboolean. Specify either true or 1 for true, false or 0 for false", DisplayName = "ApplicationInsights.Enabled invalid value should error")]
         public void TestTelemetryApplicationInsightsEnabledShouldError(string configValue, string message)
         {
             string configJson = @"{
@@ -344,7 +346,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(5, mockLogger.Invocations[0].Arguments.Count, "Log should have 4 arguments");
             var ConfigException = mockLogger.Invocations[0].Arguments[3] as JsonException;
             Assert.IsInstanceOfType(ConfigException, typeof(JsonException), "Should have raised a Json Exception");
-            Assert.AreEqual(ConfigException.Message, message);
+            Assert.AreEqual(message, ConfigException.Message);
         }
 
         /// <summary>

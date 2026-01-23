@@ -115,12 +115,22 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     case FILTER_URL:
                         // save the AST that represents the filter for the query
                         // ?$filter=<filter clause using microsoft api guidelines>
-                        string filterQueryString = $"?{FILTER_URL}={context.ParsedQueryString[key]}";
-                        context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+                        // Use the raw (URL-encoded) filter value to preserve special characters like &
+                        string? rawFilterValue = ExtractRawQueryParameter(context.RawQueryString, FILTER_URL);
+                        if (rawFilterValue is not null)
+                        {
+                            string filterQueryString = $"?{FILTER_URL}={rawFilterValue}";
+                            context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
+                        }
                         break;
                     case SORT_URL:
-                        string sortQueryString = $"?{SORT_URL}={context.ParsedQueryString[key]}";
-                        (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
+                        // Use the raw (URL-encoded) orderby value to preserve special characters
+                        string? rawSortValue = ExtractRawQueryParameter(context.RawQueryString, SORT_URL);
+                        if (rawSortValue is not null)
+                        {
+                            string sortQueryString = $"?{SORT_URL}={rawSortValue}";
+                            (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
+                        }
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -282,6 +292,42 @@ namespace Azure.DataApiBuilder.Core.Parsers
         private static bool IsNull(string value)
         {
             return string.IsNullOrWhiteSpace(value) || string.Equals(value, "null", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Extracts the raw (URL-encoded) value of a query parameter from a query string.
+        /// This preserves special characters like & in filter values.
+        /// </summary>
+        /// <param name="queryString">The raw query string (e.g., "?$filter=region%20eq%20%27filter%20%26%20test%27")</param>
+        /// <param name="parameterName">The parameter name to extract (e.g., "$filter")</param>
+        /// <returns>The raw encoded value of the parameter, or null if not found</returns>
+        private static string? ExtractRawQueryParameter(string queryString, string parameterName)
+        {
+            if (string.IsNullOrWhiteSpace(queryString))
+            {
+                return null;
+            }
+
+            // Remove leading '?' if present
+            string query = queryString.TrimStart('?');
+
+            // Split by '&' to get individual parameters
+            string[] parameters = query.Split('&');
+
+            foreach (string param in parameters)
+            {
+                int equalsIndex = param.IndexOf('=');
+                if (equalsIndex > 0)
+                {
+                    string key = param.Substring(0, equalsIndex);
+                    if (string.Equals(key, parameterName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return param.Substring(equalsIndex + 1);
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }

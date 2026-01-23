@@ -412,6 +412,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTestWithFilterContainingSpecialCharacters",
+                @"
+                  SELECT json_agg(to_jsonb(subq)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationTableName + @"
+                      WHERE title = 'filter & test'
+                      ORDER BY id asc
+                  ) AS subq"
+            },
+            {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 @"
                     SELECT to_jsonb(subq) AS data

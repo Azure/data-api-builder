@@ -113,24 +113,16 @@ namespace Azure.DataApiBuilder.Core.Parsers
                         context.FieldsToBeReturned = context.ParsedQueryString[key]!.Split(",").ToList();
                         break;
                     case FILTER_URL:
-                        // save the AST that represents the filter for the query
-                        // ?$filter=<filter clause using microsoft api guidelines>
-                        // Use the raw (URL-encoded) filter value to preserve special characters like &
+                        // Use raw (URL-encoded) filter value to preserve special characters like &
                         string? rawFilterValue = ExtractRawQueryParameter(context.RawQueryString, FILTER_URL);
                         if (rawFilterValue is not null)
-                        {
-                            string filterQueryString = $"?{FILTER_URL}={rawFilterValue}";
-                            context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause(filterQueryString, $"{context.EntityName}.{context.DatabaseObject.FullName}");
-                        }
+                            context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause($"?{FILTER_URL}={rawFilterValue}", $"{context.EntityName}.{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
-                        // Use the raw (URL-encoded) orderby value to preserve special characters
+                        // Use raw (URL-encoded) orderby value to preserve special characters
                         string? rawSortValue = ExtractRawQueryParameter(context.RawQueryString, SORT_URL);
                         if (rawSortValue is not null)
-                        {
-                            string sortQueryString = $"?{SORT_URL}={rawSortValue}";
-                            (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, sortQueryString);
-                        }
+                            (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, $"?{SORT_URL}={rawSortValue}");
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];
@@ -296,43 +288,18 @@ namespace Azure.DataApiBuilder.Core.Parsers
 
         /// <summary>
         /// Extracts the raw (URL-encoded) value of a query parameter from a query string.
-        /// This preserves special characters like & in filter values.
-        /// This method assumes the query string is properly URL-encoded, where parameter
-        /// separators are unencoded '&' and special characters within values are encoded (e.g., %26).
+        /// Preserves special characters like & in filter values (e.g., %26 stays as %26).
         /// </summary>
-        /// <param name="queryString">The raw query string (e.g., "?$filter=region%20eq%20%27filter%20%26%20test%27")</param>
-        /// <param name="parameterName">The parameter name to extract (e.g., "$filter")</param>
-        /// <returns>The raw encoded value of the parameter, or null if not found</returns>
         private static string? ExtractRawQueryParameter(string queryString, string parameterName)
         {
-            if (string.IsNullOrWhiteSpace(queryString))
+            if (string.IsNullOrWhiteSpace(queryString)) return null;
+
+            foreach (string param in queryString.TrimStart('?').Split('&'))
             {
-                return null;
+                int idx = param.IndexOf('=');
+                if (idx >= 0 && param.Substring(0, idx).Equals(parameterName, StringComparison.OrdinalIgnoreCase))
+                    return idx < param.Length - 1 ? param.Substring(idx + 1) : string.Empty;
             }
-
-            // Remove leading '?' if present
-            string query = queryString.TrimStart('?');
-
-            // Split by '&' to get individual parameters
-            // This works correctly because in a properly URL-encoded query string:
-            // - Parameter separators are unencoded '&'
-            // - Special characters within values are encoded (e.g., '&' becomes '%26')
-            string[] parameters = query.Split('&');
-
-            foreach (string param in parameters)
-            {
-                int equalsIndex = param.IndexOf('=');
-                if (equalsIndex >= 0)
-                {
-                    string key = param.Substring(0, equalsIndex);
-                    if (string.Equals(key, parameterName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Return everything after '=', or empty string if '=' is at the end
-                        return equalsIndex < param.Length - 1 ? param.Substring(equalsIndex + 1) : string.Empty;
-                    }
-                }
-            }
-
             return null;
         }
     }

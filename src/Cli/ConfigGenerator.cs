@@ -1747,6 +1747,7 @@ namespace Cli
                 List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
                 Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
                 List<FieldMetadata> mergedFields = [];
+                bool primaryKeyOptionProvided = options.FieldsPrimaryKeyCollection?.Any() == true;
 
                 foreach (FieldMetadata field in existingFields)
                 {
@@ -1757,7 +1758,10 @@ namespace Cli
                             Name = updatedField.Name,
                             Alias = updatedField.Alias ?? field.Alias,
                             Description = updatedField.Description ?? field.Description,
-                            PrimaryKey = updatedField.PrimaryKey
+                            // If --fields.primary-key was not provided at all,
+                            // keep the existing primary-key flag. Otherwise,
+                            // use the value coming from updatedField.
+                            PrimaryKey = primaryKeyOptionProvided ? updatedField.PrimaryKey : field.PrimaryKey
                         });
                         updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
                     }

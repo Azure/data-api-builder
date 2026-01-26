@@ -307,7 +307,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-
             if (GetDatabaseType() == DatabaseType.MSSQL)
             {
                 await GenerateAutoentitiesIntoEntities();

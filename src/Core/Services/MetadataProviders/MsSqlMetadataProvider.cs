@@ -382,7 +382,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
-        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
+        public async Task<JsonArray?> QueryAutoentitiesConfiguration(Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);

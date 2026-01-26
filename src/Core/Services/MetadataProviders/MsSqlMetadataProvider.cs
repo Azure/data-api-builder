@@ -295,10 +295,17 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc/>
         protected override async Task GenerateAutoentitiesIntoEntities()
         {
-            await Task.CompletedTask;
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            if (runtimeConfig.Autoentities is not null)
+            {
+                foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
+                {
+                    JsonArray? resultArray = await QueryAutoentitiesConfiguration(autoentity);
+                }
+            }
         }
 
-        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
+        public async Task<JsonArray?> QueryAutoentitiesConfiguration(Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);

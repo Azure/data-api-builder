@@ -307,7 +307,11 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            GenerateAutoentitiesIntoEntities();
+            if (GetDatabaseType() == DatabaseType.MSSQL)
+            {
+                await GenerateAutoentitiesIntoEntities();
+            }
+
             GenerateDatabaseObjectForEntities();
             if (_isValidateOnly)
             {
@@ -688,23 +692,12 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// 
+        /// Creates entities for each table that is found, based on the autoentity configuration.
+        /// This method is only called for tables in MsSql.
         /// </summary>
-        private void GenerateAutoentitiesIntoEntities()
+        protected virtual Task GenerateAutoentitiesIntoEntities()
         {
-            if (GetDatabaseType() != DatabaseType.MSSQL)
-            {
-                return;
-            }
-
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            if (runtimeConfig.Autoentities is not null)
-            {
-                foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
-                {
-                    
-                }
-            }
+            throw new NotImplementedException();
         }
 
         protected void PopulateDatabaseObjectForEntity(

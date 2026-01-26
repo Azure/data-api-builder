@@ -90,5 +90,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// DB Connection Param.
         /// </summary>
         public string QuoteTableNameAsDBConnectionParam(string param);
+
+        public string BuildGetAutoentitiesQuery(string include, string exclude, string namePattern) => throw new NotImplementedException();
     }
 }

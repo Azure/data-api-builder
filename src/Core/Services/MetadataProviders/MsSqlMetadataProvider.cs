@@ -291,5 +291,34 @@ namespace Azure.DataApiBuilder.Core.Services
                 return false;
             }
         }
+
+        /// <inheritdoc/>
+        protected override async Task GenerateAutoentitiesIntoEntities()
+        {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            if (runtimeConfig.Autoentities is not null)
+            {
+                foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
+                {
+                    JsonArray? resultArray = await QueryAutoentitiesConfiguration(autoentity);
+                }
+            }
+        }
+
+        public async Task<JsonArray?> QueryAutoentitiesConfiguration(Autoentity autoentity)
+        {
+            string include = string.Join(",", autoentity.Patterns.Include);
+            string exclude = string.Join(",", autoentity.Patterns.Exclude);
+            string namePattern = autoentity.Patterns.Name;
+            string getAutoentitiesQuery = SqlQueryBuilder.BuildGetAutoentitiesQuery(include, exclude, namePattern);
+
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: getAutoentitiesQuery,
+                parameters: null!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
+                dataSourceName: _dataSourceName);
+
+            return resultArray;
+        }
     }
 }

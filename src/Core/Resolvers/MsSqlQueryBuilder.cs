@@ -571,7 +571,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns></returns>
         public string BuildGetAutoentitiesQuery(string include, string exclude, string namePattern)
         {
-            string query = $"DECLARE @include_pattern NVARCHAR(MAX) = {include} DECLARE @exclude_pattern NVARCHAR(MAX) = {exclude} DECLARE @name_pattern NVARCHAR(255) = {namePattern}" +
+            string query = $"DECLARE @include_pattern NVARCHAR(MAX) = '{include}' DECLARE @exclude_pattern NVARCHAR(MAX) = '{exclude}' DECLARE @name_pattern NVARCHAR(255) = '{namePattern}' " +
                 "DECLARE @exclude_invalid_types BIT = 1 SET NOCOUNT ON; WITH include_patterns AS ( SELECT LTRIM(RTRIM(value)) AS pattern " +
                 "FROM STRING_SPLIT(ISNULL(@include_pattern, N''), N',') WHERE LTRIM(RTRIM(value)) <> N'' ), " +
                 "exclude_patterns AS ( SELECT LTRIM(RTRIM(value)) AS pattern FROM STRING_SPLIT(ISNULL(@exclude_pattern, N''), N',') " +
@@ -588,8 +588,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "END AS entity_name, CASE WHEN EXISTS ( SELECT 1 FROM sys.columns AS c JOIN sys.types AS ty ON c.user_type_id = ty.user_type_id WHERE c.object_id = a.object_id AND ty.name IN " +
                 "( N'geography', N'geometry', N'hierarchyid', N'sql_variant', N'xml', N'rowversion', N'vector' ) ) THEN 1 ELSE 0 END AS contains_invalid_types FROM eligible_tables AS a WHERE " +
                 "a.is_system_object = 0 AND ( NOT EXISTS (SELECT 1 FROM exclude_patterns) OR NOT EXISTS ( SELECT 1 FROM exclude_patterns AS ep WHERE a.full_name LIKE ep.pattern " +
-                "COLLATE DATABASE_DEFAULT ESCAPE '\' ) ) AND ( NOT EXISTS (SELECT 1 FROM include_patterns) OR EXISTS ( SELECT 1 FROM include_patterns AS ip WHERE a.full_name LIKE ip.pattern " +
-                "COLLATE DATABASE_DEFAULT ESCAPE '\' ) ) AND ( @exclude_invalid_types = 0 OR NOT EXISTS ( SELECT 1 FROM sys.columns AS c JOIN sys.types AS ty ON c.user_type_id = ty.user_type_id " +
+                "COLLATE DATABASE_DEFAULT ESCAPE '\\' ) ) AND ( NOT EXISTS (SELECT 1 FROM include_patterns) OR EXISTS ( SELECT 1 FROM include_patterns AS ip WHERE a.full_name LIKE ip.pattern " +
+                "COLLATE DATABASE_DEFAULT ESCAPE '\\' ) ) AND ( @exclude_invalid_types = 0 OR NOT EXISTS ( SELECT 1 FROM sys.columns AS c JOIN sys.types AS ty ON c.user_type_id = ty.user_type_id " +
                 "WHERE c.object_id = a.object_id AND ty.name IN ( N'geography', N'geometry', N'hierarchyid', N'sql_variant', N'xml', N'rowversion', N'vector' ) ) ) ORDER BY a.schema_name, a.object_name;";
 
             return query;

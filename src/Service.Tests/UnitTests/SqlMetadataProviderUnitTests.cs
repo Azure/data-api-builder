@@ -588,5 +588,35 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
         }
+
+        /// <summary>
+        /// Ensures that the query that returns the tables that will be generated
+        /// into entities from the autoentites configuration return the expected result.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task CheckAutoentitiesQuery()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+            
+            await _sqlMetadataProvider.InitializeAsync();
+
+            MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
+            JsonArray resultArray = metadataProvider.QueryAutoentitiesConfiguration();
+
+            Assert.IsNotNull(resultArray);
+
+            JsonObject resultObject = (JsonObject)resultArray[0];
+            Assert.AreEqual(expected: entitySchema, actual: resultObject[0]);
+            Assert.AreEqual(expected: entityObject, actual: resultObject[1]);
+            Assert.AreEqual(expected: entityName, actual: resultObject[2]);
+
+            // Check that the values inside of the
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
     }
 }

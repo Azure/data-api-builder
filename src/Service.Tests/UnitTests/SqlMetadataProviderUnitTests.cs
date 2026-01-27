@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using HotChocolate.Execution.Processing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -593,28 +594,56 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Ensures that the query that returns the tables that will be generated
         /// into entities from the autoentites configuration return the expected result.
         /// </summary>
-        [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public async Task CheckAutoentitiesQuery()
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow(new string[] { "dbo.%book%" }, new string[] { }, "{schema}.{object}.books", new string[] { "book" }, "")]
+        [DataRow(new string[] { "dbo.%publish%" }, new string[] { }, "{schema}.{object}", new string[] { "publish" }, "")]
+        [DataRow(new string[] { "dbo.%book%" }, new string[] { "dbo.%books%" }, "{schema}_{object}_exclude_books", new string[] { "book" }, "books")]
+        [DataRow(new string[] { "dbo.%book%", "dbo.%publish%" }, new string[] { }, "{object}", new string[] { "book", "publish" }, "")]
+        public async Task CheckAutoentitiesQuery(string[] include, string[] exclude, string name, string[] includeObject, string excludeObject)
         {
+            // Arrange
             DatabaseEngine = TestCategory.MSSQL;
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            Autoentity autoentity = new(new AutoentityPatterns(include, exclude, name), null, null);
+            Dictionary<string, Autoentity> dictAutoentity = new()
+            {
+                { "autoentity", autoentity }
+            };
+            RuntimeConfig configWithAutoentity = runtimeConfig with
+            {
+                Autoentities = new RuntimeAutoentities(dictAutoentity)
+            };
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(configWithAutoentity);
             SetUpSQLMetadataProvider(runtimeConfigProvider);
             
             await _sqlMetadataProvider.InitializeAsync();
 
+            // Act
             MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
-            JsonArray resultArray = metadataProvider.QueryAutoentitiesConfiguration();
+            JsonArray resultArray = await metadataProvider.QueryAutoentitiesConfiguration(autoentity);
 
+            // Assert
             Assert.IsNotNull(resultArray);
+            foreach(JsonObject resultObject in resultArray)
+            {
+                bool includedObjectExists = false;
+                foreach (string included in includeObject)
+                {
+                    if (resultObject[1].ToString().Contains(included))
+                    {
+                        includedObjectExists = true;
+                        Assert.AreEqual(expected: "dbo", actual: resultObject[0].ToString(), "Query does not return expected schema.");
+                        Assert.AreNotEqual(name, resultObject[3].ToString(), "Name returned by query should not include {schema} or {object}.");
+                        if (exclude.Length > 0)
+                        {
+                            Assert.IsTrue(!resultObject[1].ToString().Contains(excludeObject), "Query returns pattern that should be excluded.");
+                        }
+                    }
+                }
 
-            JsonObject resultObject = (JsonObject)resultArray[0];
-            Assert.AreEqual(expected: entitySchema, actual: resultObject[0]);
-            Assert.AreEqual(expected: entityObject, actual: resultObject[1]);
-            Assert.AreEqual(expected: entityName, actual: resultObject[2]);
-
-            // Check that the values inside of the
+                Assert.IsTrue(includedObjectExists, "Query does not return expected object.");
+            }
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }

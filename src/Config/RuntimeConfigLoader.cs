@@ -327,6 +327,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replacementSettings));
+        options.Converters.Add(new BoolJsonConverter());
         options.Converters.Add(new FileSinkConverter(replacementSettings));
 
         // Add AzureKeyVaultOptionsConverterFactory to ensure AKV config is deserialized properly

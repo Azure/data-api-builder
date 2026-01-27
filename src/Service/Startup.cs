@@ -491,7 +491,7 @@ namespace Azure.DataApiBuilder.Service
 
             // If no password is provided, and the endpoint (or at least one of them) is non-localhost,
             // attempt to use Entra authentication.
-            if (string.IsNullOrEmpty(options.Password) && !options.EndPoints.Any(IsLocalhostEndpoint))
+            if (string.IsNullOrEmpty(options.Password) && options.EndPoints.Any(static ep => !IsLocalhostEndpoint(ep)))
             {
                 options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
             }

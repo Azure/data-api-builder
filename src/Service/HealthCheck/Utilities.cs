@@ -69,5 +69,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             // "EntityName?$first=4"
             return $"/{entityName}?$first={first}";
         }
+
+        public static string NormalizeConnectionString(string connectionString, DatabaseType dbType)
+        {
+            switch (dbType)
+            {
+                case DatabaseType.PostgreSQL:
+                    return new NpgsqlConnectionStringBuilder(connectionString).ToString();
+                case DatabaseType.MSSQL:
+                case DatabaseType.DWSQL:
+                    return new SqlConnectionStringBuilder(connectionString).ToString();
+                default:
+                    return connectionString;
+            }
+        }
     }
 }

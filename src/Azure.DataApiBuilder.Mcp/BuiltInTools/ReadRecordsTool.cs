@@ -114,6 +114,15 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
+                // Check entity-level DML tool configuration
+                if (runtimeConfig.Entities?.TryGetValue(entityName, out Entity? entity) == true)
+                {
+                    if (entity.Mcp?.DmlToolEnabled == false)
+                    {
+                        return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entityName}'.");
+                    }
+                }
+
                 if (root.TryGetProperty("select", out JsonElement selectElement))
                 {
                     select = selectElement.GetString();

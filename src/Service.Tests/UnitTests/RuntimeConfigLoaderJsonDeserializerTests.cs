@@ -14,7 +14,9 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -211,6 +213,140 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 return $"@env('{envVarName}')";
             }
+        }
+
+        /// <summary>
+        /// Test method to validate that environment variable replacement works correctly
+        /// for the telemetry.application-insights.enabled property when set through config
+        /// or through environment variables
+        /// </summary>
+        [TestMethod]
+        [DataRow(true, DisplayName = "ApplicationInsights.Enabled set to true (literal bool)")]
+        [DataRow(false, DisplayName = "ApplicationInsights.Enabled set to false (literal bool)")]
+        public void TestTelemetryApplicationInsightsEnabled(bool expected)
+        {
+            TestTelemetryApplicationInsightsEnabledInternal(expected.ToString().ToLower(), expected);
+        }
+
+        [TestMethod]
+        [DataRow("true", true, DisplayName = "ApplicationInsights.Enabled from string 'true'")]
+        [DataRow("false", false, DisplayName = "ApplicationInsights.Enabled from string 'false'")]
+        [DataRow("1", true, DisplayName = "ApplicationInsights.Enabled from string '1'")]
+        [DataRow("0", false, DisplayName = "ApplicationInsights.Enabled from string '0'")]
+        public void TestTelemetryApplicationInsightsEnabledFromString(string configSetting, bool expected)
+        {
+
+            TestTelemetryApplicationInsightsEnabledInternal($"\"{configSetting}\"", expected);
+        }
+
+        [TestMethod]
+        [DataRow("true", true, DisplayName = "ApplicationInsights.Enabled from environment 'true'")]
+        [DataRow("false", false, DisplayName = "ApplicationInsights.Enabled from environment 'false'")]
+        [DataRow("1", true, DisplayName = "ApplicationInsights.Enabled from environment '1'")]
+        [DataRow("0", false, DisplayName = "ApplicationInsights.Enabled from environment '0'")]
+        public void TestTelemetryApplicationInsightsEnabledFromEnvironment(string configSetting, bool expected)
+        {
+            // Arrange
+            const string envVarName = "APP_INSIGHTS_ENABLED";
+            string envVarValue = configSetting;
+            // Set up the environment variable
+            Environment.SetEnvironmentVariable(envVarName, envVarValue);
+
+            try
+            {
+                TestTelemetryApplicationInsightsEnabledInternal("\"@env('APP_INSIGHTS_ENABLED')\"", expected);
+            }
+            finally
+            {
+                // Cleanup
+                Environment.SetEnvironmentVariable(envVarName, null);
+            }
+
+        }
+        public static void TestTelemetryApplicationInsightsEnabledInternal(string configValue, bool expected)
+        {
+            const string AppInsightsConnectionString = "InstrumentationKey=test-key";
+
+            string configJson = @"{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                    ""data-source"": {
+                        ""database-type"": ""mssql"",
+                        ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                    },
+                    ""runtime"": {
+                        ""telemetry"": {
+                            ""application-insights"": {
+                                ""enabled"": " + configValue + @",
+                                ""connection-string"": """ + AppInsightsConnectionString + @"""
+                            }
+                        }
+                    },
+                    ""entities"": { }
+                }";
+
+            // Act
+            bool IsParsed = RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig runtimeConfig,
+                replacementSettings: new DeserializationVariableReplacementSettings(
+                    azureKeyVaultOptions: null,
+                    doReplaceEnvVar: true,
+                    doReplaceAkvVar: false));
+
+            // Assert
+            Assert.IsTrue(IsParsed);
+            Assert.AreEqual(AppInsightsConnectionString, runtimeConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString, "Connection string should be preserved");
+            Assert.AreEqual(expected, runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled, "ApplicationInsights enabled value should match expected value");
+        }
+
+        /// <summary>
+        ///  
+        /// </summary>
+        /// <param name="configValue">Value to set in the config to cause error</param>
+        /// <param name="message">Error message</param>
+        [TestMethod]
+        [DataRow("somenonboolean", "Invalid boolean value: somenonboolean. Specify either true or 1 for true, false or 0 for false", DisplayName = "ApplicationInsights.Enabled invalid value should error")]
+        public void TestTelemetryApplicationInsightsEnabledShouldError(string configValue, string message)
+        {
+            string configJson = @"{
+                    ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                    ""data-source"": {
+                        ""database-type"": ""mssql"",
+                        ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+                    },
+                    ""runtime"": {
+                        ""telemetry"": {
+                            ""application-insights"": {
+                                ""enabled"": """ + configValue + @""",
+                                ""connection-string"": ""InstrumentationKey=test-key""
+                            }
+                        }
+                    },
+                    ""entities"": { }
+                }";
+
+            // Arrange
+            Mock<ILogger> mockLogger = new();
+
+            // Act
+            bool isParsed = RuntimeConfigLoader.TryParseConfig(
+                configJson,
+                out RuntimeConfig runtimeConfig,
+                replacementSettings: new DeserializationVariableReplacementSettings(
+                    azureKeyVaultOptions: null,
+                    doReplaceEnvVar: true,
+                    doReplaceAkvVar: false),
+                logger: mockLogger.Object);
+
+            // Assert
+            Assert.IsFalse(isParsed);
+            Assert.IsNull(runtimeConfig);
+
+            Assert.AreEqual(1, mockLogger.Invocations.Count, "Should raise 1 exception");
+            Assert.AreEqual(5, mockLogger.Invocations[0].Arguments.Count, "Log should have 4 arguments");
+            var ConfigException = mockLogger.Invocations[0].Arguments[3] as JsonException;
+            Assert.IsInstanceOfType(ConfigException, typeof(JsonException), "Should have raised a Json Exception");
+            Assert.AreEqual(message, ConfigException.Message);
         }
 
         /// <summary>
@@ -656,7 +792,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(McpRuntimeOptions.DEFAULT_PATH, parsedConfig.McpPath);
             Assert.IsTrue(parsedConfig.AllowIntrospection);
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
-            Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);
+            Assert.IsTrue(parsedConfig.IsAppServiceIdentityProvider);
             Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
             Assert.IsTrue(parsedConfig.IsLogLevelNull());
             Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null

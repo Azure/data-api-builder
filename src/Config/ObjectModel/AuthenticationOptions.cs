@@ -35,9 +35,9 @@ public record AuthenticationOptions(string Provider = nameof(EasyAuthType.AppSer
     public const string UNAUTHENTICATED_AUTHENTICATION = "Unauthenticated";
 
     /// <summary>
-    /// Returns whether the configured Provider value matches the unauthenticated authentication type.
+    /// Returns whether the configured Provider value matches the Unauthenticated authentication type.
     /// </summary>
-    /// <returns>True when all operations run as anonymous.</returns>
+    /// <returns>True if Provider is Unauthenticated type.</returns>
     public bool IsUnauthenticatedAuthenticationProvider() => Provider.Equals(UNAUTHENTICATED_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>

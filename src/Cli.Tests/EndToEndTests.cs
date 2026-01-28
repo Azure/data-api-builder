@@ -1121,12 +1121,15 @@ public class EndToEndTests
     [DataRow("AppService", true)]
     [DataRow("AzureAD", true)]
     [DataRow("EntraID", true)]
+    [DataRow("Unauthenticated", true)]
     public void TestBaseRouteIsConfigurableForSWA(string authProvider, bool isExceptionExpected)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
             "--connection-string", SAMPLE_TEST_CONN_STRING, "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
 
-        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _))
+        if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _) &&
+            !authProvider.Equals("Unauthenticated", StringComparison.OrdinalIgnoreCase) &&
+            !authProvider.Equals("Simulator", StringComparison.OrdinalIgnoreCase))
         {
             string[] audIssuers = { "--auth.audience", "aud-xxx", "--auth.issuer", "issuer-xxx" };
             initArgs = initArgs.Concat(audIssuers).ToArray();

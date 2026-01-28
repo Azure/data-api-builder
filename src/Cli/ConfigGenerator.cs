@@ -2448,16 +2448,16 @@ namespace Cli
                     // Warn if Unauthenticated provider is used with authenticated or custom roles
                     if (config.Runtime?.Host?.Authentication?.IsUnauthenticatedAuthenticationProvider() == true)
                     {
-                        foreach (KeyValuePair<string, Entity> entity in config.Entities.Where(e => e.Value.Permissions is not null))
+                        bool hasNonAnonymousRoles = config.Entities
+                            .Where(e => e.Value.Permissions is not null)
+                            .SelectMany(e => e.Value.Permissions!)
+                            .Any(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase));
+
+                        if (hasNonAnonymousRoles)
                         {
-                            foreach (EntityPermission permission in entity.Value.Permissions!.Where(p => !p.Role.Equals("anonymous", StringComparison.OrdinalIgnoreCase)))
-                            {
-                                _logger.LogWarning(
-                                    "Entity '{EntityName}' has permission configured for role '{Role}' but authentication provider is 'Unauthenticated'. " +
-                                    "All requests will be treated as anonymous.",
-                                    entity.Key,
-                                    permission.Role);
-                            }
+                            _logger.LogWarning(
+                                "Authentication provider is 'Unauthenticated' but some entities have permissions configured for non-anonymous roles. " +
+                                "All requests will be treated as anonymous.");
                         }
                     }
                 }

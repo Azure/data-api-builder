@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Authentication;
 
-namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthenticationHandler;
+namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 
 /// <summary>
 /// Extension methods related to Unauthenticated authentication.

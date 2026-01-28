@@ -7,10 +7,11 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthenticationHandler;
+namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 
 /// <summary>
 /// This class is used to best integrate with ASP.NET Core AuthenticationHandler base class.
+///     Ref: https://github.com/dotnet/aspnetcore/blob/main/src/Security/Authentication/Core/src/AuthenticationHandler.cs
 /// When "Unauthenticated" is configured, this handler authenticates the user as anonymous,
 /// without reading any HTTP authentication headers.
 /// </summary>

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthenticationHandler;
+namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.UnauthenticatedAuthentication;
 
 /// <summary>
 /// Default values related to UnauthenticatedAuthentication handler.

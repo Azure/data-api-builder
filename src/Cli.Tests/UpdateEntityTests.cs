@@ -1101,11 +1101,14 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Updating a field's description without --fields.primary-key
-        /// should not change its existing primary-key flag.
+        /// Updating a field's description should either preserve or clear
+        /// the existing primary-key flag depending on whether an explicit
+        /// --fields.primary-key value is provided.
         /// </summary>
-        [TestMethod]
-        public void TestUpdateFieldDescriptionPreservesPrimaryKeyWhenNoFlagProvided()
+        [DataTestMethod]
+        [DataRow(null, true, DisplayName = "No primary-key flag: preserve existing true")]
+        [DataRow(false, false, DisplayName = "Explicit primary-key false: clear existing true")]
+        public void TestUpdateFieldDescriptionPrimaryKeyBehavior(bool? primaryKeyFlag, bool expectedPrimaryKey)
         {
             string initialConfig = GetInitialConfigString() + "," + @"
                 ""entities"": {
@@ -1127,6 +1130,10 @@ namespace Cli.Tests
                     }
                 }
             }";
+
+            IEnumerable<bool>? primaryKeyFlags = primaryKeyFlag.HasValue
+                ? new[] { primaryKeyFlag.Value }
+                : null;
 
             UpdateOptions options = new(
                 source: null,
@@ -1162,7 +1169,7 @@ namespace Cli.Tests
                 fieldsNameCollection: new[] { "Id" },
                 fieldsAliasCollection: null,
                 fieldsDescriptionCollection: new[] { "Unique Key" },
-                fieldsPrimaryKeyCollection: null,
+                fieldsPrimaryKeyCollection: primaryKeyFlags,
                 mcpDmlTools: null,
                 mcpCustomTool: null
             );
@@ -1176,86 +1183,7 @@ namespace Cli.Tests
             FieldMetadata field = updatedEntity.Fields[0];
             Assert.AreEqual("Id", field.Name);
             Assert.AreEqual("Unique Key", field.Description);
-            Assert.IsTrue(field.PrimaryKey, "Primary key flag should be preserved when --fields.primary-key is not provided.");
-        }
-
-        /// <summary>
-        /// When --fields.primary-key false is explicitly provided, it should
-        /// change an existing primary-key flag from true to false.
-        /// </summary>
-        [TestMethod]
-        public void TestUpdateFieldPrimaryKeyCanBeClearedWithExplicitFalse()
-        {
-            string initialConfig = GetInitialConfigString() + "," + @"
-                ""entities"": {
-                    ""MyEntity"": {
-                        ""source"": ""MyTable"",
-                        ""fields"": [
-                            {
-                                ""name"": ""Id"",
-                                ""description"": ""Primary key"",
-                                ""primary-key"": true
-                            }
-                        ],
-                        ""permissions"": [
-                            {
-                                ""role"": ""anonymous"",
-                                ""actions"": [""read""]
-                            }
-                        ]
-                    }
-                }
-            }";
-
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: null,
-                linkingTargetFields: null,
-                relationshipFields: null,
-                map: null,
-                cacheEnabled: null,
-                cacheTtl: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null,
-                description: null,
-                parametersNameCollection: null,
-                parametersDescriptionCollection: null,
-                parametersRequiredCollection: null,
-                parametersDefaultCollection: null,
-                fieldsNameCollection: new[] { "Id" },
-                fieldsAliasCollection: null,
-                fieldsDescriptionCollection: new[] { "Unique Key" },
-                fieldsPrimaryKeyCollection: new[] { false },
-                mcpDmlTools: null,
-                mcpCustomTool: null
-            );
-
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
-            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedRuntimeConfig), "Successfully updated entity in the config.");
-
-            Entity updatedEntity = updatedRuntimeConfig.Entities["MyEntity"];
-            Assert.IsNotNull(updatedEntity.Fields);
-            Assert.AreEqual(1, updatedEntity.Fields!.Count);
-            FieldMetadata field = updatedEntity.Fields[0];
-            Assert.AreEqual("Id", field.Name);
-            Assert.AreEqual("Unique Key", field.Description);
-            Assert.IsFalse(field.PrimaryKey, "Primary key flag should be cleared when --fields.primary-key false is provided.");
+            Assert.AreEqual(expectedPrimaryKey, field.PrimaryKey);
         }
 
         private static string GetInitialConfigString()

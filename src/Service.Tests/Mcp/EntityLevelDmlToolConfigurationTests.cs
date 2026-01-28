@@ -23,6 +23,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     /// Tests for entity-level DML tool configuration (GitHub issue #3017).
     /// Ensures that DML tools respect the entity-level Mcp.DmlToolEnabled property
     /// in addition to the runtime-level configuration.
+    /// 
+    /// Coverage:
+    /// - Entity with DmlToolEnabled=false (tool disabled at entity level)
+    /// - Entity with DmlToolEnabled=true (tool enabled at entity level)
+    /// - Entity with no MCP configuration (defaults to enabled)
+    /// - Custom tool with CustomToolEnabled=false (runtime validation)
     /// </summary>
     [TestClass]
     public class EntityLevelDmlToolConfigurationTests
@@ -47,14 +53,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-            
+
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-            
+
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual("ToolDisabled", errorType.GetString());
-            
+
             Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
             string message = errorMessage.GetString() ?? string.Empty;
             Assert.IsTrue(message.Contains("DML tools are disabled for entity 'Book'"));
@@ -78,10 +84,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-            
+
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-            
+
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual("ToolDisabled", errorType.GetString());
@@ -105,10 +111,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-            
+
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-            
+
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual("ToolDisabled", errorType.GetString());
@@ -132,10 +138,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-            
+
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-            
+
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual("ToolDisabled", errorType.GetString());
@@ -159,10 +165,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-            
+
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-            
+
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual("ToolDisabled", errorType.GetString());
@@ -192,12 +198,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             {
                 TextContentBlock firstContent = (TextContentBlock)result.Content[0];
                 JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-                
-                if (content.TryGetProperty("error", out JsonElement error) && 
+
+                if (content.TryGetProperty("error", out JsonElement error) &&
                     error.TryGetProperty("type", out JsonElement errorType))
                 {
                     string errorTypeValue = errorType.GetString();
-                    Assert.AreNotEqual("ToolDisabled", errorTypeValue, 
+                    Assert.AreNotEqual("ToolDisabled", errorTypeValue,
                         "Should not get ToolDisabled error when DmlToolEnabled=true");
                 }
             }
@@ -226,12 +232,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             {
                 TextContentBlock firstContent = (TextContentBlock)result.Content[0];
                 JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-                
-                if (content.TryGetProperty("error", out JsonElement error) && 
+
+                if (content.TryGetProperty("error", out JsonElement error) &&
                     error.TryGetProperty("type", out JsonElement errorType))
                 {
                     string errorTypeValue = errorType.GetString();
-                    Assert.AreNotEqual("ToolDisabled", errorTypeValue, 
+                    Assert.AreNotEqual("ToolDisabled", errorTypeValue,
                         "Should not get ToolDisabled error when entity has no MCP config");
                 }
             }
@@ -249,7 +255,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Arrange - Create a stored procedure entity with CustomToolEnabled=false
             RuntimeConfig config = CreateConfigWithCustomToolDisabled();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
-            
+
             // Create the DynamicCustomTool with the entity that has CustomToolEnabled initially true
             // (simulating tool created at startup, then config changed)
             Entity initialEntity = new Entity(
@@ -257,14 +263,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 GraphQL: new("GetBook", "GetBook"),
                 Fields: null,
                 Rest: new(Enabled: true),
-                Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { 
+                Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
                     new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
                 }) },
                 Mappings: null,
                 Relationships: null,
                 Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: true)
             );
-            
+
             Azure.DataApiBuilder.Mcp.Core.DynamicCustomTool tool = new("GetBook", initialEntity);
 
             JsonDocument arguments = JsonDocument.Parse("{}");
@@ -274,14 +280,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when CustomToolEnabled=false in runtime config");
-            
+
             TextContentBlock firstContent = (TextContentBlock)result.Content[0];
             JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-            
+
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual("ToolDisabled", errorType.GetString());
-            
+
             Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
             string message = errorMessage.GetString() ?? string.Empty;
             Assert.IsTrue(message.Contains("Custom tool is disabled for entity 'GetBook'"));
@@ -301,7 +307,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     GraphQL: new("Book", "Books"),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { 
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
                         new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null),
                         new EntityAction(Action: EntityActionOperation.Create, Fields: null, Policy: null),
                         new EntityAction(Action: EntityActionOperation.Update, Fields: null, Policy: null),
@@ -349,7 +355,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     GraphQL: new("GetBook", "GetBook"),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { 
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
                         new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
                     }) },
                     Mappings: null,
@@ -394,7 +400,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     GraphQL: new("Book", "Books"),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { 
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
                         new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null)
                     }) },
                     Mappings: null,
@@ -439,7 +445,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     GraphQL: new("Book", "Books"),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { 
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
                         new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null)
                     }) },
                     Mappings: null,
@@ -485,7 +491,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                     GraphQL: new("GetBook", "GetBook"),
                     Fields: null,
                     Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { 
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
                         new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null)
                     }) },
                     Mappings: null,

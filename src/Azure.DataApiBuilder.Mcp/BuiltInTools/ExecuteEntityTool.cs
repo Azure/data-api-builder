@@ -108,12 +108,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                 }
 
                 // Check entity-level DML tool configuration early (before metadata resolution)
-                if (config.Entities?.TryGetValue(entity, out Entity? entityForCheck) == true)
+                if (config.Entities?.TryGetValue(entity, out Entity? entityForCheck) == true &&
+                    entityForCheck.Mcp?.DmlToolEnabled == false)
                 {
-                    if (entityForCheck.Mcp?.DmlToolEnabled == false)
-                    {
-                        return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entity}'.");
-                    }
+                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entity}'.");
                 }
 
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();

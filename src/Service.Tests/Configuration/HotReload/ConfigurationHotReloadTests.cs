@@ -26,6 +26,7 @@ public class ConfigurationHotReloadTests
     private static HttpClient _testClient;
     private static RuntimeConfigProvider _configProvider;
     private static StringWriter _writer;
+    private static readonly object _writerLock = new();
     private const string CONFIG_FILE_NAME = "hot-reload.dab-config.json";
     private const string GQL_QUERY_NAME = "books";
     private const string HOT_RELOAD_SUCCESS_MESSAGE = "Validated hot-reloaded configuration file";
@@ -232,6 +233,17 @@ public class ConfigurationHotReloadTests
     }
 
     /// <summary>
+    /// Thread-safe helper to check if the writer contains a specific message
+    /// </summary>
+    private static bool WriterContains(string message)
+    {
+        lock (_writerLock)
+        {
+            return _writer.ToString().Contains(message);
+        }
+    }
+
+    /// <summary>
     /// Hot reload the configuration by saving a new file with different rest and graphQL paths.
     /// Validate that the response is correct when making a request with the newly hot-reloaded paths.
     /// </summary>
@@ -262,7 +274,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -308,7 +320,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -348,7 +360,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -394,7 +406,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -434,7 +446,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -496,6 +508,7 @@ public class ConfigurationHotReloadTests
     /// Here, we updated the old mappings of the entity book field "title" to "bookTitle".
     /// Validate that the response from the server is correct, by ensuring that the old mappings when used in the query
     /// results in bad request, while the new mappings results in a correct response as "title" field is no longer valid.
+    /// </summary>
     [TestCategory(MSSQL_ENVIRONMENT)]
     [TestMethod]
     [Ignore] // This test requires GraphQL schema reload. See: issue #3019
@@ -514,7 +527,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -598,7 +611,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -641,7 +654,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to complete successfully
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+            () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -671,24 +684,32 @@ public class ConfigurationHotReloadTests
         GenerateConfigFile(
             connectionString: $"WrongConnectionString");
         await WaitForConditionAsync(
-          () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
+          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog = $"{_writer.ToString()}";
-        _writer.GetStringBuilder().Clear();
+        string failedConfigLog;
+        lock (_writerLock)
+        {
+            failedConfigLog = _writer.ToString();
+            _writer.GetStringBuilder().Clear();
+        }
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
-          () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
-        string succeedConfigLog = $"{_writer.ToString()}";
+        string succeedConfigLog;
+        lock (_writerLock)
+        {
+            succeedConfigLog = _writer.ToString();
+        }
 
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
@@ -720,25 +741,33 @@ public class ConfigurationHotReloadTests
             databaseType: DatabaseType.PostgreSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.POSTGRESQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
-          () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
+          () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload was not able to validate properly
-        string failedConfigLog = $"{_writer.ToString()}";
-        _writer.GetStringBuilder().Clear();
+        string failedConfigLog;
+        lock (_writerLock)
+        {
+            failedConfigLog = _writer.ToString();
+            _writer.GetStringBuilder().Clear();
+        }
 
         // Hot Reload should succeed here
         GenerateConfigFile(
             databaseType: DatabaseType.MSSQL,
             connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
         await WaitForConditionAsync(
-          () => _writer.ToString().Contains(HOT_RELOAD_SUCCESS_MESSAGE),
+          () => WriterContains(HOT_RELOAD_SUCCESS_MESSAGE),
           TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
           TimeSpan.FromMilliseconds(500));
 
         // Log that shows that hot-reload validated properly
-        string succeedConfigLog = $"{_writer.ToString()}";
+        string succeedConfigLog;
+        lock (_writerLock)
+        {
+            succeedConfigLog = _writer.ToString();
+        }
 
         HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
 
@@ -782,7 +811,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to fail
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
+            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 
@@ -829,7 +858,7 @@ public class ConfigurationHotReloadTests
 
         // Wait for hot-reload to fail (parsing error should trigger failure message)
         await WaitForConditionAsync(
-            () => _writer.ToString().Contains(HOT_RELOAD_FAILURE_MESSAGE),
+            () => WriterContains(HOT_RELOAD_FAILURE_MESSAGE),
             TimeSpan.FromSeconds(HOT_RELOAD_TIMEOUT_SECONDS),
             TimeSpan.FromMilliseconds(500));
 

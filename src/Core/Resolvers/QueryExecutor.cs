@@ -9,8 +9,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -32,6 +34,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
         protected RuntimeConfigProvider ConfigProvider { get; }
         protected IHttpContextAccessor HttpContextAccessor { get; }
+        protected ISemanticCache? SemanticCache { get; }
+        protected IEmbeddingService? EmbeddingService { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
@@ -53,13 +57,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                              ILogger<IQueryExecutor> logger,
                              RuntimeConfigProvider configProvider,
                              IHttpContextAccessor httpContextAccessor,
-                             HotReloadEventHandler<HotReloadEventArgs>? handler)
+                             HotReloadEventHandler<HotReloadEventArgs>? handler,
+                             ISemanticCache? semanticCache = null,
+                             IEmbeddingService? embeddingService = null)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
+            SemanticCache = semanticCache;
+            EmbeddingService = embeddingService;
             _maxResponseSizeMB = configProvider.GetConfig().MaxResponseSizeMB();
             _maxResponseSizeBytes = _maxResponseSizeMB * 1024 * 1024;
 
@@ -178,6 +186,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
+            // Check semantic cache if enabled
+            TResult? cachedResult = await CheckSemanticCacheAsync<TResult>(sqltext, httpContext);
+            if (cachedResult != null)
+            {
+                return cachedResult;
+            }
+
             using TConnection conn = CreateConnection(dataSourceName);
 
             // Check if connection creation succeeded
@@ -236,6 +251,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 }
             });
+
+            // Store successful result in semantic cache
+            if (result != null)
+            {
+                await StoreInSemanticCacheAsync(sqltext, result, httpContext);
+            }
 
             return result;
         }
@@ -899,6 +920,163 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         httpContext.Items[TOTALDBEXECUTIONTIME] = time;
                     }
                 }
+            }
+        }
+
+        private static bool IsSemanticCacheCandidateSql(string sqlText)
+        {
+            if (string.IsNullOrWhiteSpace(sqlText))
+            {
+                return false;
+            }
+
+            // Avoid caching metadata/system queries (startup introspection, INFORMATION_SCHEMA, sys.* etc.).
+            // These are frequent, not user-driven, and caching them adds cost (embeddings) with low value.
+            string sql = sqlText.TrimStart();
+            if (sql.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            {
+                if (sql.Contains("INFORMATION_SCHEMA", StringComparison.OrdinalIgnoreCase) ||
+                    sql.Contains("sys.", StringComparison.OrdinalIgnoreCase) ||
+                    sql.Contains("sys ", StringComparison.OrdinalIgnoreCase) ||
+                    sql.Contains("FROM sys", StringComparison.OrdinalIgnoreCase) ||
+                    sql.Contains("object_id(", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks semantic cache for similar queries before database execution.
+        /// </summary>
+        /// <typeparam name="TResult">Type of the expected result</typeparam>
+        /// <param name="sqlText">SQL query text to check for semantic similarity</param>
+        /// <param name="httpContext">Current HTTP context for logging correlation</param>
+        /// <returns>Cached result if found, null otherwise</returns>
+        protected virtual async Task<TResult?> CheckSemanticCacheAsync<TResult>(string sqlText, HttpContext? httpContext)
+        {
+            // Skip if semantic cache is not configured
+            if (SemanticCache == null || EmbeddingService == null)
+            {
+                return default(TResult);
+            }
+
+            var config = ConfigProvider.GetConfig();
+            if (!config.IsSemanticCachingEnabled)
+            {
+                return default(TResult);
+            }
+
+            if (!IsSemanticCacheCandidateSql(sqlText))
+            {
+                return default(TResult);
+            }
+
+            try
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+
+                // Make the semantic-cache decision visible even when debug logs are suppressed.
+                QueryExecutorLogger.LogInformation(
+                    "{correlationId} Semantic cache enabled. Attempting semantic cache lookup for query execution.",
+                    correlationId);
+
+                // Generate embedding for SQL query
+                float[] embedding = await EmbeddingService.GenerateEmbeddingAsync(sqlText);
+
+                var semanticCacheOptions = config.Runtime?.SemanticCache!;
+
+                // Query semantic cache
+                var cacheResult = await SemanticCache.QueryAsync(
+                    embedding: embedding,
+                    maxResults: semanticCacheOptions.MaxResults ?? SemanticCacheOptions.DEFAULT_MAX_RESULTS,
+                    similarityThreshold: semanticCacheOptions.SimilarityThreshold ?? SemanticCacheOptions.DEFAULT_SIMILARITY_THRESHOLD);
+
+                if (cacheResult != null)
+                {
+                    QueryExecutorLogger.LogInformation(
+                        "{correlationId} Semantic cache HIT. Similarity: {similarity:F4}",
+                        correlationId,
+                        cacheResult.Similarity);
+
+                    // Deserialize cached result
+                    return JsonSerializer.Deserialize<TResult>(cacheResult.Response);
+                }
+
+                QueryExecutorLogger.LogInformation("{correlationId} Semantic cache MISS.", correlationId);
+                return default(TResult);
+            }
+            catch (Exception ex)
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                QueryExecutorLogger.LogWarning(ex,
+                    "{correlationId} Semantic cache lookup failed; proceeding with DB execution.",
+                    correlationId);
+                return default(TResult);
+            }
+        }
+
+        /// <summary>
+        /// Stores successful query results in semantic cache for future similar queries.
+        /// </summary>
+        /// <typeparam name="TResult">Type of the result to store</typeparam>
+        /// <param name="sqlText">SQL query text used for embedding generation</param>
+        /// <param name="result">Query result to store</param>
+        /// <param name="httpContext">Current HTTP context for logging correlation</param>
+        protected virtual async Task StoreInSemanticCacheAsync<TResult>(string sqlText, TResult result, HttpContext? httpContext)
+        {
+            // Skip if semantic cache is not configured
+            if (SemanticCache == null || EmbeddingService == null || result == null)
+            {
+                return;
+            }
+
+            var config = ConfigProvider.GetConfig();
+            if (!config.IsSemanticCachingEnabled)
+            {
+                return;
+            }
+
+            if (!IsSemanticCacheCandidateSql(sqlText))
+            {
+                return;
+            }
+
+            try
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+
+                // Generate embedding for SQL query
+                float[] embedding = await EmbeddingService.GenerateEmbeddingAsync(sqlText);
+
+                // Serialize result for storage
+                string responseJson = JsonSerializer.Serialize(result);
+
+                var semanticCacheOptions = config.Runtime?.SemanticCache!;
+                TimeSpan? ttl = semanticCacheOptions.ExpireSeconds.HasValue
+                    ? TimeSpan.FromSeconds(semanticCacheOptions.ExpireSeconds.Value)
+                    : null;
+
+                await SemanticCache.StoreAsync(
+                    embedding: embedding,
+                    responseJson: responseJson,
+                    ttl: ttl);
+
+                // Note: the semantic cache implementation is allowed to degrade gracefully.
+                // Log as an attempt to avoid claiming success if the implementation chose to do nothing.
+                QueryExecutorLogger.LogInformation(
+                    "{correlationId} Semantic cache store attempted (ttlSeconds={ttlSeconds}).",
+                    correlationId,
+                    semanticCacheOptions.ExpireSeconds ?? SemanticCacheOptions.DEFAULT_EXPIRE_SECONDS);
+            }
+            catch (Exception ex)
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                QueryExecutorLogger.LogWarning(ex,
+                    "{correlationId} Semantic cache store failed (request still succeeded).",
+                    correlationId);
             }
         }
     }

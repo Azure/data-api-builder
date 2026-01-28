@@ -5,6 +5,7 @@ using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ using static Azure.DataApiBuilder.Config.DabConfigEvents;
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
     /// <summary>
-    /// QueryManagerFactory. Implements IQueryManagerFactory
+    /// QueryManagerFactory. Implements IAbstractQueryManagerFactory
     /// Used to get the appropriate query builder, query executor and exception parser and  based on the database type.
     /// </summary>
     public class QueryManagerFactory : IAbstractQueryManagerFactory
@@ -26,6 +27,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly ILogger<IQueryExecutor> _logger;
         private readonly IHttpContextAccessor _contextAccessor;
         private readonly HotReloadEventHandler<HotReloadEventArgs>? _handler;
+        private readonly ISemanticCache? _semanticCache;
+        private readonly IEmbeddingService? _embeddingService;
 
         /// <summary>
         /// Initiates an instance of QueryManagerFactory
@@ -37,13 +40,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             RuntimeConfigProvider runtimeConfigProvider,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor contextAccessor,
-            HotReloadEventHandler<HotReloadEventArgs>? handler)
+            HotReloadEventHandler<HotReloadEventArgs>? handler,
+            ISemanticCache? semanticCache = null,
+            IEmbeddingService? embeddingService = null)
         {
             handler?.Subscribe(QUERY_MANAGER_FACTORY_ON_CONFIG_CHANGED, OnConfigChanged);
             _handler = handler;
             _runtimeConfigProvider = runtimeConfigProvider;
             _logger = logger;
             _contextAccessor = contextAccessor;
+            _semanticCache = semanticCache;
+            _embeddingService = embeddingService;
+
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();
             _dbExceptionsParsers = new Dictionary<DatabaseType, DbExceptionParser>();
@@ -73,22 +81,50 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                     case DatabaseType.MSSQL:
                         queryBuilder = new MsSqlQueryBuilder();
                         exceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
-                        queryExecutor = new MsSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
+                        queryExecutor = new MsSqlQueryExecutor(
+                            _runtimeConfigProvider,
+                            exceptionParser,
+                            _logger,
+                            _contextAccessor,
+                            _handler,
+                            _semanticCache,
+                            _embeddingService);
                         break;
                     case DatabaseType.MySQL:
                         queryBuilder = new MySqlQueryBuilder();
                         exceptionParser = new MySqlDbExceptionParser(_runtimeConfigProvider);
-                        queryExecutor = new MySqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
+                        queryExecutor = new MySqlQueryExecutor(
+                            _runtimeConfigProvider,
+                            exceptionParser,
+                            _logger,
+                            _contextAccessor,
+                            _handler,
+                            _semanticCache,
+                            _embeddingService);
                         break;
                     case DatabaseType.PostgreSQL:
                         queryBuilder = new PostgresQueryBuilder();
                         exceptionParser = new PostgreSqlDbExceptionParser(_runtimeConfigProvider);
-                        queryExecutor = new PostgreSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
+                        queryExecutor = new PostgreSqlQueryExecutor(
+                            _runtimeConfigProvider,
+                            exceptionParser,
+                            _logger,
+                            _contextAccessor,
+                            _handler,
+                            _semanticCache,
+                            _embeddingService);
                         break;
                     case DatabaseType.DWSQL:
                         queryBuilder = new DwSqlQueryBuilder(enableNto1JoinOpt: _runtimeConfigProvider.GetConfig().EnableDwNto1JoinOpt);
                         exceptionParser = new MsSqlDbExceptionParser(_runtimeConfigProvider);
-                        queryExecutor = new MsSqlQueryExecutor(_runtimeConfigProvider, exceptionParser, _logger, _contextAccessor, _handler);
+                        queryExecutor = new MsSqlQueryExecutor(
+                            _runtimeConfigProvider,
+                            exceptionParser,
+                            _logger,
+                            _contextAccessor,
+                            _handler,
+                            _semanticCache,
+                            _embeddingService);
                         break;
                     default:
                         throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage);

@@ -403,6 +403,11 @@ namespace Azure.DataApiBuilder.Core.Services
             _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
             _logger.LogInformation($"Autoentities name pattern: {namePattern}");
 
+            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
+            _logger.LogInformation($"Autoentities include pattern: {include}");
+            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
+            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
+
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: getAutoentitiesQuery,
                 parameters: parameters,

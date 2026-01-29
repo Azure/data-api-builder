@@ -598,6 +598,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(new string[] { "dbo.%publish%" }, new string[] { }, "{schema}.{object}", new string[] { "publish" }, "")]
         [DataRow(new string[] { "dbo.%book%" }, new string[] { "dbo.%books%" }, "{schema}_{object}_exclude_books", new string[] { "book" }, "books")]
         [DataRow(new string[] { "dbo.%book%", "dbo.%publish%" }, new string[] { }, "{object}", new string[] { "book", "publish" }, "")]
+        [DataRow(new string[] { }, new string[] { "dbo.%book%" }, "{object}", new string[] { "" }, "book")]
         public async Task CheckAutoentitiesQuery(string[] include, string[] exclude, string name, string[] includeObject, string excludeObject)
         {
             // Arrange
@@ -632,8 +633,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     if (resultObject["object"].ToString().Contains(included))
                     {
                         includedObjectExists = true;
-                        Assert.AreEqual(expected: "dbo", actual: resultObject["schema"].ToString(), "Query does not return expected schema.");
                         Assert.AreNotEqual(name, resultObject["entity_name"].ToString(), "Name returned by query should not include {schema} or {object}.");
+                        if (include.Length > 0)
+                        {
+                            Assert.AreEqual(expected: "dbo", actual: resultObject["schema"].ToString(), "Query does not return expected schema.");
+                        }
+
                         if (exclude.Length > 0)
                         {
                             Assert.IsTrue(!resultObject["object"].ToString().Contains(excludeObject), "Query returns pattern that should be excluded.");

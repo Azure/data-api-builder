@@ -382,7 +382,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
-        public async Task<JsonArray?> QueryAutoentitiesConfiguration(Autoentity autoentity)
+        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);
@@ -394,6 +394,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}exclude_pattern", new(exclude, null, SqlDbType.NVarChar) },
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}name_pattern", new(namePattern, null, SqlDbType.NVarChar) }
             };
+
+            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
+            _logger.LogInformation($"Autoentities include pattern: {include}");
+            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
+            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
 
             _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
             _logger.LogInformation($"Autoentities include pattern: {include}");

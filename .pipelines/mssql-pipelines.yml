@@ -277,7 +277,7 @@ jobs:
       publishLocation: 'Container'
 
 - job: windows_hotreload
-  displayName: 'Windows Hot-Reload Tests'
+  displayName: 'windows hot-reload tests'
   pool:
     vmImage: 'windows-latest'
   variables:

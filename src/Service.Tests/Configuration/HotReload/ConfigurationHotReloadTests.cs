@@ -194,42 +194,93 @@ public class ConfigurationHotReloadTests
     {
         // Arrange
         GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
-        _testClient = _testServer.CreateClient();
-        _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
+        
+        // Add retry logic for test server initialization in CI/CD environments
+        int maxRetries = 3;
+        int retryDelayMs = 2000;
+        Exception lastException = null;
 
-        string query = GQL_QUERY;
-        object payload =
-            new { query };
-
-        HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            Content = JsonContent.Create(payload)
-        };
+            try
+            {
+                Console.WriteLine($"Initializing test server (attempt {attempt}/{maxRetries})...");
+                _testServer = new(Program.CreateWebHostBuilder(new string[] { "--ConfigFileName", CONFIG_FILE_NAME }));
+                _testClient = _testServer.CreateClient();
+                _configProvider = _testServer.Services.GetService<RuntimeConfigProvider>();
 
-        HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
-        HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
+                // Give the server a moment to fully initialize
+                await Task.Delay(1000);
 
-        // Assert rest and graphQL requests return status OK.
-        Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode);
-        Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode);
+                string query = GQL_QUERY;
+                object payload = new { query };
 
-        // Save the contents from request to validate results after hot-reloads.
-        string restContent = await restResult.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(restContent);
-        _bookDBOContents = doc.RootElement.GetProperty("value").ToString();
+                HttpRequestMessage request = new(HttpMethod.Post, "/graphQL")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage restResult = await _testClient.GetAsync("/rest/Book");
+                HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
+
+                // Assert rest and graphQL requests return status OK.
+                Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode, 
+                    $"REST request failed on attempt {attempt}. Response: {await restResult.Content.ReadAsStringAsync()}");
+                Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode,
+                    $"GraphQL request failed on attempt {attempt}. Response: {await gQLResult.Content.ReadAsStringAsync()}");
+
+                // Save the contents from request to validate results after hot-reloads.
+                string restContent = await restResult.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(restContent);
+                _bookDBOContents = doc.RootElement.GetProperty("value").ToString();
+
+                Console.WriteLine($"Test server initialized successfully on attempt {attempt}");
+                return; // Success - exit retry loop
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                Console.WriteLine($"Test server initialization attempt {attempt} failed: {ex.Message}");
+                
+                // Clean up failed attempt
+                try
+                {
+                    _testClient?.Dispose();
+                    _testServer?.Dispose();
+                }
+                catch { /* Ignore cleanup errors */ }
+
+                if (attempt < maxRetries)
+                {
+                    Console.WriteLine($"Waiting {retryDelayMs}ms before retry...");
+                    await Task.Delay(retryDelayMs);
+                }
+            }
+        }
+
+        // If we got here, all retries failed
+        throw new Exception($"Failed to initialize test server after {maxRetries} attempts. Last error: {lastException?.Message}", lastException);
     }
 
     [ClassCleanup]
     public static void ClassCleanup()
     {
-        if (File.Exists(CONFIG_FILE_NAME))
+        try
         {
-            File.Delete(CONFIG_FILE_NAME);
-        }
+            if (File.Exists(CONFIG_FILE_NAME))
+            {
+                File.Delete(CONFIG_FILE_NAME);
+            }
 
-        _testServer.Dispose();
-        _testClient.Dispose();
+            _testClient?.Dispose();
+            _testServer?.Dispose();
+            
+            Console.WriteLine("Test cleanup completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during test cleanup: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -902,6 +953,7 @@ public class ConfigurationHotReloadTests
         {
             Console.WriteLine($"Console output captured:\n{_writer.ToString()}");
         }
+
         throw new TimeoutException("The condition was not met within the timeout period.");
     }
 }

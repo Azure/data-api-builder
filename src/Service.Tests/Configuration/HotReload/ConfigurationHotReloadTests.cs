@@ -31,7 +31,7 @@ public class ConfigurationHotReloadTests
     private const string GQL_QUERY_NAME = "books";
     private const string HOT_RELOAD_SUCCESS_MESSAGE = "Validated hot-reloaded configuration file";
     private const string HOT_RELOAD_FAILURE_MESSAGE = "Unable to hot reload configuration file due to";
-    private const int HOT_RELOAD_TIMEOUT_SECONDS = 120; // Increased from 30 to 120 for CI/CD environments
+    private const int HOT_RELOAD_TIMEOUT_SECONDS = 120; // Increased timeout for CI/CD environments where file watchers can be slow
 
     private const string GQL_QUERY = @"{
                 books(first: 100) {

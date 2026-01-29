@@ -31,7 +31,7 @@ public class ConfigurationHotReloadTests
     private const string GQL_QUERY_NAME = "books";
     private const string HOT_RELOAD_SUCCESS_MESSAGE = "Validated hot-reloaded configuration file";
     private const string HOT_RELOAD_FAILURE_MESSAGE = "Unable to hot reload configuration file due to";
-    private const int HOT_RELOAD_TIMEOUT_SECONDS = 120; // Increased timeout for CI/CD environments where file watchers can be slow
+    private const int HOT_RELOAD_TIMEOUT_SECONDS = 120;
 
     private const string GQL_QUERY = @"{
                 books(first: 100) {
@@ -195,7 +195,6 @@ public class ConfigurationHotReloadTests
         // Arrange
         GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
 
-        // Add retry logic for test server initialization in CI/CD environments
         int maxRetries = 3;
         int retryDelayMs = 2000;
         Exception lastException = null;
@@ -235,7 +234,7 @@ public class ConfigurationHotReloadTests
                 _bookDBOContents = doc.RootElement.GetProperty("value").ToString();
 
                 Console.WriteLine($"Test server initialized successfully on attempt {attempt}");
-                return; // Success - exit retry loop
+                return;
             }
             catch (Exception ex)
             {

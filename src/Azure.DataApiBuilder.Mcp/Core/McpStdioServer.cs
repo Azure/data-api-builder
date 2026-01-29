@@ -160,9 +160,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </remarks>
         private void HandleInitialize(JsonElement? id)
         {
-            // Extract the actual id value from the request
-            object? requestId = id.HasValue ? GetIdValue(id.Value) : null;
-
             // Get the description from runtime config if available
             string? instructions = null;
             RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();

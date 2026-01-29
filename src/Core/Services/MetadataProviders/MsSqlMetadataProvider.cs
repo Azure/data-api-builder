@@ -300,13 +300,13 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
                 {
-                    JsonArray? resultArray = await QueryAutoentitiesConfiguration(autoentity);
+                    JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
                     // TODO: Finish implementation of autoentities generation in task #3052
                 }
             }
         }
 
-        public async Task<JsonArray?> QueryAutoentitiesConfiguration(Autoentity autoentity)
+        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
         {
             string include = string.Join(",", autoentity.Patterns.Include);
             string exclude = string.Join(",", autoentity.Patterns.Exclude);
@@ -318,6 +318,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}exclude_pattern", new(exclude, null, SqlDbType.NVarChar) },
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}name_pattern", new(namePattern, null, SqlDbType.NVarChar) }
             };
+
+            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
+            _logger.LogInformation($"Autoentities include pattern: {include}");
+            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
+            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
 
             _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
             _logger.LogInformation($"Autoentities include pattern: {include}");

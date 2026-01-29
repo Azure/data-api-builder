@@ -697,7 +697,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         protected virtual Task GenerateAutoentitiesIntoEntities()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException($"{GetType().Name} does not support Autoentities yet.");
         }
 
         protected void PopulateDatabaseObjectForEntity(

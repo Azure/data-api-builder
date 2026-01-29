@@ -564,15 +564,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Builds the query used to get the list of tables with the SQL LIKE
         /// syntax that will be transformed into entities.
+        /// NOTE: Currently this query only returns Tables, support for Views will come later.
         /// </summary>
         /// <param name="include">Pattern for tables that will be included.</param>
         /// <param name="exclude">Pattern for tables that will be excluded.</param>
         /// <param name="namePattern">Pattern for naming the entities.</param>
-        /// <returns></returns>
         public string BuildGetAutoentitiesQuery(string include, string exclude, string namePattern)
         {
-            string query = $"DECLARE @include_pattern NVARCHAR(MAX) = '{include}' DECLARE @exclude_pattern NVARCHAR(MAX) = '{exclude}' DECLARE @name_pattern NVARCHAR(255) = '{namePattern}' " +
-                "DECLARE @exclude_invalid_types BIT = 1 SET NOCOUNT ON; WITH include_patterns AS ( SELECT LTRIM(RTRIM(value)) AS pattern " +
+            string query = $"DECLARE @include_pattern NVARCHAR(MAX) = '{include}'; DECLARE @exclude_pattern NVARCHAR(MAX) = '{exclude}'; DECLARE @name_pattern NVARCHAR(255) = '{namePattern}'; " +
+                "DECLARE @exclude_invalid_types BIT = 1; SET NOCOUNT ON; WITH include_patterns AS ( SELECT LTRIM(RTRIM(value)) AS pattern " +
                 "FROM STRING_SPLIT(ISNULL(@include_pattern, N''), N',') WHERE LTRIM(RTRIM(value)) <> N'' ), " +
                 "exclude_patterns AS ( SELECT LTRIM(RTRIM(value)) AS pattern FROM STRING_SPLIT(ISNULL(@exclude_pattern, N''), N',') " +
                 "WHERE LTRIM(RTRIM(value)) <> N'' ), all_tables AS ( SELECT s.name AS schema_name, t.name AS object_name, s.name + N'.' " +

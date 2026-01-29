@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     {
         /// <summary>
         /// Verifies that when ALL entities are stored procedures with custom-tool enabled,
-        /// describe_entities returns an AllEntitiesFilteredAsCustomTools error with guidance
+        /// describe_entities returns an AllEntitiesFilteredDmlDisabled error with guidance
         /// to use tools/list instead. This ensures users understand why describe_entities is empty.
         /// </summary>
         [TestMethod]
@@ -46,18 +46,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
 
             // Assert
-            // When all entities are custom-tool SPs, they're all filtered out, so we get a specific error
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = GetContentFromResult(result);
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("AllEntitiesFilteredAsCustomTools", errorType.GetString());
-
+            AssertErrorResult(result, "AllEntitiesFilteredDmlDisabled");
+            
             // Verify the error message is helpful
+            JsonElement content = GetContentFromResult(result);
+            content.TryGetProperty("error", out JsonElement error);
             Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
             string message = errorMessage.GetString() ?? string.Empty;
-            Assert.IsTrue(message.Contains("custom tools"));
-            Assert.IsTrue(message.Contains("tools/list"));
+            Assert.IsTrue(message.Contains("DML tools disabled") || message.Contains("dml-tools"));
+            Assert.IsTrue(message.Contains("tools/list") || message.Contains("custom-tool"));
         }
 
         /// <summary>
@@ -70,25 +67,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             // Arrange
             RuntimeConfig config = CreateConfigWithMixedStoredProcedures();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            DescribeEntitiesTool tool = new();
 
-            // Act
-            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
-
-            // Assert
-            Assert.IsTrue(result.IsError == false || result.IsError == null);
-            JsonElement content = GetContentFromResult(result);
-            Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
-
-            List<string> entityNames = entities.EnumerateArray()
-                .Select(e => e.GetProperty("name").GetString()!)
-                .ToList();
-
-            // CountBooks has no custom-tool config, should be included
-            Assert.IsTrue(entityNames.Contains("CountBooks"));
-            // GetBook has custom-tool enabled, should be excluded
-            Assert.IsFalse(entityNames.Contains("GetBook"));
+            // Act & Assert
+            CallToolResult result = await ExecuteToolAsync(config);
+            AssertSuccessResultWithEntityNames(result, new[] { "CountBooks" }, new[] { "GetBook" });
         }
 
         /// <summary>
@@ -99,28 +81,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [TestMethod]
         public async Task DescribeEntities_TablesAndViewsUnaffectedByFiltering()
         {
-            // Arrange
+            // Arrange & Act & Assert
             RuntimeConfig config = CreateConfigWithMixedEntityTypes();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            DescribeEntitiesTool tool = new();
-
-            // Act
-            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
-
-            // Assert
-            Assert.IsTrue(result.IsError == false || result.IsError == null);
-            JsonElement content = GetContentFromResult(result);
-            Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
-
-            List<string> entityNames = entities.EnumerateArray()
-                .Select(e => e.GetProperty("name").GetString()!)
-                .ToList();
-
-            // Tables and views should always appear
-            Assert.IsTrue(entityNames.Contains("Book"));
-            Assert.IsTrue(entityNames.Contains("BookView"));
-            // Custom-tool SP should be excluded
-            Assert.IsFalse(entityNames.Contains("GetBook"));
+            CallToolResult result = await ExecuteToolAsync(config);
+            AssertSuccessResultWithEntityNames(result, new[] { "Book", "BookView" }, new[] { "GetBook" });
         }
 
         /// <summary>
@@ -133,26 +97,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             // Arrange
             RuntimeConfig config = CreateConfigWithMixedEntityTypes();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            DescribeEntitiesTool tool = new();
 
             // Act
-            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
+            CallToolResult result = await ExecuteToolAsync(config);
 
             // Assert
             Assert.IsTrue(result.IsError == false || result.IsError == null);
             JsonElement content = GetContentFromResult(result);
             Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
-
-            int entityCount = entities.GetArrayLength();
-
-            // Config has 3 entities: Book (table), BookView (view), GetBook (custom-tool SP)
-            // Only 2 should be returned (custom-tool SP excluded)
-            Assert.AreEqual(2, entityCount);
-
-            // Verify the count field in the response matches the filtered entity array length
             Assert.IsTrue(content.TryGetProperty("count", out JsonElement countElement));
-            Assert.AreEqual(entityCount, countElement.GetInt32());
+            
+            int entityCount = entities.GetArrayLength();
+            Assert.AreEqual(2, entityCount, "Config has 3 entities but only 2 should be returned (custom-tool SP excluded)");
+            Assert.AreEqual(entityCount, countElement.GetInt32(), "Count field should match filtered entity array length");
         }
 
         /// <summary>
@@ -167,26 +124,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             RuntimeConfig config = CreateConfigWithMixedEntityTypes();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             DescribeEntitiesTool tool = new();
-
             JsonDocument arguments = JsonDocument.Parse("{\"nameOnly\": true}");
 
             // Act
             CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
 
             // Assert
-            Assert.IsTrue(result.IsError == false || result.IsError == null);
-            JsonElement content = GetContentFromResult(result);
-            Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
-
-            List<string> entityNames = entities.EnumerateArray()
-                .Select(e => e.GetProperty("name").GetString()!)
-                .ToList();
-
-            // Should still exclude custom-tool SP even with nameOnly=true
-            Assert.IsTrue(entityNames.Contains("Book"));
-            Assert.IsTrue(entityNames.Contains("BookView"));
-            Assert.IsFalse(entityNames.Contains("GetBook"));
-            Assert.AreEqual(2, entities.GetArrayLength());
+            AssertSuccessResultWithEntityNames(result, new[] { "Book", "BookView" }, new[] { "GetBook" });
         }
 
         /// <summary>
@@ -196,23 +140,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [TestMethod]
         public async Task DescribeEntities_ReturnsNoEntitiesConfigured_WhenConfigHasNoEntities()
         {
-            // Arrange
+            // Arrange & Act
             RuntimeConfig config = CreateConfigWithNoEntities();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            DescribeEntitiesTool tool = new();
+            CallToolResult result = await ExecuteToolAsync(config);
 
-            // Act
-            CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
-
-            // Assert - Expect NoEntitiesConfigured (not AllEntitiesFilteredAsCustomTools)
-            // because the config truly has NO entities, not filtered entities
-            Assert.IsTrue(result.IsError == true);
-            JsonElement content = GetContentFromResult(result);
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("NoEntitiesConfigured", errorType.GetString());
-
+            // Assert
+            AssertErrorResult(result, "NoEntitiesConfigured");
+            
             // Verify the error message indicates no entities configured
+            JsonElement content = GetContentFromResult(result);
+            content.TryGetProperty("error", out JsonElement error);
             Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
             string message = errorMessage.GetString() ?? string.Empty;
             Assert.IsTrue(message.Contains("No entities are configured"));
@@ -229,8 +166,46 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         [TestMethod]
         public async Task DescribeEntities_IncludesCustomToolWithDmlEnabled()
         {
-            // Arrange
+            // Arrange & Act
             RuntimeConfig config = CreateConfigWithCustomToolAndDmlEnabled();
+            CallToolResult result = await ExecuteToolAsync(config);
+
+            // Assert
+            AssertSuccessResultWithEntityNames(result, new[] { "GetBook" }, Array.Empty<string>());
+        }
+
+        /// <summary>
+        /// Verifies that when some (but not all) entities are filtered as custom-tool-only,
+        /// the filtering is logged but does not affect the response content.
+        /// The response should contain only the non-filtered entities.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_LogsFilteringInfo_WhenSomeEntitiesFiltered()
+        {
+            // Arrange & Act
+            RuntimeConfig config = CreateConfigWithMixedEntityTypes();
+            CallToolResult result = await ExecuteToolAsync(config);
+
+            // Assert
+            AssertSuccessResultWithEntityNames(result, new[] { "Book", "BookView" }, new[] { "GetBook" });
+            
+            // Verify count matches
+            JsonElement content = GetContentFromResult(result);
+            Assert.IsTrue(content.TryGetProperty("count", out JsonElement countElement));
+            Assert.AreEqual(2, countElement.GetInt32());
+        }
+
+        /// <summary>
+        /// Verifies that entities with DML tools disabled (dml-tools: false) are filtered from describe_entities.
+        /// This ensures the filtering applies to all entity types, not just stored procedures.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(EntitySourceType.Table, "Publisher", "Book", DisplayName = "Filters Table with DML disabled")]
+        [DataRow(EntitySourceType.View, "Book", "BookView", DisplayName = "Filters View with DML disabled")]
+        public async Task DescribeEntities_FiltersEntityWithDmlToolsDisabled(EntitySourceType filteredEntityType, string includedEntityName, string filteredEntityName)
+        {
+            // Arrange
+            RuntimeConfig config = CreateConfigWithEntityDmlDisabled(filteredEntityType, includedEntityName, filteredEntityName);
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             DescribeEntitiesTool tool = new();
 
@@ -238,6 +213,49 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             CallToolResult result = await tool.ExecuteAsync(null, serviceProvider, CancellationToken.None);
 
             // Assert
+            AssertSuccessResultWithEntityNames(result, new[] { includedEntityName }, new[] { filteredEntityName });
+        }
+
+        /// <summary>
+        /// Verifies that when ALL entities have dml-tools disabled, the appropriate error is returned.
+        /// This tests the error scenario applies to all entity types, not just stored procedures.
+        /// </summary>
+        [TestMethod]
+        public async Task DescribeEntities_ReturnsAllEntitiesFilteredDmlDisabled_WhenAllEntitiesHaveDmlDisabled()
+        {
+            // Arrange & Act
+            RuntimeConfig config = CreateConfigWithAllEntitiesDmlDisabled();
+            CallToolResult result = await ExecuteToolAsync(config);
+
+            // Assert
+            AssertErrorResult(result, "AllEntitiesFilteredDmlDisabled");
+            
+            // Verify the error message is helpful
+            JsonElement content = GetContentFromResult(result);
+            content.TryGetProperty("error", out JsonElement error);
+            Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
+            string message = errorMessage.GetString() ?? string.Empty;
+            Assert.IsTrue(message.Contains("DML tools disabled"), "Error message should mention DML tools disabled");
+            Assert.IsTrue(message.Contains("dml-tools: false"), "Error message should mention the config syntax");
+        }
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Executes the DescribeEntitiesTool with the given config.
+        /// </summary>
+        private static async Task<CallToolResult> ExecuteToolAsync(RuntimeConfig config, JsonDocument arguments = null)
+        {
+            IServiceProvider serviceProvider = CreateServiceProvider(config);
+            DescribeEntitiesTool tool = new();
+            return await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Runs the DescribeEntitiesTool and asserts successful execution with expected entity names.
+        /// </summary>
+        private static void AssertSuccessResultWithEntityNames(CallToolResult result, string[] includedEntities, string[] excludedEntities)
+        {
             Assert.IsTrue(result.IsError == false || result.IsError == null);
             JsonElement content = GetContentFromResult(result);
             Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
@@ -246,36 +264,57 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 .Select(e => e.GetProperty("name").GetString()!)
                 .ToList();
 
-            // GetBook has custom-tool: true AND dml-tools: true, so it should APPEAR in describe_entities
-            Assert.IsTrue(entityNames.Contains("GetBook"),
-                "SP with custom-tool:true + dml-tools:true should appear in describe_entities");
+            foreach (string includedEntity in includedEntities)
+            {
+                Assert.IsTrue(entityNames.Contains(includedEntity), $"{includedEntity} should be included");
+            }
 
-            // Should have exactly 1 entity
-            Assert.AreEqual(1, entities.GetArrayLength());
+            foreach (string excludedEntity in excludedEntities)
+            {
+                Assert.IsFalse(entityNames.Contains(excludedEntity), $"{excludedEntity} should be excluded");
+            }
+
+            Assert.AreEqual(includedEntities.Length, entities.GetArrayLength());
         }
 
-        #region Helper Methods
+        /// <summary>
+        /// Asserts that the result contains an error with the specified type.
+        /// </summary>
+        private static void AssertErrorResult(CallToolResult result, string expectedErrorType)
+        {
+            Assert.IsTrue(result.IsError == true);
+            JsonElement content = GetContentFromResult(result);
+            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
+            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
+            Assert.AreEqual(expectedErrorType, errorType.GetString());
+        }
 
         /// <summary>
-        /// Creates a runtime config with only custom-tool stored procedures.
-        /// Used to test the AllEntitiesFilteredAsCustomTools error scenario.
+        /// Creates a basic entity with standard permissions.
         /// </summary>
-        private static RuntimeConfig CreateConfigWithCustomToolSP()
+        private static Entity CreateEntity(string sourceName, EntitySourceType sourceType, string singularName, string pluralName, EntityMcpOptions mcpOptions = null)
         {
-            Dictionary<string, Entity> entities = new()
-            {
-                ["GetBook"] = new Entity(
-                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("GetBook", "GetBook"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false)
-                )
-            };
+            EntityActionOperation action = sourceType == EntitySourceType.StoredProcedure
+                ? EntityActionOperation.Execute
+                : EntityActionOperation.Read;
 
+            return new Entity(
+                Source: new(sourceName, sourceType, null, null),
+                GraphQL: new(singularName, pluralName),
+                Fields: null,
+                Rest: new(Enabled: true),
+                Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: action, Fields: null, Policy: null) }) },
+                Mappings: null,
+                Relationships: null,
+                Mcp: mcpOptions
+            );
+        }
+
+        /// <summary>
+        /// Creates a runtime config with the specified entities.
+        /// </summary>
+        private static RuntimeConfig CreateRuntimeConfig(Dictionary<string, Entity> entities)
+        {
             return new RuntimeConfig(
                 Schema: "test-schema",
                 DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
@@ -287,6 +326,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                 ),
                 Entities: new(entities)
             );
+        }
+
+        /// <summary>
+        /// Creates a runtime config with only custom-tool stored procedures.
+        /// Used to test the AllEntitiesFilteredAsCustomTools error scenario.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithCustomToolSP()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["GetBook"] = CreateEntity("get_book", EntitySourceType.StoredProcedure, "GetBook", "GetBook",
+                    new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false))
+            };
+
+            return CreateRuntimeConfig(entities);
         }
 
         /// <summary>
@@ -298,40 +352,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Dictionary<string, Entity> entities = new()
             {
-                // Regular SP without custom-tool config
-                ["CountBooks"] = new Entity(
-                    Source: new("count_books", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("CountBooks", "CountBooks"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null
-                ),
-                // SP with custom-tool enabled
-                ["GetBook"] = new Entity(
-                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("GetBook", "GetBook"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false)
-                )
+                ["CountBooks"] = CreateEntity("count_books", EntitySourceType.StoredProcedure, "CountBooks", "CountBooks"),
+                ["GetBook"] = CreateEntity("get_book", EntitySourceType.StoredProcedure, "GetBook", "GetBook",
+                    new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false))
             };
 
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
+            return CreateRuntimeConfig(entities);
         }
 
         /// <summary>
@@ -343,50 +369,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Dictionary<string, Entity> entities = new()
             {
-                // Table
-                ["Book"] = new Entity(
-                    Source: new("books", EntitySourceType.Table, null, null),
-                    GraphQL: new("Book", "Books"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null
-                ),
-                // View
-                ["BookView"] = new Entity(
-                    Source: new("book_view", EntitySourceType.View, null, null),
-                    GraphQL: new("BookView", "BookViews"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null
-                ),
-                // Custom-tool SP
-                ["GetBook"] = new Entity(
-                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("GetBook", "GetBook"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false)
-                )
+                ["Book"] = CreateEntity("books", EntitySourceType.Table, "Book", "Books"),
+                ["BookView"] = CreateEntity("book_view", EntitySourceType.View, "BookView", "BookViews"),
+                ["GetBook"] = CreateEntity("get_book", EntitySourceType.StoredProcedure, "GetBook", "GetBook",
+                    new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: false))
             };
 
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
+            return CreateRuntimeConfig(entities);
         }
 
         /// <summary>
@@ -395,18 +384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// </summary>
         private static RuntimeConfig CreateConfigWithNoEntities()
         {
-            // Create a config with no entities at all (empty dictionary)
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(new Dictionary<string, Entity>())
-            );
+            return CreateRuntimeConfig(new Dictionary<string, Entity>());
         }
 
         /// <summary>
@@ -417,29 +395,56 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         {
             Dictionary<string, Entity> entities = new()
             {
-                ["GetBook"] = new Entity(
-                    Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
-                    GraphQL: new("GetBook", "GetBook"),
-                    Fields: null,
-                    Rest: new(Enabled: true),
-                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(Action: EntityActionOperation.Execute, Fields: null, Policy: null) }) },
-                    Mappings: null,
-                    Relationships: null,
-                    Mcp: new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: true)
-                )
+                ["GetBook"] = CreateEntity("get_book", EntitySourceType.StoredProcedure, "GetBook", "GetBook",
+                    new EntityMcpOptions(customToolEnabled: true, dmlToolsEnabled: true))
             };
 
-            return new RuntimeConfig(
-                Schema: "test-schema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(Enabled: true, Path: "/mcp", DmlTools: null),
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
-                ),
-                Entities: new(entities)
-            );
+            return CreateRuntimeConfig(entities);
+        }
+
+        /// <summary>
+        /// Creates a runtime config with an entity that has dml-tools disabled.
+        /// Used to test that entities with dml-tools: false are filtered from describe_entities.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithEntityDmlDisabled(EntitySourceType filteredEntityType, string includedEntityName, string filteredEntityName)
+        {
+            Dictionary<string, Entity> entities = new();
+
+            // Add the included entity (different type based on what's being filtered)
+            if (filteredEntityType == EntitySourceType.Table)
+            {
+                entities[includedEntityName] = CreateEntity("publishers", EntitySourceType.Table, includedEntityName, $"{includedEntityName}s",
+                    new EntityMcpOptions(customToolEnabled: null, dmlToolsEnabled: true));
+                entities[filteredEntityName] = CreateEntity("books", EntitySourceType.Table, filteredEntityName, $"{filteredEntityName}s",
+                    new EntityMcpOptions(customToolEnabled: null, dmlToolsEnabled: false));
+            }
+            else if (filteredEntityType == EntitySourceType.View)
+            {
+                entities[includedEntityName] = CreateEntity("books", EntitySourceType.Table, includedEntityName, $"{includedEntityName}s");
+                entities[filteredEntityName] = CreateEntity("book_view", EntitySourceType.View, filteredEntityName, $"{filteredEntityName}s",
+                    new EntityMcpOptions(customToolEnabled: null, dmlToolsEnabled: false));
+            }
+
+            return CreateRuntimeConfig(entities);
+        }
+
+        /// <summary>
+        /// Creates a runtime config where all entities have dml-tools disabled.
+        /// Used to test the AllEntitiesFilteredDmlDisabled error scenario.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithAllEntitiesDmlDisabled()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Book"] = CreateEntity("books", EntitySourceType.Table, "Book", "Books",
+                    new EntityMcpOptions(customToolEnabled: null, dmlToolsEnabled: false)),
+                ["BookView"] = CreateEntity("book_view", EntitySourceType.View, "BookView", "BookViews",
+                    new EntityMcpOptions(customToolEnabled: null, dmlToolsEnabled: false)),
+                ["GetBook"] = CreateEntity("get_book", EntitySourceType.StoredProcedure, "GetBook", "GetBook",
+                    new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: false))
+            };
+
+            return CreateRuntimeConfig(entities);
         }
 
         /// <summary>

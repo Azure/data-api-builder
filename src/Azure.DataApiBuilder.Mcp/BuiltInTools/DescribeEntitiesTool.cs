@@ -146,9 +146,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 List<Dictionary<string, object?>> entityList = new();
 
-                // Track how many stored procedures were filtered out because they're exposed as custom-tool-only.
+                // Track how many entities were filtered out because DML tools are disabled (dml-tools: false).
                 // This helps provide a more specific error message when all entities are filtered.
-                int filteredCustomToolCount = 0;
+                int filteredDmlDisabledCount = 0;
 
                 if (runtimeConfig.Entities != null)
                 {
@@ -159,15 +159,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         string entityName = entityEntry.Key;
                         Entity entity = entityEntry.Value;
 
-                        // Filter out stored procedures when dml-tools is explicitly disabled (false).
-                        // This applies regardless of custom-tool setting:
-                        // - custom-tool: true, dml-tools: false → Filtered (appears only in tools/list)
-                        // - custom-tool: false, dml-tools: false → Filtered (entity fully disabled for MCP)
-                        // When dml-tools is true (or default), the entity appears in describe_entities.
-                        if (entity.Source.Type == EntitySourceType.StoredProcedure &&
-                            entity.Mcp?.DmlToolEnabled == false)
+                        // Filter out entities when dml-tools is explicitly disabled (false).
+                        // This applies to all entity types (tables, views, stored procedures).
+                        // When dml-tools is false, the entity is not exposed via DML tools
+                        // (read_records, create_record, etc.) and should not appear in describe_entities.
+                        if (entity.Mcp?.DmlToolEnabled == false)
                         {
-                            filteredCustomToolCount++;
+                            filteredDmlDisabledCount++;
                             continue;
                         }
 
@@ -202,17 +200,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             $"No entities found matching the filter: {string.Join(", ", entityFilter)}",
                             logger));
                     }
-                    // All entities were filtered because they're custom-tool-only - only return this specific error
-                    // if ALL configured entities were filtered (not just some). This prevents misleading errors
-                    // when entities fail to build for other reasons (e.g., exceptions in Build*EntityInfo).
-                    else if (filteredCustomToolCount > 0 &&
+                    // Return a specific error when ALL configured entities have dml-tools: false.
+                    // Only show this error when every entity was intentionally filtered by the dml-tools check above,
+                    // not when some entities failed to build due to exceptions in BuildBasicEntityInfo() or BuildFullEntityInfo() functions.
+                    else if (filteredDmlDisabledCount > 0 &&
                              runtimeConfig.Entities != null &&
-                             filteredCustomToolCount == runtimeConfig.Entities.Entities.Count)
+                             filteredDmlDisabledCount == runtimeConfig.Entities.Entities.Count)
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
                             toolName,
-                            "AllEntitiesFilteredAsCustomTools",
-                            $"All {filteredCustomToolCount} configured entities are stored procedures exposed as custom-tool-only (dml-tools: false). Custom tools appear in tools/list, not describe_entities. Use the tools/list endpoint to discover available custom tools.",
+                            "AllEntitiesFilteredDmlDisabled",
+                            $"All {filteredDmlDisabledCount} configured entities have DML tools disabled (dml-tools: false). Entities with dml-tools disabled do not appear in describe_entities. For stored procedures, check tools/list if custom-tool is enabled.",
                             logger));
                     }
                     // Truly no entities configured in the runtime config, or entities failed to build for other reasons
@@ -237,6 +235,18 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     ["entities"] = finalEntityList,
                     ["count"] = finalEntityList.Count
                 };
+
+                // Log when entities were filtered due to DML tools disabled for visibility
+                if (filteredDmlDisabledCount > 0)
+                {
+                    logger?.LogInformation(
+                        "DescribeEntitiesTool: {FilteredCount} entity(ies) filtered with DML tools disabled (dml-tools: false). " +
+                        "These entities are not exposed via DML tools and do not appear in describe_entities response. " +
+                        "Returned {ReturnedCount} entities, filtered {FilteredCount}.",
+                        filteredDmlDisabledCount,
+                        finalEntityList.Count,
+                        filteredDmlDisabledCount);
+                }
 
                 logger?.LogInformation(
                     "DescribeEntitiesTool returned {EntityCount} entities. Response type: {ResponseType} (nameOnly={NameOnly}).",

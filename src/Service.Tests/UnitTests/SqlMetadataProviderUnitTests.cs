@@ -19,7 +19,6 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using HotChocolate.Execution.Processing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -592,7 +591,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Ensures that the query that returns the tables that will be generated
-        /// into entities from the autoentites configuration return the expected result.
+        /// into entities from the autoentities configuration returns the expected result.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(new string[] { "dbo.%book%" }, new string[] { }, "{schema}.{object}.books", new string[] { "book" }, "")]
@@ -630,14 +629,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 bool includedObjectExists = false;
                 foreach (string included in includeObject)
                 {
-                    if (resultObject[1].ToString().Contains(included))
+                    if (resultObject["object"].ToString().Contains(included))
                     {
                         includedObjectExists = true;
-                        Assert.AreEqual(expected: "dbo", actual: resultObject[0].ToString(), "Query does not return expected schema.");
-                        Assert.AreNotEqual(name, resultObject[3].ToString(), "Name returned by query should not include {schema} or {object}.");
+                        Assert.AreEqual(expected: "dbo", actual: resultObject["schema"].ToString(), "Query does not return expected schema.");
+                        Assert.AreNotEqual(name, resultObject["entity_name"].ToString(), "Name returned by query should not include {schema} or {object}.");
                         if (exclude.Length > 0)
                         {
-                            Assert.IsTrue(!resultObject[1].ToString().Contains(excludeObject), "Query returns pattern that should be excluded.");
+                            Assert.IsTrue(!resultObject["object"].ToString().Contains(excludeObject), "Query returns pattern that should be excluded.");
                         }
                     }
                 }

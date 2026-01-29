@@ -301,6 +301,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
                 {
                     JsonArray? resultArray = await QueryAutoentitiesConfiguration(autoentity);
+                    // TODO: Finish implementation of autoentities generation in task #3052
                 }
             }
         }

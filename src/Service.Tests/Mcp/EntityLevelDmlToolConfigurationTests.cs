@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.BuiltInTools;
+using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -34,19 +35,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     public class EntityLevelDmlToolConfigurationTests
     {
         /// <summary>
-        /// Verifies that ReadRecordsTool respects entity-level DmlToolEnabled=false.
+        /// Verifies that DML tools respect entity-level DmlToolEnabled=false.
         /// When an entity has DmlToolEnabled explicitly set to false, the tool should
-        /// return a ToolDisabled error even if the runtime-level ReadRecords is enabled.
+        /// return a ToolDisabled error even if the runtime-level tool is enabled.
         /// </summary>
-        [TestMethod]
-        public async Task ReadRecords_RespectsEntityLevelDmlToolDisabled()
+        /// <param name="toolType">The type of tool to test (ReadRecords, CreateRecord, UpdateRecord, DeleteRecord, ExecuteEntity).</param>
+        /// <param name="jsonArguments">The JSON arguments for the tool.</param>
+        /// <param name="isStoredProcedure">Whether the entity is a stored procedure (uses different config).</param>
+        [DataTestMethod]
+        [DataRow("ReadRecords", "{\"entity\": \"Book\"}", false, DisplayName = "ReadRecords respects entity-level DmlToolEnabled=false")]
+        [DataRow("CreateRecord", "{\"entity\": \"Book\", \"data\": {\"id\": 1, \"title\": \"Test\"}}", false, DisplayName = "CreateRecord respects entity-level DmlToolEnabled=false")]
+        [DataRow("UpdateRecord", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}", false, DisplayName = "UpdateRecord respects entity-level DmlToolEnabled=false")]
+        [DataRow("DeleteRecord", "{\"entity\": \"Book\", \"keys\": {\"id\": 1}}", false, DisplayName = "DeleteRecord respects entity-level DmlToolEnabled=false")]
+        [DataRow("ExecuteEntity", "{\"entity\": \"GetBook\"}", true, DisplayName = "ExecuteEntity respects entity-level DmlToolEnabled=false")]
+        public async Task DmlTool_RespectsEntityLevelDmlToolDisabled(string toolType, string jsonArguments, bool isStoredProcedure)
         {
             // Arrange
-            RuntimeConfig config = CreateConfigWithDmlToolDisabledEntity();
+            RuntimeConfig config = isStoredProcedure
+                ? CreateConfigWithDmlToolDisabledStoredProcedure()
+                : CreateConfigWithDmlToolDisabledEntity();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
-            ReadRecordsTool tool = new();
+            IMcpTool tool = CreateTool(toolType);
 
-            JsonDocument arguments = JsonDocument.Parse("{\"entity\": \"Book\"}");
+            JsonDocument arguments = JsonDocument.Parse(jsonArguments);
 
             // Act
             CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
@@ -54,135 +65,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
 
-            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("ToolDisabled", errorType.GetString());
-
-            Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
-            string message = errorMessage.GetString() ?? string.Empty;
-            Assert.IsTrue(message.Contains("DML tools are disabled for entity 'Book'"));
+            JsonElement content = await RunToolAsync(tool, arguments, serviceProvider);
+            AssertToolDisabledError(content);
         }
 
         /// <summary>
-        /// Verifies that CreateRecordTool respects entity-level DmlToolEnabled=false.
+        /// Verifies that DML tools work normally when entity-level DmlToolEnabled is not set to false.
+        /// This test ensures the entity-level check doesn't break the normal flow when either:
+        /// - DmlToolEnabled=true (explicitly enabled)
+        /// - entity.Mcp is null (defaults to enabled)
         /// </summary>
-        [TestMethod]
-        public async Task CreateRecord_RespectsEntityLevelDmlToolDisabled()
+        /// <param name="scenario">The test scenario description.</param>
+        /// <param name="useMcpConfig">Whether to include MCP config with DmlToolEnabled=true (false means no MCP config).</param>
+        [DataTestMethod]
+        [DataRow("DmlToolEnabled=true", true, DisplayName = "ReadRecords works when entity has DmlToolEnabled=true")]
+        [DataRow("No MCP config", false, DisplayName = "ReadRecords works when entity has no MCP config")]
+        public async Task ReadRecords_WorksWhenNotDisabledAtEntityLevel(string scenario, bool useMcpConfig)
         {
             // Arrange
-            RuntimeConfig config = CreateConfigWithDmlToolDisabledEntity();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            CreateRecordTool tool = new();
-
-            JsonDocument arguments = JsonDocument.Parse("{\"entity\": \"Book\", \"data\": {\"id\": 1, \"title\": \"Test\"}}");
-
-            // Act
-            CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
-
-            // Assert
-            Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-
-            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("ToolDisabled", errorType.GetString());
-        }
-
-        /// <summary>
-        /// Verifies that UpdateRecordTool respects entity-level DmlToolEnabled=false.
-        /// </summary>
-        [TestMethod]
-        public async Task UpdateRecord_RespectsEntityLevelDmlToolDisabled()
-        {
-            // Arrange
-            RuntimeConfig config = CreateConfigWithDmlToolDisabledEntity();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            UpdateRecordTool tool = new();
-
-            JsonDocument arguments = JsonDocument.Parse("{\"entity\": \"Book\", \"keys\": {\"id\": 1}, \"fields\": {\"title\": \"Updated\"}}");
-
-            // Act
-            CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
-
-            // Assert
-            Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-
-            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("ToolDisabled", errorType.GetString());
-        }
-
-        /// <summary>
-        /// Verifies that DeleteRecordTool respects entity-level DmlToolEnabled=false.
-        /// </summary>
-        [TestMethod]
-        public async Task DeleteRecord_RespectsEntityLevelDmlToolDisabled()
-        {
-            // Arrange
-            RuntimeConfig config = CreateConfigWithDmlToolDisabledEntity();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            DeleteRecordTool tool = new();
-
-            JsonDocument arguments = JsonDocument.Parse("{\"entity\": \"Book\", \"keys\": {\"id\": 1}}");
-
-            // Act
-            CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
-
-            // Assert
-            Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-
-            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("ToolDisabled", errorType.GetString());
-        }
-
-        /// <summary>
-        /// Verifies that ExecuteEntityTool respects entity-level DmlToolEnabled=false.
-        /// </summary>
-        [TestMethod]
-        public async Task ExecuteEntity_RespectsEntityLevelDmlToolDisabled()
-        {
-            // Arrange
-            RuntimeConfig config = CreateConfigWithDmlToolDisabledStoredProcedure();
-            IServiceProvider serviceProvider = CreateServiceProvider(config);
-            ExecuteEntityTool tool = new();
-
-            JsonDocument arguments = JsonDocument.Parse("{\"entity\": \"GetBook\"}");
-
-            // Act
-            CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
-
-            // Assert
-            Assert.IsTrue(result.IsError == true, "Expected error when entity has DmlToolEnabled=false");
-
-            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
-
-            Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
-            Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
-            Assert.AreEqual("ToolDisabled", errorType.GetString());
-        }
-
-        /// <summary>
-        /// Verifies that DML tools work normally when entity has DmlToolEnabled=true (default).
-        /// This test ensures the entity-level check doesn't break the normal flow.
-        /// </summary>
-        [TestMethod]
-        public async Task ReadRecords_WorksWhenEntityLevelDmlToolEnabled()
-        {
-            // Arrange
-            RuntimeConfig config = CreateConfigWithDmlToolEnabledEntity();
+            RuntimeConfig config = useMcpConfig
+                ? CreateConfigWithDmlToolEnabledEntity()
+                : CreateConfigWithEntityWithoutMcpConfig();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             ReadRecordsTool tool = new();
 
@@ -196,28 +99,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // but that's OK for this test. We just want to ensure it passes the entity-level check.
             if (result.IsError == true)
             {
-                TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-                JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
+                JsonElement content = await RunToolAsync(tool, arguments, serviceProvider);
 
                 if (content.TryGetProperty("error", out JsonElement error) &&
                     error.TryGetProperty("type", out JsonElement errorType))
                 {
                     string errorTypeValue = errorType.GetString();
                     Assert.AreNotEqual("ToolDisabled", errorTypeValue,
-                        "Should not get ToolDisabled error when DmlToolEnabled=true");
+                        $"Should not get ToolDisabled error for scenario: {scenario}");
                 }
             }
         }
 
         /// <summary>
-        /// Verifies that entity-level check is skipped when entity has no MCP configuration.
-        /// When entity.Mcp is null, DmlToolEnabled defaults to true.
+        /// Verifies the precedence of runtime-level vs entity-level configuration.
+        /// When runtime-level tool is disabled, entity-level DmlToolEnabled=true should NOT override it.
+        /// This validates that runtime-level acts as a global gate that takes precedence.
         /// </summary>
         [TestMethod]
-        public async Task ReadRecords_WorksWhenEntityHasNoMcpConfig()
+        public async Task ReadRecords_RuntimeDisabledTakesPrecedenceOverEntityEnabled()
         {
-            // Arrange
-            RuntimeConfig config = CreateConfigWithEntityWithoutMcpConfig();
+            // Arrange - Runtime has readRecords=false, but entity has DmlToolEnabled=true
+            RuntimeConfig config = CreateConfigWithRuntimeDisabledButEntityEnabled();
             IServiceProvider serviceProvider = CreateServiceProvider(config);
             ReadRecordsTool tool = new();
 
@@ -227,19 +130,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
 
             // Assert
-            // Should not be a ToolDisabled error
-            if (result.IsError == true)
-            {
-                TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-                JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
+            Assert.IsTrue(result.IsError == true, "Expected error when runtime-level tool is disabled");
 
-                if (content.TryGetProperty("error", out JsonElement error) &&
-                    error.TryGetProperty("type", out JsonElement errorType))
-                {
-                    string errorTypeValue = errorType.GetString();
-                    Assert.AreNotEqual("ToolDisabled", errorTypeValue,
-                        "Should not get ToolDisabled error when entity has no MCP config");
-                }
+            JsonElement content = await RunToolAsync(tool, arguments, serviceProvider);
+            AssertToolDisabledError(content);
+
+            // Verify the error is due to runtime-level, not entity-level
+            // (The error message should NOT mention entity-specific disabling)
+            if (content.TryGetProperty("error", out JsonElement error) &&
+                error.TryGetProperty("message", out JsonElement errorMessage))
+            {
+                string message = errorMessage.GetString() ?? string.Empty;
+                Assert.IsFalse(message.Contains("entity"),
+                    "Error should be from runtime-level check, not entity-level check");
             }
         }
 
@@ -281,19 +184,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // Assert
             Assert.IsTrue(result.IsError == true, "Expected error when CustomToolEnabled=false in runtime config");
 
-            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
-            JsonElement content = JsonDocument.Parse(firstContent.Text).RootElement;
+            JsonElement content = await RunToolAsync(tool, arguments, serviceProvider);
+            AssertToolDisabledError(content, "Custom tool is disabled for entity 'GetBook'");
+        }
 
+        #region Helper Methods
+
+        /// <summary>
+        /// Helper method to execute an MCP tool and return the parsed JsonElement from the result.
+        /// </summary>
+        /// <param name="tool">The MCP tool to execute.</param>
+        /// <param name="arguments">The JSON arguments for the tool.</param>
+        /// <param name="serviceProvider">The service provider with dependencies.</param>
+        /// <returns>The parsed JsonElement from the tool's response.</returns>
+        private static async Task<JsonElement> RunToolAsync(IMcpTool tool, JsonDocument arguments, IServiceProvider serviceProvider)
+        {
+            CallToolResult result = await tool.ExecuteAsync(arguments, serviceProvider, CancellationToken.None);
+            TextContentBlock firstContent = (TextContentBlock)result.Content[0];
+            return JsonDocument.Parse(firstContent.Text).RootElement;
+        }
+
+        /// <summary>
+        /// Helper method to assert that a JsonElement contains a ToolDisabled error.
+        /// </summary>
+        /// <param name="content">The JSON content to check for error.</param>
+        /// <param name="expectedMessageFragment">Optional message fragment that should be present in the error message.</param>
+        private static void AssertToolDisabledError(JsonElement content, string expectedMessageFragment = null)
+        {
             Assert.IsTrue(content.TryGetProperty("error", out JsonElement error));
             Assert.IsTrue(error.TryGetProperty("type", out JsonElement errorType));
             Assert.AreEqual("ToolDisabled", errorType.GetString());
 
-            Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
-            string message = errorMessage.GetString() ?? string.Empty;
-            Assert.IsTrue(message.Contains("Custom tool is disabled for entity 'GetBook'"));
+            if (expectedMessageFragment != null)
+            {
+                Assert.IsTrue(error.TryGetProperty("message", out JsonElement errorMessage));
+                string message = errorMessage.GetString() ?? string.Empty;
+                Assert.IsTrue(message.Contains(expectedMessageFragment),
+                    $"Expected error message to contain '{expectedMessageFragment}', but got: {message}");
+            }
         }
 
-        #region Helper Methods
+        /// <summary>
+        /// Helper method to create an MCP tool instance based on the tool type.
+        /// </summary>
+        /// <param name="toolType">The type of tool to create (ReadRecords, CreateRecord, UpdateRecord, DeleteRecord, ExecuteEntity).</param>
+        /// <returns>An instance of the requested tool.</returns>
+        private static IMcpTool CreateTool(string toolType)
+        {
+            return toolType switch
+            {
+                "ReadRecords" => new ReadRecordsTool(),
+                "CreateRecord" => new CreateRecordTool(),
+                "UpdateRecord" => new UpdateRecordTool(),
+                "DeleteRecord" => new DeleteRecordTool(),
+                "ExecuteEntity" => new ExecuteEntityTool(),
+                _ => throw new ArgumentException($"Unknown tool type: {toolType}", nameof(toolType))
+            };
+        }
 
         /// <summary>
         /// Creates a runtime config with a table entity that has DmlToolEnabled=false.
@@ -512,6 +459,52 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
                         DmlTools: new(
                             describeEntities: true,
                             readRecords: true,
+                            createRecord: true,
+                            updateRecord: true,
+                            deleteRecord: true,
+                            executeEntity: true
+                        )
+                    ),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)
+                ),
+                Entities: new(entities)
+            );
+        }
+
+        /// <summary>
+        /// Creates a runtime config where runtime-level readRecords is disabled,
+        /// but entity-level DmlToolEnabled is true. This tests precedence behavior.
+        /// </summary>
+        private static RuntimeConfig CreateConfigWithRuntimeDisabledButEntityEnabled()
+        {
+            Dictionary<string, Entity> entities = new()
+            {
+                ["Book"] = new Entity(
+                    Source: new("books", EntitySourceType.Table, null, null),
+                    GraphQL: new("Book", "Books"),
+                    Fields: null,
+                    Rest: new(Enabled: true),
+                    Permissions: new[] { new EntityPermission(Role: "anonymous", Actions: new[] {
+                        new EntityAction(Action: EntityActionOperation.Read, Fields: null, Policy: null)
+                    }) },
+                    Mappings: null,
+                    Relationships: null,
+                    Mcp: new EntityMcpOptions(customToolEnabled: false, dmlToolsEnabled: true)
+                )
+            };
+
+            return new RuntimeConfig(
+                Schema: "test-schema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(
+                        Enabled: true,
+                        Path: "/mcp",
+                        DmlTools: new(
+                            describeEntities: true,
+                            readRecords: false,  // Runtime-level DISABLED
                             createRecord: true,
                             updateRecord: true,
                             deleteRecord: true,

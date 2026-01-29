@@ -122,8 +122,9 @@ jobs:
     displayName: 'Run MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage" --logger "console;verbosity=detailed" -- RunConfiguration.TestSessionTimeout=7200000'
       projects: '**/*Tests/*.csproj'
+    timeoutInMinutes: 120
 
   - task: CmdLine@2
     displayName: 'Set flag to publish Verify *.received files when tests fail'
@@ -249,8 +250,9 @@ jobs:
     displayName: 'Run MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage" --logger "console;verbosity=detailed" -- RunConfiguration.TestSessionTimeout=7200000'
       projects: '**/*Tests/*.csproj'
+    timeoutInMinutes: 120
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'

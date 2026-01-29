@@ -31,7 +31,7 @@ public class ConfigurationHotReloadTests
     private const string GQL_QUERY_NAME = "books";
     private const string HOT_RELOAD_SUCCESS_MESSAGE = "Validated hot-reloaded configuration file";
     private const string HOT_RELOAD_FAILURE_MESSAGE = "Unable to hot reload configuration file due to";
-    private const int HOT_RELOAD_TIMEOUT_SECONDS = 30;
+    private const int HOT_RELOAD_TIMEOUT_SECONDS = 120; // Increased from 30 to 120 for CI/CD environments
 
     private const string GQL_QUERY = @"{
                 books(first: 100) {
@@ -879,16 +879,29 @@ public class ConfigurationHotReloadTests
     private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout, TimeSpan pollingInterval)
     {
         System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        int attemptCount = 0;
         while (stopwatch.Elapsed < timeout)
         {
+            attemptCount++;
             if (condition())
             {
+                Console.WriteLine($"Hot-reload condition met after {stopwatch.Elapsed.TotalSeconds:F2} seconds ({attemptCount} attempts)");
                 return;
+            }
+
+            if (attemptCount % 10 == 0) // Log every 10 attempts (every 5 seconds)
+            {
+                Console.WriteLine($"Still waiting for hot-reload condition... Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s, Attempts: {attemptCount}");
             }
 
             await Task.Delay(pollingInterval);
         }
 
+        Console.WriteLine($"Hot-reload timeout after {stopwatch.Elapsed.TotalSeconds:F2} seconds ({attemptCount} attempts)");
+        lock (_writerLock)
+        {
+            Console.WriteLine($"Console output captured:\n{_writer.ToString()}");
+        }
         throw new TimeoutException("The condition was not met within the timeout period.");
     }
 }

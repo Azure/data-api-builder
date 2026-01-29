@@ -194,7 +194,7 @@ public class ConfigurationHotReloadTests
     {
         // Arrange
         GenerateConfigFile(connectionString: $"{ConfigurationTests.GetConnectionStringFromEnvironmentConfig(TestCategory.MSSQL).Replace("\\", "\\\\")}");
-        
+
         // Add retry logic for test server initialization in CI/CD environments
         int maxRetries = 3;
         int retryDelayMs = 2000;
@@ -224,7 +224,7 @@ public class ConfigurationHotReloadTests
                 HttpResponseMessage gQLResult = await _testClient.SendAsync(request);
 
                 // Assert rest and graphQL requests return status OK.
-                Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode, 
+                Assert.AreEqual(HttpStatusCode.OK, restResult.StatusCode,
                     $"REST request failed on attempt {attempt}. Response: {await restResult.Content.ReadAsStringAsync()}");
                 Assert.AreEqual(HttpStatusCode.OK, gQLResult.StatusCode,
                     $"GraphQL request failed on attempt {attempt}. Response: {await gQLResult.Content.ReadAsStringAsync()}");
@@ -241,7 +241,7 @@ public class ConfigurationHotReloadTests
             {
                 lastException = ex;
                 Console.WriteLine($"Test server initialization attempt {attempt} failed: {ex.Message}");
-                
+
                 // Clean up failed attempt
                 try
                 {
@@ -274,7 +274,6 @@ public class ConfigurationHotReloadTests
 
             _testClient?.Dispose();
             _testServer?.Dispose();
-            
             Console.WriteLine("Test cleanup completed successfully");
         }
         catch (Exception ex)

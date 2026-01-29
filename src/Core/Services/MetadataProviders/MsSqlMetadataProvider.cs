@@ -60,6 +60,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc/>
         public override async Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
         {
+            
             string enumerateEnabledTriggers = SqlQueryBuilder.BuildFetchEnabledTriggersQuery();
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -289,6 +290,41 @@ namespace Azure.DataApiBuilder.Core.Services
                 dbType = 0;
                 return false;
             }
+        }
+
+        /// <inheritdoc/>
+        protected override async Task GenerateAutoentitiesIntoEntities()
+        {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            if (runtimeConfig.Autoentities is not null)
+            {
+                foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
+                {
+                    JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
+                    // TODO: Finish implementation of autoentities generation in task #3052
+                }
+            }
+        }
+
+        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
+        {
+            string include = string.Join(",", autoentity.Patterns.Include);
+            string exclude = string.Join(",", autoentity.Patterns.Exclude);
+            string namePattern = autoentity.Patterns.Name;
+            string getAutoentitiesQuery = SqlQueryBuilder.BuildGetAutoentitiesQuery(include, exclude, namePattern);
+
+            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
+            _logger.LogInformation($"Autoentities include pattern: {include}");
+            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
+            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
+
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: getAutoentitiesQuery,
+                parameters: null!,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
+                dataSourceName: _dataSourceName);
+
+            return resultArray;
         }
     }
 }

@@ -616,7 +616,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(configWithAutoentity);
             SetUpSQLMetadataProvider(runtimeConfigProvider);
-            
+
             await _sqlMetadataProvider.InitializeAsync();
 
             // Act

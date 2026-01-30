@@ -293,7 +293,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        protected override async Task GenerateAutoentitiesIntoEntities()
+        // TODO: Finish implementation of autoentities generation in task #3052
+        /*protected override async Task GenerateAutoentitiesIntoEntities()
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             if (runtimeConfig.Autoentities is not null)
@@ -301,10 +302,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
                 {
                     JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
-                    // TODO: Finish implementation of autoentities generation in task #3052
                 }
             }
-        }
+        }*/
 
         public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
         {

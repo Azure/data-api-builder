@@ -506,7 +506,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// 2. are computed based on other columns,
         /// are considered as read only columns. The query combines both the types of read-only columns and returns the list.
         /// </summary>
-        /// <param name="schemaParamName">Param name of the schema/database.</param>
+        /// <param name="schemaParamName">Param name of the schema.</param>
         /// <param name="tableParamName">Param name of the table.</param>
         /// <returns></returns>
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
@@ -569,28 +569,177 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="include">Pattern for tables that will be included.</param>
         /// <param name="exclude">Pattern for tables that will be excluded.</param>
         /// <param name="namePattern">Pattern for naming the entities.</param>
-        public string BuildGetAutoentitiesQuery(string include, string exclude, string namePattern)
+        public string BuildGetAutoentitiesQuery()
         {
-            string query = $"DECLARE @include_pattern NVARCHAR(MAX) = '{include}'; DECLARE @exclude_pattern NVARCHAR(MAX) = '{exclude}'; DECLARE @name_pattern NVARCHAR(255) = '{namePattern}'; " +
-                "DECLARE @exclude_invalid_types BIT = 1; SET NOCOUNT ON; WITH include_patterns AS ( SELECT LTRIM(RTRIM(value)) AS pattern " +
-                "FROM STRING_SPLIT(ISNULL(@include_pattern, N''), N',') WHERE LTRIM(RTRIM(value)) <> N'' ), " +
-                "exclude_patterns AS ( SELECT LTRIM(RTRIM(value)) AS pattern FROM STRING_SPLIT(ISNULL(@exclude_pattern, N''), N',') " +
-                "WHERE LTRIM(RTRIM(value)) <> N'' ), all_tables AS ( SELECT s.name AS schema_name, t.name AS object_name, s.name + N'.' " +
-                "+ t.name AS full_name, N'table' AS object_type, t.object_id FROM sys.tables AS t JOIN sys.schemas AS s ON t.schema_id = s.schema_id " +
-                "WHERE EXISTS ( SELECT 1 FROM sys.key_constraints AS kc WHERE kc.parent_object_id = t.object_id AND kc.type = 'PK' ) ), eligible_tables AS " +
-                "( SELECT o.schema_name, o.object_name, o.full_name, o.object_type, o.object_id, CASE WHEN so.is_ms_shipped = 1 THEN 1 WHEN o.schema_name IN " +
-                "(N'sys', N'INFORMATION_SCHEMA') THEN 1 WHEN o.object_name IN ( N'__EFMigrationsHistory', N'__MigrationHistory', N'__FlywayHistory', N'sysdiagrams' ) THEN 1 " +
-                "WHEN o.object_name LIKE N'service_broker_%' THEN 1 WHEN o.object_name LIKE N'queue_messages_%' THEN 1 WHEN o.object_name LIKE N'MSmerge_%' " +
-                "THEN 1 WHEN o.object_name LIKE N'MSreplication_%' THEN 1 WHEN o.object_name LIKE N'FileTableUpdates$%' THEN 1 WHEN o.object_name LIKE N'graph_%' THEN 1 WHEN EXISTS " +
-                "( SELECT 1 FROM sys.tables AS t WHERE t.object_id = o.object_id AND ( t.is_tracked_by_cdc = 1 OR t.temporal_type > 0 OR t.is_filetable = 1 OR t.is_memory_optimized = 1 ) ) " +
-                "THEN 1 ELSE 0 END AS is_system_object FROM all_tables AS o JOIN sys.objects AS so ON so.object_id = o.object_id ) SELECT a.schema_name AS [schema], a.object_name AS [object], " +
-                "CASE WHEN LTRIM(RTRIM(ISNULL(@name_pattern, N''))) = N'' THEN a.object_name ELSE REPLACE( REPLACE(@name_pattern, N'{schema}', a.schema_name), N'{object}', a.object_name ) " +
-                "END AS entity_name, CASE WHEN EXISTS ( SELECT 1 FROM sys.columns AS c JOIN sys.types AS ty ON c.user_type_id = ty.user_type_id WHERE c.object_id = a.object_id AND ty.name IN " +
-                "( N'geography', N'geometry', N'hierarchyid', N'sql_variant', N'xml', N'rowversion', N'vector' ) ) THEN 1 ELSE 0 END AS contains_invalid_types FROM eligible_tables AS a WHERE " +
-                "a.is_system_object = 0 AND ( NOT EXISTS (SELECT 1 FROM exclude_patterns) OR NOT EXISTS ( SELECT 1 FROM exclude_patterns AS ep WHERE a.full_name LIKE ep.pattern " +
-                "COLLATE DATABASE_DEFAULT ESCAPE '\\' ) ) AND ( NOT EXISTS (SELECT 1 FROM include_patterns) OR EXISTS ( SELECT 1 FROM include_patterns AS ip WHERE a.full_name LIKE ip.pattern " +
-                "COLLATE DATABASE_DEFAULT ESCAPE '\\' ) ) AND ( @exclude_invalid_types = 0 OR NOT EXISTS ( SELECT 1 FROM sys.columns AS c JOIN sys.types AS ty ON c.user_type_id = ty.user_type_id " +
-                "WHERE c.object_id = a.object_id AND ty.name IN ( N'geography', N'geometry', N'hierarchyid', N'sql_variant', N'xml', N'rowversion', N'vector' ) ) ) ORDER BY a.schema_name, a.object_name;";
+            string query = @$"
+                DECLARE @exclude_invalid_types BIT = 1;
+
+                SET NOCOUNT ON;
+
+                WITH
+                {IncludeAndExcludeSplitQuery(true)},
+                {IncludeAndExcludeSplitQuery(false)},
+                all_tables AS
+                (
+                    SELECT
+                        s.name AS schema_name,
+                        t.name AS object_name,
+                        s.name + N'.' + t.name AS full_name,
+                        N'table' AS object_type,
+                        t.object_id
+                    FROM sys.tables AS t
+                    JOIN sys.schemas AS s
+                        ON t.schema_id = s.schema_id
+                    WHERE EXISTS
+                    (
+                        SELECT 1
+                        FROM sys.key_constraints AS kc
+                        WHERE kc.parent_object_id = t.object_id
+                            AND kc.type = 'PK'
+                    )
+                ),
+                eligible_tables AS
+                (
+                    SELECT
+                        o.schema_name,
+                        o.object_name,
+                        o.full_name,
+                        o.object_type,
+                        o.object_id,
+                        CASE
+                            WHEN so.is_ms_shipped = 1 THEN 1
+                            WHEN o.schema_name IN (N'sys', N'INFORMATION_SCHEMA') THEN 1
+                            WHEN o.object_name IN
+                            (
+                                N'__EFMigrationsHistory',
+                                N'__MigrationHistory',
+                                N'__FlywayHistory',
+                                N'sysdiagrams'
+                            ) THEN 1
+                            WHEN o.object_name LIKE N'service_broker_%' THEN 1
+                            WHEN o.object_name LIKE N'queue_messages_%' THEN 1
+                            WHEN o.object_name LIKE N'MSmerge_%' THEN 1
+                            WHEN o.object_name LIKE N'MSreplication_%' THEN 1
+                            WHEN o.object_name LIKE N'FileTableUpdates$%' THEN 1
+                            WHEN o.object_name LIKE N'graph_%' THEN 1
+                            WHEN EXISTS
+                            (
+                                SELECT 1
+                                FROM sys.tables AS t
+                                WHERE t.object_id = o.object_id
+                                    AND
+                                    (
+                                        t.is_tracked_by_cdc = 1
+                                        OR t.temporal_type > 0
+                                        OR t.is_filetable = 1
+                                        OR t.is_memory_optimized = 1
+                                    )
+                            ) THEN 1
+                            ELSE 0
+                        END AS is_system_object
+                    FROM all_tables AS o
+                    JOIN sys.objects AS so
+                        ON so.object_id = o.object_id
+                )
+                SELECT
+                    a.schema_name AS [schema],
+                    a.object_name AS [object],
+                    CASE
+                        WHEN LTRIM(RTRIM(ISNULL(@name_pattern, N''))) = N'' THEN a.object_name
+                        ELSE REPLACE(
+                                    REPLACE(@name_pattern, N'{{schema}}', a.schema_name),
+                                    N'{{object}}', a.object_name
+                                )
+                    END AS entity_name,
+                    CASE
+                        WHEN EXISTS
+                        (
+                            SELECT 1
+                            FROM sys.columns AS c
+                            JOIN sys.types AS ty
+                                ON c.user_type_id = ty.user_type_id
+                            WHERE c.object_id = a.object_id
+                                AND ty.name IN
+                                (
+                                    N'geography',
+                                    N'geometry',
+                                    N'hierarchyid',
+                                    N'sql_variant',
+                                    N'xml',
+                                    N'rowversion',
+                                    N'vector'
+                                )
+                        ) THEN 1
+                        ELSE 0
+                    END AS contains_invalid_types
+                FROM eligible_tables AS a
+                WHERE
+                    a.is_system_object = 0
+                    AND
+                    (
+                        NOT EXISTS (SELECT 1 FROM exclude_patterns)
+                        OR NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM exclude_patterns AS ep
+                            WHERE a.full_name LIKE ep.pattern COLLATE DATABASE_DEFAULT ESCAPE '\'
+                        )
+                    )
+                    AND
+                    (
+                        NOT EXISTS (SELECT 1 FROM include_patterns)
+                        OR EXISTS
+                        (
+                            SELECT 1
+                            FROM include_patterns AS ip
+                            WHERE a.full_name LIKE ip.pattern COLLATE DATABASE_DEFAULT ESCAPE '\'
+                        )
+                    )
+                    AND
+                    (
+                        @exclude_invalid_types = 0
+                        OR NOT EXISTS
+                        (
+                            SELECT 1
+                            FROM sys.columns AS c
+                            JOIN sys.types AS ty
+                                ON c.user_type_id = ty.user_type_id
+                            WHERE c.object_id = a.object_id
+                                AND ty.name IN
+                                (
+                                    N'geography',
+                                    N'geometry',
+                                    N'hierarchyid',
+                                    N'sql_variant',
+                                    N'xml',
+                                    N'rowversion',
+                                    N'vector'
+                                )
+                        )
+                    )
+                ORDER BY
+                    a.schema_name,
+                    a.object_name;";
+
+            return query;
+        }
+
+        /// <summary>
+        /// Generates a SQL query segment for splitting include or exclude patterns.
+        /// </summary>
+        /// <param name="isInclude">Indicates whether to generate the include or exclude pattern query.</param>
+        /// <returns>An SQL query segment as a string.</returns>
+        public static string IncludeAndExcludeSplitQuery(bool isInclude)
+        {
+            string pattern = isInclude ? "include" : "exclude";
+
+            string query = $@"
+                {pattern}_patterns AS
+                (
+                    SELECT LTRIM(RTRIM(value)) AS pattern
+                    FROM STRING_SPLIT(ISNULL(@{pattern}_pattern, N''), N',')
+                    WHERE LTRIM(RTRIM(value)) <> N''
+                )";
 
             return query;
         }

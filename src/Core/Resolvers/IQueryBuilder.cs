@@ -91,6 +91,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string QuoteTableNameAsDBConnectionParam(string param);
 
-        public string BuildGetAutoentitiesQuery(string include, string exclude, string namePattern) => throw new NotSupportedException($"{GetType().Name} does not support Autoentities yet.");
+        public string BuildGetAutoentitiesQuery() => throw new NotSupportedException($"{GetType().Name} does not support Autoentities yet.");
     }
 }

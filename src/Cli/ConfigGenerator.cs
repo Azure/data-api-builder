@@ -810,7 +810,15 @@ namespace Cli
 
             // MCP: Enabled and Path
             if (options.RuntimeMcpEnabled != null ||
-                options.RuntimeMcpPath != null)
+                options.RuntimeMcpPath != null ||
+                options.RuntimeMcpDescription != null ||
+                options.RuntimeMcpDmlToolsEnabled != null ||
+                options.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null ||
+                options.RuntimeMcpDmlToolsCreateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -1064,6 +1072,14 @@ namespace Cli
                         _logger.LogError("Failed to update Runtime.Mcp.Path as '{updatedValue}' due to exception message: {exceptionMessage}", updatedValue, exceptionMessage);
                         return false;
                     }
+                }
+
+                // Runtime.Mcp.Description
+                updatedValue = options?.RuntimeMcpDescription;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Description = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Description as '{updatedValue}'", updatedValue);
                 }
 
                 // Handle DML tools configuration
@@ -1747,6 +1763,7 @@ namespace Cli
                 List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
                 Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
                 List<FieldMetadata> mergedFields = [];
+                bool primaryKeyOptionProvided = options.FieldsPrimaryKeyCollection?.Any() == true;
 
                 foreach (FieldMetadata field in existingFields)
                 {
@@ -1757,7 +1774,10 @@ namespace Cli
                             Name = updatedField.Name,
                             Alias = updatedField.Alias ?? field.Alias,
                             Description = updatedField.Description ?? field.Description,
-                            PrimaryKey = updatedField.PrimaryKey
+                            // If --fields.primary-key was not provided at all,
+                            // keep the existing primary-key flag. Otherwise,
+                            // use the value coming from updatedField.
+                            PrimaryKey = primaryKeyOptionProvided ? updatedField.PrimaryKey : field.PrimaryKey
                         });
                         updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
                     }

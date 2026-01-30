@@ -625,7 +625,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert
             Assert.IsNotNull(resultArray);
-            foreach(JsonObject resultObject in resultArray)
+            foreach (JsonObject resultObject in resultArray)
             {
                 bool includedObjectExists = false;
                 foreach (string included in includeObject)

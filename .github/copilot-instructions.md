@@ -78,7 +78,7 @@ dotnet test --filter "TestCategory=CosmosDb_NoSql"
 
 ### Running Locally
 
-1. Open the solution: `src/Azure.DataApiBuilder.Service.sln`
+1. Open the solution: `src/Azure.DataApiBuilder.sln`
 2. Copy a config file from `src/Service.Tests/dab-config.<engine>.json` to `src/Service/`
 3. Update connection string (use environment variables)
 4. Set `Azure.DataApiBuilder.Service` as startup project
@@ -146,7 +146,7 @@ When adding or modifying generated SQL queries in tests:
 - Never commit connection strings or secrets
 
 ### Config Generation
-Use the ConfigGenerators directory for automated config file creation:
+Use the config-generators directory for automated config file creation:
 ```bash
 # Build with config generation
 dotnet build -p:generateConfigFileForDbType=<database_type>
@@ -159,7 +159,7 @@ Supported types: `mssql`, `postgresql`, `cosmosdb_nosql`, `mysql`
 - **Connection strings**: Always use `.env` files (add to `.gitignore`)
 - **Authentication**: Supports AppService, EasyAuth, StaticWebApps, JWT
 - **Authorization**: Role-based permissions in config
-- **Set-session-context**: Available for SQL Server row-level security
+- **set-session-context**: Available for SQL Server row-level security
 
 ## API Development
 

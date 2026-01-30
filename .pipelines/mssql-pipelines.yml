@@ -122,7 +122,7 @@ jobs:
     displayName: 'Run MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      arguments: '--filter "TestCategory=MsSql&FullyQualifiedName!~ConfigurationHotReloadTests" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
 
   - task: CmdLine@2
@@ -246,11 +246,20 @@ jobs:
       targetFiles: 'src/out/tests/*/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
-    displayName: 'Run MsSql Integration Tests'
+    displayName: 'MsSql Integration Tests'
     inputs:
       command: test
-      arguments: '--filter "TestCategory=MsSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      arguments: '--filter "TestCategory=MsSql&FullyQualifiedName!~ConfigurationHotReloadTests" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
       projects: '**/*Tests/*.csproj'
+
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Hot-Reload Tests'
+    inputs:
+      command: test
+      arguments: '--filter "TestCategory=MsSql&FullyQualifiedName~ConfigurationHotReloadTests" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage" --logger "console;verbosity=detailed"'
+      projects: '**/*Tests/*.csproj'
+    timeoutInMinutes: 45
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish code coverage'

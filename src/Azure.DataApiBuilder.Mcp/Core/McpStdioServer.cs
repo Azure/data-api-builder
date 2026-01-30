@@ -3,7 +3,9 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -158,7 +160,26 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// </remarks>
         private void HandleInitialize(JsonElement? id)
         {
-            var result = new
+            // Get the description from runtime config if available
+            string? instructions = null;
+            RuntimeConfigProvider? runtimeConfigProvider = _serviceProvider.GetService<RuntimeConfigProvider>();
+            if (runtimeConfigProvider != null)
+            {
+                try
+                {
+                    RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+                    instructions = runtimeConfig.Runtime?.Mcp?.Description;
+                }
+                catch (Exception ex)
+                {
+                    // Log to stderr for diagnostics and rethrow to avoid masking configuration errors
+                    Console.Error.WriteLine($"[MCP WARNING] Failed to retrieve MCP description from config: {ex.Message}");
+                    throw;
+                }
+            }
+
+            // Create the initialize response
+            object result = new
             {
                 protocolVersion = _protocolVersion,
                 capabilities = new
@@ -170,7 +191,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 {
                     name = McpProtocolDefaults.MCP_SERVER_NAME,
                     version = McpProtocolDefaults.MCP_SERVER_VERSION
-                }
+                },
+                instructions = !string.IsNullOrWhiteSpace(instructions) ? instructions : null
             };
 
             WriteResult(id, result);

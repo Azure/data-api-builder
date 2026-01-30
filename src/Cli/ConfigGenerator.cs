@@ -2784,7 +2784,11 @@ namespace Cli
             AutoentityPatterns patterns = BuildAutoentityPatterns(options, existingAutoentity);
 
             // Build template
-            AutoentityTemplate template = BuildAutoentityTemplate(options, existingAutoentity);
+            AutoentityTemplate? template = BuildAutoentityTemplate(options, existingAutoentity);
+            if (template is null)
+            {
+                return false;
+            }
 
             // Build permissions
             EntityPermission[]? permissions = BuildAutoentityPermissions(options, existingAutoentity);
@@ -2868,8 +2872,9 @@ namespace Cli
 
         /// <summary>
         /// Builds the AutoentityTemplate object from the provided options and existing autoentity.
+        /// Returns null if validation fails.
         /// </summary>
-        private static AutoentityTemplate BuildAutoentityTemplate(AutoentitiesConfigureOptions options, Autoentity? existingAutoentity)
+        private static AutoentityTemplate? BuildAutoentityTemplate(AutoentitiesConfigureOptions options, Autoentity? existingAutoentity)
         {
             // Start with existing values or defaults
             EntityMcpOptions? mcp = existingAutoentity?.Template.Mcp;
@@ -2890,7 +2895,7 @@ namespace Cli
                 if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
                 {
                     _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Expected: true or false.", options.TemplateMcpDmlTool);
-                    return existingAutoentity?.Template ?? new AutoentityTemplate();
+                    return null;
                 }
 
                 bool? customToolEnabled = mcp?.UserProvidedCustomToolEnabled == true ? mcp.CustomToolEnabled : null;
@@ -2953,7 +2958,7 @@ namespace Cli
                 if (!Enum.TryParse<EntityCacheLevel>(options.TemplateCacheLevel, ignoreCase: true, out EntityCacheLevel cacheLevelValue))
                 {
                     _logger.LogError("Invalid value for template.cache.level: {value}. Allowed values: L1, L1L2.", options.TemplateCacheLevel);
-                    return existingAutoentity?.Template ?? new AutoentityTemplate();
+                    return null;
                 }
 
                 cacheLevel = cacheLevelValue;

@@ -90,6 +90,7 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
         AutoentityTemplate? template = value?.Template;
         if (template?.UserProvidedRestOptions is true
             || template?.UserProvidedGraphQLOptions is true
+            || template?.UserProvidedMcpOptions is true
             || template?.UserProvidedHealthOptions is true
             || template?.UserProvidedCacheOptions is true)
         {

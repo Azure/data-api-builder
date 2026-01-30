@@ -2893,8 +2893,9 @@ namespace Cli
                     return existingAutoentity?.Template ?? new AutoentityTemplate();
                 }
 
-                bool? customToolEnabled = mcp?.CustomToolEnabled;
-                mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: mcpDmlToolValue);
+                bool? customToolEnabled = mcp?.UserProvidedCustomToolEnabled == true ? mcp.CustomToolEnabled : null;
+                bool? dmlToolValue = mcpDmlToolValue;
+                mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
                 userProvidedMcp = true;
                 _logger.LogInformation("Updated template.mcp.dml-tool for definition '{DefinitionName}'", options.DefinitionName);
             }

@@ -116,6 +116,12 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
             JsonSerializer.Serialize(writer, value.GraphQL, options);
         }
 
+        if (value?.UserProvidedMcpOptions is true)
+        {
+            writer.WritePropertyName("mcp");
+            JsonSerializer.Serialize(writer, value.Mcp, options);
+        }
+
         if (value?.UserProvidedHealthOptions is true)
         {
             writer.WritePropertyName("health");

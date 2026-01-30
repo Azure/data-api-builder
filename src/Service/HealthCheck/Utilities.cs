@@ -72,15 +72,24 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         public static string NormalizeConnectionString(string connectionString, DatabaseType dbType)
         {
-            switch (dbType)
+            try
             {
-                case DatabaseType.PostgreSQL:
-                    return new NpgsqlConnectionStringBuilder(connectionString).ToString();
-                case DatabaseType.MSSQL:
-                case DatabaseType.DWSQL:
-                    return new SqlConnectionStringBuilder(connectionString).ToString();
-                default:
-                    return connectionString;
+                switch (dbType)
+                {
+                    case DatabaseType.PostgreSQL:
+                        return new NpgsqlConnectionStringBuilder(connectionString).ToString();
+                    case DatabaseType.MSSQL:
+                    case DatabaseType.DWSQL:
+                        return new SqlConnectionStringBuilder(connectionString).ToString();
+                    default:
+                        return connectionString;
+                }
+            }
+            catch (Exception)
+            {
+                // If the connection string cannot be parsed by the builder,
+                // return the original string to avoid failing the health check.
+                return connectionString;
             }
         }
     }

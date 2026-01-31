@@ -168,7 +168,7 @@ Supported types: `mssql`, `postgresql`, `cosmosdb_nosql`, `mysql`
 - Follows Microsoft REST API Guidelines
 - Request body validation available
 - Health endpoint: `/health`
-- Swagger UI in development mode: `/swagger`
+- Swagger UI in development mode: `/{REST_PATH}/openapi` (default: `/api/openapi`)
 
 ### GraphQL API
 - Base path: `/graphql` (configurable)

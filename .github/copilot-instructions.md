@@ -8,7 +8,7 @@ Data API builder (DAB) is an open-source, no-code tool that creates secure, full
 - **Language**: C# / .NET
 - **.NET Version**: .NET 8.0 (see `global.json`)
 - **Supported Databases**: Azure SQL, SQL Server, SQLDW, Cosmos DB, PostgreSQL, MySQL
-- **API Types**: REST, GraphQL
+- **API Types**: REST, GraphQL, MCP
 - **Deployment**: Cross-platform (Azure, AWS, GCP, on-premises)
 
 ## Project Structure

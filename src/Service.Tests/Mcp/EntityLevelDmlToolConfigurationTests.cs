@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Create the DynamicCustomTool with the entity that has CustomToolEnabled initially true
             // (simulating tool created at startup, then config changed)
-            Entity initialEntity = new Entity(
+            Entity initialEntity = new(
                 Source: new("get_book", EntitySourceType.StoredProcedure, null, null),
                 GraphQL: new("GetBook", "GetBook"),
                 Fields: null,

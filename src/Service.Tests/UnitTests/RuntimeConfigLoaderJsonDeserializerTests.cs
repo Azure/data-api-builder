@@ -344,7 +344,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(1, mockLogger.Invocations.Count, "Should raise 1 exception");
             Assert.AreEqual(5, mockLogger.Invocations[0].Arguments.Count, "Log should have 4 arguments");
-            var ConfigException = mockLogger.Invocations[0].Arguments[3] as JsonException;
+            JsonException ConfigException = mockLogger.Invocations[0].Arguments[3] as JsonException;
             Assert.IsInstanceOfType(ConfigException, typeof(JsonException), "Should have raised a Json Exception");
             Assert.AreEqual(message, ConfigException.Message);
         }

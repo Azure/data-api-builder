@@ -175,7 +175,9 @@ Supported types: `mssql`, `postgresql`, `cosmosdb_nosql`, `mysql`
 - Introspection enabled in development mode
 - Nitro UI in development mode: `/graphql`
 - Schema generated from database metadata
-
+### MCP tools
+- Base Path:  `/mcp` (configurable)
+- Discover tools with MCP Inspector
 ## Common Commands
 
 ```bash

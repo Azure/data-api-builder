@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Data API builder (DAB) is an open-source, no-code tool that creates secure, full-featured REST and GraphQL endpoints for databases. It's a CRUD data API engine that runs in a container—on Azure, any other cloud, or on-premises.
+Data API builder (DAB) is an open-source, no-code tool that creates secure, full-featured REST, GraphQL endpoints for databases. It's a CRUD data API engine that runs in a container—on Azure, any other cloud, or on-premises. It also supports creation of DML and Custom MCP tools for a SQL MCP Server backed by a SQL database.
 
 ### Key Technologies
 - **Language**: C# / .NET

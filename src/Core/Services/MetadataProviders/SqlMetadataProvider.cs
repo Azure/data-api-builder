@@ -748,9 +748,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
 
-                    if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table)
+                    if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table or EntitySourceType.View)
                     {
-                        ProcessRelationships(entityName, entity, (DatabaseTable)sourceObject, sourceObjects);
+                        ProcessRelationships(entityName, entity, sourceObject, sourceObjects);
                     }
                 }
             }
@@ -780,22 +780,23 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Adds a foreign key definition for each of the nested entities
         /// specified in the relationships section of this entity
         /// to gather the referencing and referenced columns from the database at a later stage.
-        /// Sets the referencing and referenced tables based on the kind of relationship.
+        /// Sets the referencing and referenced database objects (tables or views) based on the kind of relationship.
         /// A linking object encountered is used as the referencing table
         /// for the foreign key definition.
         /// When no foreign key is defined in the database for the relationship,
         /// the relationship.source.fields and relationship.target.fields are mandatory.
         /// Initializing a FKDefinition indicates to find the foreign key
-        /// between the referencing and referenced tables.
+        /// between the referencing and referenced database objects.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="entity"></param>
-        /// <param name="databaseTable"></param>
+        /// <param name="entityName">Name of the source entity.</param>
+        /// <param name="entity">Entity configuration.</param>
+        /// <param name="databaseObject">Database object (table or view) backing the entity.</param>
+        /// <param name="sourceObjects">Collection of all database objects.</param>
         /// <exception cref="InvalidOperationException"></exception>
         private void ProcessRelationships(
             string entityName,
             Entity entity,
-            DatabaseTable databaseTable,
+            DatabaseObject databaseObject,
             Dictionary<string, DatabaseObject> sourceObjects)
         {
             SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
@@ -824,9 +825,17 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
 
                 (targetSchemaName, targetDbTableName) = ParseSchemaAndDbTableName(targetEntity.Source.Object)!;
-                DatabaseTable targetDbTable = new(targetSchemaName, targetDbTableName);
+
+                // Create appropriate database object based on target entity's source type
+                DatabaseObject targetDbObject = targetEntity.Source.Type switch
+                {
+                    EntitySourceType.View => new DatabaseView(targetSchemaName, targetDbTableName),
+                    _ => new DatabaseTable(targetSchemaName, targetDbTableName)
+                };
+
                 // If a linking object is specified,
                 // give that higher preference and add two foreign keys for this targetEntity.
+                // Note: Linking objects must remain tables (not views) per the requirement.
                 if (relationship.LinkingObject is not null)
                 {
                     (linkingTableSchema, linkingTableName) = ParseSchemaAndDbTableName(relationship.LinkingObject)!;
@@ -835,8 +844,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
                         targetEntityName: targetEntityName,
-                        referencingDbTable: linkingDbTable,
-                        referencedDbTable: databaseTable,
+                        referencingDbObject: linkingDbTable,
+                        referencedDbObject: databaseObject,
                         referencingColumns: relationship.LinkingSourceFields,
                         referencedColumns: relationship.SourceFields,
                         referencingEntityRole: RelationshipRole.Linking,
@@ -847,8 +856,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
                         targetEntityName: targetEntityName,
-                        referencingDbTable: linkingDbTable,
-                        referencedDbTable: targetDbTable,
+                        referencingDbObject: linkingDbTable,
+                        referencedDbObject: targetDbObject,
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
                         referencingEntityRole: RelationshipRole.Linking,
@@ -902,8 +911,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
                         targetEntityName,
-                        referencingDbTable: databaseTable,
-                        referencedDbTable: targetDbTable,
+                        referencingDbObject: databaseObject,
+                        referencedDbObject: targetDbObject,
                         referencingColumns: relationship.SourceFields,
                         referencedColumns: relationship.TargetFields,
                         referencingEntityRole: RelationshipRole.Source,
@@ -919,8 +928,8 @@ namespace Azure.DataApiBuilder.Core.Services
                             sourceEntityName: entityName,
                             relationshipName: relationshipName,
                             targetEntityName,
-                            referencingDbTable: targetDbTable,
-                            referencedDbTable: databaseTable,
+                            referencingDbObject: targetDbObject,
+                            referencedDbObject: databaseObject,
                             referencingColumns: relationship.TargetFields,
                             referencedColumns: relationship.SourceFields,
                             referencingEntityRole: RelationshipRole.Target,
@@ -943,8 +952,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
                         targetEntityName,
-                        referencingDbTable: targetDbTable,
-                        referencedDbTable: databaseTable,
+                        referencingDbObject: targetDbObject,
+                        referencedDbObject: databaseObject,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
                         referencingEntityRole: RelationshipRole.Target,
@@ -981,8 +990,8 @@ namespace Azure.DataApiBuilder.Core.Services
             string sourceEntityName,
             string relationshipName,
             string targetEntityName,
-            DatabaseTable referencingDbTable,
-            DatabaseTable referencedDbTable,
+            DatabaseObject referencingDbObject,
+            DatabaseObject referencedDbObject,
             string[]? referencingColumns,
             string[]? referencedColumns,
             RelationshipRole referencingEntityRole,
@@ -998,8 +1007,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 Pair = new()
                 {
                     RelationshipName = relationshipName,
-                    ReferencingDbTable = referencingDbTable,
-                    ReferencedDbTable = referencedDbTable
+                    ReferencingDbObject = referencingDbObject,
+                    ReferencedDbObject = referencedDbObject
                 }
             };
 
@@ -1862,8 +1871,8 @@ namespace Azure.DataApiBuilder.Core.Services
                             {
                                 foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
                                 {
-                                    schemaNames.Add(fk.Pair.ReferencingDbTable.SchemaName);
-                                    tableNames.Add(fk.Pair.ReferencingDbTable.Name);
+                                    schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
+                                    tableNames.Add(fk.Pair.ReferencingDbObject.Name);
                                     sourceNameToSourceDefinition.TryAdd(dbObject.Name, sourceDefinition);
                                 }
                             }
@@ -2101,8 +2110,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     // 2. configResolvedFkDefinition doesn't match a database fk definition -> added to the list of
                     //    validated FK definitions because it's not already added.
                     bool doesFkExistInDatabase = VerifyForeignKeyExistsInDB(
-                        databaseTableA: configResolvedFkDefinition.Pair.ReferencingDbTable,
-                        databaseTableB: configResolvedFkDefinition.Pair.ReferencedDbTable);
+                        databaseObjectA: configResolvedFkDefinition.Pair.ReferencingDbObject,
+                        databaseObjectB: configResolvedFkDefinition.Pair.ReferencedDbObject);
 
                     if (!doesFkExistInDatabase)
                     {
@@ -2123,13 +2132,13 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Returns whether the supplied foreign key definition denotes a self-joining relationship
-        /// by checking whether the backing tables are the same.
+        /// by checking whether the backing database objects are the same.
         /// </summary>
         /// <param name="fkDefinition">ForeignKeyDefinition representing a relationship.</param>
         /// <returns>true when the ForeignKeyDefinition represents a self-joining relationship</returns>
         private static bool IsSelfJoiningRelationship(ForeignKeyDefinition fkDefinition)
         {
-            return fkDefinition.Pair.ReferencedDbTable.FullName.Equals(fkDefinition.Pair.ReferencingDbTable.FullName);
+            return fkDefinition.Pair.ReferencedDbObject.FullName.Equals(fkDefinition.Pair.ReferencingDbObject.FullName);
         }
 
         /// <summary>
@@ -2148,15 +2157,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Returns whether DAB has resolved a foreign key from the database
         /// linking databaseTableA and databaseTableB.
         /// A database foreign key definition explicitly denotes the referencing table and the referenced table.
-        /// This function creates two RelationShipPair objects, interchanging which datatable is referencing
-        /// and which table is referenced, so that DAB can definitevly identify whether a database foreign key exists.
+        /// This function creates two RelationShipPair objects, interchanging which database object is referencing
+        /// and which database object is referenced, so that DAB can definitevly identify whether a database foreign key exists.
         /// - When DAB pre-processes relationships in the config, DAB creates two foreign key definition objects
-        /// because the config doesn't tell DAB which table is referencing vs referenced. This function is called when
+        /// because the config doesn't tell DAB which database object is referencing vs referenced. This function is called when
         /// DAB is determining which of the two FK definitions to keep.
         /// </summary>
         public bool VerifyForeignKeyExistsInDB(
-            DatabaseTable databaseTableA,
-            DatabaseTable databaseTableB)
+            DatabaseObject databaseObjectA,
+            DatabaseObject databaseObjectB)
         {
             if (PairToFkDefinition is null)
             {
@@ -2164,12 +2173,12 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             RelationShipPair pairAB = new(
-                referencingDbObject: databaseTableA,
-                referencedDbObject: databaseTableB);
+                referencingDbObject: databaseObjectA,
+                referencedDbObject: databaseObjectB);
 
             RelationShipPair pairBA = new(
-                referencingDbObject: databaseTableB,
-                referencedDbObject: databaseTableA);
+                referencingDbObject: databaseObjectB,
+                referencedDbObject: databaseObjectA);
 
             return (PairToFkDefinition.ContainsKey(pairAB) || PairToFkDefinition.ContainsKey(pairBA));
         }
@@ -2201,11 +2210,9 @@ namespace Azure.DataApiBuilder.Core.Services
             bool isMToNRelationship = false)
         {
             if (GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
-                GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObject) &&
-                GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObject))
+                GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObjResult) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObjResult))
             {
-                DatabaseTable referencingDbTable = (DatabaseTable)referencingDbObject;
-                DatabaseTable referencedDbTable = (DatabaseTable)referencedDbObject;
                 SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
                 RelationShipPair referencingReferencedPair;
                 List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
@@ -2217,13 +2224,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
 
                     foreignKeyDefinition = fKDefinitions.FirstOrDefault(
-                                                            fk => string.Equals(referencedDbTable.FullName, fk.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase)
+                                                            fk => string.Equals(referencedDbObjResult.FullName, fk.Pair.ReferencedDbObject.FullName, StringComparison.OrdinalIgnoreCase)
                                                             && fk.ReferencingColumns.Count > 0
                                                             && fk.ReferencedColumns.Count > 0)!;
                 }
                 else
                 {
-                    referencingReferencedPair = new(referencingDbTable, referencedDbTable);
+                    referencingReferencedPair = new(referencingDbObjResult, referencedDbObjResult);
                     foreignKeyDefinition = fKDefinitions.FirstOrDefault(
                                                             fk => fk.Pair.Equals(referencingReferencedPair) &&
                                                             fk.ReferencingColumns.Count > 0

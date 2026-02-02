@@ -277,7 +277,7 @@ public class ColumnDefinition
     }
 }
 
-[DebuggerDisplay("Relationship: {RelationshipName} ReferencingDbTable = {Pair.ReferencingDbTable.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbTable = {Pair.ReferencedDbTable.FullName} (Count = {ReferencedColumns.Count})")]
+[DebuggerDisplay("Relationship: {RelationshipName} ReferencingDbObject = {Pair.ReferencingDbObject.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbObject = {Pair.ReferencedDbObject.FullName} (Count = {ReferencedColumns.Count})")]
 public class ForeignKeyDefinition
 {
     public string SourceEntityName { get; set; } = string.Empty;
@@ -388,7 +388,7 @@ public class ForeignKeyDefinition
     }
 }
 
-[DebuggerDisplay("ReferencingDbTable = {ReferencingDbTable.FullName}, ReferencedDbTable = {ReferencedDbTable.FullName}")]
+[DebuggerDisplay("ReferencingDbObject = {ReferencingDbObject.FullName}, ReferencedDbObject = {ReferencedDbObject.FullName}")]
 public class RelationShipPair
 {
     /// <summary>
@@ -399,26 +399,47 @@ public class RelationShipPair
     public RelationShipPair() { }
 
     public RelationShipPair(
-    DatabaseTable referencingDbObject,
-    DatabaseTable referencedDbObject)
+    DatabaseObject referencingDbObject,
+    DatabaseObject referencedDbObject)
     {
-        ReferencingDbTable = referencingDbObject;
-        ReferencedDbTable = referencedDbObject;
+        ReferencingDbObject = referencingDbObject;
+        ReferencedDbObject = referencedDbObject;
     }
 
     public RelationShipPair(
         string relationshipName,
-        DatabaseTable referencingDbObject,
-        DatabaseTable referencedDbObject)
+        DatabaseObject referencingDbObject,
+        DatabaseObject referencedDbObject)
     {
         RelationshipName = relationshipName;
-        ReferencingDbTable = referencingDbObject;
-        ReferencedDbTable = referencedDbObject;
+        ReferencingDbObject = referencingDbObject;
+        ReferencedDbObject = referencedDbObject;
     }
 
-    public DatabaseTable ReferencingDbTable { get; set; } = new();
+    /// <summary>
+    /// The database object (table or view) that is the referencing side of the relationship.
+    /// </summary>
+    public DatabaseObject ReferencingDbObject { get; set; } = new DatabaseTable();
 
-    public DatabaseTable ReferencedDbTable { get; set; } = new();
+    /// <summary>
+    /// The database object (table or view) that is the referenced side of the relationship.
+    /// </summary>
+    public DatabaseObject ReferencedDbObject { get; set; } = new DatabaseTable();
+
+    // Backward compatibility properties - kept for serialization and test compatibility
+    [JsonIgnore]
+    public DatabaseTable ReferencingDbTable
+    {
+        get => ReferencingDbObject as DatabaseTable ?? new DatabaseTable(ReferencingDbObject.SchemaName, ReferencingDbObject.Name);
+        set => ReferencingDbObject = value;
+    }
+
+    [JsonIgnore]
+    public DatabaseTable ReferencedDbTable
+    {
+        get => ReferencedDbObject as DatabaseTable ?? new DatabaseTable(ReferencedDbObject.SchemaName, ReferencedDbObject.Name);
+        set => ReferencedDbObject = value;
+    }
 
     public override bool Equals(object? other)
     {
@@ -428,13 +449,13 @@ public class RelationShipPair
     public bool Equals(RelationShipPair? other)
     {
         return other != null &&
-               ReferencedDbTable.Equals(other.ReferencedDbTable) &&
-               ReferencingDbTable.Equals(other.ReferencingDbTable);
+               ReferencedDbObject.Equals(other.ReferencedDbObject) &&
+               ReferencingDbObject.Equals(other.ReferencingDbObject);
     }
 
     public override int GetHashCode()
     {
         return HashCode.Combine(
-                ReferencedDbTable, ReferencingDbTable);
+                ReferencedDbObject, ReferencingDbObject);
     }
 }

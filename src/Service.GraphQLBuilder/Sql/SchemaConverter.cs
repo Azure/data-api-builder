@@ -633,7 +633,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     listOfForeignKeys.Where(fk =>
                         fk.ReferencingColumns.Count > 0
                         && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencingDbTable.Equals(databaseObject))
+                        && fk.Pair.ReferencingDbObject.Equals(databaseObject))
                         .ToArray();
 
                 // Find the foreign keys in which the source entity is the referenced object.
@@ -641,7 +641,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     listOfForeignKeys.Where(fk =>
                         fk.ReferencingColumns.Count > 0
                         && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencedDbTable.Equals(databaseObject))
+                        && fk.Pair.ReferencedDbObject.Equals(databaseObject))
                         .ToArray();
 
                 // The source entity should at least be a referencing or referenced db object or both

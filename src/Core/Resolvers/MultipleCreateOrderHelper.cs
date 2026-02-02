@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                string referencingEntityNameForThisFK = targetEntityForeignKey.Pair.ReferencingDbTable.Equals(sourceDbTable) ? sourceEntityName : targetEntityName;
+                string referencingEntityNameForThisFK = targetEntityForeignKey.Pair.ReferencingDbObject.Equals(sourceDbTable) ? sourceEntityName : targetEntityName;
                 referencingEntityNames.Add(referencingEntityNameForThisFK);
             }
 
@@ -350,7 +350,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                if (targetEntityForeignKey.Pair.ReferencingDbTable.Equals(sourceDbTable))
+                if (targetEntityForeignKey.Pair.ReferencingDbObject.Equals(sourceDbTable))
                 {
                     relationshipFieldsInSource = targetEntityForeignKey.ReferencingColumns;
                     relationshipFieldsInTarget = targetEntityForeignKey.ReferencedColumns;

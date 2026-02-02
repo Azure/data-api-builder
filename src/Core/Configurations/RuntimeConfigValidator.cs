@@ -323,10 +323,22 @@ public class RuntimeConfigValidator : IConfigValidator
             if (entity.Source.Type is not EntitySourceType.Table && entity.Relationships is not null
                 && entity.Relationships.Count > 0)
             {
-                HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Cannot define relationship for entity: {entityName}",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                // Views are allowed to have relationships only for MSSQL and DWSQL databases.
+                // Stored procedures cannot have relationships.
+                string databaseNameForEntity = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                DatabaseType dbType = runtimeConfig.GetDataSourceFromDataSourceName(databaseNameForEntity).DatabaseType;
+
+                bool isViewWithRelationshipAllowed = entity.Source.Type is EntitySourceType.View
+                    && (dbType is DatabaseType.MSSQL or DatabaseType.DWSQL);
+
+                if (!isViewWithRelationshipAllowed)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Cannot define relationship for entity: {entityName}. " +
+                                     $"Relationships are only supported for tables, or for views when using MSSQL or DWSQL databases.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
             }
 
             string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
@@ -1067,10 +1079,12 @@ public class RuntimeConfigValidator : IConfigValidator
                     continue;
                 }
 
-                DatabaseTable sourceDatabaseObject = (DatabaseTable)sourceObject;
-                DatabaseTable targetDatabaseObject = (DatabaseTable)targetObject;
+                // Source and target objects can be tables or views (for MSSQL/DWSQL)
+                DatabaseObject sourceDatabaseObject = sourceObject;
+                DatabaseObject targetDatabaseObject = targetObject;
                 if (relationship.LinkingObject is not null)
                 {
+                    // Linking object must remain a table
                     (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;
                     DatabaseTable linkingDatabaseObject = new(linkingTableSchema, linkingTableName);
 

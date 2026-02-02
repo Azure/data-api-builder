@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // First identify which side of the relationship, this fk definition
                     // is looking at.
-                    if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))
+                    if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(DatabaseObject))
                     {
                         // Case where fk in parent entity references the nested entity.
                         // Verify this is a valid fk definition before adding the join predicate.
@@ -274,7 +274,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 foreignKeyDefinition.ReferencedColumns));
                         }
                     }
-                    else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(relatedEntityDbObject))
+                    else if (foreignKeyDefinition.Pair.ReferencingDbObject.Equals(relatedEntityDbObject))
                     {
                         // Case where fk in nested entity references the parent entity.
                         if (foreignKeyDefinition.ReferencingColumns.Count > 0
@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else
                     {
                         DatabaseObject associativeTableDbObject =
-                            foreignKeyDefinition.Pair.ReferencingDbTable;
+                            foreignKeyDefinition.Pair.ReferencingDbObject;
                         // Case when the linking object is the referencing table
                         if (!associativeTableAndAliases.TryGetValue(
                                 associativeTableDbObject,
@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             associativeTableAndAliases.Add(associativeTableDbObject, associativeTableAlias);
                         }
 
-                        if (foreignKeyDefinition.Pair.ReferencedDbTable.Equals(DatabaseObject))
+                        if (foreignKeyDefinition.Pair.ReferencedDbObject.Equals(DatabaseObject))
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 associativeTableAlias,

@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         /// This ensures users understand why describe_entities is empty.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_ExcludesCustomToolStoredProcedures()
+        public async Task DescribeEntities_AllEntitiesFilteredWhenDmlToolsDisabled()
         {
             // Arrange
             RuntimeConfig config = CreateConfigWithCustomToolSP();
@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             Assert.IsTrue(content.TryGetProperty("count", out JsonElement countElement));
 
             int entityCount = entities.GetArrayLength();
-            Assert.AreEqual(2, entityCount, "Config has 3 entities but only 2 should be returned (custom-tool SP excluded)");
+            Assert.AreEqual(2, entityCount, "Config has 3 entities but only 2 should be returned (entity with dml-tools:false excluded)");
             Assert.AreEqual(entityCount, countElement.GetInt32(), "Count field should match filtered entity array length");
         }
 

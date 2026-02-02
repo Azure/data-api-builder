@@ -159,6 +159,12 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         string entityName = entityEntry.Key;
                         Entity entity = entityEntry.Value;
 
+                        // Check entity filter first to avoid counting entities that wouldn't be included anyway
+                        if (!ShouldIncludeEntity(entityName, entityFilter))
+                        {
+                            continue;
+                        }
+
                         // Filter out entities when dml-tools is explicitly disabled (false).
                         // This applies to all entity types (tables, views, stored procedures).
                         // When dml-tools is false, the entity is not exposed via DML tools
@@ -166,11 +172,6 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         if (entity.Mcp?.DmlToolEnabled == false)
                         {
                             filteredDmlDisabledCount++;
-                            continue;
-                        }
-
-                        if (!ShouldIncludeEntity(entityName, entityFilter))
-                        {
                             continue;
                         }
 
@@ -210,7 +211,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
                             toolName,
                             "AllEntitiesFilteredDmlDisabled",
-                            $"All {filteredDmlDisabledCount} configured entities have DML tools disabled (dml-tools: false). Entities with dml-tools disabled do not appear in describe_entities. For stored procedures, check tools/list if custom-tool is enabled.",
+                            $"All {filteredDmlDisabledCount} configured entities have DML tools disabled (dml-tools: false). Entities with dml-tools disabled do not appear in describe_entities. If the filtered entities are stored procedures with custom-tool enabled, check tools/list.",
                             logger));
                     }
                     // Truly no entities configured in the runtime config, or entities failed to build for other reasons

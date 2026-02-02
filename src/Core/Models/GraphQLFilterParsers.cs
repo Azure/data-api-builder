@@ -426,7 +426,14 @@ public class GQLFilterParser
         // predicates to the subquery (existsQuery), connecting queryStructure.SourceAlias to existsQuery.SourceAlias.
         string relationshipName = filterField.Name;
         EntityRelationshipKey fkLookupKey = new(queryStructure.EntityName, relationshipName);
-        BaseSqlQueryStructure sqlQueryStructure = (BaseSqlQueryStructure)queryStructure;
+        if (queryStructure is not BaseSqlQueryStructure sqlQueryStructure)
+        {
+            throw new DataApiBuilderException(
+                message: "Nested filter for SQL requires a SQL query structure.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
         sqlQueryStructure.AddJoinPredicatesForRelationship(
             fkLookupKey: fkLookupKey,
             targetEntityName: nestedFilterEntityName,

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Data.Common;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
@@ -144,6 +145,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private static bool ShouldManagedIdentityAccessBeAttempted(NpgsqlConnectionStringBuilder builder)
         {
             return string.IsNullOrEmpty(builder.Password);
+        }
+
+        /// <inheritdoc/>
+        public static void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
+        {
+            if (parameterEntry.Value is not null && parameterEntry.Value.DbType is not null)
+            {
+                parameter.DbType = (DbType)parameterEntry.Value.DbType;
+            }
         }
 
         /// <summary>

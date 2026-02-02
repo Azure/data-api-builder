@@ -147,8 +147,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return string.IsNullOrEmpty(builder.Password);
         }
 
-        /// <inheritdoc/>
-        public static void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
+        /// <inheritdoc />
+        public override NpgsqlCommand PrepareDbCommand(
+            NpgsqlConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
+        {
+            NpgsqlCommand cmd = conn.CreateCommand();
+            cmd.CommandType = CommandType.Text;
+
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
+
+            cmd.CommandText = sessionParamsQuery + sqltext;
+            if (parameters is not null)
+            {
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
+                {
+                    NpgsqlParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return cmd;
+        }
+
+        /// <summary>
+        /// Populates the DbType for a PostgreSQL parameter when available.
+        /// This ensures proper type handling for date/time and other types,
+        /// preventing "operator does not exist: date >= text" errors.
+        /// </summary>
+        /// <param name="parameterEntry">The parameter entry containing the value and optional DbType.</param>
+        /// <param name="parameter">The NpgsqlParameter to populate.</param>
+        public static void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, NpgsqlParameter parameter)
         {
             if (parameterEntry.Value is not null && parameterEntry.Value.DbType is not null)
             {

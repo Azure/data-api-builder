@@ -998,6 +998,14 @@ namespace Azure.DataApiBuilder.Core.Services
             RelationshipRole referencedEntityRole,
             RelationshipMetadata relationshipData)
         {
+            // RelationShipPair uses DatabaseTable for serialization compatibility.
+            // We convert DatabaseObject to DatabaseTable using schema and name.
+            // The Equals comparison works correctly since it only compares schema and name.
+            DatabaseTable referencingDbTable = referencingDbObject as DatabaseTable
+                ?? new DatabaseTable(referencingDbObject.SchemaName, referencingDbObject.Name);
+            DatabaseTable referencedDbTable = referencedDbObject as DatabaseTable
+                ?? new DatabaseTable(referencedDbObject.SchemaName, referencedDbObject.Name);
+
             ForeignKeyDefinition foreignKeyDefinition = new()
             {
                 SourceEntityName = sourceEntityName,
@@ -1007,8 +1015,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 Pair = new()
                 {
                     RelationshipName = relationshipName,
-                    ReferencingDbObject = referencingDbObject,
-                    ReferencedDbObject = referencedDbObject
+                    ReferencingDbTable = referencingDbTable,
+                    ReferencedDbTable = referencedDbTable
                 }
             };
 
@@ -1871,8 +1879,8 @@ namespace Azure.DataApiBuilder.Core.Services
                             {
                                 foreach (ForeignKeyDefinition fk in fkDefinitionsForTargetEntity)
                                 {
-                                    schemaNames.Add(fk.Pair.ReferencingDbObject.SchemaName);
-                                    tableNames.Add(fk.Pair.ReferencingDbObject.Name);
+                                    schemaNames.Add(fk.Pair.ReferencingDbTable.SchemaName);
+                                    tableNames.Add(fk.Pair.ReferencingDbTable.Name);
                                     sourceNameToSourceDefinition.TryAdd(dbObject.Name, sourceDefinition);
                                 }
                             }
@@ -2110,8 +2118,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     // 2. configResolvedFkDefinition doesn't match a database fk definition -> added to the list of
                     //    validated FK definitions because it's not already added.
                     bool doesFkExistInDatabase = VerifyForeignKeyExistsInDB(
-                        databaseObjectA: configResolvedFkDefinition.Pair.ReferencingDbObject,
-                        databaseObjectB: configResolvedFkDefinition.Pair.ReferencedDbObject);
+                        databaseObjectA: configResolvedFkDefinition.Pair.ReferencingDbTable,
+                        databaseObjectB: configResolvedFkDefinition.Pair.ReferencedDbTable);
 
                     if (!doesFkExistInDatabase)
                     {
@@ -2138,7 +2146,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>true when the ForeignKeyDefinition represents a self-joining relationship</returns>
         private static bool IsSelfJoiningRelationship(ForeignKeyDefinition fkDefinition)
         {
-            return fkDefinition.Pair.ReferencedDbObject.FullName.Equals(fkDefinition.Pair.ReferencingDbObject.FullName);
+            return fkDefinition.Pair.ReferencedDbTable.FullName.Equals(fkDefinition.Pair.ReferencingDbTable.FullName);
         }
 
         /// <summary>
@@ -2172,13 +2180,20 @@ namespace Azure.DataApiBuilder.Core.Services
                 return false;
             }
 
+            // Convert DatabaseObject to DatabaseTable for RelationShipPair comparison
+            // The comparison only uses schema and name, so this is safe
+            DatabaseTable dbTableA = databaseObjectA as DatabaseTable
+                ?? new DatabaseTable(databaseObjectA.SchemaName, databaseObjectA.Name);
+            DatabaseTable dbTableB = databaseObjectB as DatabaseTable
+                ?? new DatabaseTable(databaseObjectB.SchemaName, databaseObjectB.Name);
+
             RelationShipPair pairAB = new(
-                referencingDbObject: databaseObjectA,
-                referencedDbObject: databaseObjectB);
+                referencingDbObject: dbTableA,
+                referencedDbObject: dbTableB);
 
             RelationShipPair pairBA = new(
-                referencingDbObject: databaseObjectB,
-                referencedDbObject: databaseObjectA);
+                referencingDbObject: dbTableB,
+                referencedDbObject: dbTableA);
 
             return (PairToFkDefinition.ContainsKey(pairAB) || PairToFkDefinition.ContainsKey(pairBA));
         }
@@ -2214,6 +2229,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObjResult))
             {
                 SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+                // Convert DatabaseObject to DatabaseTable for RelationShipPair comparison
+                DatabaseTable referencingDbTable = referencingDbObjResult as DatabaseTable
+                    ?? new DatabaseTable(referencingDbObjResult.SchemaName, referencingDbObjResult.Name);
+                DatabaseTable referencedDbTable = referencedDbObjResult as DatabaseTable
+                    ?? new DatabaseTable(referencedDbObjResult.SchemaName, referencedDbObjResult.Name);
+
                 RelationShipPair referencingReferencedPair;
                 List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
 
@@ -2224,13 +2245,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
 
                     foreignKeyDefinition = fKDefinitions.FirstOrDefault(
-                                                            fk => string.Equals(referencedDbObjResult.FullName, fk.Pair.ReferencedDbObject.FullName, StringComparison.OrdinalIgnoreCase)
+                                                            fk => string.Equals(referencedDbObjResult.FullName, fk.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase)
                                                             && fk.ReferencingColumns.Count > 0
                                                             && fk.ReferencedColumns.Count > 0)!;
                 }
                 else
                 {
-                    referencingReferencedPair = new(referencingDbObjResult, referencedDbObjResult);
+                    referencingReferencedPair = new(referencingDbTable, referencedDbTable);
                     foreignKeyDefinition = fKDefinitions.FirstOrDefault(
                                                             fk => fk.Pair.Equals(referencingReferencedPair) &&
                                                             fk.ReferencingColumns.Count > 0

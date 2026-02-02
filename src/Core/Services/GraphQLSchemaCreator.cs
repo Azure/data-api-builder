@@ -398,7 +398,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             listOfForeignKeys.Where(fk =>
                                 fk.ReferencingColumns.Count > 0
                                 && fk.ReferencedColumns.Count > 0
-                                && fk.Pair.ReferencingDbObject.Equals(sourceDbo));
+                                && fk.Pair.ReferencingDbTable.Equals(sourceDbo));
 
                         sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject? targetDbo);
                         // Find the foreignkeys in which the target entity is the referencing object, i.e. source entity is the referenced object.
@@ -406,7 +406,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             listOfForeignKeys.Where(fk =>
                                 fk.ReferencingColumns.Count > 0
                                 && fk.ReferencedColumns.Count > 0
-                                && fk.Pair.ReferencingDbObject.Equals(targetDbo));
+                                && fk.Pair.ReferencingDbTable.Equals(targetDbo));
 
                         ForeignKeyDefinition? sourceReferencingFKInfo = sourceReferencingForeignKeysInfo.FirstOrDefault();
                         if (sourceReferencingFKInfo is not null)

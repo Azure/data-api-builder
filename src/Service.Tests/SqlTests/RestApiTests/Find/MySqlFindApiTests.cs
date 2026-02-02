@@ -410,6 +410,42 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindTestWithFilterContainingMultipleSpecialCharacters",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE title = 'A+B=C'
+                        ORDER BY id asc
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterContainingAmpersandInPhrase",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE title = 'Tom & Jerry'
+                        ORDER BY id asc
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithFilterContainingPercentSign",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE title = '100% Complete'
+                        ORDER BY id asc
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFilterQueryStringBoolResultFilter",
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data

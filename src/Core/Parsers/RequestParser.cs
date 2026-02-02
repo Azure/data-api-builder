@@ -115,14 +115,28 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     case FILTER_URL:
                         // Use raw (URL-encoded) filter value to preserve special characters like &
                         string? rawFilterValue = ExtractRawQueryParameter(context.RawQueryString, FILTER_URL);
-                        if (rawFilterValue is not null)
-                            context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause($"?{FILTER_URL}={rawFilterValue}", $"{context.EntityName}.{context.DatabaseObject.FullName}");
+                        // If key exists in ParsedQueryString but not in RawQueryString, something is wrong
+                        if (rawFilterValue is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Unable to extract {FILTER_URL} parameter from query string.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+                        context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause($"?{FILTER_URL}={rawFilterValue}", $"{context.EntityName}.{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
                         // Use raw (URL-encoded) orderby value to preserve special characters
                         string? rawSortValue = ExtractRawQueryParameter(context.RawQueryString, SORT_URL);
-                        if (rawSortValue is not null)
-                            (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, $"?{SORT_URL}={rawSortValue}");
+                        // If key exists in ParsedQueryString but not in RawQueryString, something is wrong
+                        if (rawSortValue is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Unable to extract {SORT_URL} parameter from query string.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+                        (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, $"?{SORT_URL}={rawSortValue}");
                         break;
                     case AFTER_URL:
                         context.After = context.ParsedQueryString[key];

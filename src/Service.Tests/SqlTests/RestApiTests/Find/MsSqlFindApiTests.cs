@@ -235,6 +235,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestWithFilterContainingMultipleSpecialCharacters",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE title = 'A+B=C' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterContainingAmpersandInPhrase",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE title = 'Tom & Jerry' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestWithFilterContainingPercentSign",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE title = '100% Complete' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 $"SELECT [id], [content] FROM reviews " +
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"

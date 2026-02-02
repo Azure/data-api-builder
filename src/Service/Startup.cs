@@ -796,21 +796,18 @@ namespace Azure.DataApiBuilder.Service
 
                     if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
                     {
-                        if (isProductionMode)
-                        {
-                            throw new DataApiBuilderException(
-                                message: AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG,
-                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                        }
-                        else
-                        {
-                            _logger.LogWarning(AppServiceAuthenticationInfo.APPSERVICE_DEV_MISSING_ENV_CONFIG);
-                        }
+                        _logger.LogWarning(AppServiceAuthenticationInfo.APPSERVICE_DEV_MISSING_ENV_CONFIG);
                     }
 
-                    services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                        .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
+                    string defaultScheme = easyAuthType == EasyAuthType.AppService
+                        ? EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME
+                        : EasyAuthAuthenticationDefaults.SWAAUTHSCHEME;
+
+                    services.AddAuthentication(defaultScheme)
+                            .AddEnvDetectedEasyAuth();
+
+                    _logger.LogInformation("Registered EasyAuth scheme: {Scheme}", defaultScheme);
+
                 }
                 else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
                 {
@@ -831,7 +828,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Sets EasyAuth as the default authentication scheme when runtime configuration
                 // is not present.
-                SetStaticWebAppsAuthentication(services);
+                SetAppServiceAuthentication(services);
             }
         }
 
@@ -1023,13 +1020,13 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Sets Static Web Apps EasyAuth as the authentication scheme for the engine.
+        /// Sets App Service EasyAuth as the authentication scheme for the engine.
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
-        private static void SetStaticWebAppsAuthentication(IServiceCollection services)
+        private static void SetAppServiceAuthentication(IServiceCollection services)
         {
-            services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
-                    .AddEasyAuthAuthentication(EasyAuthType.StaticWebApps);
+            services.AddAuthentication(EasyAuthAuthenticationDefaults.APPSERVICEAUTHSCHEME)
+                .AddEnvDetectedEasyAuth();
         }
 
         /// <summary>

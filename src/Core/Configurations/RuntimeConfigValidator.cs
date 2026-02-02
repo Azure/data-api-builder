@@ -849,6 +849,14 @@ public class RuntimeConfigValidator : IConfigValidator
             return;
         }
 
+        // Warn if the configured EasyAuth provider is StaticWebApps (deprecated)
+        if (!string.IsNullOrWhiteSpace(runtimeConfig.Runtime.Host.Authentication.Provider) &&
+            Enum.TryParse<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider, ignoreCase: true, out EasyAuthType provider) &&
+            provider == EasyAuthType.StaticWebApps)
+        {
+            _logger.LogWarning("The 'StaticWebApps' authentication provider is deprecated.");
+        }
+
         bool isAudienceSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Audience);
         bool isIssuerSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Issuer);
 

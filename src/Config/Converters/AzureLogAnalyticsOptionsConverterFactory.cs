@@ -142,7 +142,7 @@ internal class AzureLogAnalyticsOptionsConverterFactory : JsonConverterFactory
             if (value?.Auth is not null && (value.Auth.UserProvidedCustomTableName || value.Auth.UserProvidedDcrImmutableId || value.Auth.UserProvidedDceEndpoint))
             {
                 AzureLogAnalyticsAuthOptionsConverter authOptionsConverter = options.GetConverter(typeof(AzureLogAnalyticsAuthOptions)) as AzureLogAnalyticsAuthOptionsConverter ??
-                                    throw new JsonException("Failed to get azure-log-analytics.auth options converter");
+                    throw new JsonException("Failed to get azure-log-analytics.auth options converter");
 
                 writer.WritePropertyName("auth");
                 authOptionsConverter.Write(writer, value.Auth, options);

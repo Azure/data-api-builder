@@ -242,10 +242,9 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     logger?.LogInformation(
                         "DescribeEntitiesTool: {FilteredCount} entity(ies) filtered with DML tools disabled (dml-tools: false). " +
                         "These entities are not exposed via DML tools and do not appear in describe_entities response. " +
-                        "Returned {ReturnedCount} entities, filtered {FilteredCount}.",
+                        "Returned {ReturnedCount} entities.",
                         filteredDmlDisabledCount,
-                        finalEntityList.Count,
-                        filteredDmlDisabledCount);
+                        finalEntityList.Count);
                 }
 
                 logger?.LogInformation(

@@ -22,17 +22,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 {
     /// <summary>
     /// Tests for DescribeEntitiesTool filtering logic (GitHub issue #3043).
-    /// Ensures stored procedures with custom-tool enabled are excluded from describe_entities results
-    /// to prevent duplication (they appear in tools/list instead).
-    /// Regular entities (tables, views, non-custom-tool SPs) remain visible in describe_entities.
+    /// Validates that entities with dml-tools: false are filtered from describe_entities,
+    /// regardless of entity type (tables, views, stored procedures).
+    /// When dml-tools is disabled, entities are not exposed via DML tools and should not appear in describe_entities.
     /// </summary>
     [TestClass]
     public class DescribeEntitiesFilteringTests
     {
         /// <summary>
-        /// Verifies that when ALL entities are stored procedures with custom-tool enabled,
-        /// describe_entities returns an AllEntitiesFilteredDmlDisabled error with guidance
-        /// to use tools/list instead. This ensures users understand why describe_entities is empty.
+        /// Verifies that when ALL entities have dml-tools: false,
+        /// describe_entities returns an AllEntitiesFilteredDmlDisabled error with guidance.
+        /// This ensures users understand why describe_entities is empty.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_ExcludesCustomToolStoredProcedures()
@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             AssertErrorResult(result, "AllEntitiesFilteredDmlDisabled");
-            
+
             // Verify the error message is helpful
             JsonElement content = GetContentFromResult(result);
             content.TryGetProperty("error", out JsonElement error);
@@ -58,9 +58,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Verifies that stored procedures WITHOUT custom-tool enabled still appear in describe_entities,
-        /// while stored procedures WITH custom-tool enabled are filtered out.
-        /// This ensures filtering is selective and only applies to custom-tool SPs.
+        /// Verifies that stored procedures with dml-tools enabled (or default) appear in describe_entities,
+        /// while stored procedures with dml-tools: false are filtered out.
+        /// This ensures filtering is based on dml-tools configuration.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_IncludesRegularStoredProcedures()
@@ -74,12 +74,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Verifies that custom-tool filtering ONLY applies to stored procedures.
-        /// Tables and views always appear in describe_entities regardless of any custom-tool configuration.
-        /// This ensures filtering doesn't accidentally hide non-SP entities.
+        /// Verifies that tables and views with default/enabled dml-tools appear in describe_entities,
+        /// while stored procedures with dml-tools: false are filtered out.
+        /// This ensures filtering applies based on the dml-tools setting, not entity type.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_TablesAndViewsUnaffectedByFiltering()
+        public async Task DescribeEntities_IncludesTablesAndViewsWithDmlToolsEnabled()
         {
             // Arrange & Act & Assert
             RuntimeConfig config = CreateConfigWithMixedEntityTypes();
@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Verifies that the 'count' field in describe_entities response accurately reflects
-        /// the number of entities AFTER filtering (excludes custom-tool stored procedures).
+        /// the number of entities AFTER filtering (excludes entities with dml-tools: false).
         /// This ensures count matches the actual entities array length.
         /// </summary>
         [TestMethod]
@@ -106,15 +106,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             JsonElement content = GetContentFromResult(result);
             Assert.IsTrue(content.TryGetProperty("entities", out JsonElement entities));
             Assert.IsTrue(content.TryGetProperty("count", out JsonElement countElement));
-            
+
             int entityCount = entities.GetArrayLength();
             Assert.AreEqual(2, entityCount, "Config has 3 entities but only 2 should be returned (custom-tool SP excluded)");
             Assert.AreEqual(entityCount, countElement.GetInt32(), "Count field should match filtered entity array length");
         }
 
         /// <summary>
-        /// Verifies that custom-tool filtering is applied consistently regardless of the nameOnly parameter.
-        /// When nameOnly=true (lightweight response), custom-tool SPs are still filtered out.
+        /// Verifies that dml-tools filtering is applied consistently regardless of the nameOnly parameter.
+        /// When nameOnly=true (lightweight response), entities with dml-tools: false are still filtered out.
         /// This ensures filtering behavior is consistent across both response modes.
         /// </summary>
         [TestMethod]
@@ -135,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Test that NoEntitiesConfigured error is returned when runtime config truly has no entities.
-        /// This is different from AllEntitiesFilteredAsCustomTools where entities exist but are filtered.
+        /// This is different from AllEntitiesFilteredDmlDisabled where entities exist but are filtered.
         /// </summary>
         [TestMethod]
         public async Task DescribeEntities_ReturnsNoEntitiesConfigured_WhenConfigHasNoEntities()
@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             AssertErrorResult(result, "NoEntitiesConfigured");
-            
+
             // Verify the error message indicates no entities configured
             JsonElement content = GetContentFromResult(result);
             content.TryGetProperty("error", out JsonElement error);
@@ -175,12 +175,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Verifies that when some (but not all) entities are filtered as custom-tool-only,
-        /// the filtering is logged but does not affect the response content.
-        /// The response should contain only the non-filtered entities.
+        /// Verifies that when some (but not all) entities have dml-tools: false,
+        /// only non-filtered entities appear in the response.
+        /// This validates partial filtering works correctly with accurate count.
         /// </summary>
         [TestMethod]
-        public async Task DescribeEntities_LogsFilteringInfo_WhenSomeEntitiesFiltered()
+        public async Task DescribeEntities_ReturnsOnlyNonFilteredEntities_WhenPartiallyFiltered()
         {
             // Arrange & Act
             RuntimeConfig config = CreateConfigWithMixedEntityTypes();
@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             AssertSuccessResultWithEntityNames(result, new[] { "Book", "BookView" }, new[] { "GetBook" });
-            
+
             // Verify count matches
             JsonElement content = GetContentFromResult(result);
             Assert.IsTrue(content.TryGetProperty("count", out JsonElement countElement));
@@ -229,7 +229,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             // Assert
             AssertErrorResult(result, "AllEntitiesFilteredDmlDisabled");
-            
+
             // Verify the error message is helpful
             JsonElement content = GetContentFromResult(result);
             content.TryGetProperty("error", out JsonElement error);
@@ -329,8 +329,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Creates a runtime config with only custom-tool stored procedures.
-        /// Used to test the AllEntitiesFilteredAsCustomTools error scenario.
+        /// Creates a runtime config with a stored procedure that has dml-tools: false.
+        /// Used to test the AllEntitiesFilteredDmlDisabled error scenario.
         /// </summary>
         private static RuntimeConfig CreateConfigWithCustomToolSP()
         {
@@ -345,8 +345,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Creates a runtime config with mixed stored procedures:
-        /// one regular SP (CountBooks) and one custom-tool SP (GetBook).
-        /// Used to test that filtering is selective.
+        /// one SP with dml-tools enabled/default (CountBooks) and one with dml-tools: false (GetBook).
+        /// Used to test that filtering is based on dml-tools configuration.
         /// </summary>
         private static RuntimeConfig CreateConfigWithMixedStoredProcedures()
         {
@@ -362,8 +362,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
         /// <summary>
         /// Creates a runtime config with mixed entity types:
-        /// table (Book), view (BookView), and custom-tool SP (GetBook).
-        /// Used to test that filtering only affects stored procedures.
+        /// table (Book), view (BookView), and SP with dml-tools: false (GetBook).
+        /// Used to test that filtering applies to all entity types based on dml-tools setting.
         /// </summary>
         private static RuntimeConfig CreateConfigWithMixedEntityTypes()
         {

@@ -2166,7 +2166,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// linking databaseTableA and databaseTableB.
         /// A database foreign key definition explicitly denotes the referencing table and the referenced table.
         /// This function creates two RelationShipPair objects, interchanging which database object is referencing
-        /// and which database object is referenced, so that DAB can definitevly identify whether a database foreign key exists.
+        /// and which database object is referenced, so that DAB can definitively identify whether a database foreign key exists.
         /// - When DAB pre-processes relationships in the config, DAB creates two foreign key definition objects
         /// because the config doesn't tell DAB which database object is referencing vs referenced. This function is called when
         /// DAB is determining which of the two FK definitions to keep.

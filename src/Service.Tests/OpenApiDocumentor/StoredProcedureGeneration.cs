@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// preventing Swagger UI from showing duplicate entity groups.
         /// </summary>
         [TestMethod]
-        public void OpenApiDocumentor_NosDuplicateTags()
+        public void OpenApiDocumentor_NoDuplicateTags()
         {
             // Act: Get the tags from the OpenAPI document
             IList<OpenApiTag> tags = _openApiDocument.Tags;

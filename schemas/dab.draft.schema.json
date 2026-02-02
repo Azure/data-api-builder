@@ -1119,6 +1119,12 @@
                   "type": "integer",
                   "description": "Time to live in seconds",
                   "default": 5
+                },
+                "level": {
+                  "type": "string",
+                  "description": "Cache level (L1 or L1L2)",
+                  "enum": [ "L1", "L1L2", null ],
+                  "default": "L1L2"
                 }
               }
             },

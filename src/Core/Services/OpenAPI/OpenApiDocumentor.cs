@@ -1075,7 +1075,6 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Additionally, the property typeMetadata is sourced by converting the stored procedure
         /// parameter's SystemType to JsonDataType.
         /// </summary>
-        /// </summary>
         /// <param name="fields">Collection of stored procedure parameter metadata.</param>
         /// <param name="allowAdditionalProperties">When true, sets additionalProperties to true indicating extra fields are allowed.</param>
         /// <returns>OpenApiSchema object representing a stored procedure's request body.</returns>

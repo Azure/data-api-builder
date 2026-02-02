@@ -124,6 +124,12 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity {_entityName} is not a stored procedure.", logger);
                 }
 
+                // Check if custom tool is still enabled for this entity
+                if (entityConfig.Mcp?.CustomToolEnabled != true)
+                {
+                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"Custom tool is disabled for entity '{_entityName}'.");
+                }
+
                 // 4) Resolve metadata
                 if (!McpMetadataHelper.TryResolveMetadata(
                         _entityName,

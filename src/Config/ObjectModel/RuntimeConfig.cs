@@ -338,7 +338,8 @@ public record RuntimeConfig
                 {
                     try
                     {
-                        // If parent has no DataSource, use the first child's DataSource as the default
+                        // If parent has no DataSource, use the first child's DataSource as the default.
+                        // This only happens once - subsequent children skip this block since this.DataSource is no longer null.
                         if (this.DataSource is null && config.DataSource is not null)
                         {
                             this.DataSource = config.DataSource;

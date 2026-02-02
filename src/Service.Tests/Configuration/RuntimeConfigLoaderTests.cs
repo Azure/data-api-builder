@@ -151,8 +151,14 @@ public class RuntimeConfigLoaderTests
         // When parent has no data-source, we get:
         // - One entry for parent's DefaultDataSourceName (set from first child's data source)
         // - Three entries from child configs (each with their own DefaultDataSourceName)
-        Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 4, "Should have 4 data sources (1 default + 3 from children)");
+        IList<DataSource> allDataSources = runtimeConfig.ListAllDataSources().ToList();
+        Assert.AreEqual(4, allDataSources.Count, "Should have 4 data sources (1 default + 3 from children)");
         Assert.IsTrue(runtimeConfig.SqlDataSourceUsed, "Should have Sql data source");
+
+        // Verify all three SQL database types from children are present
+        Assert.IsTrue(allDataSources.Any(ds => ds.DatabaseType == DatabaseType.MSSQL), "Should have MsSql data source");
+        Assert.IsTrue(allDataSources.Any(ds => ds.DatabaseType == DatabaseType.MySQL), "Should have MySql data source");
+        Assert.IsTrue(allDataSources.Any(ds => ds.DatabaseType == DatabaseType.PostgreSQL), "Should have PostgreSql data source");
 
         // Verify the first child's data source is used as the default
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType, "Default datasource should be from first child file (MsSql)");

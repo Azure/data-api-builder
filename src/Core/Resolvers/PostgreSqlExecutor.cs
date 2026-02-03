@@ -181,7 +181,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Populates the DbType for a PostgreSQL parameter when available.
         /// This ensures proper type handling for date/time and other types,
-        /// preventing "operator does not exist: date >= text" errors.
+        /// preventing errors like "operator does not exist: date >= text".
         /// </summary>
         /// <param name="parameterEntry">The parameter entry containing the value and optional DbType.</param>
         /// <param name="parameter">The NpgsqlParameter to populate.</param>

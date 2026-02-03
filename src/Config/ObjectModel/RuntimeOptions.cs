@@ -17,6 +17,7 @@ public record RuntimeOptions
     public RuntimeCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
     public RuntimeHealthCheckConfig? Health { get; init; }
+    public EmbeddingsOptions? Embeddings { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -28,7 +29,8 @@ public record RuntimeOptions
         TelemetryOptions? Telemetry = null,
         RuntimeCacheOptions? Cache = null,
         PaginationOptions? Pagination = null,
-        RuntimeHealthCheckConfig? Health = null)
+        RuntimeHealthCheckConfig? Health = null,
+        EmbeddingsOptions? Embeddings = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -39,6 +41,7 @@ public record RuntimeOptions
         this.Cache = Cache;
         this.Pagination = Pagination;
         this.Health = Health;
+        this.Embeddings = Embeddings;
     }
 
     /// <summary>
@@ -74,4 +77,12 @@ public record RuntimeOptions
         Health is null ||
         Health?.Enabled is null ||
         Health?.Enabled is true;
+
+    /// <summary>
+    /// Indicates whether embeddings are configured.
+    /// Embeddings are considered configured when the Embeddings property is not null.
+    /// </summary>
+    [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Embeddings))]
+    public bool IsEmbeddingsConfigured => Embeddings is not null;
 }

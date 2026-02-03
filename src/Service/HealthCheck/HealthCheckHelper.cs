@@ -137,14 +137,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Updates the DAB configuration details coming from RuntimeConfig for the Health report.
         private static void UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
+            bool embeddingsEnabled = runtimeConfig?.Runtime?.Embeddings?.Enabled ?? false;
+            bool embeddingsEndpointEnabled = embeddingsEnabled && (runtimeConfig?.Runtime?.Embeddings?.IsEndpointEnabled ?? false);
+
             comprehensiveHealthCheckReport.ConfigurationDetails = new ConfigurationDetails
             {
-                Rest = runtimeConfig.IsRestEnabled,
-                GraphQL = runtimeConfig.IsGraphQLEnabled,
-                Mcp = runtimeConfig.IsMcpEnabled,
-                Caching = runtimeConfig.IsCachingEnabled,
+                Rest = runtimeConfig?.IsRestEnabled ?? false,
+                GraphQL = runtimeConfig?.IsGraphQLEnabled ?? false,
+                Mcp = runtimeConfig?.IsMcpEnabled ?? false,
+                Caching = runtimeConfig?.IsCachingEnabled ?? false,
                 Telemetry = runtimeConfig?.Runtime?.Telemetry != null,
-                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Production, // Modify to runtimeConfig.HostMode in Roles PR
+                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Production,
+                Embeddings = embeddingsEnabled,
+                EmbeddingsEndpoint = embeddingsEndpointEnabled
             };
         }
 

@@ -4,6 +4,7 @@
 using System;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -26,7 +27,7 @@ public class EmbeddingsOptionsTests
         ""runtime"": {
             ""embeddings"": {
                 ""provider"": ""azure-openai"",
-                ""endpoint"": ""https://my-openai.openai.azure.com"",
+                ""base-url"": ""https://my-openai.openai.azure.com"",
                 ""api-key"": ""test-api-key"",
                 ""model"": ""text-embedding-ada-002"",
                 ""api-version"": ""2024-02-01"",
@@ -47,7 +48,7 @@ public class EmbeddingsOptionsTests
         ""runtime"": {
             ""embeddings"": {
                 ""provider"": ""openai"",
-                ""endpoint"": ""https://api.openai.com"",
+                ""base-url"": ""https://api.openai.com"",
                 ""api-key"": ""sk-test-key""
             }
         },
@@ -64,7 +65,7 @@ public class EmbeddingsOptionsTests
         ""runtime"": {
             ""embeddings"": {
                 ""provider"": ""azure-openai"",
-                ""endpoint"": ""https://my-openai.openai.azure.com"",
+                ""base-url"": ""https://my-openai.openai.azure.com"",
                 ""api-key"": ""test-api-key"",
                 ""model"": ""my-deployment""
             }
@@ -83,25 +84,18 @@ public class EmbeddingsOptionsTests
     }";
 
     /// <summary>
-    /// Tests that a full Azure OpenAI embeddings configuration is correctly deserialized.
+    /// Tests that Azure OpenAI embeddings configuration deserializes correctly.
     /// </summary>
     [TestMethod]
     public void TestAzureOpenAIEmbeddingsConfigDeserialization()
     {
         // Act
-        bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-            BASIC_CONFIG_WITH_EMBEDDINGS,
-            out RuntimeConfig runtimeConfig,
-            replacementSettings: new DeserializationVariableReplacementSettings(
-                azureKeyVaultOptions: null,
-                doReplaceEnvVar: false,
-                doReplaceAkvVar: false));
+        bool success = RuntimeConfigLoader.TryParseConfig(BASIC_CONFIG_WITH_EMBEDDINGS, out RuntimeConfig? runtimeConfig);
 
         // Assert
-        Assert.IsTrue(isParsingSuccessful);
+        Assert.IsTrue(success);
         Assert.IsNotNull(runtimeConfig);
         Assert.IsNotNull(runtimeConfig.Runtime);
-        Assert.IsTrue(runtimeConfig.Runtime.IsEmbeddingsConfigured);
         Assert.IsNotNull(runtimeConfig.Runtime.Embeddings);
 
         EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
@@ -112,111 +106,74 @@ public class EmbeddingsOptionsTests
         Assert.AreEqual("2024-02-01", embeddings.ApiVersion);
         Assert.AreEqual(1536, embeddings.Dimensions);
         Assert.AreEqual(30000, embeddings.TimeoutMs);
-
-        // Verify UserProvided flags
-        Assert.IsTrue(embeddings.UserProvidedModel);
-        Assert.IsTrue(embeddings.UserProvidedApiVersion);
-        Assert.IsTrue(embeddings.UserProvidedDimensions);
-        Assert.IsTrue(embeddings.UserProvidedTimeoutMs);
     }
 
     /// <summary>
-    /// Tests that an OpenAI embeddings configuration without optional fields is correctly deserialized
-    /// and default values are applied.
+    /// Tests that OpenAI embeddings configuration deserializes correctly with defaults.
     /// </summary>
     [TestMethod]
     public void TestOpenAIEmbeddingsConfigWithDefaults()
     {
         // Act
-        bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-            OPENAI_CONFIG,
-            out RuntimeConfig runtimeConfig,
-            replacementSettings: new DeserializationVariableReplacementSettings(
-                azureKeyVaultOptions: null,
-                doReplaceEnvVar: false,
-                doReplaceAkvVar: false));
+        bool success = RuntimeConfigLoader.TryParseConfig(OPENAI_CONFIG, out RuntimeConfig? runtimeConfig);
 
         // Assert
-        Assert.IsTrue(isParsingSuccessful);
+        Assert.IsTrue(success);
         Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
 
         EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
         Assert.AreEqual(EmbeddingProviderType.OpenAI, embeddings.Provider);
         Assert.AreEqual("https://api.openai.com", embeddings.BaseUrl);
         Assert.AreEqual("sk-test-key", embeddings.ApiKey);
-
-        // Model not specified, but EffectiveModel should return default for OpenAI
         Assert.IsNull(embeddings.Model);
         Assert.AreEqual(EmbeddingsOptions.DEFAULT_OPENAI_MODEL, embeddings.EffectiveModel);
-
-        // Optional fields should use effective defaults
+        Assert.IsNull(embeddings.ApiVersion);
+        Assert.IsNull(embeddings.Dimensions);
+        Assert.IsNull(embeddings.TimeoutMs);
         Assert.AreEqual(EmbeddingsOptions.DEFAULT_TIMEOUT_MS, embeddings.EffectiveTimeoutMs);
-        Assert.AreEqual(EmbeddingsOptions.DEFAULT_AZURE_API_VERSION, embeddings.EffectiveApiVersion);
-
-        // UserProvided flags should be false for optional fields
-        Assert.IsFalse(embeddings.UserProvidedModel);
-        Assert.IsFalse(embeddings.UserProvidedApiVersion);
-        Assert.IsFalse(embeddings.UserProvidedDimensions);
-        Assert.IsFalse(embeddings.UserProvidedTimeoutMs);
     }
 
     /// <summary>
-    /// Tests minimal Azure OpenAI configuration with required fields only.
+    /// Tests that minimal Azure OpenAI config deserializes correctly.
     /// </summary>
     [TestMethod]
     public void TestMinimalAzureOpenAIConfig()
     {
         // Act
-        bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-            MINIMAL_AZURE_CONFIG,
-            out RuntimeConfig runtimeConfig,
-            replacementSettings: new DeserializationVariableReplacementSettings(
-                azureKeyVaultOptions: null,
-                doReplaceEnvVar: false,
-                doReplaceAkvVar: false));
+        bool success = RuntimeConfigLoader.TryParseConfig(MINIMAL_AZURE_CONFIG, out RuntimeConfig? runtimeConfig);
 
         // Assert
-        Assert.IsTrue(isParsingSuccessful);
+        Assert.IsTrue(success);
         Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
 
         EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
         Assert.AreEqual(EmbeddingProviderType.AzureOpenAI, embeddings.Provider);
         Assert.AreEqual("my-deployment", embeddings.Model);
         Assert.AreEqual("my-deployment", embeddings.EffectiveModel);
-        Assert.IsTrue(embeddings.UserProvidedModel);
     }
 
     /// <summary>
-    /// Tests that a configuration without embeddings returns IsEmbeddingsConfigured as false.
+    /// Tests that configuration without embeddings section deserializes correctly.
     /// </summary>
     [TestMethod]
     public void TestConfigWithoutEmbeddings()
     {
         // Act
-        bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-            CONFIG_WITHOUT_EMBEDDINGS,
-            out RuntimeConfig runtimeConfig,
-            replacementSettings: new DeserializationVariableReplacementSettings(
-                azureKeyVaultOptions: null,
-                doReplaceEnvVar: false,
-                doReplaceAkvVar: false));
+        bool success = RuntimeConfigLoader.TryParseConfig(CONFIG_WITHOUT_EMBEDDINGS, out RuntimeConfig? runtimeConfig);
 
         // Assert
-        Assert.IsTrue(isParsingSuccessful);
+        Assert.IsTrue(success);
         Assert.IsNotNull(runtimeConfig);
-
-        // Runtime may be null or Embeddings may be null
-        bool isEmbeddingsConfigured = runtimeConfig.Runtime?.IsEmbeddingsConfigured ?? false;
-        Assert.IsFalse(isEmbeddingsConfigured);
+        Assert.IsNull(runtimeConfig.Runtime?.Embeddings);
     }
 
     /// <summary>
-    /// Tests that EmbeddingProviderType enum is correctly serialized with kebab-case.
+    /// Tests that EmbeddingProviderType enum deserializes correctly from JSON.
     /// </summary>
     [DataTestMethod]
-    [DataRow("azure-openai", EmbeddingProviderType.AzureOpenAI, DisplayName = "azure-openai deserializes to AzureOpenAI")]
-    [DataRow("openai", EmbeddingProviderType.OpenAI, DisplayName = "openai deserializes to OpenAI")]
-    public void TestEmbeddingProviderTypeDeserialization(string providerValue, EmbeddingProviderType expectedType)
+    [DataRow("azure-openai", EmbeddingProviderType.AzureOpenAI)]
+    [DataRow("openai", EmbeddingProviderType.OpenAI)]
+    public void TestEmbeddingProviderTypeDeserialization(string jsonValue, EmbeddingProviderType expected)
     {
         // Arrange
         string config = $@"
@@ -228,8 +185,8 @@ public class EmbeddingsOptionsTests
             }},
             ""runtime"": {{
                 ""embeddings"": {{
-                    ""provider"": ""{providerValue}"",
-                    ""endpoint"": ""https://example.com"",
+                    ""provider"": ""{jsonValue}"",
+                    ""base-url"": ""https://example.com"",
                     ""api-key"": ""test-key"",
                     ""model"": ""test-model""
                 }}
@@ -238,18 +195,12 @@ public class EmbeddingsOptionsTests
         }}";
 
         // Act
-        bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-            config,
-            out RuntimeConfig runtimeConfig,
-            replacementSettings: new DeserializationVariableReplacementSettings(
-                azureKeyVaultOptions: null,
-                doReplaceEnvVar: false,
-                doReplaceAkvVar: false));
+        bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig);
 
         // Assert
-        Assert.IsTrue(isParsingSuccessful);
+        Assert.IsTrue(success);
         Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
-        Assert.AreEqual(expectedType, runtimeConfig.Runtime.Embeddings.Provider);
+        Assert.AreEqual(expected, runtimeConfig.Runtime.Embeddings.Provider);
     }
 
     /// <summary>
@@ -277,7 +228,7 @@ public class EmbeddingsOptionsTests
 
         // Assert
         Assert.IsTrue(normalizedJson.Contains("\"provider\":\"azure-openai\""), $"Expected provider in JSON: {json}");
-        Assert.IsTrue(normalizedJson.Contains("\"endpoint\":\"https://my-endpoint.openai.azure.com\""), $"Expected endpoint in JSON: {json}");
+        Assert.IsTrue(normalizedJson.Contains("\"base-url\":\"https://my-endpoint.openai.azure.com\""), $"Expected base-url in JSON: {json}");
         Assert.IsTrue(normalizedJson.Contains("\"api-key\":\"my-api-key\""), $"Expected api-key in JSON: {json}");
         Assert.IsTrue(normalizedJson.Contains("\"model\":\"my-model\""), $"Expected model in JSON: {json}");
         Assert.IsTrue(normalizedJson.Contains("\"api-version\":\"2024-02-01\""), $"Expected api-version in JSON: {json}");
@@ -302,7 +253,7 @@ public class EmbeddingsOptionsTests
             ""runtime"": {
                 ""embeddings"": {
                     ""provider"": ""azure-openai"",
-                    ""endpoint"": ""@env('EMBEDDINGS_ENDPOINT')"",
+                    ""base-url"": ""@env('EMBEDDINGS_ENDPOINT')"",
                     ""api-key"": ""@env('EMBEDDINGS_API_KEY')"",
                     ""model"": ""@env('EMBEDDINGS_MODEL')""
                 }
@@ -311,29 +262,29 @@ public class EmbeddingsOptionsTests
         }";
 
         // Set environment variables
-        Environment.SetEnvironmentVariable("EMBEDDINGS_ENDPOINT", "https://test-endpoint.openai.azure.com");
-        Environment.SetEnvironmentVariable("EMBEDDINGS_API_KEY", "test-secret-key");
-        Environment.SetEnvironmentVariable("EMBEDDINGS_MODEL", "text-embedding-3-small");
+        Environment.SetEnvironmentVariable("EMBEDDINGS_ENDPOINT", "https://test.openai.azure.com");
+        Environment.SetEnvironmentVariable("EMBEDDINGS_API_KEY", "test-key-from-env");
+        Environment.SetEnvironmentVariable("EMBEDDINGS_MODEL", "test-model-from-env");
+
+        // Create replacement settings to enable env var replacement
+        DeserializationVariableReplacementSettings replacementSettings = new(
+            doReplaceEnvVar: true,
+            doReplaceAkvVar: false,
+            envFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
 
         try
         {
             // Act
-            bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
-                config,
-                out RuntimeConfig runtimeConfig,
-                replacementSettings: new DeserializationVariableReplacementSettings(
-                    azureKeyVaultOptions: null,
-                    doReplaceEnvVar: true,
-                    doReplaceAkvVar: false));
+            bool success = RuntimeConfigLoader.TryParseConfig(config, out RuntimeConfig? runtimeConfig, replacementSettings);
 
             // Assert
-            Assert.IsTrue(isParsingSuccessful);
+            Assert.IsTrue(success);
             Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
 
             EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
-            Assert.AreEqual("https://test-endpoint.openai.azure.com", embeddings.BaseUrl);
-            Assert.AreEqual("test-secret-key", embeddings.ApiKey);
-            Assert.AreEqual("text-embedding-3-small", embeddings.Model);
+            Assert.AreEqual("https://test.openai.azure.com", embeddings.BaseUrl);
+            Assert.AreEqual("test-key-from-env", embeddings.ApiKey);
+            Assert.AreEqual("test-model-from-env", embeddings.Model);
         }
         finally
         {

@@ -100,7 +100,7 @@ public class EmbeddingServiceTests
     [DataTestMethod]
     [DataRow(null, DisplayName = "Null text returns failure")]
     [DataRow("", DisplayName = "Empty text returns failure")]
-    public async Task TryEmbedAsync_ReturnsFailure_ForNullOrEmptyText(string? text)
+    public async Task TryEmbedAsync_ReturnsFailure_ForNullOrEmptyText(string text)
     {
         // Arrange
         EmbeddingsOptions options = CreateAzureOpenAIOptions();

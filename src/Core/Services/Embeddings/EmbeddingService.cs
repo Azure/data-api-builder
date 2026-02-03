@@ -24,6 +24,7 @@ public class EmbeddingService : IEmbeddingService
     private readonly EmbeddingsOptions _options;
     private readonly ILogger<EmbeddingService> _logger;
     private readonly IFusionCache _cache;
+    private readonly string _providerName;
 
     // Constants
     private const char KEY_DELIMITER = ':';
@@ -60,6 +61,9 @@ public class EmbeddingService : IEmbeddingService
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+
+        // Cache provider name for telemetry to avoid repeated string allocations
+        _providerName = _options.Provider.ToString().ToLowerInvariant();
 
         // Validate required options
         if (string.IsNullOrEmpty(_options.BaseUrl))
@@ -106,11 +110,6 @@ public class EmbeddingService : IEmbeddingService
     /// <inheritdoc/>
     public bool IsEnabled => _options.Enabled;
 
-    /// <summary>
-    /// Gets the provider name for telemetry.
-    /// </summary>
-    private string ProviderName => _options.Provider.ToString().ToLowerInvariant();
-
     /// <inheritdoc/>
     public async Task<EmbeddingResult> TryEmbedAsync(string text, CancellationToken cancellationToken = default)
     {
@@ -128,18 +127,18 @@ public class EmbeddingService : IEmbeddingService
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         using Activity? activity = EmbeddingTelemetryHelper.StartEmbeddingActivity("TryEmbedAsync");
-        activity?.SetEmbeddingActivityTags(ProviderName, _options.EffectiveModel, textCount: 1);
+        activity?.SetEmbeddingActivityTags(_providerName, _options.EffectiveModel, textCount: 1);
 
         try
         {
-            EmbeddingTelemetryHelper.TrackEmbeddingRequest(ProviderName, textCount: 1);
+            EmbeddingTelemetryHelper.TrackEmbeddingRequest(_providerName, textCount: 1);
 
             float[] embedding = await EmbedAsync(text, cancellationToken);
 
             stopwatch.Stop();
             activity?.SetEmbeddingActivitySuccess(stopwatch.Elapsed.TotalMilliseconds, embedding.Length);
-            EmbeddingTelemetryHelper.TrackTotalDuration(ProviderName, stopwatch.Elapsed, fromCache: false);
-            EmbeddingTelemetryHelper.TrackDimensions(ProviderName, embedding.Length);
+            EmbeddingTelemetryHelper.TrackTotalDuration(_providerName, stopwatch.Elapsed, fromCache: false);
+            EmbeddingTelemetryHelper.TrackDimensions(_providerName, embedding.Length);
 
             return new EmbeddingResult(true, embedding);
         }
@@ -148,7 +147,7 @@ public class EmbeddingService : IEmbeddingService
             stopwatch.Stop();
             _logger.LogError(ex, "Failed to generate embedding for text");
             activity?.SetEmbeddingActivityError(ex);
-            EmbeddingTelemetryHelper.TrackError(ProviderName, ex.GetType().Name);
+            EmbeddingTelemetryHelper.TrackError(_providerName, ex.GetType().Name);
 
             return new EmbeddingResult(false, null, ex.Message);
         }
@@ -171,21 +170,21 @@ public class EmbeddingService : IEmbeddingService
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         using Activity? activity = EmbeddingTelemetryHelper.StartEmbeddingActivity("TryEmbedBatchAsync");
-        activity?.SetEmbeddingActivityTags(ProviderName, _options.EffectiveModel, texts.Length);
+        activity?.SetEmbeddingActivityTags(_providerName, _options.EffectiveModel, texts.Length);
 
         try
         {
-            EmbeddingTelemetryHelper.TrackEmbeddingRequest(ProviderName, texts.Length);
+            EmbeddingTelemetryHelper.TrackEmbeddingRequest(_providerName, texts.Length);
 
             float[][] embeddings = await EmbedBatchAsync(texts, cancellationToken);
 
             stopwatch.Stop();
             int dimensions = embeddings.Length > 0 ? embeddings[0].Length : 0;
             activity?.SetEmbeddingActivitySuccess(stopwatch.Elapsed.TotalMilliseconds, dimensions);
-            EmbeddingTelemetryHelper.TrackTotalDuration(ProviderName, stopwatch.Elapsed, fromCache: false);
+            EmbeddingTelemetryHelper.TrackTotalDuration(_providerName, stopwatch.Elapsed, fromCache: false);
             if (dimensions > 0)
             {
-                EmbeddingTelemetryHelper.TrackDimensions(ProviderName, dimensions);
+                EmbeddingTelemetryHelper.TrackDimensions(_providerName, dimensions);
             }
 
             return new EmbeddingBatchResult(true, embeddings);
@@ -195,7 +194,7 @@ public class EmbeddingService : IEmbeddingService
             stopwatch.Stop();
             _logger.LogError(ex, "Failed to generate embeddings for batch of {Count} texts", texts.Length);
             activity?.SetEmbeddingActivityError(ex);
-            EmbeddingTelemetryHelper.TrackError(ProviderName, ex.GetType().Name);
+            EmbeddingTelemetryHelper.TrackError(_providerName, ex.GetType().Name);
 
             return new EmbeddingBatchResult(false, null, ex.Message);
         }
@@ -269,12 +268,12 @@ public class EmbeddingService : IEmbeddingService
                 _logger.LogDebug("Embedding cache hit for text hash {TextHash}", cacheKeys[i]);
                 results[i] = cached.Value;
                 cacheHits++;
-                EmbeddingTelemetryHelper.TrackCacheHit(ProviderName);
+                EmbeddingTelemetryHelper.TrackCacheHit(_providerName);
             }
             else
             {
                 uncachedIndices.Add(i);
-                EmbeddingTelemetryHelper.TrackCacheMiss(ProviderName);
+                EmbeddingTelemetryHelper.TrackCacheMiss(_providerName);
             }
         }
 
@@ -294,8 +293,8 @@ public class EmbeddingService : IEmbeddingService
         apiStopwatch.Stop();
 
         // Track API call telemetry
-        EmbeddingTelemetryHelper.TrackApiCall(ProviderName, uncachedTexts.Length);
-        EmbeddingTelemetryHelper.TrackApiDuration(ProviderName, apiStopwatch.Elapsed, uncachedTexts.Length);
+        EmbeddingTelemetryHelper.TrackApiCall(_providerName, uncachedTexts.Length);
+        EmbeddingTelemetryHelper.TrackApiDuration(_providerName, apiStopwatch.Elapsed, uncachedTexts.Length);
 
         // Cache new results and merge with cached results
         for (int i = 0; i < uncachedIndices.Count; i++)

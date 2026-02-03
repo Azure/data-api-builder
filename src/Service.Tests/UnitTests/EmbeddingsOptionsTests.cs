@@ -106,7 +106,7 @@ public class EmbeddingsOptionsTests
 
         EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
         Assert.AreEqual(EmbeddingProviderType.AzureOpenAI, embeddings.Provider);
-        Assert.AreEqual("https://my-openai.openai.azure.com", embeddings.Endpoint);
+        Assert.AreEqual("https://my-openai.openai.azure.com", embeddings.BaseUrl);
         Assert.AreEqual("test-api-key", embeddings.ApiKey);
         Assert.AreEqual("text-embedding-ada-002", embeddings.Model);
         Assert.AreEqual("2024-02-01", embeddings.ApiVersion);
@@ -142,7 +142,7 @@ public class EmbeddingsOptionsTests
 
         EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
         Assert.AreEqual(EmbeddingProviderType.OpenAI, embeddings.Provider);
-        Assert.AreEqual("https://api.openai.com", embeddings.Endpoint);
+        Assert.AreEqual("https://api.openai.com", embeddings.BaseUrl);
         Assert.AreEqual("sk-test-key", embeddings.ApiKey);
 
         // Model not specified, but EffectiveModel should return default for OpenAI
@@ -261,7 +261,7 @@ public class EmbeddingsOptionsTests
         // Arrange
         EmbeddingsOptions options = new(
             Provider: EmbeddingProviderType.AzureOpenAI,
-            Endpoint: "https://my-endpoint.openai.azure.com",
+            BaseUrl: "https://my-endpoint.openai.azure.com",
             ApiKey: "my-api-key",
             Model: "my-model",
             ApiVersion: "2024-02-01",
@@ -331,7 +331,7 @@ public class EmbeddingsOptionsTests
             Assert.IsNotNull(runtimeConfig?.Runtime?.Embeddings);
 
             EmbeddingsOptions embeddings = runtimeConfig.Runtime.Embeddings;
-            Assert.AreEqual("https://test-endpoint.openai.azure.com", embeddings.Endpoint);
+            Assert.AreEqual("https://test-endpoint.openai.azure.com", embeddings.BaseUrl);
             Assert.AreEqual("test-secret-key", embeddings.ApiKey);
             Assert.AreEqual("text-embedding-3-small", embeddings.Model);
         }

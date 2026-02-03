@@ -74,14 +74,15 @@ namespace Cli.Commands
             long? fileSinkFileSizeLimitBytes = null,
             CliBool? runtimeEmbeddingsEnabled = null,
             EmbeddingProviderType? runtimeEmbeddingsProvider = null,
-            string? runtimeEmbeddingsEndpoint = null,
+            string? runtimeEmbeddingsBaseUrl = null,
             string? runtimeEmbeddingsApiKey = null,
             string? runtimeEmbeddingsModel = null,
             string? runtimeEmbeddingsApiVersion = null,
             int? runtimeEmbeddingsDimensions = null,
             int? runtimeEmbeddingsTimeoutMs = null,
-            CliBool? runtimeEmbeddingsRestEnabled = null,
-            string? runtimeEmbeddingsRestPath = null,
+            CliBool? runtimeEmbeddingsEndpointEnabled = null,
+            string? runtimeEmbeddingsEndpointPath = null,
+            IEnumerable<string>? runtimeEmbeddingsEndpointRoles = null,
             CliBool? runtimeEmbeddingsHealthEnabled = null,
             int? runtimeEmbeddingsHealthThresholdMs = null,
             string? runtimeEmbeddingsHealthTestText = null,
@@ -150,15 +151,16 @@ namespace Cli.Commands
             // Embeddings
             RuntimeEmbeddingsEnabled = runtimeEmbeddingsEnabled;
             RuntimeEmbeddingsProvider = runtimeEmbeddingsProvider;
-            RuntimeEmbeddingsEndpoint = runtimeEmbeddingsEndpoint;
+            RuntimeEmbeddingsBaseUrl = runtimeEmbeddingsBaseUrl;
             RuntimeEmbeddingsApiKey = runtimeEmbeddingsApiKey;
             RuntimeEmbeddingsModel = runtimeEmbeddingsModel;
             RuntimeEmbeddingsApiVersion = runtimeEmbeddingsApiVersion;
             RuntimeEmbeddingsDimensions = runtimeEmbeddingsDimensions;
             RuntimeEmbeddingsTimeoutMs = runtimeEmbeddingsTimeoutMs;
-            // Embeddings REST
-            RuntimeEmbeddingsRestEnabled = runtimeEmbeddingsRestEnabled;
-            RuntimeEmbeddingsRestPath = runtimeEmbeddingsRestPath;
+            // Embeddings Endpoint
+            RuntimeEmbeddingsEndpointEnabled = runtimeEmbeddingsEndpointEnabled;
+            RuntimeEmbeddingsEndpointPath = runtimeEmbeddingsEndpointPath;
+            RuntimeEmbeddingsEndpointRoles = runtimeEmbeddingsEndpointRoles;
             // Embeddings Health
             RuntimeEmbeddingsHealthEnabled = runtimeEmbeddingsHealthEnabled;
             RuntimeEmbeddingsHealthThresholdMs = runtimeEmbeddingsHealthThresholdMs;
@@ -319,8 +321,8 @@ namespace Cli.Commands
         [Option("runtime.embeddings.provider", Required = false, HelpText = "Configure embedding provider type. Allowed values: azure-openai, openai.")]
         public EmbeddingProviderType? RuntimeEmbeddingsProvider { get; }
 
-        [Option("runtime.embeddings.endpoint", Required = false, HelpText = "Configure the embedding provider base URL endpoint.")]
-        public string? RuntimeEmbeddingsEndpoint { get; }
+        [Option("runtime.embeddings.base-url", Required = false, HelpText = "Configure the embedding provider base URL.")]
+        public string? RuntimeEmbeddingsBaseUrl { get; }
 
         [Option("runtime.embeddings.api-key", Required = false, HelpText = "Configure the embedding API key for authentication.")]
         public string? RuntimeEmbeddingsApiKey { get; }
@@ -337,14 +339,14 @@ namespace Cli.Commands
         [Option("runtime.embeddings.timeout-ms", Required = false, HelpText = "Configure the request timeout in milliseconds. Default: 30000")]
         public int? RuntimeEmbeddingsTimeoutMs { get; }
 
-        [Option("runtime.embeddings.rest.enabled", Required = false, HelpText = "Enable/disable the REST endpoint for embeddings. Default: false")]
-        public CliBool? RuntimeEmbeddingsRestEnabled { get; }
+        [Option("runtime.embeddings.endpoint.enabled", Required = false, HelpText = "Enable/disable the endpoint for embeddings. Default: false")]
+        public CliBool? RuntimeEmbeddingsEndpointEnabled { get; }
 
-        [Option("runtime.embeddings.rest.path", Required = false, HelpText = "Configure the REST endpoint path for embeddings. Default: /embed")]
-        public string? RuntimeEmbeddingsRestPath { get; }
+        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the endpoint path for embeddings. Default: /embed")]
+        public string? RuntimeEmbeddingsEndpointPath { get; }
 
-        [Option("runtime.embeddings.rest.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding REST endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
-        public IEnumerable<string>? RuntimeEmbeddingsRestRoles { get; }
+        [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
+        public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }
 
         [Option("runtime.embeddings.health.enabled", Required = false, HelpText = "Enable/disable health checks for the embedding service. Default: true")]
         public CliBool? RuntimeEmbeddingsHealthEnabled { get; }

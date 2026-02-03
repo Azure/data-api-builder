@@ -911,7 +911,7 @@ namespace Cli
 
             // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs
             if (options.RuntimeEmbeddingsProvider is not null ||
-                options.RuntimeEmbeddingsEndpoint is not null ||
+                options.RuntimeEmbeddingsBaseUrl is not null ||
                 options.RuntimeEmbeddingsApiKey is not null ||
                 options.RuntimeEmbeddingsModel is not null ||
                 options.RuntimeEmbeddingsApiVersion is not null ||
@@ -1563,7 +1563,7 @@ namespace Cli
             {
                 // Get values from options or fall back to existing configuration
                 EmbeddingProviderType? provider = options.RuntimeEmbeddingsProvider ?? existingEmbeddingsOptions?.Provider;
-                string? endpoint = options.RuntimeEmbeddingsEndpoint ?? existingEmbeddingsOptions?.Endpoint;
+                string? baseUrl = options.RuntimeEmbeddingsBaseUrl ?? existingEmbeddingsOptions?.BaseUrl;
                 string? apiKey = options.RuntimeEmbeddingsApiKey ?? existingEmbeddingsOptions?.ApiKey;
                 string? model = options.RuntimeEmbeddingsModel ?? existingEmbeddingsOptions?.Model;
                 string? apiVersion = options.RuntimeEmbeddingsApiVersion ?? existingEmbeddingsOptions?.ApiVersion;
@@ -1577,9 +1577,9 @@ namespace Cli
                     return false;
                 }
 
-                if (string.IsNullOrEmpty(endpoint))
+                if (string.IsNullOrEmpty(baseUrl))
                 {
-                    _logger.LogError("Failed to configure embeddings: endpoint is required. Use --runtime.embeddings.endpoint to specify the provider base URL.");
+                    _logger.LogError("Failed to configure embeddings: base-url is required. Use --runtime.embeddings.base-url to specify the provider base URL.");
                     return false;
                 }
 
@@ -1613,7 +1613,7 @@ namespace Cli
                 // Create the embeddings options
                 updatedEmbeddingsOptions = new EmbeddingsOptions(
                     Provider: (EmbeddingProviderType)provider,
-                    Endpoint: endpoint,
+                    BaseUrl: baseUrl,
                     ApiKey: apiKey,
                     Model: model,
                     ApiVersion: apiVersion,

@@ -2,23 +2,36 @@
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Core.Services;
 
 /// <summary>
 /// Service implementation for text embedding/vectorization.
 /// Supports both OpenAI and Azure OpenAI providers.
+/// Includes L1 memory cache using FusionCache to prevent duplicate embedding API calls.
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {
     private readonly HttpClient _httpClient;
     private readonly EmbeddingsOptions _options;
     private readonly ILogger<EmbeddingService> _logger;
+    private readonly IFusionCache _cache;
+
+    // Constants
+    private const char KEY_DELIMITER = ':';
+    private const string CACHE_KEY_PREFIX = "embedding";
+
+    /// <summary>
+    /// Default cache TTL in hours. Set high since embeddings are deterministic and don't get outdated.
+    /// </summary>
+    private const int DEFAULT_CACHE_TTL_HOURS = 24;
 
     /// <summary>
     /// JSON serializer options for request/response handling.
@@ -32,17 +45,20 @@ public class EmbeddingService : IEmbeddingService
     /// <summary>
     /// Initializes a new instance of the EmbeddingService.
     /// </summary>
-    /// <param name="httpClient">The HTTP client factory for creating HTTP clients.</param>
+    /// <param name="httpClient">The HTTP client for making API requests.</param>
     /// <param name="options">The embedding configuration options.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="cache">The FusionCache instance for L1 memory caching.</param>
     public EmbeddingService(
         HttpClient httpClient,
         EmbeddingsOptions options,
-        ILogger<EmbeddingService> logger)
+        ILogger<EmbeddingService> logger,
+        IFusionCache cache)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
 
         ConfigureHttpClient();
     }
@@ -77,8 +93,31 @@ public class EmbeddingService : IEmbeddingService
             throw new ArgumentException("Text cannot be null or empty.", nameof(text));
         }
 
-        float[][] results = await EmbedBatchAsync(new[] { text }, cancellationToken);
-        return results[0];
+        string cacheKey = CreateCacheKey(text);
+
+        float[]? embedding = await _cache.GetOrSetAsync<float[]>(
+            key: cacheKey,
+            async (FusionCacheFactoryExecutionContext<float[]> ctx, CancellationToken ct) =>
+            {
+                _logger.LogDebug("Embedding cache miss, calling API for text hash {TextHash}", cacheKey);
+
+                float[][] results = await EmbedFromApiAsync(new[] { text }, ct);
+                float[] result = results[0];
+
+                // L1 only - skip distributed cache
+                ctx.Options.SetSkipDistributedCache(true, true);
+                ctx.Options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
+
+                return result;
+            },
+            token: cancellationToken);
+
+        if (embedding is null)
+        {
+            throw new InvalidOperationException("Failed to get embedding from cache or API.");
+        }
+
+        return embedding;
     }
 
     /// <inheritdoc/>
@@ -89,6 +128,86 @@ public class EmbeddingService : IEmbeddingService
             throw new ArgumentException("Texts cannot be null or empty.", nameof(texts));
         }
 
+        // For batch, check cache for each text individually
+        string[] cacheKeys = texts.Select(CreateCacheKey).ToArray();
+        float[]?[] results = new float[texts.Length][];
+        List<int> uncachedIndices = new();
+
+        // Check cache for each text
+        for (int i = 0; i < texts.Length; i++)
+        {
+            MaybeValue<float[]> cached = _cache.TryGet<float[]>(key: cacheKeys[i]);
+
+            if (cached.HasValue)
+            {
+                _logger.LogDebug("Embedding cache hit for text hash {TextHash}", cacheKeys[i]);
+                results[i] = cached.Value;
+            }
+            else
+            {
+                uncachedIndices.Add(i);
+            }
+        }
+
+        // If all texts were cached, return immediately
+        if (uncachedIndices.Count == 0)
+        {
+            return results!;
+        }
+
+        _logger.LogDebug("Embedding cache miss for {Count} text(s), calling API", uncachedIndices.Count);
+
+        // Call API for uncached texts only
+        string[] uncachedTexts = uncachedIndices.Select(i => texts[i]).ToArray();
+        float[][] apiResults = await EmbedFromApiAsync(uncachedTexts, cancellationToken);
+
+        // Cache new results and merge with cached results
+        for (int i = 0; i < uncachedIndices.Count; i++)
+        {
+            int originalIndex = uncachedIndices[i];
+            results[originalIndex] = apiResults[i];
+
+            // Store in L1 cache only
+            _cache.Set(
+                key: cacheKeys[originalIndex],
+                value: apiResults[i],
+                options =>
+                {
+                    options.SetSkipDistributedCache(true, true);
+                    options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
+                });
+        }
+
+        return results!;
+    }
+
+    /// <summary>
+    /// Creates a cache key from the text using SHA256 hash.
+    /// Format: embedding:{SHA256_hash}
+    /// Uses hash to keep cache keys small and deterministic.
+    /// </summary>
+    /// <param name="text">The text to create a cache key for.</param>
+    /// <returns>Cache key string.</returns>
+    private static string CreateCacheKey(string text)
+    {
+        // Use SHA256 for deterministic, collision-resistant hash
+        byte[] textBytes = Encoding.UTF8.GetBytes(text);
+        byte[] hashBytes = SHA256.HashData(textBytes);
+        string hashHex = Convert.ToHexString(hashBytes);
+
+        StringBuilder cacheKeyBuilder = new();
+        cacheKeyBuilder.Append(CACHE_KEY_PREFIX);
+        cacheKeyBuilder.Append(KEY_DELIMITER);
+        cacheKeyBuilder.Append(hashHex);
+
+        return cacheKeyBuilder.ToString();
+    }
+
+    /// <summary>
+    /// Calls the embedding API to get embeddings for the provided texts.
+    /// </summary>
+    private async Task<float[][]> EmbedFromApiAsync(string[] texts, CancellationToken cancellationToken)
+    {
         string requestUrl = BuildRequestUrl();
         object requestBody = BuildRequestBody(texts);
 

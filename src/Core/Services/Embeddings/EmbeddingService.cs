@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
@@ -71,6 +72,12 @@ public class EmbeddingService : IEmbeddingService
             throw new ArgumentException("ApiKey is required in EmbeddingsOptions.", nameof(options));
         }
 
+        // Azure OpenAI requires model/deployment name
+        if (_options.Provider == EmbeddingProviderType.AzureOpenAI && string.IsNullOrEmpty(_options.EffectiveModel))
+        {
+            throw new InvalidOperationException("Model/deployment name is required for Azure OpenAI provider.");
+        }
+
         ConfigureHttpClient();
     }
 
@@ -99,6 +106,11 @@ public class EmbeddingService : IEmbeddingService
     /// <inheritdoc/>
     public bool IsEnabled => _options.Enabled;
 
+    /// <summary>
+    /// Gets the provider name for telemetry.
+    /// </summary>
+    private string ProviderName => _options.Provider.ToString().ToLowerInvariant();
+
     /// <inheritdoc/>
     public async Task<EmbeddingResult> TryEmbedAsync(string text, CancellationToken cancellationToken = default)
     {
@@ -114,14 +126,30 @@ public class EmbeddingService : IEmbeddingService
             return new EmbeddingResult(false, null, "Text cannot be null or empty.");
         }
 
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        using Activity? activity = EmbeddingTelemetryHelper.StartEmbeddingActivity("TryEmbedAsync");
+        activity?.SetEmbeddingActivityTags(ProviderName, _options.EffectiveModel, textCount: 1);
+
         try
         {
+            EmbeddingTelemetryHelper.TrackEmbeddingRequest(ProviderName, textCount: 1);
+
             float[] embedding = await EmbedAsync(text, cancellationToken);
+
+            stopwatch.Stop();
+            activity?.SetEmbeddingActivitySuccess(stopwatch.Elapsed.TotalMilliseconds, embedding.Length);
+            EmbeddingTelemetryHelper.TrackTotalDuration(ProviderName, stopwatch.Elapsed, fromCache: false);
+            EmbeddingTelemetryHelper.TrackDimensions(ProviderName, embedding.Length);
+
             return new EmbeddingResult(true, embedding);
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
             _logger.LogError(ex, "Failed to generate embedding for text");
+            activity?.SetEmbeddingActivityError(ex);
+            EmbeddingTelemetryHelper.TrackError(ProviderName, ex.GetType().Name);
+
             return new EmbeddingResult(false, null, ex.Message);
         }
     }
@@ -141,14 +169,34 @@ public class EmbeddingService : IEmbeddingService
             return new EmbeddingBatchResult(false, null, "Texts array cannot be null or empty.");
         }
 
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        using Activity? activity = EmbeddingTelemetryHelper.StartEmbeddingActivity("TryEmbedBatchAsync");
+        activity?.SetEmbeddingActivityTags(ProviderName, _options.EffectiveModel, texts.Length);
+
         try
         {
+            EmbeddingTelemetryHelper.TrackEmbeddingRequest(ProviderName, texts.Length);
+
             float[][] embeddings = await EmbedBatchAsync(texts, cancellationToken);
+
+            stopwatch.Stop();
+            int dimensions = embeddings.Length > 0 ? embeddings[0].Length : 0;
+            activity?.SetEmbeddingActivitySuccess(stopwatch.Elapsed.TotalMilliseconds, dimensions);
+            EmbeddingTelemetryHelper.TrackTotalDuration(ProviderName, stopwatch.Elapsed, fromCache: false);
+            if (dimensions > 0)
+            {
+                EmbeddingTelemetryHelper.TrackDimensions(ProviderName, dimensions);
+            }
+
             return new EmbeddingBatchResult(true, embeddings);
         }
         catch (Exception ex)
         {
+            stopwatch.Stop();
             _logger.LogError(ex, "Failed to generate embeddings for batch of {Count} texts", texts.Length);
+            activity?.SetEmbeddingActivityError(ex);
+            EmbeddingTelemetryHelper.TrackError(ProviderName, ex.GetType().Name);
+
             return new EmbeddingBatchResult(false, null, ex.Message);
         }
     }
@@ -209,6 +257,7 @@ public class EmbeddingService : IEmbeddingService
         string[] cacheKeys = texts.Select(CreateCacheKey).ToArray();
         float[]?[] results = new float[texts.Length][];
         List<int> uncachedIndices = new();
+        int cacheHits = 0;
 
         // Check cache for each text
         for (int i = 0; i < texts.Length; i++)
@@ -219,10 +268,13 @@ public class EmbeddingService : IEmbeddingService
             {
                 _logger.LogDebug("Embedding cache hit for text hash {TextHash}", cacheKeys[i]);
                 results[i] = cached.Value;
+                cacheHits++;
+                EmbeddingTelemetryHelper.TrackCacheHit(ProviderName);
             }
             else
             {
                 uncachedIndices.Add(i);
+                EmbeddingTelemetryHelper.TrackCacheMiss(ProviderName);
             }
         }
 
@@ -236,7 +288,14 @@ public class EmbeddingService : IEmbeddingService
 
         // Call API for uncached texts only
         string[] uncachedTexts = uncachedIndices.Select(i => texts[i]).ToArray();
+
+        Stopwatch apiStopwatch = Stopwatch.StartNew();
         float[][] apiResults = await EmbedFromApiAsync(uncachedTexts, cancellationToken);
+        apiStopwatch.Stop();
+
+        // Track API call telemetry
+        EmbeddingTelemetryHelper.TrackApiCall(ProviderName, uncachedTexts.Length);
+        EmbeddingTelemetryHelper.TrackApiDuration(ProviderName, apiStopwatch.Elapsed, uncachedTexts.Length);
 
         // Cache new results and merge with cached results
         for (int i = 0; i < uncachedIndices.Count; i++)
@@ -260,15 +319,17 @@ public class EmbeddingService : IEmbeddingService
 
     /// <summary>
     /// Creates a cache key from the text using SHA256 hash.
-    /// Format: embedding:{SHA256_hash}
+    /// Format: embedding:{provider}:{model}:{SHA256_hash}
+    /// Includes provider and model to prevent cross-configuration collisions.
     /// Uses hash to keep cache keys small and deterministic.
     /// </summary>
     /// <param name="text">The text to create a cache key for.</param>
     /// <returns>Cache key string.</returns>
-    private static string CreateCacheKey(string text)
+    private string CreateCacheKey(string text)
     {
-        // Use SHA256 for deterministic, collision-resistant hash
-        byte[] textBytes = Encoding.UTF8.GetBytes(text);
+        // Include provider and model in hash to avoid cross-provider/model collisions
+        string keyInput = $"{_options.Provider}:{_options.EffectiveModel}:{text}";
+        byte[] textBytes = Encoding.UTF8.GetBytes(keyInput);
         byte[] hashBytes = SHA256.HashData(textBytes);
         string hashHex = Convert.ToHexString(hashBytes);
 

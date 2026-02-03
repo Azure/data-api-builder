@@ -4,7 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace Azure.DataApiBuilder.Config.ObjectModel;
+namespace Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 
 /// <summary>
 /// Represents the options for configuring the embedding service.
@@ -28,6 +28,19 @@ public record EmbeddingsOptions
     public const string DEFAULT_OPENAI_MODEL = "text-embedding-3-small";
 
     /// <summary>
+    /// Whether the embedding service is enabled. Defaults to true.
+    /// When false, the embedding service will not be used.
+    /// </summary>
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>
+    /// Flag indicating whether the user provided the enabled setting.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool UserProvidedEnabled { get; init; }
+
+    /// <summary>
     /// The embedding provider type (azure-openai or openai).
     /// Required.
     /// </summary>
@@ -35,11 +48,11 @@ public record EmbeddingsOptions
     public EmbeddingProviderType Provider { get; init; }
 
     /// <summary>
-    /// The provider base URL endpoint.
+    /// The provider base URL.
     /// Required.
     /// </summary>
-    [JsonPropertyName("endpoint")]
-    public string Endpoint { get; init; }
+    [JsonPropertyName("base-url")]
+    public string BaseUrl { get; init; }
 
     /// <summary>
     /// The API key for authentication.
@@ -74,6 +87,18 @@ public record EmbeddingsOptions
     /// </summary>
     [JsonPropertyName("timeout-ms")]
     public int? TimeoutMs { get; init; }
+
+    /// <summary>
+    /// Endpoint configuration for the embedding service.
+    /// </summary>
+    [JsonPropertyName("endpoint")]
+    public EmbeddingsEndpointOptions? Endpoint { get; init; }
+
+    /// <summary>
+    /// Health check configuration for the embedding service.
+    /// </summary>
+    [JsonPropertyName("health")]
+    public EmbeddingsHealthCheckConfig? Health { get; init; }
 
     /// <summary>
     /// Flag which informs whether the user provided a custom timeout value.
@@ -122,19 +147,52 @@ public record EmbeddingsOptions
     [JsonIgnore]
     public string? EffectiveModel => Model ?? (Provider == EmbeddingProviderType.OpenAI ? DEFAULT_OPENAI_MODEL : null);
 
+    /// <summary>
+    /// Returns true if embedding health check is enabled.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsHealthCheckEnabled => Health?.Enabled ?? false;
+
+    /// <summary>
+    /// Returns true if embedding endpoint is enabled.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsEndpointEnabled => Endpoint?.Enabled ?? false;
+
+    /// <summary>
+    /// Gets the effective endpoint path.
+    /// </summary>
+    [JsonIgnore]
+    public string EffectiveEndpointPath => Endpoint?.EffectivePath ?? EmbeddingsEndpointOptions.DEFAULT_PATH;
+
     [JsonConstructor]
     public EmbeddingsOptions(
         EmbeddingProviderType Provider,
-        string Endpoint,
+        string BaseUrl,
         string ApiKey,
+        bool? Enabled = null,
         string? Model = null,
         string? ApiVersion = null,
         int? Dimensions = null,
-        int? TimeoutMs = null)
+        int? TimeoutMs = null,
+        EmbeddingsEndpointOptions? Endpoint = null,
+        EmbeddingsHealthCheckConfig? Health = null)
     {
         this.Provider = Provider;
-        this.Endpoint = Endpoint;
+        this.BaseUrl = BaseUrl;
         this.ApiKey = ApiKey;
+        this.Endpoint = Endpoint;
+        this.Health = Health;
+
+        if (Enabled.HasValue)
+        {
+            this.Enabled = Enabled.Value;
+            UserProvidedEnabled = true;
+        }
+        else
+        {
+            this.Enabled = true; // Default to enabled
+        }
 
         if (Model is not null)
         {

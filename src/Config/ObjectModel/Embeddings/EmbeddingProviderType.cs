@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
 
-namespace Azure.DataApiBuilder.Config.ObjectModel;
+namespace Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 
 /// <summary>
 /// Represents the supported embedding provider types.

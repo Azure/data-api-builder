@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Config.Utilities;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
@@ -21,6 +22,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Core.Telemetry;
@@ -394,6 +396,36 @@ namespace Azure.DataApiBuilder.Service
                 EmbeddingsOptions embeddingsOptions = runtimeConfig.Runtime.Embeddings;
                 services.AddHttpClient<IEmbeddingService, EmbeddingService>();
                 services.AddSingleton(embeddingsOptions);
+
+                string providerName = embeddingsOptions.Provider.ToString().ToLowerInvariant();
+
+                if (embeddingsOptions.Enabled)
+                {
+                    _logger.LogInformation(
+                        "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
+                        providerName,
+                        embeddingsOptions.EffectiveModel ?? "(default)",
+                        embeddingsOptions.BaseUrl);
+
+                    // Endpoint is only available if both embeddings and endpoint are enabled
+                    if (embeddingsOptions.IsEndpointEnabled)
+                    {
+                        _logger.LogInformation(
+                            "Embeddings endpoint enabled at path: {Path}",
+                            embeddingsOptions.EffectiveEndpointPath);
+                    }
+
+                    if (embeddingsOptions.IsHealthCheckEnabled)
+                    {
+                        _logger.LogInformation(
+                            "Embeddings health check enabled with threshold: {ThresholdMs}ms",
+                            embeddingsOptions.Health!.ThresholdMs);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Embeddings service is configured but disabled.");
+                }
             }
 
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);

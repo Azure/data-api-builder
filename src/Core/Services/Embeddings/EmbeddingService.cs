@@ -6,11 +6,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
-namespace Azure.DataApiBuilder.Core.Services;
+namespace Azure.DataApiBuilder.Core.Services.Embeddings;
 
 /// <summary>
 /// Service implementation for text embedding/vectorization.
@@ -86,8 +86,70 @@ public class EmbeddingService : IEmbeddingService
     }
 
     /// <inheritdoc/>
+    public bool IsEnabled => _options.Enabled;
+
+    /// <inheritdoc/>
+    public async Task<EmbeddingResult> TryEmbedAsync(string text, CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled)
+        {
+            _logger.LogDebug("Embedding service is disabled, skipping embed request");
+            return new EmbeddingResult(false, null, "Embedding service is disabled.");
+        }
+
+        if (string.IsNullOrEmpty(text))
+        {
+            _logger.LogWarning("TryEmbedAsync called with null or empty text");
+            return new EmbeddingResult(false, null, "Text cannot be null or empty.");
+        }
+
+        try
+        {
+            float[] embedding = await EmbedAsync(text, cancellationToken);
+            return new EmbeddingResult(true, embedding);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate embedding for text");
+            return new EmbeddingResult(false, null, ex.Message);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<EmbeddingBatchResult> TryEmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
+    {
+        if (!_options.Enabled)
+        {
+            _logger.LogDebug("Embedding service is disabled, skipping batch embed request");
+            return new EmbeddingBatchResult(false, null, "Embedding service is disabled.");
+        }
+
+        if (texts is null || texts.Length == 0)
+        {
+            _logger.LogWarning("TryEmbedBatchAsync called with null or empty texts array");
+            return new EmbeddingBatchResult(false, null, "Texts array cannot be null or empty.");
+        }
+
+        try
+        {
+            float[][] embeddings = await EmbedBatchAsync(texts, cancellationToken);
+            return new EmbeddingBatchResult(true, embeddings);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate embeddings for batch of {Count} texts", texts.Length);
+            return new EmbeddingBatchResult(false, null, ex.Message);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken = default)
     {
+        if (!_options.Enabled)
+        {
+            throw new InvalidOperationException("Embedding service is disabled.");
+        }
+
         if (string.IsNullOrEmpty(text))
         {
             throw new ArgumentException("Text cannot be null or empty.", nameof(text));
@@ -123,6 +185,10 @@ public class EmbeddingService : IEmbeddingService
     /// <inheritdoc/>
     public async Task<float[][]> EmbedBatchAsync(string[] texts, CancellationToken cancellationToken = default)
     {
+        if (!_options.Enabled)
+        {
+            throw new InvalidOperationException("Embedding service is disabled.");
+        }
         if (texts is null || texts.Length == 0)
         {
             throw new ArgumentException("Texts cannot be null or empty.", nameof(texts));
@@ -245,20 +311,20 @@ public class EmbeddingService : IEmbeddingService
     /// </summary>
     private string BuildRequestUrl()
     {
-        string endpoint = _options.Endpoint.TrimEnd('/');
+        string baseUrl = _options.BaseUrl.TrimEnd('/');
 
         if (_options.Provider == EmbeddingProviderType.AzureOpenAI)
         {
-            // Azure OpenAI: {endpoint}/openai/deployments/{deployment}/embeddings?api-version={version}
+            // Azure OpenAI: {baseUrl}/openai/deployments/{deployment}/embeddings?api-version={version}
             string model = _options.EffectiveModel
                 ?? throw new InvalidOperationException("Model/deployment name is required for Azure OpenAI.");
 
-            return $"{endpoint}/openai/deployments/{model}/embeddings?api-version={_options.EffectiveApiVersion}";
+            return $"{baseUrl}/openai/deployments/{model}/embeddings?api-version={_options.EffectiveApiVersion}";
         }
         else
         {
-            // OpenAI: {endpoint}/v1/embeddings
-            return $"{endpoint}/v1/embeddings";
+            // OpenAI: {baseUrl}/v1/embeddings
+            return $"{baseUrl}/v1/embeddings";
         }
     }
 

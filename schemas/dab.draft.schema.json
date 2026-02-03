@@ -642,6 +642,87 @@
               "default": 4
             }
           }
+        },
+        "embeddings": {
+          "type": "object",
+          "description": "Configuration for text embedding/vectorization service. Supports OpenAI and Azure OpenAI providers.",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "description": "The embedding provider type.",
+              "enum": ["azure-openai", "openai"]
+            },
+            "endpoint": {
+              "type": "string",
+              "description": "The provider base URL endpoint. For Azure OpenAI, use the Azure resource endpoint. For OpenAI, use https://api.openai.com."
+            },
+            "api-key": {
+              "type": "string",
+              "description": "The API key for authentication. Supports environment variable substitution with @env('VAR_NAME')."
+            },
+            "model": {
+              "type": "string",
+              "description": "The model or deployment name. Required for Azure OpenAI (deployment name). For OpenAI, defaults to 'text-embedding-3-small' if not specified."
+            },
+            "api-version": {
+              "type": "string",
+              "description": "Azure API version. Only used for Azure OpenAI provider.",
+              "default": "2024-02-01"
+            },
+            "dimensions": {
+              "type": "integer",
+              "description": "Output vector dimensions. Optional, uses model default if not specified. Useful for Redis schema alignment.",
+              "minimum": 1
+            },
+            "timeout-ms": {
+              "type": "integer",
+              "description": "Request timeout in milliseconds.",
+              "default": 30000,
+              "minimum": 1,
+              "maximum": 300000
+            }
+          },
+          "required": ["provider", "endpoint", "api-key"],
+          "allOf": [
+            {
+              "$comment": "Azure OpenAI requires the model (deployment name) to be specified.",
+              "if": {
+                "properties": {
+                  "provider": {
+                    "const": "azure-openai"
+                  }
+                },
+                "required": ["provider"]
+              },
+              "then": {
+                "required": ["model"],
+                "properties": {
+                  "api-version": {
+                    "type": "string",
+                    "description": "Azure API version. Required for Azure OpenAI provider.",
+                    "default": "2024-02-01"
+                  }
+                }
+              }
+            },
+            {
+              "$comment": "OpenAI does not require model (defaults to text-embedding-3-small) and does not use api-version.",
+              "if": {
+                "properties": {
+                  "provider": {
+                    "const": "openai"
+                  }
+                },
+                "required": ["provider"]
+              },
+              "then": {
+                "properties": {
+                  "api-version": false
+                }
+              }
+            }
+          ]
         }
       }
     },

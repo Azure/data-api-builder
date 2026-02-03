@@ -648,14 +648,19 @@
           "description": "Configuration for text embedding/vectorization service. Supports OpenAI and Azure OpenAI providers.",
           "additionalProperties": false,
           "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the embedding service is enabled. Defaults to true.",
+              "default": true
+            },
             "provider": {
               "type": "string",
               "description": "The embedding provider type.",
               "enum": ["azure-openai", "openai"]
             },
-            "endpoint": {
+            "base-url": {
               "type": "string",
-              "description": "The provider base URL endpoint. For Azure OpenAI, use the Azure resource endpoint. For OpenAI, use https://api.openai.com."
+              "description": "The provider base URL. For Azure OpenAI, use the Azure resource endpoint. For OpenAI, use https://api.openai.com."
             },
             "api-key": {
               "type": "string",
@@ -683,7 +688,7 @@
               "maximum": 300000
             }
           },
-          "required": ["provider", "endpoint", "api-key"],
+          "required": ["provider", "base-url", "api-key"],
           "allOf": [
             {
               "$comment": "Azure OpenAI requires the model (deployment name) to be specified.",

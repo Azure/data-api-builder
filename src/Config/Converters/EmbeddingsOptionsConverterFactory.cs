@@ -13,11 +13,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
 {
-    private readonly DeserializationVariableReplacementSettings? _replacementSettings;
-
     public EmbeddingsOptionsConverterFactory(DeserializationVariableReplacementSettings? replacementSettings = null)
     {
-        _replacementSettings = replacementSettings;
+        // Note: replacementSettings is not used in this converter because the environment variable
+        // replacement is handled by the string deserializers registered in the JsonSerializerOptions.
     }
 
     /// <inheritdoc/>
@@ -29,18 +28,11 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new EmbeddingsOptionsConverter(_replacementSettings);
+        return new EmbeddingsOptionsConverter();
     }
 
     private class EmbeddingsOptionsConverter : JsonConverter<EmbeddingsOptions>
     {
-        private readonly DeserializationVariableReplacementSettings? _replacementSettings;
-
-        public EmbeddingsOptionsConverter(DeserializationVariableReplacementSettings? replacementSettings)
-        {
-            _replacementSettings = replacementSettings;
-        }
-
         public override EmbeddingsOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType != JsonTokenType.StartObject)

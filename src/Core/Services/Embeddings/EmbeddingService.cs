@@ -224,6 +224,12 @@ public class EmbeddingService : IEmbeddingService
                 float[][] results = await EmbedFromApiAsync(new[] { text }, ct);
                 float[] result = results[0];
 
+                // Validate the embedding result is not empty
+                if (result.Length == 0)
+                {
+                    throw new InvalidOperationException("API returned empty embedding array.");
+                }
+
                 // L1 only - skip distributed cache
                 ctx.Options.SetSkipDistributedCache(true, true);
                 ctx.Options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
@@ -232,7 +238,7 @@ public class EmbeddingService : IEmbeddingService
             },
             token: cancellationToken);
 
-        if (embedding is null)
+        if (embedding is null || embedding.Length == 0)
         {
             throw new InvalidOperationException("Failed to get embedding from cache or API.");
         }

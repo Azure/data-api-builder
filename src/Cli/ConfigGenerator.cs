@@ -909,14 +909,15 @@ namespace Cli
                 }
             }
 
-            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs
+            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled
             if (options.RuntimeEmbeddingsProvider is not null ||
                 options.RuntimeEmbeddingsBaseUrl is not null ||
                 options.RuntimeEmbeddingsApiKey is not null ||
                 options.RuntimeEmbeddingsModel is not null ||
                 options.RuntimeEmbeddingsApiVersion is not null ||
                 options.RuntimeEmbeddingsDimensions is not null ||
-                options.RuntimeEmbeddingsTimeoutMs is not null)
+                options.RuntimeEmbeddingsTimeoutMs is not null ||
+                options.RuntimeEmbeddingsEnabled is not null)
             {
                 bool status = TryUpdateConfiguredEmbeddingsValues(options, runtimeConfig?.Runtime?.Embeddings, out EmbeddingsOptions? updatedEmbeddingsOptions);
                 if (status && updatedEmbeddingsOptions is not null)
@@ -1569,6 +1570,9 @@ namespace Cli
                 string? apiVersion = options.RuntimeEmbeddingsApiVersion ?? existingEmbeddingsOptions?.ApiVersion;
                 int? dimensions = options.RuntimeEmbeddingsDimensions ?? existingEmbeddingsOptions?.Dimensions;
                 int? timeoutMs = options.RuntimeEmbeddingsTimeoutMs ?? existingEmbeddingsOptions?.TimeoutMs;
+                bool? enabled = options.RuntimeEmbeddingsEnabled.HasValue
+                    ? options.RuntimeEmbeddingsEnabled.Value == CliBool.True
+                    : existingEmbeddingsOptions?.Enabled;
 
                 // Validate required fields
                 if (provider is null)
@@ -1615,6 +1619,7 @@ namespace Cli
                     Provider: (EmbeddingProviderType)provider,
                     BaseUrl: baseUrl,
                     ApiKey: apiKey,
+                    Enabled: enabled,
                     Model: model,
                     ApiVersion: apiVersion,
                     Dimensions: dimensions,

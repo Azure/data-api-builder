@@ -60,6 +60,17 @@ public class EmbeddingService : IEmbeddingService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
 
+        // Validate required options
+        if (string.IsNullOrEmpty(_options.BaseUrl))
+        {
+            throw new ArgumentException("BaseUrl is required in EmbeddingsOptions.", nameof(options));
+        }
+
+        if (string.IsNullOrEmpty(_options.ApiKey))
+        {
+            throw new ArgumentException("ApiKey is required in EmbeddingsOptions.", nameof(options));
+        }
+
         ConfigureHttpClient();
     }
 

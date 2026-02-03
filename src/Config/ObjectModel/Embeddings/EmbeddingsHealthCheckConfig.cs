@@ -23,7 +23,8 @@ public record EmbeddingsHealthCheckConfig : HealthCheckConfig
 
     /// <summary>
     /// The expected milliseconds the embedding request should complete within to be considered healthy.
-    /// If the request takes equal or longer than this value, the health check will be considered unhealthy.
+    /// If the request takes longer than this value, the health check will be considered unhealthy.
+    /// Requests completing at exactly the threshold are considered healthy.
     /// Default: 5000ms (5 seconds)
     /// </summary>
     [JsonPropertyName("threshold-ms")]

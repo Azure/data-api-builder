@@ -21,7 +21,7 @@ public enum EmbeddingProviderType
 
     /// <summary>
     /// OpenAI embedding provider.
-    /// Lowercase "openai" is the serialized value.
     /// </summary>
+    [EnumMember(Value = "openai")]
     OpenAI
 }

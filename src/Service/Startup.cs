@@ -387,6 +387,19 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
+            // Register embedding service if configured
+            if (runtimeConfigAvailable
+                && runtimeConfig?.Runtime?.IsEmbeddingsConfigured == true)
+            {
+                EmbeddingsOptions embeddingsOptions = runtimeConfig.Runtime.Embeddings;
+                services.AddHttpClient<IEmbeddingService, EmbeddingService>(client =>
+                {
+                    // Base configuration is done in the EmbeddingService constructor
+                }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler());
+
+                services.AddSingleton(embeddingsOptions);
+            }
+
             AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
 
             // Subscribe the GraphQL schema refresh method to the specific hot-reload event

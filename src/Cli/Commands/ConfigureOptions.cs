@@ -71,6 +71,13 @@ namespace Cli.Commands
             RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
+            EmbeddingProviderType? runtimeEmbeddingsProvider = null,
+            string? runtimeEmbeddingsEndpoint = null,
+            string? runtimeEmbeddingsApiKey = null,
+            string? runtimeEmbeddingsModel = null,
+            string? runtimeEmbeddingsApiVersion = null,
+            int? runtimeEmbeddingsDimensions = null,
+            int? runtimeEmbeddingsTimeoutMs = null,
             string? config = null)
             : base(config)
         {
@@ -132,6 +139,14 @@ namespace Cli.Commands
             FileSinkRollingInterval = fileSinkRollingInterval;
             FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
             FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
+            // Embeddings
+            RuntimeEmbeddingsProvider = runtimeEmbeddingsProvider;
+            RuntimeEmbeddingsEndpoint = runtimeEmbeddingsEndpoint;
+            RuntimeEmbeddingsApiKey = runtimeEmbeddingsApiKey;
+            RuntimeEmbeddingsModel = runtimeEmbeddingsModel;
+            RuntimeEmbeddingsApiVersion = runtimeEmbeddingsApiVersion;
+            RuntimeEmbeddingsDimensions = runtimeEmbeddingsDimensions;
+            RuntimeEmbeddingsTimeoutMs = runtimeEmbeddingsTimeoutMs;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -280,6 +295,27 @@ namespace Cli.Commands
 
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
         public long? FileSinkFileSizeLimitBytes { get; }
+
+        [Option("runtime.embeddings.provider", Required = false, HelpText = "Configure embedding provider type. Allowed values: azure-openai, openai.")]
+        public EmbeddingProviderType? RuntimeEmbeddingsProvider { get; }
+
+        [Option("runtime.embeddings.endpoint", Required = false, HelpText = "Configure the embedding provider base URL endpoint.")]
+        public string? RuntimeEmbeddingsEndpoint { get; }
+
+        [Option("runtime.embeddings.api-key", Required = false, HelpText = "Configure the embedding API key for authentication.")]
+        public string? RuntimeEmbeddingsApiKey { get; }
+
+        [Option("runtime.embeddings.model", Required = false, HelpText = "Configure the model/deployment name. Required for Azure OpenAI, defaults to text-embedding-3-small for OpenAI.")]
+        public string? RuntimeEmbeddingsModel { get; }
+
+        [Option("runtime.embeddings.api-version", Required = false, HelpText = "Configure the Azure API version. Only used for Azure OpenAI provider. Default: 2024-02-01")]
+        public string? RuntimeEmbeddingsApiVersion { get; }
+
+        [Option("runtime.embeddings.dimensions", Required = false, HelpText = "Configure the output vector dimensions. Optional, uses model default if not specified.")]
+        public int? RuntimeEmbeddingsDimensions { get; }
+
+        [Option("runtime.embeddings.timeout-ms", Required = false, HelpText = "Configure the request timeout in milliseconds. Default: 30000")]
+        public int? RuntimeEmbeddingsTimeoutMs { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

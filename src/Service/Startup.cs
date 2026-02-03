@@ -392,11 +392,7 @@ namespace Azure.DataApiBuilder.Service
                 && runtimeConfig?.Runtime?.IsEmbeddingsConfigured == true)
             {
                 EmbeddingsOptions embeddingsOptions = runtimeConfig.Runtime.Embeddings;
-                services.AddHttpClient<IEmbeddingService, EmbeddingService>(client =>
-                {
-                    // Base configuration is done in the EmbeddingService constructor
-                }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler());
-
+                services.AddHttpClient<IEmbeddingService, EmbeddingService>();
                 services.AddSingleton(embeddingsOptions);
             }
 

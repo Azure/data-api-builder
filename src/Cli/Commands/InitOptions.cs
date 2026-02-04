@@ -94,7 +94,7 @@ namespace Cli.Commands
         [Option("cors-origin", Separator = ',', Required = false, HelpText = "Specify the list of allowed origins.")]
         public IEnumerable<string>? CorsOrigin { get; }
 
-        [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
+        [Option("auth.provider", Default = "AppService", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
 
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]

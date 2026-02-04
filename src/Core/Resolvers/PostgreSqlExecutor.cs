@@ -184,8 +184,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// preventing errors like "operator does not exist: date >= text".
         /// </summary>
         /// <param name="parameterEntry">The parameter entry containing the value and optional DbType.</param>
-        /// <param name="parameter">The NpgsqlParameter to populate.</param>
-        public static void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, NpgsqlParameter parameter)
+        /// <param name="parameter">The DbParameter to populate.</param>
+        public override void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
         {
             if (parameterEntry.Value is not null && parameterEntry.Value.DbType is not null)
             {

@@ -117,7 +117,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return type switch
             {
                 BYTE_TYPE => false,
-                DATE_TYPE => false,
                 SMALLDATETIME_TYPE => false,
                 DATETIME2_TYPE => false,
                 DATETIMEOFFSET_TYPE => false,
@@ -140,6 +139,152 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             {
                 return columnName;
             }
+        }
+
+        /// <summary>
+        /// Tests DATE type filtering with various comparison operators.
+        /// This validates the fix for issue #3094 where DATE filtering failed with
+        /// "operator does not exist: date >= text" error.
+        /// The fix ensures DbType.Date is set on parameters to prevent ::text casting.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DATE_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", "=",
+            DisplayName = "DATE filter with eq operator")]
+        [DataRow(DATE_TYPE, "gt", "'1753-01-01'", "\"1753-01-01\"", ">",
+            DisplayName = "DATE filter with gt operator")]
+        [DataRow(DATE_TYPE, "gte", "'1999-01-08'", "\"1999-01-08\"", ">=",
+            DisplayName = "DATE filter with gte operator")]
+        [DataRow(DATE_TYPE, "lt", "'9999-12-31'", "\"9999-12-31\"", "<",
+            DisplayName = "DATE filter with lt operator")]
+        [DataRow(DATE_TYPE, "lte", "'2000-06-15'", "\"2000-06-15\"", "<=",
+            DisplayName = "DATE filter with lte operator")]
+        [DataRow(DATE_TYPE, "neq", "'1753-01-01'", "\"1753-01-01\"", "!=",
+            DisplayName = "DATE filter with neq operator")]
+        public async Task PostgreSQL_DateTypeFilterAndOrderBy(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
+        /// <summary>
+        /// Tests TIMESTAMP type filtering with various comparison operators.
+        /// This validates the fix for issue #3094 where TIMESTAMP filtering failed with
+        /// "operator does not exist: timestamp >= text" error.
+        /// The fix ensures DbType.DateTime is set on parameters to prevent ::text casting.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:54'", "\"1999-01-08 10:23:54\"", "=",
+            DisplayName = "TIMESTAMP filter with eq operator")]
+        [DataRow(DATETIME_TYPE, "gt", "'1753-01-01 00:00:00'", "\"1753-01-01 00:00:00\"", ">",
+            DisplayName = "TIMESTAMP filter with gt operator")]
+        [DataRow(DATETIME_TYPE, "gte", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", ">=",
+            DisplayName = "TIMESTAMP filter with gte operator")]
+        [DataRow(DATETIME_TYPE, "lt", "'9999-12-31 23:59:59'", "\"9999-12-31 23:59:59\"", "<",
+            DisplayName = "TIMESTAMP filter with lt operator")]
+        [DataRow(DATETIME_TYPE, "lte", "'1999-01-08 10:23:54'", "\"1999-01-08 10:23:54\"", "<=",
+            DisplayName = "TIMESTAMP filter with lte operator")]
+        [DataRow(DATETIME_TYPE, "neq", "'1753-01-01 00:00:00'", "\"1753-01-01 00:00:00\"", "!=",
+            DisplayName = "TIMESTAMP filter with neq operator")]
+        public async Task PostgreSQL_TimestampTypeFilterAndOrderBy(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
+        /// <summary>
+        /// Tests the specific scenario from issue #3094:
+        /// GraphQL query with gte filter on a date field should work without
+        /// "operator does not exist: date >= text" error.
+        /// 
+        /// Example query that should work:
+        /// query {
+        ///   supportedTypes(filter: { date_types: { gte: "2024-01-01" } }) {
+        ///     items { date_types }
+        ///   }
+        /// }
+        /// </summary>
+        [TestMethod]
+        public async Task PostgreSQL_DateGteFilter_NoTextCastingError()
+        {
+            if (!IsSupportedType(DATE_TYPE))
+            {
+                Assert.Inconclusive("DATE type not supported");
+            }
+
+            string field = "date_types";
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes(first: 100 orderBy: { typeid: ASC } filter: { " + field + @": { gte: ""1999-01-08"" } }) {
+                    items {
+                        typeid, " + field + @"
+                    }
+                }
+            }";
+
+            // Execute the query - this should not throw "operator does not exist: date >= text"
+            System.Text.Json.JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+
+            // Verify we got results (not an error)
+            Assert.IsTrue(actual.TryGetProperty("items", out System.Text.Json.JsonElement items), "Expected 'items' property in response");
+            Assert.IsTrue(items.GetArrayLength() > 0, "Expected at least one result for gte filter on date");
+        }
+
+        /// <summary>
+        /// Tests the specific scenario from issue #3094:
+        /// GraphQL query with gte filter on a timestamp field should work without
+        /// "operator does not exist: timestamp >= text" error.
+        /// </summary>
+        [TestMethod]
+        public async Task PostgreSQL_TimestampGteFilter_NoTextCastingError()
+        {
+            if (!IsSupportedType(DATETIME_TYPE))
+            {
+                Assert.Inconclusive("DATETIME type not supported");
+            }
+
+            string field = "datetime_types";
+            string graphQLQueryName = "supportedTypes";
+            string gqlQuery = @"{
+                supportedTypes(first: 100 orderBy: { typeid: ASC } filter: { " + field + @": { gte: ""1999-01-08T00:00:00.000Z"" } }) {
+                    items {
+                        typeid, " + field + @"
+                    }
+                }
+            }";
+
+            // Execute the query - this should not throw "operator does not exist: timestamp >= text"
+            System.Text.Json.JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+
+            // Verify we got results (not an error)
+            Assert.IsTrue(actual.TryGetProperty("items", out System.Text.Json.JsonElement items), "Expected 'items' property in response");
+            Assert.IsTrue(items.GetArrayLength() > 0, "Expected at least one result for gte filter on timestamp");
+        }
+
+        /// <summary>
+        /// Tests that other type conversions (int, string, boolean, etc.) are not broken
+        /// by the date/time DbType fix.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(INT_TYPE, "eq", "1", "1", "=", DisplayName = "Int filter still works")]
+        [DataRow(STRING_TYPE, "eq", "'lksa;jdflasdf;alsdflksdfkldj'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=", DisplayName = "String filter still works")]
+        [DataRow(BOOLEAN_TYPE, "eq", "'true'", "true", "=", DisplayName = "Boolean filter still works")]
+        [DataRow(DECIMAL_TYPE, "eq", "0.333333", "0.333333", "=", DisplayName = "Decimal filter still works")]
+        public async Task PostgreSQL_OtherTypeFilters_NotBroken(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
         /// <summary>

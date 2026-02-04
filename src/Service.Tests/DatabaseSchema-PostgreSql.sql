@@ -161,6 +161,7 @@ CREATE TABLE type_table(
     float_types float,
     decimal_types decimal(38, 19),
     boolean_types boolean,
+    date_types date,
     datetime_types timestamp,
     bytearray_types bytea,
     uuid_types uuid DEFAULT gen_random_uuid ()
@@ -349,14 +350,14 @@ INSERT INTO bookmarks (id, bkname)
 SELECT
 	value,
     CONCAT('Test Item #' , value)
-FROM 
+FROM
     GENERATE_SERIES(1, 10000, 1) as value;
 
 INSERT INTO mappedbookmarks (id, bkname)
 SELECT
 	value,
     CONCAT('Test Item #' , value)
-FROM 
+FROM
     GENERATE_SERIES(1, 10000, 1) as value;
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
@@ -366,7 +367,7 @@ INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (5, 'Filtered Reco
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO clubs(id, name) VALUES (1111, 'Manchester United'), (1112, 'FC Barcelona'), (1113, 'Real Madrid');
 INSERT INTO players(id, name, current_club_id, new_club_id)
-    VALUES 
+    VALUES
         (1, 'Cristiano Ronaldo', 1113, 1111),
         (2, 'Leonel Messi', 1112, 1113);
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
@@ -405,12 +406,12 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 INSERT INTO brokers("ID Number", "First Name", "Last Name") VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, True), (1, 1, 42.75, False);
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, True);
-INSERT INTO type_table(id, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, datetime_types, bytearray_types) VALUES
-    (1, 1, 1, 1, '', 0.33, 0.33, 0.333333, true, '1999-01-08 10:23:54', '\xABCDEF0123'),
-    (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, false, '19990108 10:23:00', '\x98AB7511AABB1234'),
-    (3, -32768, -2147483648, -9223372036854775808, '', -3.4E38, -1.7E308, 2.929292E-19, true, '1753-01-01 00:00:00.000', '\x00000000'),
-    (4, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, true, '9999-12-31 23:59:59.997', '\xFFFFFFFF'),
-    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO type_table(id, short_types, int_types, long_types, string_types, single_types, float_types, decimal_types, boolean_types, date_types, datetime_types, bytearray_types) VALUES
+    (1, 1, 1, 1, '', 0.33, 0.33, 0.333333, true, '1999-01-08', '1999-01-08 10:23:54', '\xABCDEF0123'),
+    (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, false, '2000-06-15', '19990108 10:23:00', '\x98AB7511AABB1234'),
+    (3, -32768, -2147483648, -9223372036854775808, '', -3.4E38, -1.7E308, 2.929292E-19, true, '1753-01-01', '1753-01-01 00:00:00.000', '\x00000000'),
+    (4, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, true, '9999-12-31', '9999-12-31 23:59:59.997', '\xFFFFFFFF'),
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 INSERT INTO trees("treeId", species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO trees("treeId", species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');

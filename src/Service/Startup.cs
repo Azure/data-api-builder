@@ -262,7 +262,13 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
-            services.AddSingleton<HealthCheckHelper>();
+            services.AddSingleton<HealthCheckHelper>(sp =>
+            {
+                ILogger<HealthCheckHelper> logger = sp.GetRequiredService<ILogger<HealthCheckHelper>>();
+                HttpUtilities httpUtility = sp.GetRequiredService<HttpUtilities>();
+                IEmbeddingService? embeddingService = sp.GetService<IEmbeddingService>();
+                return new HealthCheckHelper(logger, httpUtility, embeddingService);
+            });
             services.AddSingleton<HttpUtilities>();
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();

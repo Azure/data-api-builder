@@ -108,9 +108,10 @@ public class EmbeddingController : ControllerBase
                 {
                     text = JsonSerializer.Deserialize<string>(text) ?? text;
                 }
-                catch
+                catch (JsonException)
                 {
                     // Not valid JSON string, use as-is
+                    _logger.LogDebug("Request body is not a valid JSON string, using as plain text.");
                 }
             }
         }
@@ -151,9 +152,11 @@ public class EmbeddingController : ControllerBase
     private string GetClientRole()
     {
         StringValues roleHeader = Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-        if (roleHeader.Count == 1 && !string.IsNullOrEmpty(roleHeader[0]))
+        string? firstRole = roleHeader.Count == 1 ? roleHeader[0] : null;
+        
+        if (!string.IsNullOrEmpty(firstRole))
         {
-            return roleHeader[0]!.ToLowerInvariant();
+            return firstRole.ToLowerInvariant();
         }
 
         return EmbeddingsEndpointOptions.ANONYMOUS_ROLE;

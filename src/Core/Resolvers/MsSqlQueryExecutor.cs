@@ -82,7 +82,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
-            ConfigureMsSqlQueryEecutor();
+            ConfigureMsSqlQueryExecutor();
         }
 
         /// <summary>
@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Configure during construction or a hot-reload scenario.
         /// </summary>
-        private void ConfigureMsSqlQueryEecutor()
+        private void ConfigureMsSqlQueryExecutor()
         {
             IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = _runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType is DatabaseType.MSSQL || x.Value.DatabaseType is DatabaseType.DWSQL);
 

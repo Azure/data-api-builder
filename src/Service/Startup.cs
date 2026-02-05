@@ -481,6 +481,25 @@ namespace Azure.DataApiBuilder.Service
         {
             ConfigurationOptions options = ConfigurationOptions.Parse(connectionString);
 
+            if (ShouldUseEntraAuthForRedis(options))
+            {
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+            }
+
+            return await ConnectionMultiplexer.ConnectAsync(options);
+        }
+
+        /// <summary>
+        /// Determines whether Azure Entra authentication should be used.
+        /// Conditions:
+        /// - No password provided
+        /// - At least one endpoint is NOT localhost/loopback
+        /// </summary>
+        /// <param name="options">The Redis configuration options.</param>
+        /// <returns>True if Azure Entra authentication should be used; otherwise, false.</returns>
+        /// <remarks>Internal for testing.</remarks>
+        internal static bool ShouldUseEntraAuthForRedis(ConfigurationOptions options)
+        {
             // Determine if an endpoint is localhost/loopback
             static bool IsLocalhostEndpoint(EndPoint ep) => ep switch
             {
@@ -489,14 +508,8 @@ namespace Azure.DataApiBuilder.Service
                 _ => false,
             };
 
-            // If no password is provided, and the endpoint (or at least one of them) is non-localhost,
-            // attempt to use Entra authentication.
-            if (string.IsNullOrEmpty(options.Password) && options.EndPoints.Any(static ep => !IsLocalhostEndpoint(ep)))
-            {
-                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
-            }
-
-            return await ConnectionMultiplexer.ConnectAsync(options);
+            return string.IsNullOrEmpty(options.Password)
+                && options.EndPoints.Any(ep => !IsLocalhostEndpoint(ep));
         }
 
         /// <summary>

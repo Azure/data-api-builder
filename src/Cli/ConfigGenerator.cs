@@ -2894,7 +2894,7 @@ namespace Cli
             {
                 if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
                 {
-                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Expected: true or false.", options.TemplateMcpDmlTool);
+                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Valid values are: true, false", options.TemplateMcpDmlTool);
                     return null;
                 }
 
@@ -2957,7 +2957,7 @@ namespace Cli
             {
                 if (!Enum.TryParse<EntityCacheLevel>(options.TemplateCacheLevel, ignoreCase: true, out EntityCacheLevel cacheLevelValue))
                 {
-                    _logger.LogError("Invalid value for template.cache.level: {value}. Allowed values: L1, L1L2.", options.TemplateCacheLevel);
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntityCacheLevel>(options.TemplateCacheLevel));
                     return null;
                 }
 

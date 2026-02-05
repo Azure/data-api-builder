@@ -178,6 +178,7 @@ Supported types: `mssql`, `postgresql`, `cosmosdb_nosql`, `mysql`
 ### MCP Tools
 - Base Path:  `/mcp` (configurable)
 - Discover tools with MCP Inspector
+
 ## Common Commands
 
 ```bash
@@ -205,6 +206,39 @@ dab validate
 - Include configuration files, logs, and hosting model in issue reports
 - Run `dotnet format` before committing
 - Do not commit connection strings or other secrets
+
+### Commit Signing
+
+All commits should be signed to receive the verified badge on GitHub. Configure GPG or SSH signing:
+
+**GPG Signing:**
+```bash
+# Generate a GPG key
+gpg --full-generate-key
+
+# List keys and copy the key ID
+gpg --list-secret-keys --keyid-format=long
+
+# Configure Git to use the key
+git config --global user.signingkey <KEY_ID>
+git config --global commit.gpgsign true
+
+# Add GPG key to GitHub account
+gpg --armor --export <KEY_ID>
+```
+
+**SSH Signing:**
+```bash
+# Generate an SSH key
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# Configure Git to use SSH signing
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+git config --global commit.gpgsign true
+
+# Add SSH key to GitHub account as signing key
+```
 
 ## References
 

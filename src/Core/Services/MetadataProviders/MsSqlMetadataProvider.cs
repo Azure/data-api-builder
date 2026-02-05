@@ -292,19 +292,9 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        // TODO: Finish implementation of autoentities generation in task #3052
         protected override async Task GenerateAutoentitiesIntoEntities()
         {
-            await Task.CompletedTask; // Temporary await to suppress build errors.
-
-            /*RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            if (runtimeConfig.Autoentities is not null)
-            {
-                foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
-                {
-                    JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
-                }
-            }*/
+            await Task.CompletedTask;
         }
 
         public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)

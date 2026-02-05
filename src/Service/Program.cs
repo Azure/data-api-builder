@@ -5,16 +5,19 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Telemetry;
+using Azure.DataApiBuilder.Service.Utilities;
 using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.ApplicationInsights;
@@ -33,6 +36,14 @@ namespace Azure.DataApiBuilder.Service
 
         public static void Main(string[] args)
         {
+            bool runMcpStdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? mcpRole);
+
+            if (runMcpStdio)
+            {
+                Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+                Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+            }
+
             if (!ValidateAspNetCoreUrls())
             {
                 Console.Error.WriteLine("Invalid ASPNETCORE_URLS format. e.g.: ASPNETCORE_URLS=\"http://localhost:5000;https://localhost:5001\"");
@@ -40,20 +51,26 @@ namespace Azure.DataApiBuilder.Service
                 return;
             }
 
-            if (!StartEngine(args))
+            if (!StartEngine(args, runMcpStdio, mcpRole))
             {
                 Environment.ExitCode = -1;
             }
         }
 
-        public static bool StartEngine(string[] args)
+        public static bool StartEngine(string[] args, bool runMcpStdio, string? mcpRole)
         {
-            // Unable to use ILogger because this code is invoked before LoggerFactory
-            // is instantiated.
             Console.WriteLine("Starting the runtime engine...");
             try
             {
-                CreateHostBuilder(args).Build().Run();
+                IHost host = CreateHostBuilder(args, runMcpStdio, mcpRole).Build();
+
+                if (runMcpStdio)
+                {
+                    return McpStdioHelper.RunMcpStdioHost(host);
+                }
+
+                // Normal web mode
+                host.Run();
                 return true;
             }
             // Catch exception raised by explicit call to IHostApplicationLifetime.StopApplication()
@@ -72,17 +89,28 @@ namespace Azure.DataApiBuilder.Service
             }
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args)
+        // Compatibility overload used by external callers that do not pass the runMcpStdio flag.
+        public static bool StartEngine(string[] args)
+        {
+            bool runMcpStdio = McpStdioHelper.ShouldRunMcpStdio(args, out string? mcpRole);
+            return StartEngine(args, runMcpStdio, mcpRole: mcpRole);
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args, bool runMcpStdio, string? mcpRole)
         {
             return Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration(builder =>
                 {
                     AddConfigurationProviders(builder, args);
+                    if (runMcpStdio)
+                    {
+                        McpStdioHelper.ConfigureMcpStdio(builder, mcpRole);
+                    }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     Startup.MinimumLogLevel = GetLogLevelFromCommandLineArgs(args, out Startup.IsLogLevelOverriddenByCli);
-                    ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel);
+                    ILoggerFactory loggerFactory = GetLoggerFactoryForLogLevel(Startup.MinimumLogLevel, stdio: runMcpStdio);
                     ILogger<Startup> startupLogger = loggerFactory.CreateLogger<Startup>();
                     DisableHttpsRedirectionIfNeeded(args);
                     webBuilder.UseStartup(builder => new Startup(builder.Configuration, startupLogger));
@@ -140,7 +168,14 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="appTelemetryClient">Telemetry client</param>
         /// <param name="logLevelInitializer">Hot-reloadable log level</param>
         /// <param name="serilogLogger">Core Serilog logging pipeline</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null, LogLevelInitializer? logLevelInitializer = null, Logger? serilogLogger = null)
+        /// <param name="stdio">Whether the logger is for stdio mode</param>
+        /// <returns>ILoggerFactory</returns>
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(
+            LogLevel logLevel,
+            TelemetryClient? appTelemetryClient = null,
+            LogLevelInitializer? logLevelInitializer = null,
+            Logger? serilogLogger = null,
+            bool stdio = false)
         {
             return LoggerFactory
                 .Create(builder =>
@@ -229,7 +264,19 @@ namespace Azure.DataApiBuilder.Service
                         }
                     }
 
-                    builder.AddConsole();
+                    // In stdio mode, route console logs to STDERR to keep STDOUT clean for MCP JSON
+                    if (stdio)
+                    {
+                        builder.ClearProviders();
+                        builder.AddConsole(options =>
+                        {
+                            options.LogToStandardErrorThreshold = LogLevel.Trace;
+                        });
+                    }
+                    else
+                    {
+                        builder.AddConsole();
+                    }
                 });
         }
 

@@ -138,7 +138,7 @@ namespace Cli.Tests
                             ""allow-credentials"": false
                         }},
                         ""authentication"": {{
-                            ""provider"": ""StaticWebApps""
+                            ""provider"": ""AppService""
                         }}
                     }},
                     {telemetrySection}

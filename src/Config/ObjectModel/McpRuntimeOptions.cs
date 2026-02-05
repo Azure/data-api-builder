@@ -30,11 +30,18 @@ public record McpRuntimeOptions
     [JsonConverter(typeof(DmlToolsConfigConverter))]
     public DmlToolsConfig? DmlTools { get; init; }
 
+    /// <summary>
+    /// Description of the MCP server to be exposed in the initialize response
+    /// </summary>
+    [JsonPropertyName("description")]
+    public string? Description { get; init; }
+
     [JsonConstructor]
     public McpRuntimeOptions(
         bool? Enabled = null,
         string? Path = null,
-        DmlToolsConfig? DmlTools = null)
+        DmlToolsConfig? DmlTools = null,
+        string? Description = null)
     {
         this.Enabled = Enabled ?? true;
 
@@ -58,6 +65,8 @@ public record McpRuntimeOptions
         {
             this.DmlTools = DmlTools;
         }
+
+        this.Description = Description;
     }
 
     /// <summary>

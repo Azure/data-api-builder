@@ -65,6 +65,10 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsLinkingEntity);
         // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
         VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
+        // Ignore the UserProvidedCustomToolEnabled. They aren't serialized to our config file, enforced by EntityMcpOptionsConverterFactory.
+        VerifierSettings.IgnoreMember<EntityMcpOptions>(mcpOptions => mcpOptions.UserProvidedCustomToolEnabled);
+        // Ignore the UserProvidedDmlToolsEnabled. They aren't serialized to our config file, enforced by EntityMcpOptionsConverterFactory.
+        VerifierSettings.IgnoreMember<EntityMcpOptions>(mcpOptions => mcpOptions.UserProvidedDmlToolsEnabled);
         // Ignore the IsRequestBodyStrict as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRequestBodyStrict);
         // Ignore the IsGraphQLEnabled as that's unimportant from a test standpoint.
@@ -77,6 +81,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.McpDmlTools);
         // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
+        // Ignore the IsAppServiceIdentityProvider as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsAppServiceIdentityProvider);
         // Ignore the RestPath as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.RestPath);
         // Ignore the GraphQLPath as that's unimportant from a test standpoint.

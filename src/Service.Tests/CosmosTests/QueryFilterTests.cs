@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -11,6 +12,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
+using static Azure.DataApiBuilder.Core.AuthenticationHelpers.AppServiceAuthentication;
 using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
@@ -280,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, bool ignoreBlankResults = false, Dictionary<string, object> variables = null)
         {
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken, variables: variables);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             ValidateResults(actual.GetProperty("items"), expected.RootElement, ignoreBlankResults);
@@ -898,6 +900,31 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// Test filters on two different nested objects simultaneously
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterOnTwoDifferentNestedObjects()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
+                    character: { name: { eq: ""planet character"" } },
+                    earth: { type: { eq: ""earth4"" } }
+                })
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = "SELECT c.id, c.name FROM c " +
+                "WHERE c.character.name = \"planet character\" AND c.earth.type = \"earth4\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
         /// For "item-level-permission-role" role, DB policies are defined. This test confirms that all the DB policies are considered.
         /// For the reference, Below conditions are applied for an Entity in Db Config file.
         /// MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"
@@ -918,11 +945,19 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Now get the item with item level permission
             string clientRoleHeader = "item-level-permission-role";
-            // string clientRoleHeader = "authenticated";
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]),
                 clientRoleHeader: clientRoleHeader);
 
             string dbQuery = $"SELECT c.id " +
@@ -980,11 +1015,22 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
             string clientRoleHeader = "limited-read-role";
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]);
+
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: authToken,
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1012,7 +1058,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 queryName: "planets",
                 query: gqlQuery,
                 variables: new() { },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             Assert.AreEqual(response.GetProperty("items")[0].GetProperty("name").ToString(), "Earth");
@@ -1037,7 +1083,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken();
             JsonElement actual = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery, authToken: authToken);
             Assert.AreEqual(actual.GetProperty("items")[0].GetProperty("earth").GetProperty("id").ToString(), _idList[0]);
         }
@@ -1065,11 +1111,22 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string clientRoleHeader = "limited-read-role";
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]);
+
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: authToken,
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1100,7 +1157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
@@ -1131,7 +1188,17 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string clientRoleHeader = "limited-read-role";
-            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader);
+
+            AppServiceClaim roleClaim = new()
+            {
+                Val = clientRoleHeader,
+                Typ = ClaimTypes.Role
+            };
+
+            // For App Service, roles must exist as claims on the principal
+            // (in addition to X-MS-API-ROLE) for DAB authZ to allow the request.
+            // SWA tests passed without this because SWA uses a looser, header-driven role model.
+            string authToken = AuthTestHelper.CreateAppServiceEasyAuthToken(additionalClaims: [roleClaim]);
             JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName,
                 query: gqlQuery,
                 authToken: authToken,
@@ -1190,7 +1257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                authToken: AuthTestHelper.CreateAppServiceEasyAuthToken(),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.

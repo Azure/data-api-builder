@@ -292,19 +292,73 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        // TODO: Finish implementation of autoentities generation in task #3052
         protected override async Task GenerateAutoentitiesIntoEntities()
         {
-            await Task.CompletedTask; // Temporary await to suppress build errors.
-
-            /*RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            if (runtimeConfig.Autoentities is not null)
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            Dictionary<string, Entity> entities = (Dictionary<string, Entity>)_entities;
+            if (runtimeConfig.Autoentities is null)
             {
-                foreach ((string name, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
+                return;
+            }
+
+            foreach ((string autoentityName, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
+            {
+                JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
+                if (resultArray is null)
                 {
-                    JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
+                    continue;
                 }
-            }*/
+
+                foreach (JsonObject resultObject in resultArray!)
+                {
+                    // Extract the entity name, schema, and database object name from the query result.
+                    // The SQL query returns these values with placeholders already replaced.
+
+                    // TODO: change it so that we don't need to verify if the names are null
+                    string? entityName = resultObject["entity_name"]?.GetValue<string>();
+                    string? schemaName = resultObject["schema"]?.GetValue<string>();
+                    string? objectName = resultObject["object"]?.GetValue<string>();
+
+                    if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName))
+                    {
+                        _logger.LogError("Skipping autoentity generation: entity_name or object is null or empty for autoentity pattern '{AutoentityName}'.", autoentityName);
+                        continue;
+                    }
+
+                    // Create the entity using the template settings and permissions from the autoentity configuration.
+                    // Currently the source type is always Table for auto-generated entities from database objects.
+                    Entity generatedEntity = new(
+                        Source: new EntitySource(
+                            Object: objectName,
+                            Type: EntitySourceType.Table,
+                            Parameters: null,
+                            KeyFields: null),
+                        GraphQL: autoentity.Template.GraphQL,
+                        Rest: autoentity.Template.Rest,
+                        Mcp: autoentity.Template.Mcp,
+                        Permissions: autoentity.Permissions,
+                        Cache: autoentity.Template.Cache,
+                        Health: autoentity.Template.Health,
+                        Fields: null,
+                        Relationships: null,
+                        Mappings: new());
+
+                    // Add the generated entity to the linking entities dictionary.
+                    // This allows the entity to be processed later during metadata population.
+                    // TODO: Add new log message that shows if the rest calls are enabled or disabled for each of this new entities
+                    if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddEntityNameToDataSourceName(entityName))
+                    {
+                        // TODO: need to make a better message that includes if the conflict is with a user-defined entity or another auto-generated entity.
+                        throw new DataApiBuilderException(
+                            message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentity pattern '{autoentityName}'.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+                }
+            }
+
+            // TODO: include warning message that no autoentities were created if it is the same number between the _entities and the new entities.
+            _entities = entities;
         }
 
         public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)

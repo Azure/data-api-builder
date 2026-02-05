@@ -245,6 +245,11 @@ public record RuntimeConfig
         return _entityPathNameToEntityName.TryGetValue(entityPathName, out entityName);
     }
 
+    public bool TryAddEntityNameToDataSourceName(string entityName)
+    {
+        return _entityNameToDataSourceName.TryAdd(entityName, this.DefaultDataSourceName);
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.

@@ -94,6 +94,7 @@ dotnet test --filter "TestCategory=CosmosDb_NoSql"
 - **Character encoding**: UTF-8
 - **Trailing whitespace**: Removed
 - **Final newline**: Required
+- Refer to `.\src\.editorconfig` for additional formatting conventions.
 
 ### Running Code Formatter
 

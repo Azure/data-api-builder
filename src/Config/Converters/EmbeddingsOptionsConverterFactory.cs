@@ -102,10 +102,10 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                         timeoutMs = reader.GetInt32();
                         break;
                     case "endpoint":
-                        endpoint = JsonSerializer.Deserialize<EmbeddingsEndpointOptions>(ref reader, options);
+                        endpoint = ReadEndpointOptions(ref reader, options);
                         break;
                     case "health":
-                        health = JsonSerializer.Deserialize<EmbeddingsHealthCheckConfig>(ref reader, options);
+                        health = ReadHealthCheckConfig(ref reader, options);
                         break;
                     default:
                         reader.Skip();
@@ -139,6 +139,112 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 TimeoutMs: timeoutMs,
                 Endpoint: endpoint,
                 Health: health);
+        }
+
+        /// <summary>
+        /// Manually deserializes EmbeddingsEndpointOptions to handle the type mismatch
+        /// between nullable constructor parameters and non-nullable properties.
+        /// Follows the same pattern as FileSinkConverter.
+        /// </summary>
+        private static EmbeddingsEndpointOptions ReadEndpointOptions(ref Utf8JsonReader reader, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new JsonException("Expected start of object for endpoint.");
+            }
+
+            bool? enabled = null;
+            string? path = null;
+            string[]? roles = null;
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    return new EmbeddingsEndpointOptions(enabled: enabled, path: path, roles: roles);
+                }
+
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    throw new JsonException("Expected property name in endpoint.");
+                }
+
+                string? propName = reader.GetString()?.ToLowerInvariant();
+                reader.Read();
+
+                switch (propName)
+                {
+                    case "enabled":
+                        enabled = reader.GetBoolean();
+                        break;
+                    case "path":
+                        path = JsonSerializer.Deserialize<string>(ref reader, options);
+                        break;
+                    case "roles":
+                        roles = JsonSerializer.Deserialize<string[]>(ref reader, options);
+                        break;
+                    default:
+                        reader.Skip();
+                        break;
+                }
+            }
+
+            throw new JsonException("Failed to read the EmbeddingsEndpointOptions.");
+        }
+
+        /// <summary>
+        /// Manually deserializes EmbeddingsHealthCheckConfig to handle the type mismatch
+        /// between nullable constructor parameters and non-nullable properties.
+        /// Follows the same pattern as FileSinkConverter.
+        /// </summary>
+        private static EmbeddingsHealthCheckConfig ReadHealthCheckConfig(ref Utf8JsonReader reader, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new JsonException("Expected start of object for health.");
+            }
+
+            bool? enabled = null;
+            int? thresholdMs = null;
+            string? testText = null;
+            int? expectedDimensions = null;
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    return new EmbeddingsHealthCheckConfig(enabled: enabled, thresholdMs: thresholdMs, testText: testText, expectedDimensions: expectedDimensions);
+                }
+
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    throw new JsonException("Expected property name in health.");
+                }
+
+                string? propName = reader.GetString()?.ToLowerInvariant();
+                reader.Read();
+
+                switch (propName)
+                {
+                    case "enabled":
+                        enabled = reader.GetBoolean();
+                        break;
+                    case "threshold-ms":
+                        thresholdMs = reader.GetInt32();
+                        break;
+                    case "test-text":
+                        testText = JsonSerializer.Deserialize<string>(ref reader, options);
+                        break;
+                    case "expected-dimensions":
+                        expectedDimensions = reader.GetInt32();
+                        break;
+                    default:
+                        reader.Skip();
+                        break;
+                }
+            }
+
+            throw new JsonException("Failed to read the EmbeddingsHealthCheckConfig.");
         }
 
         public override void Write(Utf8JsonWriter writer, EmbeddingsOptions value, JsonSerializerOptions options)

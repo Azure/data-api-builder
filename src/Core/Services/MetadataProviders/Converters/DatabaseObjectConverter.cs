@@ -99,11 +99,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         /// </summary>
         private static SourceDefinition GetSourceDefinitionWithEscapedColumns(SourceDefinition sourceDef)
         {
-            if (sourceDef == null)
-            {
-                throw new ArgumentNullException(nameof(sourceDef));
-            }
-
             // If no columns or no columns starting with '$', return original
             if (sourceDef.Columns is null || sourceDef.Columns.Count == 0 ||
                 !sourceDef.Columns.Keys.Any(k => k.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal)))

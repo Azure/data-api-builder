@@ -83,6 +83,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateLoggerFilters(runtimeConfig);
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
+        ValidateSemanticCacheConfiguration(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -1517,5 +1518,106 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Validates semantic cache configuration when semantic caching is enabled.
+    /// Ensures required Azure Managed Redis and embedding provider settings are provided.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime configuration to validate.</param>
+    public void ValidateSemanticCacheConfiguration(RuntimeConfig runtimeConfig)
+    {
+        // Skip validation if semantic cache is not configured or not enabled
+        if (runtimeConfig.Runtime?.SemanticCache is null || !runtimeConfig.IsSemanticCachingEnabled)
+        {
+            return;
+        }
+
+        SemanticCacheOptions semanticCacheConfig = runtimeConfig.Runtime.SemanticCache;
+
+        // Validate Azure Managed Redis configuration
+        if (semanticCacheConfig.AzureManagedRedis is null)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Semantic cache requires Azure Managed Redis configuration when enabled.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(semanticCacheConfig.AzureManagedRedis.ConnectionString))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Semantic cache requires a Redis connection string when enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
+        // Validate Embedding Provider configuration
+        if (semanticCacheConfig.EmbeddingProvider is null)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Semantic cache requires embedding provider configuration when enabled.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(semanticCacheConfig.EmbeddingProvider.Endpoint))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Semantic cache requires an embedding provider endpoint when enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (string.IsNullOrWhiteSpace(semanticCacheConfig.EmbeddingProvider.ApiKey))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Semantic cache requires an embedding provider API key when enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (string.IsNullOrWhiteSpace(semanticCacheConfig.EmbeddingProvider.Model))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Semantic cache requires an embedding provider model when enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
+        // Validate similarity threshold range
+        if (semanticCacheConfig.SimilarityThreshold.HasValue)
+        {
+            double threshold = semanticCacheConfig.SimilarityThreshold.Value;
+            if (threshold < 0.0 || threshold > 1.0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Semantic cache similarity threshold must be between 0.0 and 1.0. Current value: {threshold}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
+        // Validate max results is positive
+        if (semanticCacheConfig.MaxResults.HasValue && semanticCacheConfig.MaxResults.Value <= 0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Semantic cache max results must be greater than 0. Current value: {semanticCacheConfig.MaxResults.Value}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // Validate expire seconds is positive
+        if (semanticCacheConfig.ExpireSeconds.HasValue && semanticCacheConfig.ExpireSeconds.Value <= 0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Semantic cache expire seconds must be greater than 0. Current value: {semanticCacheConfig.ExpireSeconds.Value}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
     }
 }

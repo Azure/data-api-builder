@@ -48,6 +48,16 @@ public record RuntimeConfig
         Runtime.IsCachingEnabled;
 
     /// <summary>
+    /// Retrieves the value of runtime.SemanticCache.Enabled property if present, default is false.
+    /// Semantic caching is enabled only when explicitly set to true.
+    /// </summary>
+    /// <returns>Whether semantic caching is globally enabled.</returns>
+    [JsonIgnore]
+    public bool IsSemanticCachingEnabled =>
+        Runtime is not null &&
+        Runtime.IsSemanticCachingEnabled;
+
+    /// <summary>
     /// Retrieves the value of runtime.rest.request-body-strict property if present, default is true.
     /// </summary>
     [JsonIgnore]

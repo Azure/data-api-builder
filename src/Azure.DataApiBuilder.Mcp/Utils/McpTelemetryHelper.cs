@@ -60,9 +60,10 @@ namespace Azure.DataApiBuilder.Mcp.Utils
 
                 return (entityName, null);
             }
-            catch
+            catch (Exception ex) when (ex is InvalidOperationException || ex is ArgumentException)
             {
-                // If metadata extraction fails, return null values
+                // If configuration access fails due to invalid state or arguments, return null values
+                // This is expected during startup or configuration changes
                 return (null, null);
             }
         }

@@ -122,8 +122,17 @@ namespace Azure.DataApiBuilder.Mcp.Core
                             }
                             catch (Exception ex)
                             {
-                                // Track exception in telemetry
-                                activity?.TrackMcpToolExecutionFinishedWithException(ex, errorCode: "ExecutionFailed");
+                                // Track exception in telemetry with specific error code based on exception type
+                                string errorCode = ex switch
+                                {
+                                    OperationCanceledException => McpTelemetryErrorCodes.OPERATION_CANCELLED,
+                                    UnauthorizedAccessException => McpTelemetryErrorCodes.AUTHENTICATION_FAILED,
+                                    System.Data.Common.DbException => McpTelemetryErrorCodes.DATABASE_ERROR,
+                                    ArgumentException => McpTelemetryErrorCodes.INVALID_REQUEST,
+                                    _ => McpTelemetryErrorCodes.EXECUTION_FAILED
+                                };
+
+                                activity?.TrackMcpToolExecutionFinishedWithException(ex, errorCode: errorCode);
                                 throw;
                             }
                             finally

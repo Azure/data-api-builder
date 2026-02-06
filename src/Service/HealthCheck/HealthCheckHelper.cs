@@ -10,7 +10,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Product;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -27,20 +29,24 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Dependencies
         private ILogger<HealthCheckHelper> _logger;
         private HttpUtilities _httpUtility;
+        private IEmbeddingService? _embeddingService;
         private string _incomingRoleHeader = string.Empty;
         private string _incomingRoleToken = string.Empty;
 
         private const string TIME_EXCEEDED_ERROR_MESSAGE = "The threshold for executing the request has exceeded.";
+        private const string DIMENSIONS_MISMATCH_ERROR_MESSAGE = "The embedding dimensions do not match the expected dimensions.";
 
         /// <summary>
         /// Constructor to inject the logger and HttpUtility class.
         /// </summary>
         /// <param name="logger">Logger to track the log statements.</param>
         /// <param name="httpUtility">HttpUtility to call methods from the internal class.</param>
-        public HealthCheckHelper(ILogger<HealthCheckHelper> logger, HttpUtilities httpUtility)
+        /// <param name="embeddingService">Optional embedding service for embedding health checks.</param>
+        public HealthCheckHelper(ILogger<HealthCheckHelper> logger, HttpUtilities httpUtility, IEmbeddingService? embeddingService = null)
         {
             _logger = logger;
             _httpUtility = httpUtility;
+            _embeddingService = embeddingService;
         }
 
         /// <summary>
@@ -137,14 +143,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Updates the DAB configuration details coming from RuntimeConfig for the Health report.
         private static void UpdateDabConfigurationDetails(ref ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
         {
+            bool embeddingsEnabled = runtimeConfig?.Runtime?.Embeddings?.Enabled ?? false;
+            bool embeddingsEndpointEnabled = embeddingsEnabled && (runtimeConfig?.Runtime?.Embeddings?.IsEndpointEnabled ?? false);
+
             comprehensiveHealthCheckReport.ConfigurationDetails = new ConfigurationDetails
             {
-                Rest = runtimeConfig.IsRestEnabled,
-                GraphQL = runtimeConfig.IsGraphQLEnabled,
-                Mcp = runtimeConfig.IsMcpEnabled,
-                Caching = runtimeConfig.IsCachingEnabled,
+                Rest = runtimeConfig?.IsRestEnabled ?? false,
+                GraphQL = runtimeConfig?.IsGraphQLEnabled ?? false,
+                Mcp = runtimeConfig?.IsMcpEnabled ?? false,
+                Caching = runtimeConfig?.IsCachingEnabled ?? false,
                 Telemetry = runtimeConfig?.Runtime?.Telemetry != null,
-                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Production, // Modify to runtimeConfig.HostMode in Roles PR
+                Mode = runtimeConfig?.Runtime?.Host?.Mode ?? HostMode.Production,
+                Embeddings = embeddingsEnabled,
+                EmbeddingsEndpoint = embeddingsEndpointEnabled
             };
         }
 
@@ -154,6 +165,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             comprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
             await UpdateDataSourceHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
             await UpdateEntityHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
+            await UpdateEmbeddingsHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
         }
 
         // Updates the DataSource Health Check Results in the response.
@@ -345,6 +357,109 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             }
 
             return (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
+        }
+
+        /// <summary>
+        /// Updates the Embeddings Health Check Results in the response.
+        /// Executes a test embedding and validates response time and optionally dimensions.
+        /// </summary>
+        private async Task UpdateEmbeddingsHealthCheckResultsAsync(ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
+        {
+            EmbeddingsOptions? embeddingsOptions = runtimeConfig?.Runtime?.Embeddings;
+            EmbeddingsHealthCheckConfig? healthConfig = embeddingsOptions?.Health;
+
+            // Only run health check if embeddings is enabled, health check is enabled, and embedding service is available
+            if (embeddingsOptions is null || !embeddingsOptions.Enabled || healthConfig is null || !healthConfig.Enabled || _embeddingService is null)
+            {
+                return;
+            }
+
+            if (comprehensiveHealthCheckReport.Checks is null)
+            {
+                comprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
+            }
+
+            string testText = healthConfig.TestText;
+            int thresholdMs = healthConfig.ThresholdMs;
+            int? expectedDimensions = healthConfig.ExpectedDimensions;
+
+            try
+            {
+                Stopwatch stopwatch = new();
+                stopwatch.Start();
+                EmbeddingResult result = await _embeddingService.TryEmbedAsync(testText);
+                stopwatch.Stop();
+
+                int responseTimeMs = (int)stopwatch.ElapsedMilliseconds;
+                bool isResponseTimeWithinThreshold = responseTimeMs <= thresholdMs;
+                bool isDimensionsValid = true;
+                string? errorMessage = null;
+
+                if (!result.Success)
+                {
+                    errorMessage = result.ErrorMessage ?? "Embedding request failed.";
+                    comprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
+                    {
+                        Name = "embeddings",
+                        ResponseTimeData = new ResponseTimeData
+                        {
+                            ResponseTimeMs = HealthCheckConstants.ERROR_RESPONSE_TIME_MS,
+                            ThresholdMs = thresholdMs
+                        },
+                        Exception = errorMessage,
+                        Tags = new List<string> { HealthCheckConstants.EMBEDDING },
+                        Status = HealthStatus.Unhealthy
+                    });
+                    return;
+                }
+
+                // Validate dimensions if expected dimensions is specified
+                if (expectedDimensions.HasValue && result.Embedding is not null)
+                {
+                    isDimensionsValid = result.Embedding.Length == expectedDimensions.Value;
+                    if (!isDimensionsValid)
+                    {
+                        errorMessage = $"{DIMENSIONS_MISMATCH_ERROR_MESSAGE} Expected: {expectedDimensions.Value}, Actual: {result.Embedding.Length}";
+                    }
+                }
+
+                // Check response time threshold
+                if (!isResponseTimeWithinThreshold)
+                {
+                    errorMessage = errorMessage is null ? TIME_EXCEEDED_ERROR_MESSAGE : $"{errorMessage} {TIME_EXCEEDED_ERROR_MESSAGE}";
+                }
+
+                bool isHealthy = isResponseTimeWithinThreshold && isDimensionsValid;
+
+                comprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
+                {
+                    Name = "embeddings",
+                    ResponseTimeData = new ResponseTimeData
+                    {
+                        ResponseTimeMs = responseTimeMs,
+                        ThresholdMs = thresholdMs
+                    },
+                    Exception = errorMessage,
+                    Tags = new List<string> { HealthCheckConstants.EMBEDDING },
+                    Status = isHealthy ? HealthStatus.Healthy : HealthStatus.Unhealthy
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing embeddings health check.");
+                comprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
+                {
+                    Name = "embeddings",
+                    ResponseTimeData = new ResponseTimeData
+                    {
+                        ResponseTimeMs = HealthCheckConstants.ERROR_RESPONSE_TIME_MS,
+                        ThresholdMs = thresholdMs
+                    },
+                    Exception = ex.Message,
+                    Tags = new List<string> { HealthCheckConstants.EMBEDDING },
+                    Status = HealthStatus.Unhealthy
+                });
+            }
         }
     }
 }

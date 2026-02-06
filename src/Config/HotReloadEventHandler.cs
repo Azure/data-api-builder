@@ -34,7 +34,8 @@ public class HotReloadEventHandler<TEventArgs> where TEventArgs : HotReloadEvent
             { GRAPHQL_SCHEMA_CREATOR_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_REFRESH_ON_CONFIG_CHANGED, null },
             { GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED, null },
-            { LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, null }
+            { LOG_LEVEL_INITIALIZER_ON_CONFIG_CHANGE, null },
+            { EMBEDDING_SERVICE_ON_CONFIG_CHANGED, null }
         };
     }
 

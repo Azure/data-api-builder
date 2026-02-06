@@ -66,6 +66,11 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public ToolType ToolType { get; } = ToolType.Custom;
 
         /// <summary>
+        /// Gets the entity name associated with this custom tool.
+        /// </summary>
+        public string EntityName => _entityName;
+
+        /// <summary>
         /// Gets the metadata for this custom tool, including name, description, and input schema.
         /// </summary>
         public Tool GetToolMetadata()

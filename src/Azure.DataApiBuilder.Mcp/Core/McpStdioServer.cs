@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -301,13 +302,13 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
 
                 // Determine operation based on tool name
-                operation = InferOperationFromToolName(toolName!);
+                operation = McpTelemetryHelper.InferOperationFromToolName(toolName!);
 
                 // For custom tools (DynamicCustomTool), extract stored procedure information
                 if (tool is DynamicCustomTool customTool)
                 {
                     // Get entity name and procedure from the custom tool
-                    (entityName, dbProcedure) = ExtractCustomToolMetadata(customTool, _serviceProvider);
+                    (entityName, dbProcedure) = McpTelemetryHelper.ExtractCustomToolMetadata(customTool, _serviceProvider);
                 }
 
                 // Track the start of MCP tool execution with telemetry
@@ -535,66 +536,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
                                         id.TryGetDouble(out double d) ? d : null,
                 _ => null
             };
-        }
-
-        /// <summary>
-        /// Infers the operation type from the tool name.
-        /// </summary>
-        /// <param name="toolName">The name of the tool.</param>
-        /// <returns>The inferred operation type.</returns>
-        private static string InferOperationFromToolName(string toolName)
-        {
-            return toolName.ToLowerInvariant() switch
-            {
-                string s when s.Contains("read") || s.Contains("get") || s.Contains("list") || s.Contains("describe") => "read",
-                string s when s.Contains("create") || s.Contains("insert") => "create",
-                string s when s.Contains("update") || s.Contains("modify") => "update",
-                string s when s.Contains("delete") || s.Contains("remove") => "delete",
-                string s when s.Contains("execute") => "execute",
-                _ => "execute"
-            };
-        }
-
-        /// <summary>
-        /// Extracts metadata from a custom tool for telemetry purposes.
-        /// </summary>
-        /// <param name="customTool">The custom tool instance.</param>
-        /// <param name="serviceProvider">The service provider.</param>
-        /// <returns>A tuple containing the entity name and database procedure name.</returns>
-        private static (string? entityName, string? dbProcedure) ExtractCustomToolMetadata(DynamicCustomTool customTool, IServiceProvider serviceProvider)
-        {
-            try
-            {
-                // Use reflection to access private fields since DynamicCustomTool doesn't expose these publicly
-                Type type = customTool.GetType();
-                System.Reflection.FieldInfo? entityNameField = type.GetField("_entityName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                System.Reflection.FieldInfo? entityField = type.GetField("_entity", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                string? entityName = entityNameField?.GetValue(customTool) as string;
-                object? entity = entityField?.GetValue(customTool);
-
-                if (entity != null && entityName != null)
-                {
-                    // Try to get the stored procedure name from the entity
-                    RuntimeConfigProvider? runtimeConfigProvider = serviceProvider.GetService<RuntimeConfigProvider>();
-                    if (runtimeConfigProvider != null)
-                    {
-                        RuntimeConfig config = runtimeConfigProvider.GetConfig();
-                        if (config.Entities.TryGetValue(entityName, out Config.ObjectModel.Entity? entityConfig))
-                        {
-                            string? dbProcedure = entityConfig.Source.Object;
-                            return (entityName, dbProcedure);
-                        }
-                    }
-                }
-
-                return (entityName, null);
-            }
-            catch
-            {
-                // If reflection fails, return null values
-                return (null, null);
-            }
         }
     }
 }

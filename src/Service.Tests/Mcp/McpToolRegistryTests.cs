@@ -284,10 +284,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Test that entity names converted to snake_case that result in same tool name are caught.
-        /// This validates the comment from @JerryNixon about entity aliases being unique.
-        /// Although entity names must be unique at config level, this ensures tool name
-        /// conversion doesn't create conflicts (e.g., GetUser and get_user would both become get_user).
+        /// Test that duplicate tool names (regardless of how they're generated) are caught.
+        /// This validates the duplicate detection mechanism works correctly.
+        /// Note: Entity names are already required to be unique at config level,
+        /// but this ensures the tool registry properly detects any duplicates that might occur.
         /// </summary>
         [TestMethod]
         public void RegisterTool_WithConflictingSnakeCaseNames_DetectsDuplicates()
@@ -298,8 +298,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             // First tool with snake_case name
             IMcpTool tool1 = new MockMcpTool("get_user", ToolType.Custom);
 
-            // Second tool that would convert to the same snake_case
-            // In reality, these would come from different entity names that convert to same tool name
+            // Second tool with the same name (duplicate)
             IMcpTool tool2 = new MockMcpTool("get_user", ToolType.Custom);
 
             // Act - Register first tool
@@ -333,11 +332,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
 
             public Tool GetToolMetadata()
             {
+                // Create a simple JSON object for the input schema
+                using JsonDocument doc = JsonDocument.Parse("{\"type\": \"object\"}");
                 return new Tool
                 {
                     Name = _toolName,
                     Description = $"Mock {ToolType} tool",
-                    InputSchema = JsonSerializer.Deserialize<JsonElement>("{\"type\": \"object\"}")
+                    InputSchema = doc.RootElement.Clone()
                 };
             }
 

@@ -5,14 +5,9 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -56,16 +51,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCompressionConfiguredWebHost(DabCompressionLevel.Optimal);
             TestServer server = host.GetTestServer();
-            
+
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 context.Request.Headers.AcceptEncoding = "gzip";
             });
-            
+
             // Verify Content-Encoding header is present
-            Assert.IsTrue(returnContext.Response.Headers.ContentEncoding.Contains("gzip"), 
+            Assert.IsTrue(returnContext.Response.Headers.ContentEncoding.Contains("gzip"),
                 "Response should have gzip Content-Encoding header");
-            
+
             // Verify response body exists by checking if we can read it
             using (var reader = new StreamReader(returnContext.Response.Body))
             {
@@ -82,13 +77,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCompressionConfiguredWebHost(DabCompressionLevel.Optimal);
             TestServer server = host.GetTestServer();
-            
+
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 context.Request.Headers.AcceptEncoding = "br";
             });
-            
-            Assert.IsTrue(returnContext.Response.Headers.ContentEncoding.Contains("br"), 
+
+            Assert.IsTrue(returnContext.Response.Headers.ContentEncoding.Contains("br"),
                 "Response should have br Content-Encoding header");
         }
 
@@ -100,37 +95,37 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCompressionConfiguredWebHost(DabCompressionLevel.Optimal);
             TestServer server = host.GetTestServer();
-            
+
             // Get uncompressed response
             HttpContext uncompressedContext = await server.SendAsync(context =>
             {
                 // Don't set Accept-Encoding
             });
-            
+
             using (var ms = new MemoryStream())
             {
                 await uncompressedContext.Response.Body.CopyToAsync(ms);
                 long uncompressedSize = ms.Length;
-                
+
                 // Get compressed response
                 HttpContext compressedContext = await server.SendAsync(context =>
                 {
                     context.Request.Headers.AcceptEncoding = "gzip";
                 });
-                
+
                 using (var cms = new MemoryStream())
                 {
                     await compressedContext.Response.Body.CopyToAsync(cms);
                     long compressedSize = cms.Length;
-                    
+
                     // Verify compressed size is smaller
-                    Assert.IsTrue(compressedSize < uncompressedSize, 
+                    Assert.IsTrue(compressedSize < uncompressedSize,
                         $"Compressed size ({compressedSize}) should be less than uncompressed size ({uncompressedSize})");
-                    
+
                     // Calculate compression ratio
                     double compressionRatio = (double)(uncompressedSize - compressedSize) / uncompressedSize * 100;
                     Console.WriteLine($"Compression achieved: {compressionRatio:F2}% reduction (from {uncompressedSize} to {compressedSize} bytes)");
-                    
+
                     // Verify at least some compression occurred (at least 10% for JSON)
                     Assert.IsTrue(compressionRatio > 10, $"Compression ratio should be at least 10%, got {compressionRatio:F2}%");
                 }
@@ -145,13 +140,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCompressionConfiguredWebHost(DabCompressionLevel.None);
             TestServer server = host.GetTestServer();
-            
+
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 context.Request.Headers.AcceptEncoding = "gzip";
             });
-            
-            Assert.IsFalse(returnContext.Response.Headers.ContentEncoding.Any(), 
+
+            Assert.IsFalse(returnContext.Response.Headers.ContentEncoding.Any(),
                 "Response should not have Content-Encoding header when compression is disabled");
         }
 
@@ -163,13 +158,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCompressionConfiguredWebHost(DabCompressionLevel.Optimal);
             TestServer server = host.GetTestServer();
-            
+
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 // Don't set Accept-Encoding header
             });
-            
-            Assert.IsFalse(returnContext.Response.Headers.ContentEncoding.Any(), 
+
+            Assert.IsFalse(returnContext.Response.Headers.ContentEncoding.Any(),
                 "Response should not be compressed without Accept-Encoding header");
         }
 
@@ -181,13 +176,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCompressionConfiguredWebHost(DabCompressionLevel.Fastest);
             TestServer server = host.GetTestServer();
-            
+
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 context.Request.Headers.AcceptEncoding = "gzip";
             });
-            
-            Assert.IsTrue(returnContext.Response.Headers.ContentEncoding.Contains("gzip"), 
+
+            Assert.IsTrue(returnContext.Response.Headers.ContentEncoding.Contains("gzip"),
                 "Response should be compressed with fastest level");
         }
 
@@ -199,22 +194,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             IHost host = await CreateCompressionConfiguredWebHost(DabCompressionLevel.Optimal);
             TestServer server = host.GetTestServer();
-            
+
             HttpContext returnContext = await server.SendAsync(context =>
             {
                 context.Request.Headers.AcceptEncoding = "gzip";
             });
-            
+
             // Read compressed data
             using (var ms = new MemoryStream())
             {
                 await returnContext.Response.Body.CopyToAsync(ms);
                 byte[] compressedData = ms.ToArray();
-                
+
                 // Decompress
                 string decompressedContent = await DecompressGzipAsync(compressedData);
                 Assert.IsFalse(string.IsNullOrEmpty(decompressedContent), "Decompressed content should not be empty");
-                
+
                 // Verify it's valid JSON matching our sample
                 JsonDocument doc = JsonDocument.Parse(decompressedContent);
                 Assert.IsTrue(doc.RootElement.TryGetProperty("data", out _), "Decompressed JSON should contain 'data' property");
@@ -238,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         .ConfigureServices(services =>
                         {
                             services.AddHttpContextAccessor();
-                            
+
                             // Add response compression based on level
                             if (level != DabCompressionLevel.None)
                             {
@@ -248,19 +243,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                                     DabCompressionLevel.Optimal => SystemCompressionLevel.Optimal,
                                     _ => SystemCompressionLevel.Optimal
                                 };
-                                
+
                                 services.AddResponseCompression(options =>
                                 {
                                     options.EnableForHttps = true;
                                     options.Providers.Add<GzipCompressionProvider>();
                                     options.Providers.Add<BrotliCompressionProvider>();
                                 });
-                                
+
                                 services.Configure<GzipCompressionProviderOptions>(options =>
                                 {
                                     options.Level = systemLevel;
                                 });
-                                
+
                                 services.Configure<BrotliCompressionProviderOptions>(options =>
                                 {
                                     options.Level = systemLevel;
@@ -274,7 +269,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                             {
                                 app.UseResponseCompression();
                             }
-                            
+
                             // Simple endpoint that returns JSON
                             app.Run(async context =>
                             {

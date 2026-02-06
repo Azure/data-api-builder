@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Mcp.Utils
             {
                 // Access public properties instead of reflection
                 string? entityName = customTool.EntityName;
-                
+
                 if (entityName != null)
                 {
                     // Try to get the stored procedure name from the runtime configuration

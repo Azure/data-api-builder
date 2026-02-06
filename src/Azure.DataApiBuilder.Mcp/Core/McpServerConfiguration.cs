@@ -3,8 +3,6 @@
 
 using System.Diagnostics;
 using System.Text.Json;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;

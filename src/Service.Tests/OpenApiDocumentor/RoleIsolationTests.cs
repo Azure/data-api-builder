@@ -77,6 +77,46 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         }
 
         /// <summary>
+        /// Validates that PUT/PATCH require both Create and Update permissions.
+        /// Since PUT/PATCH can create if missing (upsert), both permissions are needed at runtime.
+        /// </summary>
+        [TestMethod]
+        public async Task PutPatchOperations_RequireBothCreateAndUpdatePermissions()
+        {
+            // Test 1: Only Create permission - should NOT have PUT/PATCH
+            EntityPermission[] createOnly = new[]
+            {
+                new EntityPermission(Role: "creator", Actions: new[] { new EntityAction(EntityActionOperation.Create, null, new()) })
+            };
+            OpenApiDocument docCreateOnly = await GenerateDocumentWithPermissions(createOnly);
+            Assert.IsTrue(docCreateOnly.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Post)), "Should have POST with Create permission");
+            Assert.IsFalse(docCreateOnly.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Put)), "Should NOT have PUT with only Create permission");
+            Assert.IsFalse(docCreateOnly.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)), "Should NOT have PATCH with only Create permission");
+
+            // Test 2: Only Update permission - should NOT have PUT/PATCH
+            EntityPermission[] updateOnly = new[]
+            {
+                new EntityPermission(Role: "updater", Actions: new[] { new EntityAction(EntityActionOperation.Update, null, new()) })
+            };
+            OpenApiDocument docUpdateOnly = await GenerateDocumentWithPermissions(updateOnly);
+            Assert.IsFalse(docUpdateOnly.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Put)), "Should NOT have PUT with only Update permission");
+            Assert.IsFalse(docUpdateOnly.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)), "Should NOT have PATCH with only Update permission");
+
+            // Test 3: Both Create and Update permissions - should have PUT/PATCH
+            EntityPermission[] createAndUpdate = new[]
+            {
+                new EntityPermission(Role: "editor", Actions: new[] { 
+                    new EntityAction(EntityActionOperation.Create, null, new()),
+                    new EntityAction(EntityActionOperation.Update, null, new())
+                })
+            };
+            OpenApiDocument docBoth = await GenerateDocumentWithPermissions(createAndUpdate);
+            Assert.IsTrue(docBoth.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Post)), "Should have POST with Create permission");
+            Assert.IsTrue(docBoth.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Put)), "Should have PUT with both Create and Update permissions");
+            Assert.IsTrue(docBoth.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)), "Should have PATCH with both Create and Update permissions");
+        }
+
+        /// <summary>
         /// Validates competing roles don't leak fields to each other.
         /// When one role has access to field A and another has access to field B,
         /// the superset should have both, but individual role filtering should not leak.

@@ -810,8 +810,12 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // For tables/views, determine available operations from permissions
                 // If role is specified, filter to that role only; otherwise, get superset of all roles
+                // Note: PUT/PATCH require BOTH Create AND Update permissions (upsert semantics)
                 if (entity?.Permissions is not null)
                 {
+                    bool hasCreate = false;
+                    bool hasUpdate = false;
+
                     foreach (EntityPermission permission in entity.Permissions)
                     {
                         // Skip permissions for other roles if a specific role is requested
@@ -831,9 +835,9 @@ namespace Azure.DataApiBuilder.Core.Services
                             {
                                 configuredOperations[OperationType.Get] = true;
                                 configuredOperations[OperationType.Post] = true;
-                                configuredOperations[OperationType.Put] = true;
-                                configuredOperations[OperationType.Patch] = true;
                                 configuredOperations[OperationType.Delete] = true;
+                                hasCreate = true;
+                                hasUpdate = true;
                             }
                             else
                             {
@@ -844,10 +848,10 @@ namespace Azure.DataApiBuilder.Core.Services
                                         break;
                                     case EntityActionOperation.Create:
                                         configuredOperations[OperationType.Post] = true;
+                                        hasCreate = true;
                                         break;
                                     case EntityActionOperation.Update:
-                                        configuredOperations[OperationType.Put] = true;
-                                        configuredOperations[OperationType.Patch] = true;
+                                        hasUpdate = true;
                                         break;
                                     case EntityActionOperation.Delete:
                                         configuredOperations[OperationType.Delete] = true;
@@ -855,6 +859,13 @@ namespace Azure.DataApiBuilder.Core.Services
                                 }
                             }
                         }
+                    }
+
+                    // PUT/PATCH require both Create and Update permissions (upsert semantics)
+                    if (hasCreate && hasUpdate)
+                    {
+                        configuredOperations[OperationType.Put] = true;
+                        configuredOperations[OperationType.Patch] = true;
                     }
                 }
             }

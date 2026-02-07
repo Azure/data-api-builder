@@ -917,9 +917,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
+                // If actions is not defined for a matching role, all fields are available
                 if (permission.Actions is null)
                 {
-                    continue;
+                    return exposedColumnNames;
                 }
 
                 foreach (EntityAction action in permission.Actions)

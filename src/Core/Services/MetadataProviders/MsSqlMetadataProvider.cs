@@ -290,5 +290,38 @@ namespace Azure.DataApiBuilder.Core.Services
                 return false;
             }
         }
+
+        /// <inheritdoc/>
+        protected override async Task GenerateAutoentitiesIntoEntities()
+        {
+            await Task.CompletedTask;
+        }
+
+        public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)
+        {
+            string include = string.Join(",", autoentity.Patterns.Include);
+            string exclude = string.Join(",", autoentity.Patterns.Exclude);
+            string namePattern = autoentity.Patterns.Name;
+            string getAutoentitiesQuery = SqlQueryBuilder.BuildGetAutoentitiesQuery();
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}include_pattern", new(include, null, SqlDbType.NVarChar) },
+                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}exclude_pattern", new(exclude, null, SqlDbType.NVarChar) },
+                { $"{BaseQueryStructure.PARAM_NAME_PREFIX}name_pattern", new(namePattern, null, SqlDbType.NVarChar) }
+            };
+
+            _logger.LogInformation("Query for Autoentities is being executed with the following parameters.");
+            _logger.LogInformation($"Autoentities include pattern: {include}");
+            _logger.LogInformation($"Autoentities exclude pattern: {exclude}");
+            _logger.LogInformation($"Autoentities name pattern: {namePattern}");
+
+            JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: getAutoentitiesQuery,
+                parameters: parameters,
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
+                dataSourceName: _dataSourceName);
+
+            return resultArray;
+        }
     }
 }

@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
@@ -83,6 +84,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateLoggerFilters(runtimeConfig);
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
+        ValidateEmbeddingsOptions(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -227,6 +229,157 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 HandleOrRecordException(new DataApiBuilderException(
                     message: ex.Message,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates the embeddings configuration options when embeddings are configured.
+    /// Checks required fields, URL format, numeric constraints, and endpoint path conflicts.
+    /// </summary>
+    public void ValidateEmbeddingsOptions(RuntimeConfig runtimeConfig)
+    {
+        // Skip validation if embeddings are not configured.
+        if (runtimeConfig.Runtime?.Embeddings is null)
+        {
+            return;
+        }
+
+        EmbeddingsOptions embeddingsOptions = runtimeConfig.Runtime.Embeddings;
+
+        // Skip further validation if embeddings are explicitly disabled.
+        if (!embeddingsOptions.Enabled)
+        {
+            return;
+        }
+
+        // base-url is required and must be a valid URL.
+        if (string.IsNullOrWhiteSpace(embeddingsOptions.BaseUrl))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Embeddings 'base-url' cannot be null or empty when embeddings are enabled.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+        else if (!Uri.TryCreate(embeddingsOptions.BaseUrl, UriKind.Absolute, out Uri? baseUri) ||
+                 (baseUri.Scheme != Uri.UriSchemeHttps && baseUri.Scheme != Uri.UriSchemeHttp))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Embeddings 'base-url' must be a valid HTTP or HTTPS URL. Got: {embeddingsOptions.BaseUrl}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // api-key is required.
+        if (string.IsNullOrWhiteSpace(embeddingsOptions.ApiKey))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Embeddings 'api-key' cannot be null or empty when embeddings are enabled.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // For Azure OpenAI provider, model (deployment name) is required.
+        if (embeddingsOptions.Provider == EmbeddingProviderType.AzureOpenAI && string.IsNullOrWhiteSpace(embeddingsOptions.Model))
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: "Embeddings 'model' (deployment name) is required when using the Azure OpenAI provider.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // timeout-ms must be positive if provided.
+        if (embeddingsOptions.TimeoutMs is not null && embeddingsOptions.TimeoutMs <= 0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Embeddings 'timeout-ms' must be a positive integer. Got: {embeddingsOptions.TimeoutMs}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // dimensions must be positive if provided.
+        if (embeddingsOptions.Dimensions is not null && embeddingsOptions.Dimensions <= 0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Embeddings 'dimensions' must be a positive integer. Got: {embeddingsOptions.Dimensions}",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
+        // Validate endpoint configuration.
+        if (embeddingsOptions.Endpoint is not null && embeddingsOptions.Endpoint.Enabled)
+        {
+            string endpointPath = embeddingsOptions.Endpoint.EffectivePath;
+
+            if (!RuntimeConfigValidatorUtil.TryValidateUriComponent(endpointPath, out string exceptionMsgSuffix))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings endpoint path {exceptionMsgSuffix}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Check for path conflicts with REST, GraphQL, and MCP endpoints.
+            if (runtimeConfig.IsRestEnabled && string.Equals(endpointPath, runtimeConfig.RestPath, StringComparison.OrdinalIgnoreCase))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings endpoint path '{endpointPath}' conflicts with the REST endpoint path.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (runtimeConfig.IsGraphQLEnabled && string.Equals(endpointPath, runtimeConfig.GraphQLPath, StringComparison.OrdinalIgnoreCase))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings endpoint path '{endpointPath}' conflicts with the GraphQL endpoint path.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (runtimeConfig.IsMcpEnabled && string.Equals(endpointPath, runtimeConfig.McpPath, StringComparison.OrdinalIgnoreCase))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings endpoint path '{endpointPath}' conflicts with the MCP endpoint path.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // In production mode, roles must be explicitly configured.
+            if (!runtimeConfig.IsDevelopmentMode() &&
+                (embeddingsOptions.Endpoint.Roles is null || embeddingsOptions.Endpoint.Roles.Length == 0))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Embeddings endpoint 'roles' must be explicitly configured in production mode.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
+        // Validate health check configuration.
+        if (embeddingsOptions.Health is not null && embeddingsOptions.Health.Enabled)
+        {
+            if (embeddingsOptions.Health.ThresholdMs <= 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings health check 'threshold-ms' must be a positive integer. Got: {embeddingsOptions.Health.ThresholdMs}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (string.IsNullOrWhiteSpace(embeddingsOptions.Health.TestText))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Embeddings health check 'test-text' cannot be null or empty when health check is enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (embeddingsOptions.Health.ExpectedDimensions is not null && embeddingsOptions.Health.ExpectedDimensions <= 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Embeddings health check 'expected-dimensions' must be a positive integer. Got: {embeddingsOptions.Health.ExpectedDimensions}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

@@ -28,12 +28,14 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// <param name="configFileName"></param>
         /// <param name="databaseEnvironment"></param>
         /// <param name="requestBodyStrict">Optional value for request-body-strict setting. If null, uses default (true).</param>
+        /// <param name="role">Optional role to filter OpenAPI document. If null, returns superset of all roles.</param>
         /// <returns>Generated OpenApiDocument</returns>
         internal static async Task<OpenApiDocument> GenerateOpenApiDocumentAsync(
             RuntimeEntities runtimeEntities,
             string configFileName,
             string databaseEnvironment,
-            bool? requestBodyStrict = null)
+            bool? requestBodyStrict = null,
+            string? role = null)
         {
             TestHelper.SetupDatabaseEnvironment(databaseEnvironment);
             FileSystem fileSystem = new();
@@ -64,7 +66,8 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
             {
-                HttpRequestMessage request = new(HttpMethod.Get, "/api/openapi");
+                string requestUrl = role is null ? "/api/openapi" : $"/api/openapi/{role}";
+                HttpRequestMessage request = new(HttpMethod.Get, requestUrl);
 
                 HttpResponseMessage response = await client.SendAsync(request);
                 Stream responseStream = await response.Content.ReadAsStreamAsync();

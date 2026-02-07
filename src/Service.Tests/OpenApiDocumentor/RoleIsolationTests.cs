@@ -138,9 +138,21 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             Assert.IsTrue(supersetDoc.Components.Schemas.ContainsKey("book"), "Schema should exist");
             Assert.IsTrue(supersetDoc.Components.Schemas["book"].Properties.ContainsKey("id"), "Superset should have 'id' from reader");
             Assert.IsTrue(supersetDoc.Components.Schemas["book"].Properties.ContainsKey("title"), "Superset should have 'title' from writer");
+
+            // Reader role should only see 'id', not 'title'
+            OpenApiDocument readerDoc = await GenerateDocumentWithPermissions(permissions, role: "reader");
+            Assert.IsTrue(readerDoc.Components.Schemas.ContainsKey("book"), "Reader schema should exist");
+            Assert.IsTrue(readerDoc.Components.Schemas["book"].Properties.ContainsKey("id"), "Reader should see 'id'");
+            Assert.IsFalse(readerDoc.Components.Schemas["book"].Properties.ContainsKey("title"), "Reader should NOT see 'title'");
+
+            // Writer role should only see 'title', not 'id'
+            OpenApiDocument writerDoc = await GenerateDocumentWithPermissions(permissions, role: "writer");
+            Assert.IsTrue(writerDoc.Components.Schemas.ContainsKey("book"), "Writer schema should exist");
+            Assert.IsTrue(writerDoc.Components.Schemas["book"].Properties.ContainsKey("title"), "Writer should see 'title'");
+            Assert.IsFalse(writerDoc.Components.Schemas["book"].Properties.ContainsKey("id"), "Writer should NOT see 'id'");
         }
 
-        private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions)
+        private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions, string? role = null)
         {
             Entity entity = new(
                 Source: new("books", EntitySourceType.Table, null, null),
@@ -152,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 Relationships: null);
 
             RuntimeEntities entities = new(new Dictionary<string, Entity> { { "book", entity } });
-            return await OpenApiTestBootstrap.GenerateOpenApiDocumentAsync(entities, CONFIG_FILE, DB_ENV);
+            return await OpenApiTestBootstrap.GenerateOpenApiDocumentAsync(entities, CONFIG_FILE, DB_ENV, requestBodyStrict: null, role: role);
         }
     }
 }

@@ -146,6 +146,10 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 List<Dictionary<string, object?>> entityList = new();
 
+                // Track how many entities were filtered out because DML tools are disabled (dml-tools: false).
+                // This helps provide a more specific error message when all entities are filtered.
+                int filteredDmlDisabledCount = 0;
+
                 if (runtimeConfig.Entities != null)
                 {
                     foreach (KeyValuePair<string, Entity> entityEntry in runtimeConfig.Entities)
@@ -155,8 +159,19 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                         string entityName = entityEntry.Key;
                         Entity entity = entityEntry.Value;
 
+                        // Check entity filter first to avoid counting entities that wouldn't be included anyway
                         if (!ShouldIncludeEntity(entityName, entityFilter))
                         {
+                            continue;
+                        }
+
+                        // Filter out entities when dml-tools is explicitly disabled (false).
+                        // This applies to all entity types (tables, views, stored procedures).
+                        // When dml-tools is false, the entity is not exposed via DML tools
+                        // (read_records, create_record, etc.) and should not appear in describe_entities.
+                        if (entity.Mcp?.DmlToolEnabled == false)
+                        {
+                            filteredDmlDisabledCount++;
                             continue;
                         }
 
@@ -177,6 +192,7 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
 
                 if (entityList.Count == 0)
                 {
+                    // No entities matched the filter criteria
                     if (entityFilter != null && entityFilter.Count > 0)
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
@@ -185,6 +201,20 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                             $"No entities found matching the filter: {string.Join(", ", entityFilter)}",
                             logger));
                     }
+                    // Return a specific error when ALL configured entities have dml-tools: false.
+                    // Only show this error when every entity was intentionally filtered by the dml-tools check above,
+                    // not when some entities failed to build due to exceptions in BuildBasicEntityInfo() or BuildFullEntityInfo() functions.
+                    else if (filteredDmlDisabledCount > 0 &&
+                             runtimeConfig.Entities != null &&
+                             filteredDmlDisabledCount == runtimeConfig.Entities.Entities.Count)
+                    {
+                        return Task.FromResult(McpResponseBuilder.BuildErrorResult(
+                            toolName,
+                            "AllEntitiesFilteredDmlDisabled",
+                            $"All {filteredDmlDisabledCount} configured entities have DML tools disabled (dml-tools: false). Entities with dml-tools disabled do not appear in describe_entities. If the filtered entities are stored procedures with custom-tool enabled, check tools/list.",
+                            logger));
+                    }
+                    // Truly no entities configured in the runtime config, or entities failed to build for other reasons
                     else
                     {
                         return Task.FromResult(McpResponseBuilder.BuildErrorResult(
@@ -206,6 +236,17 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     ["entities"] = finalEntityList,
                     ["count"] = finalEntityList.Count
                 };
+
+                // Log when entities were filtered due to DML tools disabled for visibility
+                if (filteredDmlDisabledCount > 0)
+                {
+                    logger?.LogInformation(
+                        "DescribeEntitiesTool: {FilteredCount} entity(ies) filtered with DML tools disabled (dml-tools: false). " +
+                        "These entities are not exposed via DML tools and do not appear in describe_entities response. " +
+                        "Returned {ReturnedCount} entities.",
+                        filteredDmlDisabledCount,
+                        finalEntityList.Count);
+                }
 
                 logger?.LogInformation(
                     "DescribeEntitiesTool returned {EntityCount} entities. Response type: {ResponseType} (nameOnly={NameOnly}).",

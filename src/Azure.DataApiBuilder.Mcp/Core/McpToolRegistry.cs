@@ -14,32 +14,42 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// </summary>
     public class McpToolRegistry
     {
-        private readonly Dictionary<string, IMcpTool> _tools = new();
+        private readonly Dictionary<string, IMcpTool> _tools = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Registers a tool in the registry
         /// </summary>
-        /// <exception cref="DataApiBuilderException">Thrown when a tool with the same name is already registered</exception>
+        /// <exception cref="DataApiBuilderException">Thrown when tool name is invalid or duplicate</exception>
         public void RegisterTool(IMcpTool tool)
         {
             Tool metadata = tool.GetToolMetadata();
+            string toolName = metadata.Name?.Trim() ?? string.Empty;
 
-            // Check for duplicate tool names
-            if (_tools.TryGetValue(metadata.Name, out IMcpTool? existingTool))
+            // Reject empty or whitespace-only tool names
+            if (string.IsNullOrWhiteSpace(toolName))
+            {
+                throw new DataApiBuilderException(
+                    message: "MCP tool name cannot be null, empty, or whitespace.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            // Check for duplicate tool names (case-insensitive)
+            if (_tools.TryGetValue(toolName, out IMcpTool? existingTool))
             {
                 string existingToolType = existingTool.ToolType == ToolType.BuiltIn ? "built-in" : "custom";
                 string newToolType = tool.ToolType == ToolType.BuiltIn ? "built-in" : "custom";
 
                 throw new DataApiBuilderException(
-                    message: $"Duplicate MCP tool name '{metadata.Name}' detected. " +
-                             $"A {existingToolType} tool with this name is already registered. " +
-                             $"Cannot register {newToolType} tool with the same name. " +
-                             $"Tool names must be unique across all tool types.",
+                    message: $"Duplicate MCP tool name '{toolName}' detected. " +
+                            $"A {existingToolType} tool with this name is already registered. " +
+                            $"Cannot register {newToolType} tool with the same name. " +
+                            $"Tool names must be unique across all tool types.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            _tools[metadata.Name] = tool;
+            _tools[toolName] = tool;
         }
 
         /// <summary>

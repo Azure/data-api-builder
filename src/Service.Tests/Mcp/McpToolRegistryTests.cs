@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,26 +25,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
     [TestClass]
     public class McpToolRegistryTests
     {
-        /// <summary>
-        /// Test that registering a tool with a unique name succeeds.
-        /// </summary>
-        [TestMethod]
-        public void RegisterTool_WithUniqueName_Succeeds()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool tool = new MockMcpTool("unique_tool", ToolType.BuiltIn);
-
-            // Act & Assert - should not throw
-            registry.RegisterTool(tool);
-
-            // Verify tool was registered
-            bool found = registry.TryGetTool("unique_tool", out IMcpTool? retrievedTool);
-            Assert.IsTrue(found);
-            Assert.IsNotNull(retrievedTool);
-            Assert.AreEqual("unique_tool", retrievedTool.GetToolMetadata().Name);
-        }
-
         /// <summary>
         /// Test that registering multiple tools with unique names succeeds.
         /// </summary>
@@ -67,15 +48,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Test that registering two built-in tools with the same name throws an exception.
+        /// Test that registering duplicate tools of the same type throws an exception.
+        /// Validates that both built-in and custom tools enforce name uniqueness within their own type.
         /// </summary>
-        [TestMethod]
-        public void RegisterTool_WithDuplicateBuiltInToolName_ThrowsException()
+        [DataTestMethod]
+        [DataRow(ToolType.BuiltIn, "duplicate_tool", "built-in", DisplayName = "Duplicate Built-In Tools")]
+        [DataRow(ToolType.Custom, "my_custom_tool", "custom", DisplayName = "Duplicate Custom Tools")]
+        public void RegisterTool_WithDuplicateSameType_ThrowsException(
+            ToolType toolType,
+            string toolName,
+            string expectedToolTypeText)
         {
             // Arrange
             McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool("duplicate_tool", ToolType.BuiltIn);
-            IMcpTool tool2 = new MockMcpTool("duplicate_tool", ToolType.BuiltIn);
+            IMcpTool tool1 = new MockMcpTool(toolName, toolType);
+            IMcpTool tool2 = new MockMcpTool(toolName, toolType);
 
             // Act - Register first tool
             registry.RegisterTool(tool1);
@@ -86,113 +73,72 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             );
 
             // Verify exception details
-            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'duplicate_tool' detected"));
-            Assert.IsTrue(exception.Message.Contains("built-in tool with this name is already registered"));
-            Assert.IsTrue(exception.Message.Contains("Cannot register built-in tool with the same name"));
+            Assert.IsTrue(exception.Message.Contains($"Duplicate MCP tool name '{toolName}' detected"));
+            Assert.IsTrue(exception.Message.Contains($"{expectedToolTypeText} tool with this name is already registered"));
+            Assert.IsTrue(exception.Message.Contains($"Cannot register {expectedToolTypeText} tool with the same name"));
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
         }
 
         /// <summary>
-        /// Test that registering two custom tools with the same name throws an exception.
+        /// Test that registering tools with conflicting names across different types throws an exception.
+        /// Validates that tool names must be unique across all tool types (built-in and custom).
         /// </summary>
-        [TestMethod]
-        public void RegisterTool_WithDuplicateCustomToolName_ThrowsException()
+        [DataTestMethod]
+        [DataRow("create_record", ToolType.BuiltIn, ToolType.Custom, "built-in", "custom", DisplayName = "Built-In then Custom conflict")]
+        [DataRow("read_records", ToolType.BuiltIn, ToolType.Custom, "built-in", "custom", DisplayName = "Built-In then Custom conflict (read_records)")]
+        [DataRow("my_stored_proc", ToolType.Custom, ToolType.BuiltIn, "custom", "built-in", DisplayName = "Custom then Built-In conflict")]
+        public void RegisterTool_WithCrossTypeConflict_ThrowsException(
+            string toolName,
+            ToolType firstToolType,
+            ToolType secondToolType,
+            string expectedExistingType,
+            string expectedNewType)
         {
             // Arrange
             McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool("my_custom_tool", ToolType.Custom);
-            IMcpTool tool2 = new MockMcpTool("my_custom_tool", ToolType.Custom);
+            IMcpTool existingTool = new MockMcpTool(toolName, firstToolType);
+            IMcpTool conflictingTool = new MockMcpTool(toolName, secondToolType);
 
             // Act - Register first tool
-            registry.RegisterTool(tool1);
+            registry.RegisterTool(existingTool);
 
-            // Assert - Second registration should throw
+            // Assert - Second tool registration should throw
             DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(tool2)
+                () => registry.RegisterTool(conflictingTool)
             );
 
             // Verify exception details
-            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'my_custom_tool' detected"));
-            Assert.IsTrue(exception.Message.Contains("custom tool with this name is already registered"));
-            Assert.IsTrue(exception.Message.Contains("Cannot register custom tool with the same name"));
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Test that registering a custom tool with the same name as a built-in tool throws an exception.
-        /// </summary>
-        [TestMethod]
-        public void RegisterTool_CustomToolConflictsWithBuiltIn_ThrowsException()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool builtInTool = new MockMcpTool("create_record", ToolType.BuiltIn);
-            IMcpTool customTool = new MockMcpTool("create_record", ToolType.Custom);
-
-            // Act - Register built-in tool first
-            registry.RegisterTool(builtInTool);
-
-            // Assert - Custom tool registration should throw
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(customTool)
-            );
-
-            // Verify exception details
-            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'create_record' detected"));
-            Assert.IsTrue(exception.Message.Contains("built-in tool with this name is already registered"));
-            Assert.IsTrue(exception.Message.Contains("Cannot register custom tool with the same name"));
+            Assert.IsTrue(exception.Message.Contains($"Duplicate MCP tool name '{toolName}' detected"));
+            Assert.IsTrue(exception.Message.Contains($"{expectedExistingType} tool with this name is already registered"));
+            Assert.IsTrue(exception.Message.Contains($"Cannot register {expectedNewType} tool with the same name"));
             Assert.IsTrue(exception.Message.Contains("Tool names must be unique across all tool types"));
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Test that registering a built-in tool with the same name as a custom tool throws an exception.
-        /// </summary>
-        [TestMethod]
-        public void RegisterTool_BuiltInToolConflictsWithCustom_ThrowsException()
-        {
-            // Arrange
-            McpToolRegistry registry = new();
-            IMcpTool customTool = new MockMcpTool("my_stored_proc", ToolType.Custom);
-            IMcpTool builtInTool = new MockMcpTool("my_stored_proc", ToolType.BuiltIn);
-
-            // Act - Register custom tool first
-            registry.RegisterTool(customTool);
-
-            // Assert - Built-in tool registration should throw
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(builtInTool)
-            );
-
-            // Verify exception details
-            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'my_stored_proc' detected"));
-            Assert.IsTrue(exception.Message.Contains("custom tool with this name is already registered"));
-            Assert.IsTrue(exception.Message.Contains("Cannot register built-in tool with the same name"));
-            Assert.IsTrue(exception.Message.Contains("Tool names must be unique across all tool types"));
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
         }
 
         /// <summary>
         /// Test that tool name comparison is case-sensitive.
-        /// Tools with different casing should be allowed.
+        /// Tools with different casing should not be allowed.
         /// </summary>
         [TestMethod]
-        public void RegisterTool_WithDifferentCasing_Succeeds()
+        public void RegisterTool_WithDifferentCasing_ThrowsException()
         {
             // Arrange
             McpToolRegistry registry = new();
             IMcpTool tool1 = new MockMcpTool("my_tool", ToolType.BuiltIn);
             IMcpTool tool2 = new MockMcpTool("My_Tool", ToolType.Custom);
-            IMcpTool tool3 = new MockMcpTool("MY_TOOL", ToolType.Custom);
 
-            // Act & Assert - All should register successfully (case-sensitive)
+            // Act - Register first tool
             registry.RegisterTool(tool1);
-            registry.RegisterTool(tool2);
-            registry.RegisterTool(tool3);
 
-            // Verify all tools were registered
-            IEnumerable<Tool> allTools = registry.GetAllTools();
-            Assert.AreEqual(3, allTools.Count());
+            // Assert - Case-insensitive duplicate should throw
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+                () => registry.RegisterTool(tool2)
+            );
+
+            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name"));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
         }
 
         /// <summary>
@@ -236,23 +182,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Test edge case: empty tool name (if allowed by validation)
+        /// Test edge case: empty tool name should throw exception.
         /// </summary>
         [TestMethod]
-        public void RegisterTool_WithEmptyToolName_CanRegisterOnce()
+        public void RegisterTool_WithEmptyToolName_ThrowsException()
         {
             // Arrange
             McpToolRegistry registry = new();
-            IMcpTool tool1 = new MockMcpTool("", ToolType.BuiltIn);
-            IMcpTool tool2 = new MockMcpTool("", ToolType.Custom);
+            IMcpTool tool = new MockMcpTool("", ToolType.BuiltIn);
 
-            // Act - Register first tool with empty name
-            registry.RegisterTool(tool1);
-
-            // Assert - Second tool with empty name should throw
-            Assert.ThrowsException<DataApiBuilderException>(
-                () => registry.RegisterTool(tool2)
+            // Assert - Empty tool names should be rejected
+            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+                () => registry.RegisterTool(tool)
             );
+
+            Assert.IsTrue(exception.Message.Contains("cannot be null, empty, or whitespace"));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
         }
 
         /// <summary>
@@ -284,36 +229,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
         }
 
         /// <summary>
-        /// Test that duplicate tool names (regardless of how they're generated) are caught.
-        /// This validates the duplicate detection mechanism works correctly.
-        /// Note: Entity names are already required to be unique at config level,
-        /// but this ensures the tool registry properly detects any duplicates that might occur.
+        /// Test that registering a tool with leading/trailing whitespace in the name is treated as a duplicate of the trimmed name.
+        /// Note: during tool registration, the registry should trim whitespace and detect duplicates accordingly.
         /// </summary>
         [TestMethod]
-        public void RegisterTool_WithConflictingSnakeCaseNames_DetectsDuplicates()
+        public void RegisterTool_WithLeadingTrailingWhitespace_DetectsDuplicate()
         {
             // Arrange
             McpToolRegistry registry = new();
+            IMcpTool tool1 = new MockMcpTool("my_tool", ToolType.BuiltIn);
+            IMcpTool tool2 = new MockMcpTool(" my_tool ", ToolType.Custom);
 
-            // First tool with snake_case name
-            IMcpTool tool1 = new MockMcpTool("get_user", ToolType.Custom);
-
-            // Second tool with the same name (duplicate)
-            IMcpTool tool2 = new MockMcpTool("get_user", ToolType.Custom);
-
-            // Act - Register first tool
+            // Act
             registry.RegisterTool(tool1);
 
-            // Assert - Second registration should throw
-            DataApiBuilderException exception = Assert.ThrowsException<DataApiBuilderException>(
+            // Assert - trimmed name should collide
+            Assert.ThrowsException<DataApiBuilderException>(
                 () => registry.RegisterTool(tool2)
             );
-
-            // Verify exception details
-            Assert.IsTrue(exception.Message.Contains("Duplicate MCP tool name 'get_user' detected"));
         }
 
-        #region Mock Tool Implementation
+        #region Private helpers
 
         /// <summary>
         /// Mock implementation of IMcpTool for testing purposes.
@@ -352,6 +288,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Mcp
             }
         }
 
-        #endregion
+        #endregion Private helpers
     }
 }

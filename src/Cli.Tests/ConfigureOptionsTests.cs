@@ -541,6 +541,34 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.compression.level {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for compression.level and
+        /// validates whether the runtime config reflects those updated values.
+        [DataTestMethod]
+        [DataRow(CompressionLevel.Fastest, DisplayName = "Update Compression.Level to fastest.")]
+        [DataRow(CompressionLevel.Optimal, DisplayName = "Update Compression.Level to optimal.")]
+        [DataRow(CompressionLevel.None, DisplayName = "Update Compression.Level to none.")]
+        public void TestUpdateLevelForCompressionSettings(CompressionLevel updatedLevelValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update compression level value
+            ConfigureOptions options = new(
+                runtimeCompressionLevel: updatedLevelValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Level Value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Compression?.Level);
+            Assert.AreEqual(updatedLevelValue, runtimeConfig.Runtime.Compression.Level);
+        }
+
+        /// <summary>
         /// Tests that running "dab configure --runtime.host.mode {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.mode and 
         /// validates whether the runtime config reflects those updated values

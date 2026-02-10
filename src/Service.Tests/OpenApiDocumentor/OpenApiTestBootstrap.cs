@@ -33,17 +33,42 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             string configFileName,
             string databaseEnvironment)
         {
+            return await GenerateOpenApiDocumentAsync(
+                runtimeEntities: runtimeEntities,
+                configFileName: configFileName,
+                databaseEnvironment: databaseEnvironment,
+                restOptions: null);
+        }
+
+        /// <summary>
+        /// Bootstraps a test server instance using a runtime config file generated
+        /// from the provided entity collection and REST options. The test server is only used to generate
+        /// and return the OpenApiDocument for use this method's callers.
+        /// </summary>
+        /// <param name="runtimeEntities"></param>
+        /// <param name="configFileName"></param>
+        /// <param name="databaseEnvironment"></param>
+        /// <param name="restOptions">Optional REST runtime options to customize request-body-strict setting.</param>
+        /// <returns>Generated OpenApiDocument</returns>
+        internal static async Task<OpenApiDocument> GenerateOpenApiDocumentAsync(
+            RuntimeEntities runtimeEntities,
+            string configFileName,
+            string databaseEnvironment,
+            RestRuntimeOptions restOptions)
+        {
             TestHelper.SetupDatabaseEnvironment(databaseEnvironment);
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             loader.TryLoadKnownConfig(out RuntimeConfig config);
 
+            // Create custom REST options if provided, otherwise use existing config
+            RuntimeOptions runtimeWithRestOptions = restOptions is not null
+                ? config.Runtime with { Rest = restOptions, Host = config.Runtime?.Host with { Mode = HostMode.Production } }
+                : config.Runtime with { Host = config.Runtime?.Host with { Mode = HostMode.Production } };
+
             RuntimeConfig configWithCustomHostMode = config with
             {
-                Runtime = config.Runtime with
-                {
-                    Host = config.Runtime?.Host with { Mode = HostMode.Production }
-                },
+                Runtime = runtimeWithRestOptions,
                 Entities = runtimeEntities
             };
 

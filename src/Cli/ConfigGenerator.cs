@@ -849,6 +849,21 @@ namespace Cli
                 }
             }
 
+            // Compression: Level
+            if (options.RuntimeCompressionLevel != null)
+            {
+                CompressionOptions updatedCompressionOptions = runtimeConfig?.Runtime?.Compression ?? new();
+                bool status = TryUpdateConfiguredCompressionValues(options, ref updatedCompressionOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Compression = updatedCompressionOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             // Host: Mode, Cors.Origins, Cors.AllowCredentials, Authentication.Provider, Authentication.Jwt.Audience, Authentication.Jwt.Issuer
             if (options.RuntimeHostMode != null ||
                 options.RuntimeHostCorsOrigins != null ||
@@ -1222,6 +1237,37 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Compression runtime settings based on the provided value.
+        /// Validates user-provided parameters and then returns true if the updated Compression options
+        /// need to be overwritten on the existing config parameters.
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCompressionOptions">updatedCompressionOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredCompressionValues(
+            ConfigureOptions options,
+            ref CompressionOptions updatedCompressionOptions)
+        {
+            try
+            {
+                // Runtime.Compression.Level
+                CompressionLevel? updatedValue = options?.RuntimeCompressionLevel;
+                if (updatedValue != null)
+                {
+                    updatedCompressionOptions = updatedCompressionOptions with { Level = updatedValue.Value, UserProvidedLevel = true };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Compression.Level as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to configure RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

@@ -514,7 +514,7 @@ namespace Azure.DataApiBuilder.Service
             return string.IsNullOrEmpty(options.Password)
                 && options.EndPoints.Any(ep => !IsLocalhostEndpoint(ep));
         }
-      
+
         /// <summary>
         /// Configures HTTP response compression based on the runtime configuration.
         /// Compression is applied at the middleware level and supports Gzip and Brotli.

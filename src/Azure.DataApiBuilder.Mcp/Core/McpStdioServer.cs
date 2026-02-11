@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Diagnostics;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
@@ -7,7 +6,6 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Telemetry;
 using Azure.DataApiBuilder.Mcp.Model;
 using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.AspNetCore.Http;
@@ -273,52 +271,21 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 return;
             }
 
-            // Start OpenTelemetry activity for MCP tool execution
-            using Activity? activity = TelemetryTracesHelper.DABActivitySource.StartActivity("mcp.tool.execute");
-
             JsonDocument? argsDoc = null;
             try
             {
-                // Extract entity name and operation from arguments for telemetry
-                string? entityName = null;
-                string? operation = null;
-                string? dbProcedure = null;
-
                 if (@params.TryGetProperty("arguments", out JsonElement argsEl) && argsEl.ValueKind == JsonValueKind.Object)
                 {
                     string rawArgs = argsEl.GetRawText();
                     Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: {rawArgs}");
                     argsDoc = JsonDocument.Parse(rawArgs);
-
-                    // Extract entity name if present in arguments
-                    if (argsDoc.RootElement.TryGetProperty("entity", out JsonElement entityEl) && entityEl.ValueKind == JsonValueKind.String)
-                    {
-                        entityName = entityEl.GetString();
-                    }
                 }
                 else
                 {
                     Console.Error.WriteLine($"[MCP DEBUG] callTool → tool: {toolName}, args: <none>");
                 }
 
-                // Determine operation based on tool name
-                operation = McpTelemetryHelper.InferOperationFromToolName(toolName!);
-
-                // For custom tools (DynamicCustomTool), extract stored procedure information
-                if (tool is DynamicCustomTool customTool)
-                {
-                    // Get entity name and procedure from the custom tool
-                    (entityName, dbProcedure) = McpTelemetryHelper.ExtractCustomToolMetadata(customTool, _serviceProvider);
-                }
-
-                // Track the start of MCP tool execution with telemetry
-                activity?.TrackMcpToolExecutionStarted(
-                    toolName: toolName!,
-                    entityName: entityName,
-                    operation: operation,
-                    dbProcedure: dbProcedure);
-
-                // Execute the tool.
+                // Execute the tool with telemetry.
                 // If a MCP stdio role override is set in the environment, create
                 // a request HttpContext with the X-MS-API-ROLE header so tools and authorization
                 // helpers that read IHttpContextAccessor will see the role. We also ensure the
@@ -353,7 +320,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
                     try
                     {
                         // Execute the tool with the scoped service provider so any scoped services resolve correctly.
-                        callResult = await tool.ExecuteAsync(argsDoc, scopedProvider, ct);
+                        callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                            tool, toolName!, argsDoc, scopedProvider, ct);
                     }
                     finally
                     {
@@ -366,32 +334,15 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 else
                 {
-                    callResult = await tool.ExecuteAsync(argsDoc, _serviceProvider, ct);
+                    callResult = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                        tool, toolName!, argsDoc, _serviceProvider, ct);
                 }
-
-                // Track successful completion
-                activity?.TrackMcpToolExecutionFinished();
 
                 // Normalize to MCP content blocks (array). We try to pass through if a 'Content' property exists,
                 // otherwise we wrap into a single text block.
                 object[] content = CoerceToMcpContentBlocks(callResult);
 
                 WriteResult(id, new { content });
-            }
-            catch (Exception ex)
-            {
-                // Track exception in telemetry with specific error code based on exception type
-                string errorCode = ex switch
-                {
-                    OperationCanceledException => McpTelemetryErrorCodes.OPERATION_CANCELLED,
-                    UnauthorizedAccessException => McpTelemetryErrorCodes.AUTHENTICATION_FAILED,
-                    System.Data.Common.DbException => McpTelemetryErrorCodes.DATABASE_ERROR,
-                    ArgumentException => McpTelemetryErrorCodes.INVALID_REQUEST,
-                    _ => McpTelemetryErrorCodes.EXECUTION_FAILED
-                };
-
-                activity?.TrackMcpToolExecutionFinishedWithException(ex, errorCode: errorCode);
-                throw;
             }
             finally
             {

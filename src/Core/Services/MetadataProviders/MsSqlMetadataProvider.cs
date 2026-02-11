@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -294,6 +295,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc/>
         protected override async Task GenerateAutoentitiesIntoEntities()
         {
+            int addedEntities = 0;
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             Dictionary<string, Entity> entities = (Dictionary<string, Entity>)_entities;
             if (runtimeConfig.Autoentities is null)
@@ -313,11 +315,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // Extract the entity name, schema, and database object name from the query result.
                     // The SQL query returns these values with placeholders already replaced.
-
-                    // TODO: change it so that we don't need to verify if the names are null
-                    string? entityName = resultObject["entity_name"]?.GetValue<string>();
-                    string? schemaName = resultObject["schema"]?.GetValue<string>();
-                    string? objectName = resultObject["object"]?.GetValue<string>();
+                    string entityName = resultObject["entity_name"]!.ToString();
+                    string schemaName = resultObject["schema"]!.ToString();
+                    string objectName = resultObject["object"]!.ToString();
 
                     if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName))
                     {
@@ -345,20 +345,36 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.
-                    // TODO: Add new log message that shows if the rest calls are enabled or disabled for each of this new entities
                     if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddEntityNameToDataSourceName(entityName))
                     {
                         // TODO: need to make a better message that includes if the conflict is with a user-defined entity or another auto-generated entity.
                         throw new DataApiBuilderException(
-                            message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentity pattern '{autoentityName}'.",
+                            message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentity pattern with definition-name '{autoentityName}'.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
+
+                    if (runtimeConfig.IsRestEnabled)
+                    {
+                        _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, entityName);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
+                    }
+
+                    addedEntities++;
                 }
             }
 
-            // TODO: include warning message that no autoentities were created if it is the same number between the _entities and the new entities.
-            _entities = entities;
+            if (addedEntities == 0)
+            {
+                _logger.LogWarning("No new entities were generated from the autoentity patterns defined in the configuration.");
+            }
+            else
+            {
+                _runtimeConfigProvider.AddNewEntitiesToConfig(entities);
+            }
         }
 
         public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)

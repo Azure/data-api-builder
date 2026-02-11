@@ -41,8 +41,8 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean",
-              "description": "Enable health check endpoint",
+              "$ref": "#/$defs/boolean-or-string",
+              "description": "Enable health check endpoint for something",
               "default": true,
               "additionalProperties": false
             },
@@ -186,7 +186,7 @@
               "type": "string"
             },
             "enabled": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Allow enabling/disabling REST requests for all entities."
             },
             "request-body-strict": {
@@ -210,7 +210,7 @@
               "type": "string"
             },
             "enabled": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Allow enabling/disabling GraphQL requests for all entities."
             },
             "depth-limit": {
@@ -424,6 +424,19 @@
             }
           }
         },
+        "compression": {
+          "type": "object",
+          "description": "Configures HTTP response compression settings.",
+          "additionalProperties": false,
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": ["optimal", "fastest", "none"],
+              "default": "optimal",
+              "description": "Specifies the response compression level. 'optimal' provides best compression ratio, 'fastest' prioritizes speed, 'none' disables compression."
+            }
+          }
+        },
         "telemetry": {
           "type": "object",
           "description": "Telemetry configuration",
@@ -438,7 +451,7 @@
                   "description": "Application Insights connection string"
                 },
                 "enabled": {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Allow enabling/disabling Application Insights telemetry.",
                   "default": true
                 }
@@ -481,7 +494,7 @@
               "additionalProperties": false,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "$ref": "#/$defs/boolean-or-string",
                   "description": "Allow enabling/disabling Azure Log Analytics.",
                   "default": false
                 },
@@ -618,7 +631,7 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean",
+              "$ref": "#/$defs/boolean-or-string",
               "description": "Enable health check endpoint globally",
               "default": true,
               "additionalProperties": false
@@ -1391,7 +1404,15 @@
               "type": "string"
             }
           },
-          "required": ["singular"]
+          "required": [ "singular" ]
+        }
+      ]
+    },
+    "boolean-or-string": {
+      "oneOf":[
+        {
+          "type": [ "boolean", "string" ],
+          "pattern": "^(?:true|false|1|0|@env\\('.*'\\)|@akv\\('.*'\\))$"
         }
       ]
     },

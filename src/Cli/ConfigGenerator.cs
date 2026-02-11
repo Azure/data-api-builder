@@ -831,7 +831,15 @@ namespace Cli
 
             // MCP: Enabled and Path
             if (options.RuntimeMcpEnabled != null ||
-                options.RuntimeMcpPath != null)
+                options.RuntimeMcpPath != null ||
+                options.RuntimeMcpDescription != null ||
+                options.RuntimeMcpDmlToolsEnabled != null ||
+                options.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null ||
+                options.RuntimeMcpDmlToolsCreateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -855,6 +863,21 @@ namespace Cli
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Cache = updatedCacheOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Compression: Level
+            if (options.RuntimeCompressionLevel != null)
+            {
+                CompressionOptions updatedCompressionOptions = runtimeConfig?.Runtime?.Compression ?? new();
+                bool status = TryUpdateConfiguredCompressionValues(options, ref updatedCompressionOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Compression = updatedCompressionOptions } };
                 }
                 else
                 {
@@ -1087,6 +1110,14 @@ namespace Cli
                     }
                 }
 
+                // Runtime.Mcp.Description
+                updatedValue = options?.RuntimeMcpDescription;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Description = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Description as '{updatedValue}'", updatedValue);
+                }
+
                 // Handle DML tools configuration
                 bool hasToolUpdates = false;
                 DmlToolsConfig? currentDmlTools = updatedMcpOptions?.DmlTools;
@@ -1227,6 +1258,37 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Compression runtime settings based on the provided value.
+        /// Validates user-provided parameters and then returns true if the updated Compression options
+        /// need to be overwritten on the existing config parameters.
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCompressionOptions">updatedCompressionOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredCompressionValues(
+            ConfigureOptions options,
+            ref CompressionOptions updatedCompressionOptions)
+        {
+            try
+            {
+                // Runtime.Compression.Level
+                CompressionLevel? updatedValue = options?.RuntimeCompressionLevel;
+                if (updatedValue != null)
+                {
+                    updatedCompressionOptions = updatedCompressionOptions with { Level = updatedValue.Value, UserProvidedLevel = true };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Compression.Level as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to configure RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }
@@ -1768,6 +1830,7 @@ namespace Cli
                 List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
                 Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
                 List<FieldMetadata> mergedFields = [];
+                bool primaryKeyOptionProvided = options.FieldsPrimaryKeyCollection?.Any() == true;
 
                 foreach (FieldMetadata field in existingFields)
                 {
@@ -1778,7 +1841,10 @@ namespace Cli
                             Name = updatedField.Name,
                             Alias = updatedField.Alias ?? field.Alias,
                             Description = updatedField.Description ?? field.Description,
-                            PrimaryKey = updatedField.PrimaryKey
+                            // If --fields.primary-key was not provided at all,
+                            // keep the existing primary-key flag. Otherwise,
+                            // use the value coming from updatedField.
+                            PrimaryKey = primaryKeyOptionProvided ? updatedField.PrimaryKey : field.PrimaryKey
                         });
                         updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
                     }

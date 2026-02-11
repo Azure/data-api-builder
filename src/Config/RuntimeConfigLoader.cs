@@ -320,6 +320,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityMcpOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheOptionsConverterFactory());
         options.Converters.Add(new RuntimeCacheLevel2OptionsConverterFactory());
+        options.Converters.Add(new CompressionOptionsConverterFactory());
         options.Converters.Add(new MultipleCreateOptionsConverter());
         options.Converters.Add(new MultipleMutationOptionsConverter(options));
         options.Converters.Add(new DataSourceConverterFactory(replacementSettings));
@@ -327,6 +328,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new AKVRetryPolicyOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new AzureLogAnalyticsOptionsConverterFactory(replacementSettings));
         options.Converters.Add(new AzureLogAnalyticsAuthOptionsConverter(replacementSettings));
+        options.Converters.Add(new BoolJsonConverter());
         options.Converters.Add(new FileSinkConverter(replacementSettings));
 
         // Add AzureKeyVaultOptionsConverterFactory to ensure AKV config is deserialized properly

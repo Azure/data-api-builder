@@ -115,6 +115,13 @@ namespace Azure.DataApiBuilder.Mcp.BuiltInTools
                     return McpResponseBuilder.BuildErrorResult(toolName, "InvalidArguments", parseError, logger);
                 }
 
+                // Check entity-level DML tool configuration
+                if (config.Entities?.TryGetValue(entityName, out Entity? entity) == true &&
+                    entity.Mcp?.DmlToolEnabled == false)
+                {
+                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"DML tools are disabled for entity '{entityName}'.");
+                }
+
                 IMetadataProviderFactory metadataProviderFactory = serviceProvider.GetRequiredService<IMetadataProviderFactory>();
                 IMutationEngineFactory mutationEngineFactory = serviceProvider.GetRequiredService<IMutationEngineFactory>();
 

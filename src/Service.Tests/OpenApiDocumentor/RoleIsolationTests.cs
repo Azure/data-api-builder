@@ -31,12 +31,16 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             // Anonymous can only read, authenticated can create/update/delete
             EntityPermission[] permissions = new[]
             {
-                new EntityPermission(Role: "anonymous", Actions: new[] { new EntityAction(EntityActionOperation.Read, null, new()) }),
-                new EntityPermission(Role: "authenticated", Actions: new[] { 
-                    new EntityAction(EntityActionOperation.Create, null, new()),
-                    new EntityAction(EntityActionOperation.Update, null, new()),
-                    new EntityAction(EntityActionOperation.Delete, null, new())
-                })
+                new EntityPermission(
+                    Role: "anonymous",
+                    Actions: new[] { new EntityAction(EntityActionOperation.Read, null, new()) }),
+                new EntityPermission(
+                    Role: "authenticated",
+                    Actions: new[] {
+                        new EntityAction(EntityActionOperation.Create, null, new()),
+                        new EntityAction(EntityActionOperation.Update, null, new()),
+                        new EntityAction(EntityActionOperation.Delete, null, new())
+                    })
             };
 
             // Superset (no role) should have all operations
@@ -65,15 +69,25 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
 
             // The superset should have both GET and POST
             OpenApiDocument supersetDoc = await GenerateDocumentWithPermissions(permissions);
-            Assert.IsTrue(supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Get)), "Superset should have GET from reader");
-            Assert.IsTrue(supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Post)), "Superset should have POST from writer");
-            
+            Assert.IsTrue(
+                supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Get)),
+                "Superset should have GET from reader");
+            Assert.IsTrue(
+                supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Post)),
+                "Superset should have POST from writer");
+
             // Neither role alone should have all operations - they don't leak
             // This test confirms the superset correctly combines permissions while
             // the individual role filtering (when implemented for direct calls) would not
-            Assert.IsFalse(supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Put)), "No role has PUT, superset should not have it");
-            Assert.IsFalse(supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)), "No role has PATCH, superset should not have it");
-            Assert.IsFalse(supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Delete)), "No role has DELETE, superset should not have it");
+            Assert.IsFalse(
+                supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Put)),
+                "No role has PUT, superset should not have it");
+            Assert.IsFalse(
+                supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)),
+                "No role has PATCH, superset should not have it");
+            Assert.IsFalse(
+                supersetDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Delete)),
+                "No role has DELETE, superset should not have it");
         }
 
         /// <summary>
@@ -105,10 +119,12 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             // Test 3: Both Create and Update permissions - should have PUT/PATCH
             EntityPermission[] createAndUpdate = new[]
             {
-                new EntityPermission(Role: "editor", Actions: new[] { 
-                    new EntityAction(EntityActionOperation.Create, null, new()),
-                    new EntityAction(EntityActionOperation.Update, null, new())
-                })
+                new EntityPermission(
+                    Role: "editor",
+                    Actions: new[] {
+                        new EntityAction(EntityActionOperation.Create, null, new()),
+                        new EntityAction(EntityActionOperation.Update, null, new())
+                    })
             };
             OpenApiDocument docBoth = await GenerateDocumentWithPermissions(createAndUpdate);
             Assert.IsTrue(docBoth.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Post)), "Should have POST with Create permission");

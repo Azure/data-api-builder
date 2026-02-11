@@ -433,17 +433,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Tries to get the Entity name and primary key route from the provided string
-        /// returns the entity name via a lookup using the string which includes
-        /// characters up until the first '/', and then resolves the primary key
-        /// as the substring following the '/'.
+        /// by matching against configured entity paths (which may include '/' for sub-directories)
+        /// using longest-prefix matching, then treating the remaining suffix as the primary key route.
+        /// 
         /// For example, a request route should be of the form
         /// {EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
-        /// or {SubDir}/.../{EntityPath}/{PKColumn}/{PkValue}/{PKColumn}/{PKValue}...
+        /// where {EntityPath} may be a single segment like "books" or multi-segment like "shopping-cart/item".
         /// 
-        /// Note: Uses longest-prefix matching (most-specific match wins). When multiple
+        /// Uses longest-prefix matching (most-specific match wins). When multiple
         /// entity paths could match, the longest matching path takes precedence. For example,
         /// if both "cart" and "cart/item" are valid entity paths, a request to
-        /// "/cart/item/id/123" will match "cart/item" with primaryKeyRoute "id/123".
+        /// "cart/item/id/123" will match "cart/item" with primaryKeyRoute "id/123".
         /// </summary>
         /// <param name="routeAfterPathBase">The request route (no '/' prefix) containing the entity path
         /// (and optionally primary key).</param>

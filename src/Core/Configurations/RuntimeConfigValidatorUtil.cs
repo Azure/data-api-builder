@@ -118,7 +118,7 @@ public static class RuntimeConfigValidatorUtil
 
             if (segment.Contains(':'))
             {
-                errorMessage = "contains ':' which is reserved for port numbers in URLs.";
+                errorMessage = "contains ':' which is a reserved character and not allowed in URL paths.";
                 return false;
             }
 

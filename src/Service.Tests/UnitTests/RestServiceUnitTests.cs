@@ -176,6 +176,47 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="restRoutePrefix">path to return from mocked config.</param>
         public static void InitializeTest(string restRoutePrefix, string entityName)
         {
+            InitializeTestWithEntityPaths(restRoutePrefix, new Dictionary<string, string> { { entityName, entityName } });
+        }
+
+        /// <summary>
+        /// Needed for the callback that is required
+        /// to make use of out parameter with mocking.
+        /// Without use of delegate the out param will
+        /// not be populated with the correct value.
+        /// This delegate is for the callback used
+        /// with the mocked MetadataProvider.
+        /// </summary>
+        /// <param name="entityPath">The entity path.</param>
+        /// <param name="entity">Name of entity.</param>
+        delegate void metaDataCallback(string entityPath, out string entity);
+
+        /// <summary>
+        /// Initializes test with a sub-directory entity path.
+        /// </summary>
+        /// <param name="restRoutePrefix">REST path prefix (e.g., "/api").</param>
+        /// <param name="entityPath">Entity path with sub-directories (e.g., "shopping-cart/item").</param>
+        /// <param name="entityName">Name of the entity.</param>
+        public static void InitializeTestWithEntityPath(string restRoutePrefix, string entityPath, string entityName)
+        {
+            InitializeTestWithEntityPaths(restRoutePrefix, new Dictionary<string, string> { { entityPath, entityName } });
+        }
+
+        /// <summary>
+        /// Initializes test with multiple entity paths for testing overlapping path scenarios.
+        /// </summary>
+        /// <param name="restRoutePrefix">REST path prefix (e.g., "/api").</param>
+        /// <param name="entityPaths">Dictionary mapping entity paths to entity names.</param>
+        public static void InitializeTestWithMultipleEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths)
+        {
+            InitializeTestWithEntityPaths(restRoutePrefix, entityPaths);
+        }
+
+        /// <summary>
+        /// Core helper to initialize REST Service with specified entity path mappings.
+        /// </summary>
+        private static void InitializeTestWithEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths)
+        {
             RuntimeConfig mockConfig = new(
                Schema: "",
                DataSource: new(DatabaseType.PostgreSQL, "", new()),
@@ -214,7 +255,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
 
             RuntimeConfig loadedConfig = provider.GetConfig();
-            loadedConfig.TryAddEntityPathNameToEntityName(entityName, entityName);
+            foreach (KeyValuePair<string, string> mapping in entityPaths)
+            {
+                loadedConfig.TryAddEntityPathNameToEntityName(mapping.Key, mapping.Value);
+            }
 
             Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
             Mock<IAuthorizationService> authorizationService = new();
@@ -253,200 +297,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
 
             // Setup REST Service
-            _restService = new RestService(
-                queryEngineFactory.Object,
-                mutationEngineFactory.Object,
-                metadataProviderFactory.Object,
-                httpContextAccessor.Object,
-                authorizationService.Object,
-                provider,
-                requestValidator);
-        }
-
-        /// <summary>
-        /// Needed for the callback that is required
-        /// to make use of out parameter with mocking.
-        /// Without use of delegate the out param will
-        /// not be populated with the correct value.
-        /// This delegate is for the callback used
-        /// with the mocked MetadataProvider.
-        /// </summary>
-        /// <param name="entityPath">The entity path.</param>
-        /// <param name="entity">Name of entity.</param>
-        delegate void metaDataCallback(string entityPath, out string entity);
-
-        /// <summary>
-        /// Initializes test with a sub-directory entity path.
-        /// </summary>
-        /// <param name="restRoutePrefix">REST path prefix (e.g., "/api").</param>
-        /// <param name="entityPath">Entity path with sub-directories (e.g., "shopping-cart/item").</param>
-        /// <param name="entityName">Name of the entity.</param>
-        public static void InitializeTestWithEntityPath(string restRoutePrefix, string entityPath, string entityName)
-        {
-            RuntimeConfig mockConfig = new(
-               Schema: "",
-               DataSource: new(DatabaseType.PostgreSQL, "", new()),
-               Runtime: new(
-                   Rest: new(Path: restRoutePrefix),
-                   GraphQL: new(),
-                   Mcp: new(),
-                   Host: new(null, null)
-               ),
-               Entities: new(new Dictionary<string, Entity>())
-           );
-
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            MsSqlQueryBuilder queryBuilder = new();
-            Mock<DbExceptionParser> dbExceptionParser = new(provider);
-            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
-            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
-            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
-            Mock<IQueryEngineFactory> queryEngineFactory = new();
-
-            MsSqlQueryExecutor queryExecutor = new(
-                provider,
-                dbExceptionParser.Object,
-                queryExecutorLogger.Object,
-                httpContextAccessor.Object);
-
-            queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
-            queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
-
-            RuntimeConfig loadedConfig = provider.GetConfig();
-            loadedConfig.TryAddEntityPathNameToEntityName(entityPath, entityName);
-
-            Mock<IAuthorizationService> authorizationService = new();
-            DefaultHttpContext context = new();
-            httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
-            AuthorizationResolver authorizationResolver = new(provider, metadataProviderFactory.Object);
-            GQLFilterParser gQLFilterParser = new(provider, metadataProviderFactory.Object);
-
-            Mock<IFusionCache> cache = new();
-            DabCacheService cacheService = new(cache.Object, logger: null, httpContextAccessor.Object);
-
-            SqlQueryEngine queryEngine = new(
-                queryManagerFactory.Object,
-                metadataProviderFactory.Object,
-                httpContextAccessor.Object,
-                authorizationResolver,
-                gQLFilterParser,
-                queryEngineLogger.Object,
-                provider,
-                cacheService);
-
-            queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
-
-            SqlMutationEngine mutationEngine =
-                new(
-                queryManagerFactory.Object,
-                metadataProviderFactory.Object,
-                queryEngineFactory.Object,
-                authorizationResolver,
-                gQLFilterParser,
-                httpContextAccessor.Object,
-                provider);
-
-            Mock<IMutationEngineFactory> mutationEngineFactory = new();
-            mutationEngineFactory.Setup(x => x.GetMutationEngine(It.IsAny<DatabaseType>())).Returns(mutationEngine);
-            RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
-
-            _restService = new RestService(
-                queryEngineFactory.Object,
-                mutationEngineFactory.Object,
-                metadataProviderFactory.Object,
-                httpContextAccessor.Object,
-                authorizationService.Object,
-                provider,
-                requestValidator);
-        }
-
-        /// <summary>
-        /// Initializes test with multiple entity paths for testing overlapping path scenarios.
-        /// </summary>
-        /// <param name="restRoutePrefix">REST path prefix (e.g., "/api").</param>
-        /// <param name="entityPaths">Dictionary mapping entity paths to entity names.</param>
-        public static void InitializeTestWithMultipleEntityPaths(string restRoutePrefix, Dictionary<string, string> entityPaths)
-        {
-            RuntimeConfig mockConfig = new(
-               Schema: "",
-               DataSource: new(DatabaseType.PostgreSQL, "", new()),
-               Runtime: new(
-                   Rest: new(Path: restRoutePrefix),
-                   GraphQL: new(),
-                   Mcp: new(),
-                   Host: new(null, null)
-               ),
-               Entities: new(new Dictionary<string, Entity>())
-           );
-
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            MsSqlQueryBuilder queryBuilder = new();
-            Mock<DbExceptionParser> dbExceptionParser = new(provider);
-            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
-            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
-            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
-            Mock<IQueryEngineFactory> queryEngineFactory = new();
-
-            MsSqlQueryExecutor queryExecutor = new(
-                provider,
-                dbExceptionParser.Object,
-                queryExecutorLogger.Object,
-                httpContextAccessor.Object);
-
-            queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
-            queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
-
-            RuntimeConfig loadedConfig = provider.GetConfig();
-            foreach (KeyValuePair<string, string> entityPath in entityPaths)
-            {
-                loadedConfig.TryAddEntityPathNameToEntityName(entityPath.Key, entityPath.Value);
-            }
-
-            Mock<IAuthorizationService> authorizationService = new();
-            DefaultHttpContext context = new();
-            httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
-            AuthorizationResolver authorizationResolver = new(provider, metadataProviderFactory.Object);
-            GQLFilterParser gQLFilterParser = new(provider, metadataProviderFactory.Object);
-
-            Mock<IFusionCache> cache = new();
-            DabCacheService cacheService = new(cache.Object, logger: null, httpContextAccessor.Object);
-
-            SqlQueryEngine queryEngine = new(
-                queryManagerFactory.Object,
-                metadataProviderFactory.Object,
-                httpContextAccessor.Object,
-                authorizationResolver,
-                gQLFilterParser,
-                queryEngineLogger.Object,
-                provider,
-                cacheService);
-
-            queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
-
-            SqlMutationEngine mutationEngine =
-                new(
-                queryManagerFactory.Object,
-                metadataProviderFactory.Object,
-                queryEngineFactory.Object,
-                authorizationResolver,
-                gQLFilterParser,
-                httpContextAccessor.Object,
-                provider);
-
-            Mock<IMutationEngineFactory> mutationEngineFactory = new();
-            mutationEngineFactory.Setup(x => x.GetMutationEngine(It.IsAny<DatabaseType>())).Returns(mutationEngine);
-            RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
-
             _restService = new RestService(
                 queryEngineFactory.Object,
                 mutationEngineFactory.Object,

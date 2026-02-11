@@ -14,6 +14,7 @@ namespace Cli.Tests
         private MockFileSystem? _fileSystem;
         private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
         private const string TEST_RUNTIME_CONFIG_FILE = "test-update-runtime-setting.json";
+        private const string TEST_DATASOURCE_HEALTH_NAME = "My Data Source";
 
         [TestInitialize]
         public void TestInitialize()
@@ -967,7 +968,7 @@ namespace Cli.Tests
             SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
 
             ConfigureOptions options = new(
-                dataSourceHealthName: "My Data Source",
+                dataSourceHealthName: TEST_DATASOURCE_HEALTH_NAME,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
 
@@ -980,7 +981,7 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.DataSource);
             Assert.IsNotNull(config.DataSource.Health);
-            Assert.AreEqual("My Data Source", config.DataSource.Health.Name);
+            Assert.AreEqual(TEST_DATASOURCE_HEALTH_NAME, config.DataSource.Health.Name);
             Assert.IsTrue(config.DataSource.Health.Enabled); // Default value
         }
 

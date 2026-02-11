@@ -428,6 +428,19 @@
             }
           }
         },
+        "compression": {
+          "type": "object",
+          "description": "Configures HTTP response compression settings.",
+          "additionalProperties": false,
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": ["optimal", "fastest", "none"],
+              "default": "optimal",
+              "description": "Specifies the response compression level. 'optimal' provides best compression ratio, 'fastest' prioritizes speed, 'none' disables compression."
+            }
+          }
+        },
         "telemetry": {
           "type": "object",
           "description": "Telemetry configuration",

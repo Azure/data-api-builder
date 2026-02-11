@@ -468,7 +468,52 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 
+            // Add Response Compression services based on config
+            ConfigureResponseCompression(services, runtimeConfig);
+
             services.AddControllers();
+        }
+
+        /// <summary>
+        /// Configures HTTP response compression based on the runtime configuration.
+        /// Compression is applied at the middleware level and supports Gzip and Brotli.
+        /// Applies to REST, GraphQL, and MCP endpoints.
+        /// </summary>
+        private void ConfigureResponseCompression(IServiceCollection services, RuntimeConfig? runtimeConfig)
+        {
+            CompressionLevel compressionLevel = runtimeConfig?.Runtime?.Compression?.Level ?? CompressionOptions.DEFAULT_LEVEL;
+
+            // Only configure compression if level is not None
+            if (compressionLevel == CompressionLevel.None)
+            {
+                return;
+            }
+
+            System.IO.Compression.CompressionLevel systemCompressionLevel = compressionLevel switch
+            {
+                CompressionLevel.Fastest => System.IO.Compression.CompressionLevel.Fastest,
+                CompressionLevel.Optimal => System.IO.Compression.CompressionLevel.Optimal,
+                _ => System.IO.Compression.CompressionLevel.Optimal
+            };
+
+            services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+            });
+
+            services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
+            {
+                options.Level = systemCompressionLevel;
+            });
+
+            services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
+            {
+                options.Level = systemCompressionLevel;
+            });
+
+            _logger.LogInformation("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
         }
 
         /// <summary>
@@ -614,6 +659,13 @@ namespace Azure.DataApiBuilder.Service
                     context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
                     appBuilder => appBuilder.UseHttpsRedirection()
                 );
+            }
+
+            // Response compression middleware should be placed early in the pipeline.
+            // Only use if compression is not set to None.
+            if (runtimeConfig?.Runtime?.Compression?.Level is not CompressionLevel.None)
+            {
+                app.UseResponseCompression();
             }
 
             // URL Rewrite middleware MUST be called prior to UseRouting().

@@ -699,7 +699,7 @@ namespace Cli
                     // Preserve threshold only if it was explicitly set by the user
                     int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs ? datasourceHealthCheckConfig.ThresholdMs : null;
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
-                        enabled: datasourceHealthCheckConfig.Enabled,
+                        enabled: datasourceHealthCheckConfig.UserProvidedEnabled ? datasourceHealthCheckConfig.Enabled : null,
                         name: options.DataSourceHealthName,
                         thresholdMs: thresholdToPreserve);
                 }

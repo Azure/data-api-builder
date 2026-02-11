@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 try
                 {
-                    connection.ConnectionString = Utilities.NormalizeConnectionString(connectionString, databaseType);
+                    connection.ConnectionString = Utilities.NormalizeConnectionString(connectionString, databaseType, _logger);
                     using (DbCommand command = connection.CreateCommand())
                     {
                         command.CommandText = query;

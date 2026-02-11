@@ -677,7 +677,7 @@ public class RuntimeConfigValidator : IConfigValidator
         // Stores the unique rest paths configured for different entities present in the config.
         HashSet<string> restPathsForEntities = new();
 
-        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities ?? Enumerable.Empty<KeyValuePair<string, Entity>>())
         {
             if (runtimeConfig.IsRestEnabled && entity.Rest is not null && entity.Rest.Enabled)
             {

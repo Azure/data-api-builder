@@ -24,7 +24,7 @@ This document provides an end‑to‑end guide to stand up a **SQL MCP Server** 
 - Azure Subscription with permissions for Resource Groups, Storage, ACI, and Azure SQL.
 - Azure SQL Database provisioned and reachable from ACI.
 - Azure CLI (`az`) and .NET SDK installed locally.
-- DAB CLI version **1.7.81 or later**.
+- DAB CLI version **2.0.0 or later**.
 - Outbound network access from ACI to your Azure SQL server.
 
 
@@ -62,7 +62,7 @@ END;
 ## 4. Install DAB CLI and Bootstrap Configuration
 
 ```
-dotnet tool install --global Microsoft.DataApiBuilder --version 1.7.81
+dotnet tool install --global Microsoft.DataApiBuilder --version 2.0.0
 export DATABASE_CONNECTION_STRING="Server=<server>.database.windows.net;Database=<db>;User ID=<user>;Password=<pwd>;Encrypt=True;"
 
 dab init \
@@ -223,7 +223,7 @@ Use the value of `key1` or `key2` as `<StorageAccountKey>` in the next step.
 az container create \
   --resource-group <RG> \
   --name dab-mcp-demo \
-  --image mcr.microsoft.com/azure-databases/data-api-builder:1.7.81-rc \
+  --image mcr.microsoft.com/azure-databases/data-api-builder:2.0.0-rc \
   --dns-name-label <globally-unique-label> \
   --ports 5000 \
   --location <location> \

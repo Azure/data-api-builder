@@ -4,7 +4,7 @@ This document describes how to configure command timeout for PostgreSQL data sou
 
 ## Overview
 
-Data API Builder now supports configuring PostgreSQL command timeout through the `command-timeout` option in the data source configuration. This feature allows you to override the default command timeout for all PostgreSQL queries executed by Data API Builder.
+Data API builder now supports configuring PostgreSQL command timeout through the `command-timeout` option in the data source configuration. This feature allows you to override the default command timeout for all PostgreSQL queries executed by Data API builder.
 
 ## Configuration
 

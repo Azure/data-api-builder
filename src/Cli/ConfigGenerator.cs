@@ -719,20 +719,23 @@ namespace Cli
             if (options.DataSourceUserDelegatedAuthEnabled is not null
                 || options.DataSourceUserDelegatedAuthDatabaseAudience is not null)
             {
-                // Validate that user-delegated-auth is only used with MSSQL
-                if (options.DataSourceUserDelegatedAuthEnabled == true && !DatabaseType.MSSQL.Equals(dbType))
+                // Determine the enabled state: use new value if provided, otherwise preserve existing
+                bool enabled = options.DataSourceUserDelegatedAuthEnabled
+                    ?? userDelegatedAuthConfig?.Enabled
+                    ?? false;
+
+                // Validate that user-delegated-auth is only used with MSSQL when enabled=true
+                if (enabled && !DatabaseType.MSSQL.Equals(dbType))
                 {
                     _logger.LogError("user-delegated-auth is only supported for database-type 'mssql'.");
                     return false;
                 }
 
-                // Create or update user-delegated-auth config
-                bool enabled = options.DataSourceUserDelegatedAuthEnabled
-                    ?? userDelegatedAuthConfig?.Enabled
-                    ?? false;
+                // Get database-audience: use new value if provided, otherwise preserve existing
                 string? databaseAudience = options.DataSourceUserDelegatedAuthDatabaseAudience
                     ?? userDelegatedAuthConfig?.DatabaseAudience;
 
+                // Create or update user-delegated-auth config
                 userDelegatedAuthConfig = new UserDelegatedAuthConfig(
                     Enabled: enabled,
                     DatabaseAudience: databaseAudience,

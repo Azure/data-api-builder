@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </summary>
 /// <param name="Enabled">Whether user-delegated authentication is enabled.</param>
 /// <param name="DatabaseAudience">The Azure SQL resource identifier for token acquisition.</param>
-/// <param name="DisableConnectionPooling">Explicitly control connection pooling behavior. Default: true for safety.</param>
+/// <param name="DisableConnectionPooling">Explicitly control connection pooling behavior. Default: true (disabled) for safety. Connection pooling is disabled by default in OBO scenarios to prevent token reuse across different user contexts.</param>
 /// <param name="TokenCacheDurationMinutes">In-memory cache duration for OBO tokens per user. Default: 50 minutes.</param>
 public record UserDelegatedAuthConfig(
     bool Enabled = false,

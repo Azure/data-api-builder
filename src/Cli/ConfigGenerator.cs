@@ -643,6 +643,7 @@ namespace Cli
             DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
             DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
+            UserDelegatedAuthConfig? userDelegatedAuthConfig = runtimeConfig.DataSource.UserDelegatedAuth;
 
             if (options.DataSourceDatabaseType is not null)
             {
@@ -714,8 +715,33 @@ namespace Cli
                 }
             }
 
+            // Handle user-delegated-auth options
+            if (options.DataSourceUserDelegatedAuthEnabled is not null
+                || options.DataSourceUserDelegatedAuthDatabaseAudience is not null)
+            {
+                // Validate that user-delegated-auth is only used with MSSQL
+                if (options.DataSourceUserDelegatedAuthEnabled == true && !DatabaseType.MSSQL.Equals(dbType))
+                {
+                    _logger.LogError("user-delegated-auth is only supported for database-type 'mssql'.");
+                    return false;
+                }
+
+                // Create or update user-delegated-auth config
+                bool enabled = options.DataSourceUserDelegatedAuthEnabled
+                    ?? userDelegatedAuthConfig?.Enabled
+                    ?? false;
+                string? databaseAudience = options.DataSourceUserDelegatedAuthDatabaseAudience
+                    ?? userDelegatedAuthConfig?.DatabaseAudience;
+
+                userDelegatedAuthConfig = new UserDelegatedAuthConfig(
+                    Enabled: enabled,
+                    DatabaseAudience: databaseAudience,
+                    DisableConnectionPooling: userDelegatedAuthConfig?.DisableConnectionPooling,
+                    TokenCacheDurationMinutes: userDelegatedAuthConfig?.TokenCacheDurationMinutes);
+            }
+
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
-            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig);
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig, userDelegatedAuthConfig);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 
             return runtimeConfig != null;

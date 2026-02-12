@@ -14,11 +14,13 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="ConnectionString">Connection string to access the database.</param>
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
 /// <param name="Health">Health check configuration for the datasource.</param>
+/// <param name="UserDelegatedAuth">User-delegated authentication configuration (OBO). Optional.</param>
 public record DataSource(
     DatabaseType DatabaseType,
     string ConnectionString,
     Dictionary<string, object?>? Options = null,
-    DatasourceHealthCheckConfig? Health = null)
+    DatasourceHealthCheckConfig? Health = null,
+    UserDelegatedAuthConfig? UserDelegatedAuth = null)
 {
     [JsonIgnore]
     public bool IsDatasourceHealthEnabled =>

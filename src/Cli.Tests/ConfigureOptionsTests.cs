@@ -1094,5 +1094,186 @@ namespace Cli.Tests
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
         }
+
+        /// <summary>
+        /// Tests adding user-delegated-auth.enabled to a config that doesn't have user-delegated-auth configured.
+        /// This method verifies that the user-delegated-auth.enabled property can be set to true for MSSQL database.
+        /// Command: dab configure --data-source.user-delegated-auth.enabled true
+        /// </summary>
+        [TestMethod]
+        public void TestAddUserDelegatedAuthEnabled()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthEnabled: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
+        }
+
+        /// <summary>
+        /// Tests adding user-delegated-auth.database-audience to a config that doesn't have user-delegated-auth configured.
+        /// This method verifies that the database-audience can be set for user-delegated authentication.
+        /// Command: dab configure --data-source.user-delegated-auth.database-audience "https://database.windows.net"
+        /// </summary>
+        [TestMethod]
+        public void TestAddUserDelegatedAuthDatabaseAudience()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            string audienceValue = "https://database.windows.net";
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthDatabaseAudience: audienceValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.AreEqual(audienceValue, config.DataSource.UserDelegatedAuth.DatabaseAudience);
+        }
+
+        /// <summary>
+        /// Tests adding both user-delegated-auth.enabled and database-audience in a single command.
+        /// This method verifies that both properties can be set together.
+        /// Command: dab configure --data-source.user-delegated-auth.enabled true --data-source.user-delegated-auth.database-audience "https://database.windows.net"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("https://database.windows.net", DisplayName = "Azure SQL Database (public cloud)")]
+        [DataRow("https://database.usgovcloudapi.net", DisplayName = "Azure Government Cloud")]
+        [DataRow("https://database.chinacloudapi.cn", DisplayName = "Azure China Cloud")]
+        [DataRow("https://myinstance.abc123.database.windows.net", DisplayName = "Azure SQL Managed Instance")]
+        public void TestAddUserDelegatedAuthEnabledAndDatabaseAudience(string audienceValue)
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthEnabled: true,
+                dataSourceUserDelegatedAuthDatabaseAudience: audienceValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
+            Assert.AreEqual(audienceValue, config.DataSource.UserDelegatedAuth.DatabaseAudience);
+        }
+
+        /// <summary>
+        /// Tests that enabling user-delegated-auth on a non-MSSQL database fails.
+        /// This method verifies that user-delegated-auth is only allowed for MSSQL database type.
+        /// Command: dab configure --data-source.database-type postgresql --data-source.user-delegated-auth.enabled true
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("postgresql", DisplayName = "Fail when enabling user-delegated-auth on PostgreSQL")]
+        [DataRow("mysql", DisplayName = "Fail when enabling user-delegated-auth on MySQL")]
+        [DataRow("cosmosdb_nosql", DisplayName = "Fail when enabling user-delegated-auth on CosmosDB")]
+        public void TestFailureWhenEnablingUserDelegatedAuthOnNonMSSQLDatabase(string dbType)
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceDatabaseType: dbType,
+                dataSourceUserDelegatedAuthEnabled: true,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests updating existing user-delegated-auth configuration by changing the database-audience.
+        /// This method verifies that the database-audience can be updated while preserving the enabled setting.
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateUserDelegatedAuthDatabaseAudience()
+        {
+            // Arrange - Config with existing user-delegated-auth section
+            string configWithUserDelegatedAuth = @"
+            {
+                ""$schema"": ""test"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""user-delegated-auth"": {
+                        ""enabled"": true,
+                        ""database-audience"": ""https://database.windows.net""
+                    }
+                },
+                ""runtime"": {
+                    ""rest"": {
+                        ""enabled"": true,
+                        ""path"": ""/api""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""path"": ""/graphql"",
+                        ""allow-introspection"": true
+                    },
+                    ""host"": {
+                        ""mode"": ""development"",
+                        ""cors"": {
+                            ""origins"": [],
+                            ""allow-credentials"": false
+                        },
+                        ""authentication"": {
+                            ""provider"": ""StaticWebApps""
+                        }
+                    }
+                },
+                ""entities"": {}
+            }";
+            SetupFileSystemWithInitialConfig(configWithUserDelegatedAuth);
+
+            string newAudience = "https://database.usgovcloudapi.net";
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthDatabaseAudience: newAudience,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
+            Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
+            Assert.AreEqual(newAudience, config.DataSource.UserDelegatedAuth.DatabaseAudience);
+        }
     }
 }

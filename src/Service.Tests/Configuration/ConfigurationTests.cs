@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
@@ -5232,10 +5233,51 @@ type Planet @model(name:""PlanetAlias"") {
         }
 
         [TestCategory(TestCategory.MSSQL)]
-        [TestMethod]
-        public async Task TestAutoentitiesAreGeneratedIntoEntities()
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "Test Autoentities with additional entities")]
+        [DataRow(false, DisplayName = "Test Autoentities without additional entities")]
+        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities)
         {
             // Arrange
+            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
+                                                      TargetEntity: "BookPublisher",
+                                                      SourceFields: new string[] { },
+                                                      TargetFields: new string[] { },
+                                                      LinkingObject: null,
+                                                      LinkingSourceFields: null,
+                                                      LinkingTargetFields: null);
+
+            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
+                                    Fields: null,
+                                    Rest: null,
+                                    GraphQL: new(Singular: "book", Plural: "books"),
+                                    Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
+                                    Mappings: null);
+
+            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
+                                                           TargetEntity: "Book",
+                                                           SourceFields: new string[] { },
+                                                           TargetFields: new string[] { },
+                                                           LinkingObject: null,
+                                                           LinkingSourceFields: null,
+                                                           LinkingTargetFields: null);
+
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: null,
+                GraphQL: new(Singular: "bookpublisher", Plural: "bookpublishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", bookEntity },
+                { "BookPublisher", publisherEntity }
+            };
+
             Dictionary<string, Autoentity> autoentityMap = new()
             {
                 {
@@ -5243,10 +5285,10 @@ type Planet @model(name:""PlanetAlias"") {
                         Patterns: new AutoentityPatterns(
                             Include: new[] { "%publishers%" },
                             Exclude: null,
-                            Name: null // Let DAB decide entity naming
+                            Name: null
                         ),
                         Template: new AutoentityTemplate(
-                            Rest: new EntityRestOptions(Enabled: true), // Enable REST as requested
+                            Rest: new EntityRestOptions(Enabled: true),
                             GraphQL: new EntityGraphQLOptions(
                                 Singular: string.Empty, 
                                 Plural: string.Empty, 
@@ -5280,14 +5322,13 @@ type Planet @model(name:""PlanetAlias"") {
                         )
                     )
                 ),
-                Entities: new(new Dictionary<string, Entity>()), // Start with empty entities
+                Entities: new (useEntities ? entityMap : new Dictionary<string, Entity>()),
                 Autoentities: new RuntimeAutoentities(autoentityMap)
             );
 
-            const string CUSTOM_CONFIG = "autoentities-test-config.json";
-            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
 
-            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG}" };
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
@@ -5314,71 +5355,22 @@ type Planet @model(name:""PlanetAlias"") {
                 HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
 
                 // Assert
+                string expectedResponseFragment = @"{""id"":1156,""name"":""The First Publisher""}";
+
                 // Verify REST response
-                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode,
-                    "REST request to auto-generated entity should succeed");
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
 
-                // TODO: check this thing
                 string restResponseBody = await restResponse.Content.ReadAsStringAsync();
-                Assert.IsFalse(string.IsNullOrEmpty(restResponseBody),
-                    "REST response should contain data");
-
-                // Parse and validate REST response structure
-                JsonElement restJsonResponse = JsonSerializer.Deserialize<JsonElement>(restResponseBody);
-                Assert.IsTrue(restJsonResponse.TryGetProperty("value", out JsonElement restDataArray),
-                    "REST response should contain 'value' property with data array");
-                Assert.AreEqual(JsonValueKind.Array, restDataArray.ValueKind,
-                    "REST response data should be an array");
-
-                // TODO: Add specific field validation here based on your publishers table schema
-                // I think it can be done by sending a request to the database and get compare the values we get with this response
-                // Example:
-                // if (restDataArray.GetArrayLength() > 0)
-                // {
-                //     JsonElement firstPublisher = restDataArray[0];
-                //     Assert.IsTrue(firstPublisher.TryGetProperty("id", out _), "Publisher should have id field");
-                //     Assert.IsTrue(firstPublisher.TryGetProperty("name", out _), "Publisher should have name field");
-                //     
-                //     // Add more specific field and value assertions here
-                // }
-
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains(expectedResponseFragment));
+                
                 // Verify GraphQL response  
-                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode,
-                    "GraphQL request to auto-generated entity should succeed");
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
 
-                // TODO: Check this thing, I think we can just check if it is null without having to do too much stuff with readasstringasync
                 string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
-                Assert.IsFalse(string.IsNullOrEmpty(graphqlResponseBody),
-                    "GraphQL response should contain data");
-
-                // Parse and validate GraphQL response structure
-                JsonElement graphqlJsonResponse = JsonSerializer.Deserialize<JsonElement>(graphqlResponseBody);
-                Assert.IsFalse(graphqlJsonResponse.TryGetProperty("errors", out _),
-                    "GraphQL response should not contain errors");
-                Assert.IsTrue(graphqlJsonResponse.TryGetProperty("data", out JsonElement graphqlData),
-                    "GraphQL response should contain data");
-                Assert.IsTrue(graphqlData.TryGetProperty("publishers", out JsonElement publishersData),
-                    "GraphQL data should contain publishers");
-                Assert.IsTrue(publishersData.TryGetProperty("items", out JsonElement publishersItems),
-                    "GraphQL publishers should contain items array");
-                Assert.AreEqual(JsonValueKind.Array, publishersItems.ValueKind,
-                    "GraphQL publishers items should be an array");
-
-                // TODO: Add specific GraphQL field validation here based on your publishers table schema
-                // Example:
-                // if (publishersItems.GetArrayLength() > 0)
-                // {
-                //     JsonElement firstPublisher = publishersItems[0];
-                //     Assert.IsTrue(firstPublisher.TryGetProperty("id", out JsonElement idValue), "Publisher should have id field");
-                //     Assert.IsTrue(firstPublisher.TryGetProperty("name", out JsonElement nameValue), "Publisher should have name field");
-                //     
-                //     // Add specific value assertions here:
-                //     // Assert.AreEqual("Expected Publisher Name", nameValue.GetString());
-                //     // Assert.AreEqual(123, idValue.GetInt32());
-                // }
-
-                // Success! The autoentity was successfully converted to a working entity
-                // that responds to both REST and GraphQL requests
+                Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
+                Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
             }
         }
 

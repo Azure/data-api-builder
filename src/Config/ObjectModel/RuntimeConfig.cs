@@ -292,7 +292,7 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if (Entities is null && Autoentities is null)
+        if ((Entities is null || Entities.Entities.Count == 0) && Autoentities is null)
         {
             throw new DataApiBuilderException(
                 message: "Configuration file should contain either at least the Entities or Autoentities property",

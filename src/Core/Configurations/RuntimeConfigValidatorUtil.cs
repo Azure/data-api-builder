@@ -68,7 +68,7 @@ public static class RuntimeConfigValidatorUtil
 
     /// <summary>
     /// Method to validate an entity REST path allowing sub-directories (forward slashes).
-    /// Each segment of the path is validated for reserved characters.
+    /// Each segment of the path is validated for reserved characters and path traversal patterns.
     /// </summary>
     /// <param name="entityRestPath">The entity REST path to validate.</param>
     /// <param name="errorMessage">Output parameter containing a specific error message if validation fails.</param>
@@ -77,10 +77,25 @@ public static class RuntimeConfigValidatorUtil
     {
         errorMessage = null;
 
+        // Check for maximum path length (reasonable limit for URL paths)
+        const int MAX_PATH_LENGTH = 2048;
+        if (entityRestPath.Length > MAX_PATH_LENGTH)
+        {
+            errorMessage = $"exceeds maximum allowed length of {MAX_PATH_LENGTH} characters.";
+            return false;
+        }
+
         // Check for backslash usage - common mistake
         if (entityRestPath.Contains('\\'))
         {
             errorMessage = "contains a backslash (\\). Use forward slash (/) for path separators.";
+            return false;
+        }
+
+        // Check for percent-encoded characters (URL encoding not allowed in config)
+        if (entityRestPath.Contains('%'))
+        {
+            errorMessage = "contains percent-encoding (%) which is not allowed. Use literal characters only.";
             return false;
         }
 
@@ -100,6 +115,13 @@ public static class RuntimeConfigValidatorUtil
             if (string.IsNullOrEmpty(segment))
             {
                 errorMessage = "contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.";
+                return false;
+            }
+
+            // Check for path traversal patterns
+            if (segment == "." || segment == "..")
+            {
+                errorMessage = "contains path traversal patterns ('.' or '..') which are not allowed.";
                 return false;
             }
 

@@ -2091,6 +2091,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Rest path with leading slash is trimmed and passes config validation.")]
         [DataRow(true, "EntityA", "entity//path", true, "The rest path: entity//path for entity: EntityA contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.",
             DisplayName = "Rest path with consecutive slashes fails config validation.")]
+        [DataRow(true, "EntityA", "entity/path/", true, "The rest path: entity/path/ for entity: EntityA contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.",
+            DisplayName = "Rest path with trailing slash fails config validation.")]
+        [DataRow(true, "EntityA", "entity /path", true, "The rest path: entity /path for entity: EntityA contains whitespace which is not allowed in URL paths.",
+            DisplayName = "Rest path with whitespace fails config validation with helpful message.")]
+        [DataRow(true, "EntityA", "entity%3Frest", true, "The rest path: entity%3Frest for entity: EntityA contains percent-encoding (%) which is not allowed. Use literal characters only.",
+            DisplayName = "Rest path with percent-encoded characters fails config validation.")]
+        [DataRow(true, "EntityA", "entity/../path", true, "The rest path: entity/../path for entity: EntityA contains path traversal patterns ('.' or '..') which are not allowed.",
+            DisplayName = "Rest path with dot-dot segments fails config validation.")]
+        [DataRow(true, "EntityA", "entity/./path", true, "The rest path: entity/./path for entity: EntityA contains path traversal patterns ('.' or '..') which are not allowed.",
+            DisplayName = "Rest path with dot segments fails config validation.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
             string entityName,

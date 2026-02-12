@@ -3,6 +3,8 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -435,7 +437,7 @@ namespace Azure.DataApiBuilder.Service
                         else
                         {
                             // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
-                            Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(level2CacheOptions.ConnectionString);
+                            Task<IConnectionMultiplexer> connectionMultiplexerTask = CreateConnectionMultiplexerAsync(level2CacheOptions.ConnectionString);
 
                             fusionCacheBuilder
                                 .WithSerializer(new FusionCacheSystemTextJsonSerializer())
@@ -467,7 +469,92 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 
+            // Add Response Compression services based on config
+            ConfigureResponseCompression(services, runtimeConfig);
+
             services.AddControllers();
+        }
+
+        /// <summary>
+        /// Creates a ConnectionMultiplexer for Redis with support for Azure Entra authentication.
+        /// </summary>
+        /// <param name="connectionString">The Redis connection string.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the connected IConnectionMultiplexer.</returns>
+        private static async Task<IConnectionMultiplexer> CreateConnectionMultiplexerAsync(string connectionString)
+        {
+            ConfigurationOptions options = ConfigurationOptions.Parse(connectionString);
+
+            if (ShouldUseEntraAuthForRedis(options))
+            {
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+            }
+
+            return await ConnectionMultiplexer.ConnectAsync(options);
+        }
+
+        /// <summary>
+        /// Determines whether Azure Entra authentication should be used.
+        /// Conditions:
+        /// - No password provided
+        /// - At least one endpoint is NOT localhost/loopback
+        /// </summary>
+        /// <param name="options">The Redis configuration options.</param>
+        /// <returns>True if Azure Entra authentication should be used; otherwise, false.</returns>
+        /// <remarks>Internal for testing.</remarks>
+        internal static bool ShouldUseEntraAuthForRedis(ConfigurationOptions options)
+        {
+            // Determine if an endpoint is localhost/loopback
+            static bool IsLocalhostEndpoint(EndPoint ep) => ep switch
+            {
+                DnsEndPoint dns => string.Equals(dns.Host, "localhost", StringComparison.OrdinalIgnoreCase),
+                IPEndPoint ip => IPAddress.IsLoopback(ip.Address),
+                _ => false,
+            };
+
+            return string.IsNullOrEmpty(options.Password)
+                && options.EndPoints.Any(ep => !IsLocalhostEndpoint(ep));
+        }
+
+        /// <summary>
+        /// Configures HTTP response compression based on the runtime configuration.
+        /// Compression is applied at the middleware level and supports Gzip and Brotli.
+        /// Applies to REST, GraphQL, and MCP endpoints.
+        /// </summary>
+        private void ConfigureResponseCompression(IServiceCollection services, RuntimeConfig? runtimeConfig)
+        {
+            CompressionLevel compressionLevel = runtimeConfig?.Runtime?.Compression?.Level ?? CompressionOptions.DEFAULT_LEVEL;
+
+            // Only configure compression if level is not None
+            if (compressionLevel == CompressionLevel.None)
+            {
+                return;
+            }
+
+            System.IO.Compression.CompressionLevel systemCompressionLevel = compressionLevel switch
+            {
+                CompressionLevel.Fastest => System.IO.Compression.CompressionLevel.Fastest,
+                CompressionLevel.Optimal => System.IO.Compression.CompressionLevel.Optimal,
+                _ => System.IO.Compression.CompressionLevel.Optimal
+            };
+
+            services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+            });
+
+            services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
+            {
+                options.Level = systemCompressionLevel;
+            });
+
+            services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
+            {
+                options.Level = systemCompressionLevel;
+            });
+
+            _logger.LogInformation("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
         }
 
         /// <summary>
@@ -613,6 +700,13 @@ namespace Azure.DataApiBuilder.Service
                     context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
                     appBuilder => appBuilder.UseHttpsRedirection()
                 );
+            }
+
+            // Response compression middleware should be placed early in the pipeline.
+            // Only use if compression is not set to None.
+            if (runtimeConfig?.Runtime?.Compression?.Level is not CompressionLevel.None)
+            {
+                app.UseResponseCompression();
             }
 
             // URL Rewrite middleware MUST be called prior to UseRouting().

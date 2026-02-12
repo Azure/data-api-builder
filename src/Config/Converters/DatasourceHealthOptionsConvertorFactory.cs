@@ -121,14 +121,14 @@ internal class DataSourceHealthOptionsConvertorFactory : JsonConverterFactory
             if (value?.UserProvidedEnabled is true || value?.Name is not null || value?.UserProvidedThresholdMs is true)
             {
                 writer.WriteStartObject();
-                
+
                 // Only write enabled if it was explicitly provided by the user
                 if (value?.UserProvidedEnabled is true)
                 {
                     writer.WritePropertyName("enabled");
                     JsonSerializer.Serialize(writer, value.Enabled, options);
                 }
-                
+
                 if (value?.Name is not null)
                 {
                     writer.WritePropertyName("name");

@@ -700,12 +700,12 @@ namespace Cli
                     // Update the existing health config with the new name while preserving other settings.
                     // DatasourceHealthCheckConfig is a record (immutable), so we create a new instance.
                     // Preserve threshold only if it was explicitly set by the user
-                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs 
-                        ? datasourceHealthCheckConfig.ThresholdMs 
+                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs
+                        ? datasourceHealthCheckConfig.ThresholdMs
                         : null;
                     // Preserve enabled only if it was explicitly set by the user
-                    bool? enabledToPreserve = datasourceHealthCheckConfig.UserProvidedEnabled 
-                        ? datasourceHealthCheckConfig.Enabled 
+                    bool? enabledToPreserve = datasourceHealthCheckConfig.UserProvidedEnabled
+                        ? datasourceHealthCheckConfig.Enabled
                         : null;
                     datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
                         enabled: enabledToPreserve,

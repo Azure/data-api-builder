@@ -190,4 +190,3 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         }
     }
 }
-

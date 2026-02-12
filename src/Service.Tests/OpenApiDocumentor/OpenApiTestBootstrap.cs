@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             string configFileName,
             string databaseEnvironment,
             bool? requestBodyStrict = null,
-            string? role = null)
+            string role = null)
         {
             TestHelper.SetupDatabaseEnvironment(databaseEnvironment);
             FileSystem fileSystem = new();

@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             Assert.IsFalse(writerDoc.Components.Schemas["book"].Properties.ContainsKey("id"), "Writer should NOT see 'id'");
         }
 
-        private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions, string? role = null)
+        private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(EntityPermission[] permissions, string role = null)
         {
             Entity entity = new(
                 Source: new("books", EntitySourceType.Table, null, null),

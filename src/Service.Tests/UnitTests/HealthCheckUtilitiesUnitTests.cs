@@ -19,79 +19,46 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     public class HealthCheckUtilitiesUnitTests
     {
         /// <summary>
-        /// Tests that PostgreSQL connection strings are properly normalized.
+        /// Tests that connection strings are properly normalized for supported database types.
         /// </summary>
         [TestMethod]
-        public void NormalizeConnectionString_PostgreSQL_Success()
+        [DataRow(
+            DatabaseType.PostgreSQL,
+            "Host=localhost;Port=5432;Database=testdb;Username=testuser;Password=XXXX",
+            "Host=localhost",
+            "Database=testdb",
+            DisplayName = "PostgreSQL connection string normalization")]
+        [DataRow(
+            DatabaseType.MSSQL,
+            "Server=localhost;Database=testdb;User Id=testuser;Password=XXXX",
+            "Data Source=localhost",
+            "Initial Catalog=testdb",
+            DisplayName = "MSSQL connection string normalization")]
+        [DataRow(
+            DatabaseType.DWSQL,
+            "Server=localhost;Database=testdb;User Id=testuser;Password=XXXX",
+            "Data Source=localhost",
+            "Initial Catalog=testdb",
+            DisplayName = "DWSQL connection string normalization")]
+        [DataRow(
+            DatabaseType.MySQL,
+            "Server=localhost;Port=3306;Database=testdb;Uid=testuser;Pwd=XXXX",
+            "Server=localhost",
+            "Database=testdb",
+            DisplayName = "MySQL connection string normalization")]
+        public void NormalizeConnectionString_SupportedDatabases_Success(
+            DatabaseType dbType,
+            string connectionString,
+            string expectedServerPart,
+            string expectedDatabasePart)
         {
-            // Arrange
-            string connectionString = "Host=localhost;Port=5432;Database=testdb;Username=testuser;Password=testpass";
-            DatabaseType dbType = DatabaseType.PostgreSQL;
-
             // Act
             string result = HealthCheck.Utilities.NormalizeConnectionString(connectionString, dbType);
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.Contains("Host=localhost"));
-            Assert.IsTrue(result.Contains("Database=testdb"));
-        }
-
-        /// <summary>
-        /// Tests that MSSQL connection strings are properly normalized.
-        /// </summary>
-        [TestMethod]
-        public void NormalizeConnectionString_MSSQL_Success()
-        {
-            // Arrange
-            string connectionString = "Server=localhost;Database=testdb;User Id=testuser;Password=testpass";
-            DatabaseType dbType = DatabaseType.MSSQL;
-
-            // Act
-            string result = HealthCheck.Utilities.NormalizeConnectionString(connectionString, dbType);
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.Contains("Data Source=localhost"));
-            Assert.IsTrue(result.Contains("Initial Catalog=testdb"));
-        }
-
-        /// <summary>
-        /// Tests that DWSQL connection strings are properly normalized.
-        /// </summary>
-        [TestMethod]
-        public void NormalizeConnectionString_DWSQL_Success()
-        {
-            // Arrange
-            string connectionString = "Server=localhost;Database=testdb;User Id=testuser;Password=testpass";
-            DatabaseType dbType = DatabaseType.DWSQL;
-
-            // Act
-            string result = HealthCheck.Utilities.NormalizeConnectionString(connectionString, dbType);
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.Contains("Data Source=localhost"));
-            Assert.IsTrue(result.Contains("Initial Catalog=testdb"));
-        }
-
-        /// <summary>
-        /// Tests that MySQL connection strings are properly normalized.
-        /// </summary>
-        [TestMethod]
-        public void NormalizeConnectionString_MySQL_Success()
-        {
-            // Arrange
-            string connectionString = "Server=localhost;Port=3306;Database=testdb;Uid=testuser;Pwd=testpass";
-            DatabaseType dbType = DatabaseType.MySQL;
-
-            // Act
-            string result = HealthCheck.Utilities.NormalizeConnectionString(connectionString, dbType);
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.Contains("Server=localhost"));
-            Assert.IsTrue(result.Contains("Database=testdb"));
+            Assert.IsTrue(result.Contains(expectedServerPart));
+            Assert.IsTrue(result.Contains(expectedDatabasePart));
         }
 
         /// <summary>
@@ -115,43 +82,36 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Tests that malformed connection strings are handled gracefully.
         /// </summary>
         [TestMethod]
-        public void NormalizeConnectionString_MalformedString_ReturnsOriginalAndLogs()
+        [DataRow(DatabaseType.PostgreSQL, true, DisplayName = "PostgreSQL malformed string with logger")]
+        [DataRow(DatabaseType.MSSQL, true, DisplayName = "MSSQL malformed string with logger")]
+        [DataRow(DatabaseType.MySQL, false, DisplayName = "MySQL malformed string without logger")]
+        public void NormalizeConnectionString_MalformedString_ReturnsOriginal(
+            DatabaseType dbType,
+            bool useLogger)
         {
             // Arrange
             string malformedConnectionString = "InvalidConnectionString;NoEquals";
-            DatabaseType dbType = DatabaseType.PostgreSQL;
-            Mock<ILogger> mockLogger = new Mock<ILogger>();
+            Mock<ILogger>? mockLogger = useLogger ? new Mock<ILogger>() : null;
 
             // Act
-            string result = HealthCheck.Utilities.NormalizeConnectionString(malformedConnectionString, dbType, mockLogger.Object);
+            string result = HealthCheck.Utilities.NormalizeConnectionString(
+                malformedConnectionString,
+                dbType,
+                mockLogger?.Object);
 
             // Assert
             Assert.AreEqual(malformedConnectionString, result);
-            mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Warning,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => true),
-                    It.IsAny<Exception>(),
-                    It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
-                Times.Once);
-        }
-
-        /// <summary>
-        /// Tests that null logger is handled gracefully.
-        /// </summary>
-        [TestMethod]
-        public void NormalizeConnectionString_MalformedString_NullLogger_ReturnsOriginal()
-        {
-            // Arrange
-            string malformedConnectionString = "InvalidConnectionString;NoEquals";
-            DatabaseType dbType = DatabaseType.MSSQL;
-
-            // Act
-            string result = HealthCheck.Utilities.NormalizeConnectionString(malformedConnectionString, dbType, null);
-
-            // Assert
-            Assert.AreEqual(malformedConnectionString, result);
+            if (useLogger && mockLogger != null)
+            {
+                mockLogger.Verify(
+                    x => x.Log(
+                        LogLevel.Warning,
+                        It.IsAny<EventId>(),
+                        It.Is<It.IsAnyType>((v, t) => true),
+                        It.IsAny<Exception>(),
+                        It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
+                    Times.Once);
+            }
         }
 
         /// <summary>
@@ -162,7 +122,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void NormalizeConnectionString_PostgreSQL_LowercaseKeywords_Success()
         {
             // Arrange
-            string connectionString = "host=localhost;port=5432;database=mydb;username=myuser;password=mypass";
+            string connectionString = "host=localhost;port=5432;database=mydb;username=myuser;password=XXXX";
             DatabaseType dbType = DatabaseType.PostgreSQL;
 
             // Act

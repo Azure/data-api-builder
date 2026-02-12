@@ -707,7 +707,7 @@ public static class FieldFilterParser
             predicates.Push(new PredicateOperand(new Predicate(
                 new PredicateOperand(column),
                 op,
-                GenerateRightOperand(ctx, argumentObject, name, processLiterals, value, processLiteral) // right operand
+                GenerateRightOperand(ctx, argumentObject, name, processLiterals, value, processLiteral, column.ColumnName) // right operand
                 )));
         }
 
@@ -761,6 +761,7 @@ public static class FieldFilterParser
     /// <param name="processLiterals">A function to encode or parameterize literal values for database queries.</param>
     /// <param name="value">The value to be used as the right operand in the predicate.</param>
     /// <param name="processLiteral">Indicates whether to process the value as a literal using processLiterals, or use its string representation directly.</param>
+    /// <param name="columnName">The name of the column being filtered, used to look up the column's DbType for proper parameter typing.</param>
     /// <returns>A <see cref="PredicateOperand"/> representing the right operand for the predicate.</returns>
     private static PredicateOperand GenerateRightOperand(
     IMiddlewareContext ctx,
@@ -768,7 +769,8 @@ public static class FieldFilterParser
     string operationName,
     Func<object, string?, string> processLiterals,
     object value,
-    bool processLiteral)
+    bool processLiteral,
+    string? columnName)
     {
         if (operationName.Equals("in", StringComparison.OrdinalIgnoreCase))
         {
@@ -778,13 +780,13 @@ public static class FieldFilterParser
                     argumentObject.Fields[operationName],
                     ctx.Variables))
                 .Where(inValue => inValue is not null)
-                .Select(inValue => processLiterals(inValue!, null))
+                .Select(inValue => processLiterals(inValue!, columnName))
                 .ToList();
 
             return new PredicateOperand("(" + string.Join(", ", encodedParams) + ")");
         }
 
-        return new PredicateOperand(processLiteral ? processLiterals(value, null) : value.ToString());
+        return new PredicateOperand(processLiteral ? processLiterals(value, columnName) : value.ToString());
     }
 
     private static string EscapeLikeString(string input)

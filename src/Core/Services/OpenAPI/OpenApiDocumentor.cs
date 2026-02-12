@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
@@ -16,6 +17,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
@@ -31,8 +33,10 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ILogger<OpenApiDocumentor> _logger;
         private OpenApiResponses _defaultOpenApiResponses;
         private OpenApiDocument? _openApiDocument;
+        private readonly ConcurrentDictionary<string, string> _roleSpecificDocuments = new(StringComparer.OrdinalIgnoreCase);
 
         private const string DOCUMENTOR_UI_TITLE = "Data API builder - REST Endpoint";
         private const string GETALL_DESCRIPTION = "Returns entities.";
@@ -62,19 +66,27 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
         /// </summary>
-        /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
+        /// <param name="metadataProviderFactory">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<HotReloadEventArgs>? handler)
+        /// <param name="handler">Hot reload event handler.</param>
+        /// <param name="logger">Logger for diagnostic information.</param>
+        public OpenApiDocumentor(
+            IMetadataProviderFactory metadataProviderFactory,
+            RuntimeConfigProvider runtimeConfigProvider,
+            HotReloadEventHandler<HotReloadEventArgs>? handler,
+            ILogger<OpenApiDocumentor> logger)
         {
             handler?.Subscribe(DOCUMENTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _logger = logger;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
         }
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             CreateDocument(doOverrideExistingDocument: true);
+            _roleSpecificDocuments.Clear(); // Clear role-specific document cache on config change
         }
 
         /// <summary>
@@ -117,6 +129,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 return false;
             }
 
+            // Check cache first
+            if (_roleSpecificDocuments.TryGetValue(role, out document))
+            {
+                return true;
+            }
+
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
             // Check if the role exists in any entity's permissions using LINQ
@@ -140,12 +158,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 OpenApiJsonWriter jsonWriter = new(textWriter);
                 roleDoc.SerializeAsV3(jsonWriter);
                 document = textWriter.ToString();
+
+                // Cache the role-specific document
+                _roleSpecificDocuments.TryAdd(role, document);
+
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Return false for any document generation failures (e.g., serialization errors).
-                // The caller can handle the 404 response appropriately.
+                // Log exception details for debugging document generation failures
+                _logger.LogError(ex, "Failed to generate OpenAPI document for role '{Role}'", role);
                 return false;
             }
         }
@@ -453,24 +475,28 @@ namespace Azure.DataApiBuilder.Core.Services
                     openApiPathItemOperations.Add(OperationType.Get, getOperation);
                 }
 
-                bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
-
-                if (configuredRestOperations[OperationType.Put])
+                // Only calculate requestBodyRequired if PUT or PATCH operations are configured
+                if (configuredRestOperations[OperationType.Put] || configuredRestOperations[OperationType.Patch])
                 {
-                    OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
-                    putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
-                    putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                    putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                    openApiPathItemOperations.Add(OperationType.Put, putOperation);
-                }
+                    bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
 
-                if (configuredRestOperations[OperationType.Patch])
-                {
-                    OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
-                    patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
-                    patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                    patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                    openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                    if (configuredRestOperations[OperationType.Put])
+                    {
+                        OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
+                        putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                        putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                        putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                        openApiPathItemOperations.Add(OperationType.Put, putOperation);
+                    }
+
+                    if (configuredRestOperations[OperationType.Patch])
+                    {
+                        OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
+                        patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                        patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                        patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                        openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                    }
                 }
 
                 if (configuredRestOperations[OperationType.Delete])

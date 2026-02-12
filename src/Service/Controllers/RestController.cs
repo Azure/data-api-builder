@@ -234,8 +234,15 @@ namespace Azure.DataApiBuilder.Service.Controllers
                 }
 
                 // Handle /openapi/{role} route for role-specific OpenAPI documents
+                // Only allow in Development mode for security reasons
                 if (routeAfterPathBase.StartsWith(OpenApiDocumentor.OPENAPI_ROUTE + "/", StringComparison.OrdinalIgnoreCase))
                 {
+                    RuntimeConfig config = _runtimeConfigProvider.GetConfig();
+                    if (config.Runtime?.Host?.Mode != HostMode.Development)
+                    {
+                        return NotFound();
+                    }
+
                     string role = Uri.UnescapeDataString(routeAfterPathBase.Substring(OpenApiDocumentor.OPENAPI_ROUTE.Length + 1));
                     if (!string.IsNullOrEmpty(role) && _openApiDocumentor.TryGetDocumentForRole(role, out string? roleDocument))
                     {

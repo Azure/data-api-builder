@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO.Abstractions;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;

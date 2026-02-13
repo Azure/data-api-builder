@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly DatabaseType _databaseType;
 
         // Represents the entities exposed in the runtime config.
-        private IReadOnlyDictionary<string, Entity> _entities;
+        protected IReadOnlyDictionary<string, Entity> _entities;
 
         // Represents the linking entities created by DAB to support multiple mutations for entities having an M:N relationship between them.
         protected Dictionary<string, Entity> _linkingEntities = new();
@@ -307,6 +307,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
+
             if (GetDatabaseType() == DatabaseType.MSSQL)
             {
                 await GenerateAutoentitiesIntoEntities();

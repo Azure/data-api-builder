@@ -245,6 +245,11 @@ public record RuntimeConfig
         return _entityPathNameToEntityName.TryGetValue(entityPathName, out entityName);
     }
 
+    public bool TryAddEntityNameToDataSourceName(string entityName)
+    {
+        return _entityNameToDataSourceName.TryAdd(entityName, this.DefaultDataSourceName);
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.
@@ -268,7 +273,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.AzureKeyVault = AzureKeyVault;
-        this.Entities = Entities;
+        this.Entities = Entities ?? new RuntimeEntities(new Dictionary<string, Entity>());
         this.Autoentities = Autoentities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
@@ -287,17 +292,20 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if (Entities is null)
+        if ((Entities is null || Entities.Entities.Count == 0) && Autoentities is null)
         {
             throw new DataApiBuilderException(
-                message: "entities is a mandatory property in DAB Config",
+                message: "Configuration file should contain either at least the Entities or Autoentities property",
                 statusCode: HttpStatusCode.UnprocessableEntity,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        foreach (KeyValuePair<string, Entity> entity in Entities)
+        if (Entities is not null)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
+            foreach (KeyValuePair<string, Entity> entity in Entities)
+            {
+                _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
+            }
         }
 
         // Process data source and entities information for each database in multiple database scenario.
@@ -305,7 +313,7 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             // This loader is not used as a part of hot reload and therefore does not need a handler.
@@ -322,7 +330,7 @@ public record RuntimeConfig
                     {
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities.Concat(config.Entities.AsEnumerable());
+                        allEntities = allEntities?.Concat(config.Entities.AsEnumerable());
                     }
                     catch (Exception e)
                     {
@@ -336,7 +344,7 @@ public record RuntimeConfig
                 }
             }
 
-            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+            this.Entities = new RuntimeEntities(allEntities != null ? allEntities.ToDictionary(x => x.Key, x => x.Value) : new Dictionary<string, Entity>());
         }
 
         SetupDataSourcesUsed();

@@ -411,4 +411,13 @@ public class RuntimeConfigProvider
 
         return runtimeConfig;
     }
+
+    public void AddNewEntitiesToConfig(Dictionary<string, Entity> entities)
+    {
+        RuntimeConfig newRuntimeConfig = _configLoader.RuntimeConfig! with
+        {
+            Entities = new(entities)
+        };
+        _configLoader.EditRuntimeConfig(newRuntimeConfig);
+    }
 }

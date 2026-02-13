@@ -3,6 +3,8 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -436,7 +438,7 @@ namespace Azure.DataApiBuilder.Service
                         else
                         {
                             // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
-                            Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(level2CacheOptions.ConnectionString);
+                            Task<IConnectionMultiplexer> connectionMultiplexerTask = CreateConnectionMultiplexerAsync(level2CacheOptions.ConnectionString);
 
                             fusionCacheBuilder
                                 .WithSerializer(new FusionCacheSystemTextJsonSerializer())
@@ -472,6 +474,46 @@ namespace Azure.DataApiBuilder.Service
             ConfigureResponseCompression(services, runtimeConfig);
 
             services.AddControllers();
+        }
+
+        /// <summary>
+        /// Creates a ConnectionMultiplexer for Redis with support for Azure Entra authentication.
+        /// </summary>
+        /// <param name="connectionString">The Redis connection string.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the connected IConnectionMultiplexer.</returns>
+        private static async Task<IConnectionMultiplexer> CreateConnectionMultiplexerAsync(string connectionString)
+        {
+            ConfigurationOptions options = ConfigurationOptions.Parse(connectionString);
+
+            if (ShouldUseEntraAuthForRedis(options))
+            {
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+            }
+
+            return await ConnectionMultiplexer.ConnectAsync(options);
+        }
+
+        /// <summary>
+        /// Determines whether Azure Entra authentication should be used.
+        /// Conditions:
+        /// - No password provided
+        /// - At least one endpoint is NOT localhost/loopback
+        /// </summary>
+        /// <param name="options">The Redis configuration options.</param>
+        /// <returns>True if Azure Entra authentication should be used; otherwise, false.</returns>
+        /// <remarks>Internal for testing.</remarks>
+        internal static bool ShouldUseEntraAuthForRedis(ConfigurationOptions options)
+        {
+            // Determine if an endpoint is localhost/loopback
+            static bool IsLocalhostEndpoint(EndPoint ep) => ep switch
+            {
+                DnsEndPoint dns => string.Equals(dns.Host, "localhost", StringComparison.OrdinalIgnoreCase),
+                IPEndPoint ip => IPAddress.IsLoopback(ip.Address),
+                _ => false,
+            };
+
+            return string.IsNullOrEmpty(options.Password)
+                && options.EndPoints.Any(ep => !IsLocalhostEndpoint(ep));
         }
 
         /// <summary>

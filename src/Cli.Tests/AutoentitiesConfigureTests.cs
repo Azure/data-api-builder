@@ -1,17 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text;
-using System.Text.Json;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Cli.Commands;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using static Cli.Utils;
-using static Cli.Tests.TestHelper;
-
 namespace Cli.Tests;
 
 /// <summary>

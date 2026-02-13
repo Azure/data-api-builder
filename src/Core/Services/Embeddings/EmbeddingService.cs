@@ -396,7 +396,9 @@ public class EmbeddingService : IEmbeddingService
             string model = _options.EffectiveModel
                 ?? throw new InvalidOperationException("Model/deployment name is required for Azure OpenAI.");
 
-            return $"{baseUrl}/openai/deployments/{model}/embeddings?api-version={_options.EffectiveApiVersion}";
+            string encodedModel = global::System.Uri.EscapeDataString(model);
+
+            return $"{baseUrl}/openai/deployments/{encodedModel}/embeddings?api-version={_options.EffectiveApiVersion}";
         }
         else
         {

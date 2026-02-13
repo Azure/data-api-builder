@@ -100,7 +100,7 @@ internal class AutoentityConverter : JsonConverter<Autoentity>
             autoentityTemplateConverter.Write(writer, template, options);
         }
 
-        if (value?.Permissions is not null)
+        if (value?.Permissions is not null && value.Permissions.Length > 0)
         {
             writer.WritePropertyName("permissions");
             JsonSerializer.Serialize(writer, value.Permissions, options);

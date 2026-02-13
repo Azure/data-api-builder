@@ -2794,17 +2794,9 @@ namespace Cli
             EntityPermission[]? permissions = BuildAutoentityPermissions(options, existingAutoentity);
             
             // Check if permissions parsing failed (non-empty input but failed to parse)
-            bool permissionsProvided = options.Permissions is not null && options.Permissions.Any();
-            if (permissions is null && permissionsProvided)
+            if (permissions is null && options.Permissions is not null && options.Permissions.Count() > 0)
             {
                 _logger.LogError("Failed to parse permissions.");
-                return false;
-            }
-
-            // Permissions are required when creating a new autoentity definition
-            if (existingAutoentity is null && (permissions is null || permissions.Length == 0))
-            {
-                _logger.LogError("Permissions are required when creating a new autoentities definition. Use --permissions \"role:actions\"");
                 return false;
             }
 
@@ -2812,7 +2804,7 @@ namespace Cli
             Autoentity updatedAutoentity = new(
                 Patterns: patterns,
                 Template: template,
-                Permissions: permissions ?? (existingAutoentity?.Permissions ?? Array.Empty<EntityPermission>())
+                Permissions: permissions ?? existingAutoentity?.Permissions
             );
 
             // Update the dictionary

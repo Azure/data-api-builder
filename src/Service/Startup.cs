@@ -400,13 +400,13 @@ namespace Azure.DataApiBuilder.Service
                 && runtimeConfig?.Runtime?.IsEmbeddingsConfigured == true)
             {
                 EmbeddingsOptions embeddingsOptions = runtimeConfig.Runtime.Embeddings;
-                services.AddHttpClient<IEmbeddingService, EmbeddingService>();
                 services.AddSingleton(embeddingsOptions);
 
                 string providerName = embeddingsOptions.Provider.ToString().ToLowerInvariant();
 
                 if (embeddingsOptions.Enabled)
                 {
+                    services.AddHttpClient<IEmbeddingService, EmbeddingService>();
                     _logger.LogInformation(
                         "Embeddings service enabled with provider: {Provider}, model: {Model}, base-url: {BaseUrl}",
                         providerName,

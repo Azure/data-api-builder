@@ -19,9 +19,9 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         }
 
         // Centralized language for 'tool disabled' errors. Pass the tool name, e.g. "read_records".
-        public static CallToolResult ToolDisabled(string toolName, ILogger? logger)
+        public static CallToolResult ToolDisabled(string toolName, ILogger? logger, string? customMessage = null)
         {
-            string message = $"The {toolName} tool is disabled in the configuration.";
+            string message = customMessage ?? $"The {toolName} tool is disabled in the configuration.";
             return McpResponseBuilder.BuildErrorResult(toolName, Model.McpErrorCode.ToolDisabled.ToString(), message, logger);
         }
     }

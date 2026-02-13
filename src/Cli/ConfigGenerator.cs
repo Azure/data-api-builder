@@ -684,6 +684,36 @@ namespace Cli
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
+            // Handle health.name option
+            if (options.DataSourceHealthName is not null)
+            {
+                // If there's no existing health config, create one with the name
+                // Note: Passing enabled: null results in Enabled = true at runtime (default behavior)
+                // but UserProvidedEnabled = false, so the enabled property won't be serialized to JSON.
+                // This ensures only the name property is written to the config file.
+                if (datasourceHealthCheckConfig is null)
+                {
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
+                }
+                else
+                {
+                    // Update the existing health config with the new name while preserving other settings.
+                    // DatasourceHealthCheckConfig is a record (immutable), so we create a new instance.
+                    // Preserve threshold only if it was explicitly set by the user
+                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs
+                        ? datasourceHealthCheckConfig.ThresholdMs
+                        : null;
+                    // Preserve enabled only if it was explicitly set by the user
+                    bool? enabledToPreserve = datasourceHealthCheckConfig.UserProvidedEnabled
+                        ? datasourceHealthCheckConfig.Enabled
+                        : null;
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
+                        enabled: enabledToPreserve,
+                        name: options.DataSourceHealthName,
+                        thresholdMs: thresholdToPreserve);
+                }
+            }
+
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
             DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
@@ -842,6 +872,21 @@ namespace Cli
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Cache = updatedCacheOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Compression: Level
+            if (options.RuntimeCompressionLevel != null)
+            {
+                CompressionOptions updatedCompressionOptions = runtimeConfig?.Runtime?.Compression ?? new();
+                bool status = TryUpdateConfiguredCompressionValues(options, ref updatedCompressionOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Compression = updatedCompressionOptions } };
                 }
                 else
                 {
@@ -1222,6 +1267,37 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError("Failed to update RuntimeConfig.Cache with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the Config parameters in the Compression runtime settings based on the provided value.
+        /// Validates user-provided parameters and then returns true if the updated Compression options
+        /// need to be overwritten on the existing config parameters.
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCompressionOptions">updatedCompressionOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredCompressionValues(
+            ConfigureOptions options,
+            ref CompressionOptions updatedCompressionOptions)
+        {
+            try
+            {
+                // Runtime.Compression.Level
+                CompressionLevel? updatedValue = options?.RuntimeCompressionLevel;
+                if (updatedValue != null)
+                {
+                    updatedCompressionOptions = updatedCompressionOptions with { Level = updatedValue.Value, UserProvidedLevel = true };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Compression.Level as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to configure RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

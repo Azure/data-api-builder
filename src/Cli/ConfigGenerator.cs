@@ -1365,8 +1365,8 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    // Default to AppService when provider string is not provided
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.AppService);
+                    // Default to Unauthenticated when provider string is not provided
+                    updatedValue = updatedProviderValue?.ToString() ?? AuthenticationOptions.UNAUTHENTICATED_AUTHENTICATION;
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {

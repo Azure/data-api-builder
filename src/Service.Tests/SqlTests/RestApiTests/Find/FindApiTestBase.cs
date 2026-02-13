@@ -694,6 +694,69 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation with a filter containing special characters
+        /// like ampersand (&) that need to be URL-encoded. This validates that the fix for
+        /// the double-decoding issue is working correctly.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterContainingSpecialCharacters()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=title eq 'filter & test'",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingSpecialCharacters))
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with filters containing various special characters
+        /// that need URL encoding: plus (+), equals (=), and percent (%).
+        /// Validates that multiple types of special characters are handled correctly.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterContainingMultipleSpecialCharacters()
+        {
+            // Test with plus and equals signs
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=title eq 'A+B=C'",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingMultipleSpecialCharacters))
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter containing ampersand
+        /// in a different context to ensure robustness across various data patterns.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterContainingAmpersandInPhrase()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=title eq 'Tom & Jerry'",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingAmpersandInPhrase))
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation with a filter containing percent sign (%)
+        /// which has special meaning in URL encoding and SQL LIKE patterns.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterContainingPercentSign()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=title eq '100% Complete'",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingPercentSign))
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation where we compare one field
         /// to the bool returned from another comparison.
         /// </summary>

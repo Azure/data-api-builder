@@ -57,7 +57,6 @@ public class AutoentitiesConfigureTests
             patternsInclude: new[] { "dbo.%", "sys.%" },
             patternsExclude: new[] { "dbo.internal%" },
             patternsName: "{schema}_{table}",
-            permissions: new[] { "anonymous", "read" },
             config: TEST_RUNTIME_CONFIG_FILE
         );
 
@@ -98,7 +97,6 @@ public class AutoentitiesConfigureTests
             templateCacheTtlSeconds: 30,
             templateCacheLevel: "L1",
             templateHealthEnabled: true,
-            permissions: new[] { "anonymous", "read" },
             config: TEST_RUNTIME_CONFIG_FILE
         );
 

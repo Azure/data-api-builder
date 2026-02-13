@@ -96,10 +96,10 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                         apiVersion = JsonSerializer.Deserialize<string>(ref reader, options);
                         break;
                     case "dimensions":
-                        dimensions = reader.GetInt32();
+                        dimensions = JsonSerializer.Deserialize<int?>(ref reader, options);
                         break;
                     case "timeout-ms":
-                        timeoutMs = reader.GetInt32();
+                        timeoutMs = JsonSerializer.Deserialize<int?>(ref reader, options);
                         break;
                     case "endpoint":
                         endpoint = ReadEndpointOptions(ref reader, options);

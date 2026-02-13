@@ -310,8 +310,16 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                foreach (JsonObject resultObject in resultArray!)
+                foreach (JsonObject? resultObject in resultArray)
                 {
+                    if (resultObject is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Cannot create new entity from autoentity pattern due to an internal error.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
                     // Extract the entity name, schema, and database object name from the query result.
                     // The SQL query returns these values with placeholders already replaced.
                     string entityName = resultObject["entity_name"]!.ToString();

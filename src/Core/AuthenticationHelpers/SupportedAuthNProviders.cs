@@ -14,4 +14,6 @@ internal static class SupportedAuthNProviders
     public const string SIMULATOR = "Simulator";
 
     public const string STATIC_WEB_APPS = "StaticWebApps";
+
+    public const string UNAUTHENTICATED = "Unauthenticated";
 }

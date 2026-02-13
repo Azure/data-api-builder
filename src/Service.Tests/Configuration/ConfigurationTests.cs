@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
@@ -5290,8 +5289,8 @@ type Planet @model(name:""PlanetAlias"") {
                         Template: new AutoentityTemplate(
                             Rest: new EntityRestOptions(Enabled: true),
                             GraphQL: new EntityGraphQLOptions(
-                                Singular: string.Empty, 
-                                Plural: string.Empty, 
+                                Singular: string.Empty,
+                                Plural: string.Empty,
                                 Enabled: true
                             ),
                             Health: null,
@@ -5315,14 +5314,14 @@ type Planet @model(name:""PlanetAlias"") {
                     GraphQL: new(Enabled: true),
                     Mcp: new(Enabled: false),
                     Host: new(
-                        Cors: null, 
+                        Cors: null,
                         Authentication: new Config.ObjectModel.AuthenticationOptions(
-                            Provider: nameof(EasyAuthType.StaticWebApps), 
+                            Provider: nameof(EasyAuthType.StaticWebApps),
                             Jwt: null
                         )
                     )
                 ),
-                Entities: new (useEntities ? entityMap : new Dictionary<string, Entity>()),
+                Entities: new(useEntities ? entityMap : new Dictionary<string, Entity>()),
                 Autoentities: new RuntimeAutoentities(autoentityMap)
             );
 
@@ -5363,8 +5362,8 @@ type Planet @model(name:""PlanetAlias"") {
                 string restResponseBody = await restResponse.Content.ReadAsStringAsync();
                 Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
                 Assert.IsTrue(restResponseBody.Contains(expectedResponseFragment));
-                
-                // Verify GraphQL response  
+
+                // Verify GraphQL response
                 Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
 
                 string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();

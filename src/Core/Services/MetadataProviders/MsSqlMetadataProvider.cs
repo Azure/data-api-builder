@@ -6,7 +6,6 @@ using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;

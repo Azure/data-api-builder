@@ -2868,7 +2868,7 @@ namespace Cli
 
             // Build permissions
             EntityPermission[]? permissions = BuildAutoentityPermissions(options, existingAutoentity);
-            
+
             // Check if permissions parsing failed (non-empty input but failed to parse)
             if (permissions is null && options.Permissions is not null && options.Permissions.Count() > 0)
             {

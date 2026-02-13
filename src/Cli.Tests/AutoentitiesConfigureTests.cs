@@ -94,7 +94,7 @@ public class AutoentitiesConfigureTests
         // Assert
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
-        
+
         Autoentity autoentity = config.Autoentities!.AutoEntities["test-def"];
         Assert.IsTrue(autoentity.Template.Rest.Enabled);
         Assert.IsFalse(autoentity.Template.GraphQL.Enabled);
@@ -140,7 +140,7 @@ public class AutoentitiesConfigureTests
         // Assert
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
-        
+
         Autoentity autoentity = config.Autoentities!.AutoEntities["test-def"];
         // Include should remain from initial setup
         Assert.AreEqual(1, autoentity.Patterns.Include.Length);
@@ -177,7 +177,7 @@ public class AutoentitiesConfigureTests
         // Assert
         Assert.IsTrue(success);
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? config));
-        
+
         Autoentity autoentity = config.Autoentities!.AutoEntities["test-def"];
         Assert.AreEqual(1, autoentity.Permissions.Length);
         Assert.AreEqual("authenticated", autoentity.Permissions[0].Role);

@@ -173,7 +173,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             Assert.AreEqual(expected: (int)HttpStatusCode.Unauthorized, actual: postMiddlewareContext.Response.StatusCode);
             Assert.IsFalse(postMiddlewareContext.User.Identity.IsAuthenticated);
             StringValues headerValue = GetChallengeHeader(postMiddlewareContext);
-            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The audience '{BAD_AUDIENCE}' is invalid"));
+
+            // Microsoft.IdentityModel.Tokens version 8.8+ scrubs the Audience from the error message
+            // This behavior can be disabled with AppContext.SetSwitch("Switch.Microsoft.IdentityModel.DoNotScrubExceptions", true);
+            // See https://aka.ms/identitymodel/app-context-switches
+            string expectedAudienceInErrorMessage = AppContext.TryGetSwitch("Switch.Microsoft.IdentityModel.DoNotScrubExceptions", out bool isExceptionScrubbingDisabled) && isExceptionScrubbingDisabled
+                ? BAD_AUDIENCE
+                : "(null)";
+
+            Assert.IsTrue(headerValue[0].Contains("invalid_token") && headerValue[0].Contains($"The audience '{expectedAudienceInErrorMessage}' is invalid"));
         }
 
         /// <summary>

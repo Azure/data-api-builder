@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Azure.DataApiBuilder.Mcp.Model;
+using Azure.DataApiBuilder.Mcp.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -61,22 +62,23 @@ namespace Azure.DataApiBuilder.Mcp.Core
                             }
 
                             JsonDocument? arguments = null;
-                            if (request.Params?.Arguments != null)
-                            {
-                                // Convert IReadOnlyDictionary<string, JsonElement> to JsonDocument
-                                Dictionary<string, object?> jsonObject = new();
-                                foreach (KeyValuePair<string, JsonElement> kvp in request.Params.Arguments)
-                                {
-                                    jsonObject[kvp.Key] = kvp.Value;
-                                }
-
-                                string json = JsonSerializer.Serialize(jsonObject);
-                                arguments = JsonDocument.Parse(json);
-                            }
-
                             try
                             {
-                                return await tool!.ExecuteAsync(arguments, request.Services!, ct);
+                                if (request.Params?.Arguments != null)
+                                {
+                                    // Convert IReadOnlyDictionary<string, JsonElement> to JsonDocument
+                                    Dictionary<string, object?> jsonObject = new();
+                                    foreach (KeyValuePair<string, JsonElement> kvp in request.Params.Arguments)
+                                    {
+                                        jsonObject[kvp.Key] = kvp.Value;
+                                    }
+
+                                    string json = JsonSerializer.Serialize(jsonObject);
+                                    arguments = JsonDocument.Parse(json);
+                                }
+
+                                return await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                                    tool!, toolName, arguments, request.Services!, ct);
                             }
                             finally
                             {

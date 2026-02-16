@@ -257,25 +257,23 @@ public record RuntimeConfig
     [JsonConstructor]
     public RuntimeConfig(
         string? Schema,
-        DataSource DataSource,
-        RuntimeEntities Entities,
+        DataSource? DataSource,
+        RuntimeEntities? Entities,
         RuntimeAutoentities? Autoentities = null,
         RuntimeOptions? Runtime = null,
         DataSourceFiles? DataSourceFiles = null,
         AzureKeyVaultOptions? AzureKeyVault = null)
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
-        this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.AzureKeyVault = AzureKeyVault;
-        this.Entities = Entities;
         this.Autoentities = Autoentities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         bool hasDataSourceFiles = DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null && DataSourceFiles.SourceFiles.Any();
 
         // Only require data-source if data-source-files is not provided
-        if (this.DataSource is null && !hasDataSourceFiles)
+        if (DataSource is null && !hasDataSourceFiles)
         {
             throw new DataApiBuilderException(
                 message: "data-source is a mandatory property in DAB Config",
@@ -284,11 +282,11 @@ public record RuntimeConfig
         }
 
         // Initialize data source dictionary - may be empty if parent relies solely on data-source-files
-        if (this.DataSource is not null)
+        if (DataSource is not null)
         {
             _dataSourceNameToDataSource = new Dictionary<string, DataSource>
             {
-                { this.DefaultDataSourceName, this.DataSource }
+                { this.DefaultDataSourceName, DataSource }
             };
         }
         else
@@ -307,13 +305,10 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        // Initialize entities to empty if null (when using data-source-files)
-        if (Entities is null)
-        {
-            this.Entities = new RuntimeEntities(new Dictionary<string, Entity>());
-        }
+        // Initialize entities to empty if null (when using data-source-files), otherwise use provided value
+        RuntimeEntities currentEntities = Entities ?? new RuntimeEntities(new Dictionary<string, Entity>());
 
-        foreach (KeyValuePair<string, Entity> entity in this.Entities)
+        foreach (KeyValuePair<string, Entity> entity in currentEntities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
         }
@@ -321,9 +316,12 @@ public record RuntimeConfig
         // Process data source and entities information for each database in multiple database scenario.
         this.DataSourceFiles = DataSourceFiles;
 
+        // Track the resolved DataSource (may come from parameter or first child)
+        DataSource? resolvedDataSource = DataSource;
+
         if (hasDataSourceFiles)
         {
-            IEnumerable<KeyValuePair<string, Entity>> allEntities = this.Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = currentEntities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             // This loader is not used as a part of hot reload and therefore does not need a handler.
@@ -339,11 +337,11 @@ public record RuntimeConfig
                     try
                     {
                         // If parent has no DataSource, use the first child's DataSource as the default.
-                        // This only happens once - subsequent children skip this block since this.DataSource is no longer null.
-                        if (this.DataSource is null && config.DataSource is not null)
+                        // This only happens once - subsequent children skip this block since resolvedDataSource is no longer null.
+                        if (resolvedDataSource is null && config.DataSource is not null)
                         {
-                            this.DataSource = config.DataSource;
-                            _dataSourceNameToDataSource[this.DefaultDataSourceName] = this.DataSource;
+                            resolvedDataSource = config.DataSource;
+                            _dataSourceNameToDataSource[this.DefaultDataSourceName] = resolvedDataSource;
                         }
 
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -362,17 +360,21 @@ public record RuntimeConfig
                 }
             }
 
-            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+            currentEntities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
         }
 
         // Final validation: ensure we have at least one data source after all loading
-        if (this.DataSource is null)
+        if (resolvedDataSource is null)
         {
             throw new DataApiBuilderException(
                 message: "data-source is a mandatory property in DAB Config. When using data-source-files, at least one child config must contain a valid data-source.",
                 statusCode: HttpStatusCode.UnprocessableEntity,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
+
+        // Now that we've validated, assign the non-null values to properties
+        this.DataSource = resolvedDataSource;
+        this.Entities = currentEntities;
 
         SetupDataSourcesUsed();
 

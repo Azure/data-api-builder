@@ -35,58 +35,56 @@ public class DabGraphQLResultSerializer : DefaultHttpResultSerializer
                 if (error.Code != null && 
                     Enum.TryParse<DataApiBuilderException.SubStatusCodes>(error.Code, out var subStatusCode))
                 {
-                    // Map SubStatusCodes to appropriate HTTP status codes
-                    switch (subStatusCode)
-                    {
-                        // Authentication/Authorization errors
-                        case DataApiBuilderException.SubStatusCodes.AuthenticationChallenge:
-                            return HttpStatusCode.Unauthorized; // 401
-                        case DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed:
-                        case DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure:
-                        case DataApiBuilderException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed:
-                            return HttpStatusCode.Forbidden; // 403
-
-                        // Not Found errors
-                        case DataApiBuilderException.SubStatusCodes.EntityNotFound:
-                        case DataApiBuilderException.SubStatusCodes.ItemNotFound:
-                        case DataApiBuilderException.SubStatusCodes.RelationshipNotFound:
-                        case DataApiBuilderException.SubStatusCodes.RelationshipFieldNotFound:
-                        case DataApiBuilderException.SubStatusCodes.DataSourceNotFound:
-                            return HttpStatusCode.NotFound; // 404
-
-                        // Bad Request errors
-                        case DataApiBuilderException.SubStatusCodes.BadRequest:
-                        case DataApiBuilderException.SubStatusCodes.DatabaseInputError:
-                        case DataApiBuilderException.SubStatusCodes.InvalidIdentifierField:
-                        case DataApiBuilderException.SubStatusCodes.ErrorProcessingData:
-                        case DataApiBuilderException.SubStatusCodes.ExposedColumnNameMappingError:
-                        case DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType:
-                        case DataApiBuilderException.SubStatusCodes.ErrorProcessingEasyAuthHeader:
-                            return HttpStatusCode.BadRequest; // 400
-
-                        // Not Supported errors
-                        case DataApiBuilderException.SubStatusCodes.NotSupported:
-                        case DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled:
-                            return HttpStatusCode.NotImplemented; // 501
-
-                        // Conflict errors
-                        case DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists:
-                            return HttpStatusCode.Conflict; // 409
-
-                        // Server errors - Internal Server Error
-                        case DataApiBuilderException.SubStatusCodes.ConfigValidationError:
-                        case DataApiBuilderException.SubStatusCodes.ErrorInInitialization:
-                        case DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed:
-                        case DataApiBuilderException.SubStatusCodes.GraphQLMapping:
-                        case DataApiBuilderException.SubStatusCodes.UnexpectedError:
-                        case DataApiBuilderException.SubStatusCodes.OpenApiDocumentCreationFailure:
-                        default:
-                            return HttpStatusCode.InternalServerError; // 500
-                    }
+                    return MapSubStatusCodeToHttpStatusCode(subStatusCode);
                 }
             }
         }
 
         return base.GetStatusCode(result);
     }
+
+    /// <summary>
+    /// Maps DataApiBuilderException.SubStatusCodes to appropriate HTTP status codes.
+    /// </summary>
+    private static HttpStatusCode MapSubStatusCodeToHttpStatusCode(DataApiBuilderException.SubStatusCodes subStatusCode) => subStatusCode switch
+    {
+        // Authentication/Authorization errors
+        DataApiBuilderException.SubStatusCodes.AuthenticationChallenge
+            => HttpStatusCode.Unauthorized, // 401
+
+        DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed or
+        DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure or
+        DataApiBuilderException.SubStatusCodes.AuthorizationCumulativeColumnCheckFailed
+            => HttpStatusCode.Forbidden, // 403
+
+        // Not Found errors
+        DataApiBuilderException.SubStatusCodes.EntityNotFound or
+        DataApiBuilderException.SubStatusCodes.ItemNotFound or
+        DataApiBuilderException.SubStatusCodes.RelationshipNotFound or
+        DataApiBuilderException.SubStatusCodes.RelationshipFieldNotFound or
+        DataApiBuilderException.SubStatusCodes.DataSourceNotFound
+            => HttpStatusCode.NotFound, // 404
+
+        // Bad Request errors
+        DataApiBuilderException.SubStatusCodes.BadRequest or
+        DataApiBuilderException.SubStatusCodes.DatabaseInputError or
+        DataApiBuilderException.SubStatusCodes.InvalidIdentifierField or
+        DataApiBuilderException.SubStatusCodes.ErrorProcessingData or
+        DataApiBuilderException.SubStatusCodes.ExposedColumnNameMappingError or
+        DataApiBuilderException.SubStatusCodes.UnsupportedClaimValueType or
+        DataApiBuilderException.SubStatusCodes.ErrorProcessingEasyAuthHeader
+            => HttpStatusCode.BadRequest, // 400
+
+        // Not Implemented errors
+        DataApiBuilderException.SubStatusCodes.NotSupported or
+        DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled
+            => HttpStatusCode.NotImplemented, // 501
+
+        // Conflict errors
+        DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists
+            => HttpStatusCode.Conflict, // 409
+
+        // Server errors - Internal Server Error (default)
+        _ => HttpStatusCode.InternalServerError // 500
+    };
 }

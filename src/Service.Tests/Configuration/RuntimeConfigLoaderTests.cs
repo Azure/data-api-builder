@@ -178,6 +178,6 @@ public class RuntimeConfigLoaderTests
         loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
         string error = sw.ToString();
 
-        Assert.IsTrue(error.Contains("data-source is a mandatory property"), "Should fail with data-source required error when no children provide a valid data-source");
+        Assert.IsTrue(error.Contains("data-source is a mandatory property"), "Expected data-source validation error when child configs are missing");
     }
 }

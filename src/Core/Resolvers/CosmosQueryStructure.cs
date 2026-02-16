@@ -117,14 +117,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         [MemberNotNull(nameof(OrderByColumns))]
         private void Init(IDictionary<string, object?> queryParams)
         {
-            ISelection selection = _context.Selection;
+            Selection selection = _context.Selection;
             ObjectType underlyingType = selection.Field.Type.NamedType<ObjectType>();
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
             if (IsPaginated)
             {
-                FieldNode? fieldNode = ExtractQueryField(selection.SyntaxNode);
+                FieldNode? fieldNode = ExtractQueryField(selection.SyntaxNodes[0].Node);
 
                 if (fieldNode is not null)
                 {
@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                Columns.AddRange(GenerateQueryColumns(selection.SyntaxNode.SelectionSet!, _context.Operation.Document, SourceAlias));
+                Columns.AddRange(GenerateQueryColumns(selection.SyntaxNodes[0].Node.SelectionSet!, _context.Operation.Document, SourceAlias));
                 string typeName = GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingType.Directives, out string? modelName) ?
                     modelName :
                     underlyingType.Name;

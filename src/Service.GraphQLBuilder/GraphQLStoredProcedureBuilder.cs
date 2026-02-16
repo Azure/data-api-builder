@@ -100,8 +100,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         /// <summary>
         /// Takes the result from DB as JsonDocument and formats it in a way that can be filtered by column
-        /// name. It parses the Json document into a list of Dictionary with key as result_column_name
-        /// with it's corresponding value.
+        /// name. It parses the JSON document into a list of Dictionary with key as result_column_name
+        /// with its corresponding value.
         /// returns an empty list in case of no result
         /// or stored-procedure is trying to read from DB without READ permission.
         /// </summary>
@@ -156,12 +156,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 Tuple<string, IValueNode> valueNode = paramValueType switch
                 {
-                    UUID_TYPE => new(UUID_TYPE, new UuidType().ParseValue(Guid.Parse(defaultValueFromConfig))),
+                    UUID_TYPE => new(UUID_TYPE, new UuidType().ValueToLiteral(Guid.Parse(defaultValueFromConfig))),
                     BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
                     SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
                     INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
                     LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
-                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
+                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ValueToLiteral(float.Parse(defaultValueFromConfig))),
                     FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
                     DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
                     STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
@@ -174,10 +174,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                             var s when s.Equals("false", StringComparison.OrdinalIgnoreCase) => false,
                             _ => throw new FormatException($"String '{defaultValueFromConfig}' was not recognized as a valid Boolean.")
                         })),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
+                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ValueToLiteral(
                         DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
-                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
-                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
+                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new Base64StringType().ValueToLiteral(Convert.FromBase64String(defaultValueFromConfig))),
+                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new HotChocolate.Types.NodaTime.LocalTimeType().ValueToLiteral(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };
 

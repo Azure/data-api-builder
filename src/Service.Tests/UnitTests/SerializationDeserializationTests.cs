@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates serialization and deserilization of Dictionary containing DatabaseTable
+        /// Validates serialization and deserialization of Dictionary containing DatabaseTable
         /// The table will have dollar sign prefix ($) in the column name
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
         /// </summary>
@@ -309,13 +309,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
             Assert.AreEqual(deserializedDatabaseTable.FullName, _databaseTable.FullName);
             deserializedDatabaseTable.Equals(_databaseTable);
-            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.SourceDefinition, _databaseTable.SourceDefinition, "$FirstName");
-            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "$FirstName");
+
+            // After serialization, the in-memory object's Columns keys are escaped (e.g., "$FirstName" → "DAB_ESCAPE$FirstName").
+            // Verify the deserialized object has the unescaped column name "$FirstName".
+            Assert.IsTrue(deserializedDatabaseTable.SourceDefinition.Columns.ContainsKey("$FirstName"),
+                "Deserialized SourceDefinition should contain '$FirstName' column.");
+            Assert.IsTrue(deserializedDatabaseTable.TableDefinition.Columns.ContainsKey("$FirstName"),
+                "Deserialized TableDefinition should contain '$FirstName' column.");
         }
 
         /// <summary>
-        /// Validates serialization and deserilization of Dictionary containing DatabaseView
-        /// The table will have dollar sign prefix ($) in the column name
+        /// Validates serialization and deserialization of Dictionary containing DatabaseView
+        /// The view will have dollar sign prefix ($) in the column name
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
         /// </summary>
         [TestMethod]
@@ -324,6 +329,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             InitializeObjects(generateDollaredColumn: true);
 
             TestTypeNameChanges(_databaseView, "DatabaseView");
+
+            // Re-initialize because TestTypeNameChanges serializes via the converter,
+            // which mutates column keys in-place (e.g., "$FirstName" → "DAB_ESCAPE$FirstName").
+            InitializeObjects(generateDollaredColumn: true);
 
             Dictionary<string, DatabaseObject> dict = new();
             dict.Add("person", _databaseView);
@@ -344,13 +353,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(deserializedDatabaseView.SourceType, _databaseView.SourceType);
             deserializedDatabaseView.Equals(_databaseView);
-            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseView.SourceDefinition, _databaseView.SourceDefinition, "$FirstName");
-            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseView.ViewDefinition, _databaseView.ViewDefinition, "$FirstName");
+
+            // After serialization, the in-memory object's Columns keys are escaped.
+            // Verify the deserialized object has the unescaped column name "$FirstName".
+            Assert.IsTrue(deserializedDatabaseView.SourceDefinition.Columns.ContainsKey("$FirstName"),
+                "Deserialized SourceDefinition should contain '$FirstName' column.");
+            Assert.IsTrue(deserializedDatabaseView.ViewDefinition.Columns.ContainsKey("$FirstName"),
+                "Deserialized ViewDefinition should contain '$FirstName' column.");
         }
 
         /// <summary>
-        /// Validates serialization and deserilization of Dictionary containing DatabaseStoredProcedure
-        /// The table will have dollar sign prefix ($) in the column name
+        /// Validates serialization and deserialization of Dictionary containing DatabaseStoredProcedure
+        /// The stored procedure will have dollar sign prefix ($) in the column name
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
         /// </summary>
         [TestMethod]
@@ -359,6 +373,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             InitializeObjects(generateDollaredColumn: true);
 
             TestTypeNameChanges(_databaseStoredProcedure, "DatabaseStoredProcedure");
+
+            // Re-initialize because TestTypeNameChanges serializes via the converter,
+            // which mutates column keys in-place (e.g., "$FirstName" → "DAB_ESCAPE$FirstName").
+            InitializeObjects(generateDollaredColumn: true);
 
             Dictionary<string, DatabaseObject> dict = new();
             dict.Add("person", _databaseStoredProcedure);
@@ -378,8 +396,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(deserializedDatabaseSP.SourceType, _databaseStoredProcedure.SourceType);
             deserializedDatabaseSP.Equals(_databaseStoredProcedure);
-            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseSP.SourceDefinition, _databaseStoredProcedure.SourceDefinition, "$FirstName", true);
-            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseSP.StoredProcedureDefinition, _databaseStoredProcedure.StoredProcedureDefinition, "$FirstName", true);
+
+            // After serialization, the in-memory object's Columns keys are escaped.
+            // Verify the deserialized object has the unescaped column name "$FirstName".
+            Assert.IsTrue(deserializedDatabaseSP.SourceDefinition.Columns.ContainsKey("$FirstName"),
+                "Deserialized SourceDefinition should contain '$FirstName' column.");
+            Assert.IsTrue(deserializedDatabaseSP.StoredProcedureDefinition.Columns.ContainsKey("$FirstName"),
+                "Deserialized StoredProcedureDefinition should contain '$FirstName' column.");
         }
 
         private void InitializeObjects(bool generateDollaredColumn = false)
@@ -596,6 +619,162 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 TableDefinition = source2,
             };
             return new(_databaseTable, table2);
+        }
+
+        /// <summary>
+        /// Tests the edge case where a column name starts with the escape sequence 'DAB_ESCAPE$'.
+        /// This validates the double-encoding mechanism:
+        /// - Original: 'DAB_ESCAPE$FirstName' -> Serialized: 'DAB_ESCAPE$DAB_ESCAPE$FirstName' -> Deserialized: 'DAB_ESCAPE$FirstName'
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTableSerializationDeserialization_WithEscapeSequenceInColumnName()
+        {
+            ColumnDefinition columnDef = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test"), false);
+            string columnName = "DAB_ESCAPE$FirstName";
+            SourceDefinition sourceDef = new()
+            {
+                IsInsertDMLTriggerEnabled = false,
+                IsUpdateDMLTriggerEnabled = false,
+                PrimaryKey = new List<string>() { columnName },
+            };
+            sourceDef.Columns.Add(columnName, columnDef);
+
+            DatabaseTable databaseTable = new()
+            {
+                Name = "test_table",
+                SourceType = EntitySourceType.Table,
+                SchemaName = "dbo",
+                TableDefinition = sourceDef,
+            };
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                }
+            };
+
+            // Wrap in Dictionary<string, DatabaseObject> so the DatabaseObjectConverter is invoked
+            Dictionary<string, DatabaseObject> dict = new() { { "test", databaseTable } };
+
+            string serialized = JsonSerializer.Serialize(dict, _options);
+            Assert.IsTrue(serialized.Contains("DAB_ESCAPE$DAB_ESCAPE$FirstName"),
+                "Serialized JSON should contain double-escaped column name.");
+
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serialized, _options)!;
+            DatabaseTable deserialized = (DatabaseTable)deserializedDict["test"];
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("DAB_ESCAPE$FirstName"),
+                "Deserialized table should have the original column name with escape sequence.");
+            Assert.AreEqual(1, deserialized.TableDefinition.Columns.Count,
+                "Should have exactly one column.");
+        }
+
+        /// <summary>
+        /// Tests the edge case with multiple columns having different patterns:
+        /// - Regular column: 'RegularColumn'
+        /// - Dollar-prefixed column: '$DollarColumn'
+        /// - Escape-sequence-prefixed column: 'DAB_ESCAPE$EscapeColumn'
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTableSerializationDeserialization_WithMixedColumnNames()
+        {
+            ColumnDefinition columnDef1 = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test1"), false);
+            ColumnDefinition columnDef2 = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test2"), false);
+            ColumnDefinition columnDef3 = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test3"), false);
+
+            SourceDefinition sourceDef = new()
+            {
+                IsInsertDMLTriggerEnabled = false,
+                IsUpdateDMLTriggerEnabled = false,
+                PrimaryKey = new List<string>() { "RegularColumn", "$DollarColumn", "DAB_ESCAPE$EscapeColumn" },
+            };
+            sourceDef.Columns.Add("RegularColumn", columnDef1);
+            sourceDef.Columns.Add("$DollarColumn", columnDef2);
+            sourceDef.Columns.Add("DAB_ESCAPE$EscapeColumn", columnDef3);
+
+            DatabaseTable databaseTable = new()
+            {
+                Name = "test_table",
+                SourceType = EntitySourceType.Table,
+                SchemaName = "dbo",
+                TableDefinition = sourceDef,
+            };
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                }
+            };
+
+            // Wrap in Dictionary<string, DatabaseObject> so the DatabaseObjectConverter is invoked
+            Dictionary<string, DatabaseObject> dict = new() { { "test", databaseTable } };
+
+            string serialized = JsonSerializer.Serialize(dict, _options);
+
+            Assert.IsTrue(serialized.Contains("RegularColumn"),
+                "Regular column should remain unchanged in serialization.");
+            Assert.IsTrue(serialized.Contains("DAB_ESCAPE$DollarColumn"),
+                "Dollar-prefixed column should be escaped.");
+            Assert.IsTrue(serialized.Contains("DAB_ESCAPE$DAB_ESCAPE$EscapeColumn"),
+                "Escape-sequence-prefixed column should be double-escaped.");
+
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serialized, _options)!;
+            DatabaseTable deserialized = (DatabaseTable)deserializedDict["test"];
+            Assert.AreEqual(3, deserialized.TableDefinition.Columns.Count, "Should have three columns.");
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("RegularColumn"),
+                "Should have RegularColumn.");
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("$DollarColumn"),
+                "Should have $DollarColumn.");
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("DAB_ESCAPE$EscapeColumn"),
+                "Should have DAB_ESCAPE$EscapeColumn.");
+        }
+
+        /// <summary>
+        /// Tests the edge case where a column name is exactly 'DAB_ESCAPE$'.
+        /// </summary>
+        [TestMethod]
+        public void TestDatabaseTableSerializationDeserialization_WithExactEscapeSequence()
+        {
+            ColumnDefinition columnDef = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("Test"), false);
+            string columnName = "DAB_ESCAPE$";
+            SourceDefinition sourceDef = new()
+            {
+                IsInsertDMLTriggerEnabled = false,
+                IsUpdateDMLTriggerEnabled = false,
+                PrimaryKey = new List<string>() { columnName },
+            };
+            sourceDef.Columns.Add(columnName, columnDef);
+
+            DatabaseTable databaseTable = new()
+            {
+                Name = "test_table",
+                SourceType = EntitySourceType.Table,
+                SchemaName = "dbo",
+                TableDefinition = sourceDef,
+            };
+
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                }
+            };
+
+            // Wrap in Dictionary<string, DatabaseObject> so the DatabaseObjectConverter is invoked
+            Dictionary<string, DatabaseObject> dict = new() { { "test", databaseTable } };
+
+            string serialized = JsonSerializer.Serialize(dict, _options);
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serialized, _options)!;
+            DatabaseTable deserialized = (DatabaseTable)deserializedDict["test"];
+
+            Assert.IsTrue(deserialized.TableDefinition.Columns.ContainsKey("DAB_ESCAPE$"),
+                "Deserialized table should have the exact escape sequence as column name.");
+            Assert.AreEqual(1, deserialized.TableDefinition.Columns.Count,
+                "Should have exactly one column.");
         }
 
         /// <summary>

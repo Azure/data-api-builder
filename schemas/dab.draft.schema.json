@@ -1116,9 +1116,10 @@
                   "default": false
                 },
                 "ttl-seconds": {
-                  "type": "integer",
+                  "type": [ "integer", "null" ],
                   "description": "Time to live in seconds",
-                  "default": 5
+                  "default": 5,
+                  "minimum": 1
                 },
                 "level": {
                   "type": "string",

@@ -101,4 +101,51 @@ public class RuntimeConfigLoaderTests
         Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
         Assert.IsTrue(error.Contains("An item with the same key has already been added."));
     }
+
+    /// <summary>
+    /// Test validates that when parent config has no data-source but has data-source-files,
+    /// the config loads correctly using the first child's data-source as the default.
+    /// Regression test for: https://github.com/Azure/data-api-builder/issues/2979
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(new string[] { "Multidab-config.MsSql.json", "Multidab-config.MySql.json", "Multidab-config.PostgreSql.json" })]
+    public void CanLoadMultiSourceConfigWithoutParentDataSource(IEnumerable<string> dataSourceFiles)
+    {
+        // Create a parent config with NO data-source, only data-source-files and runtime
+        string parentConfig = @"{
+  ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+  ""data-source-files"": [" + string.Join(",", dataSourceFiles.Select(f => $"\"{f}\"")) + @"],
+  ""runtime"": {
+    ""rest"": {
+      ""enabled"": true,
+      ""path"": ""/api""
+    },
+    ""graphql"": {
+      ""enabled"": true,
+      ""path"": ""/graphql""
+    },
+    ""host"": {
+      ""mode"": ""development""
+    }
+  }
+}";
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+        {
+            { "dab-config.json", new MockFileData(parentConfig) }
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig), "Should successfully load config with data-source-files only");
+
+        // Verify: 1 default (adopted from first child) + 3 from children = 4
+        Assert.AreEqual(4, runtimeConfig.ListAllDataSources().Count(), "Should have 4 data sources (1 default + 3 from children)");
+        Assert.IsTrue(runtimeConfig.SqlDataSourceUsed, "Should have Sql data source");
+
+        // First child's data source becomes the parent default
+        Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType, "Default datasource should be from first child file (MsSql)");
+
+        Assert.IsTrue(runtimeConfig.Entities.Any(), "Should have entities from child configs");
+    }
 }

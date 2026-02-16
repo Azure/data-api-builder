@@ -257,22 +257,24 @@ public record RuntimeConfig
     [JsonConstructor]
     public RuntimeConfig(
         string? Schema,
-        DataSource DataSource,
-        RuntimeEntities Entities,
+        DataSource? DataSource,
+        RuntimeEntities? Entities,
         RuntimeAutoentities? Autoentities = null,
         RuntimeOptions? Runtime = null,
         DataSourceFiles? DataSourceFiles = null,
         AzureKeyVaultOptions? AzureKeyVault = null)
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
-        this.DataSource = DataSource;
+        this.DataSource = DataSource!;
         this.Runtime = Runtime;
         this.AzureKeyVault = AzureKeyVault;
-        this.Entities = Entities;
+        this.Entities = Entities!;
         this.Autoentities = Autoentities;
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
-        if (this.DataSource is null)
+        bool hasDataSourceFiles = DataSourceFiles?.SourceFiles?.Any() == true;
+
+        if (this.DataSource is null && !hasDataSourceFiles)
         {
             throw new DataApiBuilderException(
                 message: "data-source is a mandatory property in DAB Config",
@@ -280,14 +282,14 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        // we will set them up with default values
-        _dataSourceNameToDataSource = new Dictionary<string, DataSource>
-        {
-            { this.DefaultDataSourceName, this.DataSource }
-        };
+        // Initialize data source dictionary - may be empty if parent relies solely on data-source-files
+        _dataSourceNameToDataSource = this.DataSource is not null
+            ? new Dictionary<string, DataSource> { { this.DefaultDataSourceName, this.DataSource } }
+            : new Dictionary<string, DataSource>();
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if (Entities is null)
+
+        if (Entities is null && !hasDataSourceFiles)
         {
             throw new DataApiBuilderException(
                 message: "entities is a mandatory property in DAB Config",
@@ -295,7 +297,12 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        foreach (KeyValuePair<string, Entity> entity in Entities)
+        if (Entities is null)
+        {
+            this.Entities = new RuntimeEntities(new Dictionary<string, Entity>());
+        }
+
+        foreach (KeyValuePair<string, Entity> entity in this.Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
         }
@@ -303,15 +310,15 @@ public record RuntimeConfig
         // Process data source and entities information for each database in multiple database scenario.
         this.DataSourceFiles = DataSourceFiles;
 
-        if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
+        if (hasDataSourceFiles)
         {
-            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = this.Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             // This loader is not used as a part of hot reload and therefore does not need a handler.
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
-            foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
+            foreach (string dataSourceFile in DataSourceFiles!.SourceFiles!)
             {
                 // Use default replacement settings for environment variable replacement
                 DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
@@ -320,6 +327,13 @@ public record RuntimeConfig
                 {
                     try
                     {
+                        // If parent has no DataSource, adopt first child's DataSource as the default.
+                        if (this.DataSource is null && config.DataSource is not null)
+                        {
+                            this.DataSource = config.DataSource;
+                            _dataSourceNameToDataSource[this.DefaultDataSourceName] = this.DataSource;
+                        }
+
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         allEntities = allEntities.Concat(config.Entities.AsEnumerable());
@@ -337,6 +351,15 @@ public record RuntimeConfig
             }
 
             this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+        }
+
+        // Final validation: ensure at least one data source exists after loading all children
+        if (this.DataSource is null)
+        {
+            throw new DataApiBuilderException(
+                message: "data-source is a mandatory property in DAB Config. When using data-source-files, at least one child config must contain a valid data-source.",
+                statusCode: HttpStatusCode.UnprocessableEntity,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
         SetupDataSourcesUsed();

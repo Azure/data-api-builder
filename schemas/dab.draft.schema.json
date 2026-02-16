@@ -813,7 +813,7 @@
                     "level": {
                       "type": "string",
                       "description": "Cache level (L1 or L1L2)",
-                      "enum": [ "L1", "L1L2", null ],
+                      "enum": [ "L1", "L1L2" ],
                       "default": "L1L2"
                     }
                   }
@@ -1137,7 +1137,7 @@
                 "level": {
                   "type": "string",
                   "description": "Cache level (L1 or L1L2)",
-                  "enum": [ "L1", "L1L2", null ],
+                  "enum": [ "L1", "L1L2" ],
                   "default": "L1L2"
                 }
               }

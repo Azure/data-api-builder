@@ -24,7 +24,6 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 
@@ -397,11 +396,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.Insert:
 
                     HttpContext httpContext = GetHttpContext();
-                    string locationHeaderURL = UriHelper.BuildAbsolute(
-                            scheme: httpContext.Request.Scheme,
-                            host: httpContext.Request.Host,
-                            pathBase: GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()),
-                            path: httpContext.Request.Path);
+                    string locationHeaderURL = SqlPaginationUtil.ConstructBaseUriForPagination(
+                            httpContext,
+                            GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()));
 
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set

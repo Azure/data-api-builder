@@ -10,7 +10,6 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -381,11 +380,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // The third part is the computed primary key route.
             if (operationType is EntityActionOperation.Insert && !string.IsNullOrEmpty(primaryKeyRoute))
             {
-                locationHeaderURL = UriHelper.BuildAbsolute(
-                                        scheme: httpContext.Request.Scheme,
-                                        host: httpContext.Request.Host,
-                                        pathBase: baseRoute,
-                                        path: httpContext.Request.Path);
+                locationHeaderURL = SqlPaginationUtil.ConstructBaseUriForPagination(
+                                        httpContext,
+                                        baseRoute);
 
                 locationHeaderURL = locationHeaderURL.EndsWith('/') ? locationHeaderURL + primaryKeyRoute : locationHeaderURL + "/" + primaryKeyRoute;
             }

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
@@ -139,12 +140,17 @@ namespace Azure.DataApiBuilder.Core.Services
                 };
 
                 // Collect all entity tags and their descriptions for the top-level tags array
-                List<OpenApiTag> globalTags = new();
+                // Store tags in a dictionary to ensure we can reuse the same tag instances in BuildPaths
+                Dictionary<string, OpenApiTag> globalTagsDict = new();
                 foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
                 {
                     Entity entity = kvp.Value;
-                    string restPath = entity.Rest?.Path ?? kvp.Key;
-                    globalTags.Add(new OpenApiTag
+                    // Use GetEntityRestPath to ensure consistent path computation (with leading slash trimmed)
+                    string restPath = GetEntityRestPath(entity.Rest, kvp.Key);
+                    
+                    // Only add the tag if it hasn't been added yet (handles entities with the same REST path)
+                    // First entity's description wins when multiple entities share the same REST path.
+                    globalTagsDict.TryAdd(restPath, new OpenApiTag
                     {
                         Name = restPath,
                         Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
@@ -162,9 +168,9 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         new() { Url = url }
                     },
-                    Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName),
+                    Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, globalTagsDict),
                     Components = components,
-                    Tags = globalTags
+                    Tags = globalTagsDict.Values.ToList()
                 };
                 _openApiDocument = doc;
             }
@@ -193,7 +199,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// "/EntityName"
         /// </example>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName)
+        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, Dictionary<string, OpenApiTag> globalTags)
         {
             OpenApiPaths pathsCollection = new();
 
@@ -227,19 +233,24 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                // Set the tag's Description property to the entity's semantic description if present.
-                OpenApiTag openApiTag = new()
+                // Reuse the existing tag from the global tags dictionary instead of creating a new one
+                // This ensures Swagger UI displays only one group per entity
+                List<OpenApiTag> tags = new();
+                if (globalTags.TryGetValue(entityRestPath, out OpenApiTag? existingTag))
                 {
-                    Name = entityRestPath,
-                    Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
-                };
-
-                // The OpenApiTag will categorize all paths created using the entity's name or overridden REST path value.
-                // The tag categorization will instruct OpenAPI document visualization tooling to display all generated paths together.
-                List<OpenApiTag> tags = new()
+                    tags.Add(existingTag);
+                }
+                else
                 {
-                    openApiTag
-                };
+                    // Fallback: create a new tag if not found in global tags.
+                    // This should not happen in normal flow if GetEntityRestPath is used consistently.
+                    // If this path is reached, it indicates a key mismatch between CreateDocument and BuildPaths.
+                    tags.Add(new OpenApiTag
+                    {
+                        Name = entityRestPath,
+                        Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
+                    });
+                }
 
                 Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject);
 

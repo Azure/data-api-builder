@@ -150,6 +150,43 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         }
 
         /// <summary>
+        /// Integration test validating that there are no duplicate tags in the OpenAPI document.
+        /// This test ensures that tags created in CreateDocument are reused in BuildPaths,
+        /// preventing Swagger UI from showing duplicate entity groups.
+        /// </summary>
+        [TestMethod]
+        public void OpenApiDocumentor_NoDuplicateTags()
+        {
+            // Act: Get the tags from the OpenAPI document
+            IList<OpenApiTag> tags = _openApiDocument.Tags;
+
+            // Get all tag names
+            List<string> tagNames = tags.Select(t => t.Name).ToList();
+
+            // Get distinct tag names
+            List<string> distinctTagNames = tagNames.Distinct().ToList();
+
+            // Assert: The number of tags should equal the number of distinct tag names (no duplicates)
+            Assert.AreEqual(distinctTagNames.Count, tagNames.Count,
+                $"Duplicate tags found in OpenAPI document. Tags: {string.Join(", ", tagNames)}");
+
+            // Additionally, verify that each operation references tags that are in the global tags list
+            foreach (KeyValuePair<string, OpenApiPathItem> path in _openApiDocument.Paths)
+            {
+                foreach (KeyValuePair<OperationType, OpenApiOperation> operation in path.Value.Operations)
+                {
+                    foreach (OpenApiTag operationTag in operation.Value.Tags)
+                    {
+                        // Verify that the operation's tag is the same instance as one in the global tags
+                        bool foundMatchingTag = tags.Any(globalTag => ReferenceEquals(globalTag, operationTag));
+                        Assert.IsTrue(foundMatchingTag,
+                            $"Operation tag '{operationTag.Name}' at path '{path.Key}' is not the same instance as the global tag");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Validates that the provided OpenApiReference object has the expected schema reference id
         /// and that that id is present in the list of component schema in the OpenApi document.
         /// Additionally, validates that the references object contains the expected properties and JSON data types:

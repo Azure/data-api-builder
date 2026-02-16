@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 if (key.StartsWith(doubleEscapeSequence, StringComparison.Ordinal))
                 {
                     // Double-escaped: 'DAB_ESCAPE$DAB_ESCAPE$...' → 'DAB_ESCAPE$...'
-                    renames.Add((key, key.Substring(ESCAPED_DOLLARCHAR.Length)));
+                    renames.Add((key, key[ESCAPED_DOLLARCHAR.Length..]));
                 }
                 else if (key.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
                 {

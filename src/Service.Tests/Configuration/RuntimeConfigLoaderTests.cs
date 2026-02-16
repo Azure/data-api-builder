@@ -148,4 +148,36 @@ public class RuntimeConfigLoaderTests
 
         Assert.IsTrue(runtimeConfig.Entities.Any(), "Should have entities from child configs");
     }
+
+    /// <summary>
+    /// Test validates that config loading fails with a clear error when parent has
+    /// data-source-files but the referenced files don't exist (no data-source resolved).
+    /// </summary>
+    [TestMethod]
+    public void FailLoadMultiSourceConfigWithNoValidChildren()
+    {
+        string parentConfig = @"{
+  ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+  ""data-source-files"": [""nonexistent-child.json""],
+  ""runtime"": {
+    ""rest"": { ""enabled"": true },
+    ""graphql"": { ""enabled"": true }
+  }
+}";
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+        {
+            { "dab-config.json", new MockFileData(parentConfig) }
+        });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        StringWriter sw = new();
+        Console.SetError(sw);
+
+        loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+        string error = sw.ToString();
+
+        Assert.IsTrue(error.Contains("data-source is a mandatory property"), "Should fail with data-source required error when no children provide a valid data-source");
+    }
 }

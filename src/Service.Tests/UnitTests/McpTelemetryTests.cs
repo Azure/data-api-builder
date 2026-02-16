@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     public class McpTelemetryTests
     {
         private static ActivityListener? _activityListener;
-        private static List<Activity> _recordedActivities = new();
+        private static readonly List<Activity> _recordedActivities = new();
 
         /// <summary>
         /// Initialize activity listener before all tests.
@@ -134,8 +134,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         [DataTestMethod]
         [DataRow("read_records", "books", "read", null, DisplayName = "Sets entity, operation; no procedure")]
-        [DataRow("get_book", "GetBook", "execute", "dbo.GetBookById", DisplayName = "Sets all tags including db.procedure")]
-        [DataRow("describe_entities", null, null, null, DisplayName = "Handles all-null optional params")]
+        [DataRow("custom_proc", "CustomEntity", "execute", "dbo.CustomProc", DisplayName = "Custom tool with all tags including db.procedure")]
+        [DataRow("describe_entities", null, "describe", null, DisplayName = "Describe tool with null entity")]
         [DataRow("custom_tool", "MyEntity", "execute", "schema.MyStoredProc", DisplayName = "Sets all four tags")]
         public void TrackMcpToolExecutionStarted_SetsExpectedTags(
             string toolName, string? entityName, string? operation, string? dbProcedure)
@@ -187,14 +187,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             activity.TrackMcpToolExecutionStarted(toolName: "read_records");
 
             Exception testException = new InvalidOperationException("Test exception");
-            activity.TrackMcpToolExecutionFinishedWithException(testException, errorCode: "ExecutionFailed");
+            activity.TrackMcpToolExecutionFinishedWithException(testException, errorCode: McpTelemetryErrorCodes.EXECUTION_FAILED);
 
             Activity recorded = StopAndGetRecordedActivity(activity);
             Assert.AreEqual(ActivityStatusCode.Error, recorded.Status);
             Assert.AreEqual("Test exception", recorded.StatusDescription);
             Assert.AreEqual("InvalidOperationException", recorded.GetTagItem("error.type"));
             Assert.AreEqual("Test exception", recorded.GetTagItem("error.message"));
-            Assert.AreEqual("ExecutionFailed", recorded.GetTagItem("error.code"));
+            Assert.AreEqual(McpTelemetryErrorCodes.EXECUTION_FAILED, recorded.GetTagItem("error.code"));
 
             ActivityEvent? exceptionEvent = recorded.Events.FirstOrDefault(e => e.Name == "exception");
             Assert.IsNotNull(exceptionEvent, "Exception event should be recorded");
@@ -202,35 +202,29 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
-        #region InferOperationFromToolName
+        #region InferOperationFromTool
 
         /// <summary>
-        /// Test that InferOperationFromToolName returns the correct operation for tool names,
-        /// including built-in names, keyword variants, ambiguous names (precedence), and unknown names.
+        /// Test that InferOperationFromTool returns the correct operation for built-in and custom tools.
+        /// Built-in tools are mapped by name; custom tools always return "execute".
         /// </summary>
         [DataTestMethod]
-        // Built-in tool names
-        [DataRow("read_records", "read")]
-        [DataRow("get_book", "read")]
-        [DataRow("list_items", "read")]
-        [DataRow("describe_entities", "read")]
-        [DataRow("create_record", "create")]
-        [DataRow("insert_book", "create")]
-        [DataRow("update_record", "update")]
-        [DataRow("modify_entry", "update")]
-        [DataRow("delete_record", "delete")]
-        [DataRow("remove_item", "delete")]
-        [DataRow("execute_entity", "execute")]
-        // Unknown / default
-        [DataRow("my_custom_proc", "execute")]
-        [DataRow("unknown_tool", "execute")]
-        // Precedence: first matching keyword wins
-        [DataRow("get_deleted_items", "read", DisplayName = "'get' matches before 'delete'")]
-        [DataRow("list_updates", "read", DisplayName = "'list' matches before 'update'")]
-        [DataRow("create_log", "create", DisplayName = "'create' matches without 'read' substring")]
-        public void InferOperationFromToolName_ReturnsCorrectOperation(string toolName, string expectedOperation)
+        // Built-in DML tool names mapped to operations
+        [DataRow(ToolType.BuiltIn, "read_records", "read", DisplayName = "Built-in: read_records -> read")]
+        [DataRow(ToolType.BuiltIn, "create_record", "create", DisplayName = "Built-in: create_record -> create")]
+        [DataRow(ToolType.BuiltIn, "update_record", "update", DisplayName = "Built-in: update_record -> update")]
+        [DataRow(ToolType.BuiltIn, "delete_record", "delete", DisplayName = "Built-in: delete_record -> delete")]
+        [DataRow(ToolType.BuiltIn, "describe_entities", "describe", DisplayName = "Built-in: describe_entities -> describe")]
+        [DataRow(ToolType.BuiltIn, "execute_entity", "execute", DisplayName = "Built-in: execute_entity -> execute")]
+        [DataRow(ToolType.BuiltIn, "unknown_builtin", "execute", DisplayName = "Built-in: unknown -> execute (fallback)")]
+        // Custom tools always return "execute"
+        [DataRow(ToolType.Custom, "get_book", "execute", DisplayName = "Custom: get_book -> execute (stored proc)")]
+        [DataRow(ToolType.Custom, "read_users", "execute", DisplayName = "Custom: read_users -> execute (ignore name)")]
+        [DataRow(ToolType.Custom, "custom_proc", "execute", DisplayName = "Custom: custom_proc -> execute")]
+        public void InferOperationFromTool_ReturnsCorrectOperation(ToolType toolType, string toolName, string expectedOperation)
         {
-            Assert.AreEqual(expectedOperation, McpTelemetryHelper.InferOperationFromToolName(toolName));
+            IMcpTool tool = new MockMcpTool(CreateToolResult(), toolType);
+            Assert.AreEqual(expectedOperation, McpTelemetryHelper.InferOperationFromTool(tool, toolName));
         }
 
         #endregion
@@ -241,11 +235,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Test that MapExceptionToErrorCode returns the correct error code for each exception type.
         /// </summary>
         [DataTestMethod]
-        [DataRow("OperationCanceledException", "OperationCancelled")]
-        [DataRow("UnauthorizedAccessException", "AuthenticationFailed")]
-        [DataRow("ArgumentException", "InvalidRequest")]
-        [DataRow("InvalidOperationException", "ExecutionFailed")]
-        [DataRow("Exception", "ExecutionFailed")]
+        [DataRow("OperationCanceledException", McpTelemetryErrorCodes.OPERATION_CANCELLED)]
+        [DataRow("UnauthorizedAccessException", McpTelemetryErrorCodes.AUTHORIZATION_FAILED)]
+        [DataRow("ArgumentException", McpTelemetryErrorCodes.INVALID_REQUEST)]
+        [DataRow("InvalidOperationException", McpTelemetryErrorCodes.EXECUTION_FAILED)]
+        [DataRow("Exception", McpTelemetryErrorCodes.EXECUTION_FAILED)]
         public void MapExceptionToErrorCode_ReturnsCorrectCode(string exceptionTypeName, string expectedErrorCode)
         {
             Exception ex = CreateExceptionByTypeName(exceptionTypeName);
@@ -257,22 +251,48 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         #region ExecuteWithTelemetryAsync
 
         /// <summary>
-        /// Test that ExecuteWithTelemetryAsync sets Ok status for a successful tool execution.
+        /// Test that ExecuteWithTelemetryAsync sets Ok status and correct operation for all built-in DML tools.
         /// </summary>
-        [TestMethod]
-        public async Task ExecuteWithTelemetryAsync_SetsOkStatus_OnSuccess()
+        [DataTestMethod]
+        [DataRow("read_records", "read", DisplayName = "read_records -> read operation")]
+        [DataRow("create_record", "create", DisplayName = "create_record -> create operation")]
+        [DataRow("update_record", "update", DisplayName = "update_record -> update operation")]
+        [DataRow("delete_record", "delete", DisplayName = "delete_record -> delete operation")]
+        [DataRow("describe_entities", "describe", DisplayName = "describe_entities -> describe operation")]
+        [DataRow("execute_entity", "execute", DisplayName = "execute_entity -> execute operation")]
+        public async Task ExecuteWithTelemetryAsync_SetsOkStatusAndCorrectOperation_ForBuiltInTools(
+            string toolName, string expectedOperation)
         {
             CallToolResult expectedResult = CreateToolResult("success");
-            IMcpTool tool = new FakeMcpTool(expectedResult);
+            IMcpTool tool = new MockMcpTool(expectedResult, ToolType.BuiltIn);
 
             CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
-                tool, "read_records", arguments: null, CreateServiceProvider(), CancellationToken.None);
+                tool, toolName, arguments: null, CreateServiceProvider(), CancellationToken.None);
 
             Assert.AreSame(expectedResult, result);
             Activity recorded = _recordedActivities.First();
             Assert.AreEqual(ActivityStatusCode.Ok, recorded.Status);
-            Assert.AreEqual("read_records", recorded.GetTagItem("mcp.tool.name"));
-            Assert.AreEqual("read", recorded.GetTagItem("dab.operation"));
+            Assert.AreEqual(toolName, recorded.GetTagItem("mcp.tool.name"));
+            Assert.AreEqual(expectedOperation, recorded.GetTagItem("dab.operation"));
+        }
+
+        /// <summary>
+        /// Test that ExecuteWithTelemetryAsync always sets operation to "execute" for custom tools (stored procedures).
+        /// </summary>
+        [TestMethod]
+        public async Task ExecuteWithTelemetryAsync_SetsExecuteOperation_ForCustomTools()
+        {
+            CallToolResult expectedResult = CreateToolResult("success");
+            IMcpTool tool = new MockMcpTool(expectedResult, ToolType.Custom);
+
+            CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
+                tool, "get_book", arguments: null, CreateServiceProvider(), CancellationToken.None);
+
+            Assert.AreSame(expectedResult, result);
+            Activity recorded = _recordedActivities.First();
+            Assert.AreEqual(ActivityStatusCode.Ok, recorded.Status);
+            Assert.AreEqual("get_book", recorded.GetTagItem("mcp.tool.name"));
+            Assert.AreEqual("execute", recorded.GetTagItem("dab.operation"));
         }
 
         /// <summary>
@@ -282,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task ExecuteWithTelemetryAsync_SetsErrorStatus_WhenToolReturnsIsError()
         {
             CallToolResult errorResult = CreateToolResult("error occurred", isError: true);
-            IMcpTool tool = new FakeMcpTool(errorResult);
+            IMcpTool tool = new MockMcpTool(errorResult, ToolType.BuiltIn);
 
             CallToolResult result = await McpTelemetryHelper.ExecuteWithTelemetryAsync(
                 tool, "create_record", arguments: null, CreateServiceProvider(), CancellationToken.None);
@@ -300,7 +320,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task ExecuteWithTelemetryAsync_RecordsExceptionAndRethrows_WhenToolThrows()
         {
             InvalidOperationException expectedException = new("tool exploded");
-            IMcpTool tool = new FakeMcpTool(expectedException);
+            IMcpTool tool = new MockMcpTool(expectedException, ToolType.BuiltIn);
 
             InvalidOperationException thrownEx = await Assert.ThrowsExceptionAsync<InvalidOperationException>(
                 () => McpTelemetryHelper.ExecuteWithTelemetryAsync(
@@ -319,23 +339,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         #endregion
 
-        #region Test Fakes
+        #region Test Mocks
 
         /// <summary>
-        /// A minimal fake IMcpTool for testing ExecuteWithTelemetryAsync.
+        /// A minimal mock IMcpTool for testing ExecuteWithTelemetryAsync.
         /// Returns a predetermined result or throws a predetermined exception.
         /// </summary>
-        private class FakeMcpTool : IMcpTool
+        private class MockMcpTool : IMcpTool
         {
             private readonly CallToolResult? _result;
             private readonly Exception? _exception;
+            private readonly ToolType _toolType;
 
-            public FakeMcpTool(CallToolResult result) => _result = result;
-            public FakeMcpTool(Exception exception) => _exception = exception;
+            public MockMcpTool(CallToolResult result, ToolType toolType = ToolType.BuiltIn)
+            {
+                _result = result;
+                _toolType = toolType;
+            }
 
-            public ToolType ToolType => ToolType.BuiltIn;
+            public MockMcpTool(Exception exception, ToolType toolType = ToolType.BuiltIn)
+            {
+                _exception = exception;
+                _toolType = toolType;
+            }
 
-            public Tool GetToolMetadata() => new() { Name = "fake_tool", Description = "Fake tool for testing" };
+            public ToolType ToolType => _toolType;
+
+            public Tool GetToolMetadata() => new() { Name = "mock_tool", Description = "Mock tool for testing" };
 
             public Task<CallToolResult> ExecuteAsync(JsonDocument? arguments, IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
             {

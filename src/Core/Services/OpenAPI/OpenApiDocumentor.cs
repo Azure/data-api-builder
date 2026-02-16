@@ -145,17 +145,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
                 {
                     Entity entity = kvp.Value;
-                    string restPath = entity.Rest?.Path ?? kvp.Key;
+                    // Use GetEntityRestPath to ensure consistent path computation (with leading slash trimmed)
+                    string restPath = GetEntityRestPath(entity.Rest, kvp.Key);
                     
                     // Only add the tag if it hasn't been added yet (handles entities with the same REST path)
-                    if (!globalTagsDict.ContainsKey(restPath))
+                    // First entity's description wins when multiple entities share the same REST path.
+                    globalTagsDict.TryAdd(restPath, new OpenApiTag
                     {
-                        globalTagsDict[restPath] = new OpenApiTag
-                        {
-                            Name = restPath,
-                            Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
-                        };
-                    }
+                        Name = restPath,
+                        Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
+                    });
                 }
 
                 OpenApiDocument doc = new()
@@ -243,7 +242,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else
                 {
-                    // Fallback: create a new tag if not found in global tags (should not happen in normal flow)
+                    // Fallback: create a new tag if not found in global tags.
+                    // This should not happen in normal flow if GetEntityRestPath is used consistently.
+                    // If this path is reached, it indicates a key mismatch between CreateDocument and BuildPaths.
                     tags.Add(new OpenApiTag
                     {
                         Name = entityRestPath,

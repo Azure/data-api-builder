@@ -161,21 +161,21 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             IList<OpenApiTag> tags = _openApiDocument.Tags;
 
             // Get all tag names
-            var tagNames = tags.Select(t => t.Name).ToList();
+            List<string> tagNames = tags.Select(t => t.Name).ToList();
 
             // Get distinct tag names
-            var distinctTagNames = tagNames.Distinct().ToList();
+            List<string> distinctTagNames = tagNames.Distinct().ToList();
 
             // Assert: The number of tags should equal the number of distinct tag names (no duplicates)
             Assert.AreEqual(distinctTagNames.Count, tagNames.Count,
                 $"Duplicate tags found in OpenAPI document. Tags: {string.Join(", ", tagNames)}");
 
             // Additionally, verify that each operation references tags that are in the global tags list
-            foreach (var path in _openApiDocument.Paths)
+            foreach (KeyValuePair<string, OpenApiPathItem> path in _openApiDocument.Paths)
             {
-                foreach (var operation in path.Value.Operations)
+                foreach (KeyValuePair<OperationType, OpenApiOperation> operation in path.Value.Operations)
                 {
-                    foreach (var operationTag in operation.Value.Tags)
+                    foreach (OpenApiTag operationTag in operation.Value.Tags)
                     {
                         // Verify that the operation's tag is the same instance as one in the global tags
                         bool foundMatchingTag = tags.Any(globalTag => ReferenceEquals(globalTag, operationTag));

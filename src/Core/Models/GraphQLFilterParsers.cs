@@ -420,10 +420,16 @@ public class GQLFilterParser
         predicatesForExistsQuery.Push(existsQueryFilterPredicate);
 
         // Add JoinPredicates to the subquery query structure so a predicate connecting
-        // the outer table is added to the where clause of subquery
-        existsQuery.AddJoinPredicatesForRelatedEntity(
-            targetEntityName: queryStructure.EntityName,
-            relatedSourceAlias: queryStructure.SourceAlias,
+        // the outer table is added to the where clause of subquery.
+        // Use AddJoinPredicatesForRelationship (with EntityRelationshipKey) instead of
+        // AddJoinPredicatesForRelatedEntity so that self-referencing relationships
+        // (e.g., category.parent → category) resolve the correct FK definition.
+        BaseSqlQueryStructure sqlQueryStructure = (BaseSqlQueryStructure)queryStructure;
+        EntityRelationshipKey fkLookupKey = new(queryStructure.EntityName, filterField.Name);
+        sqlQueryStructure.AddJoinPredicatesForRelationship(
+            fkLookupKey: fkLookupKey,
+            targetEntityName: nestedFilterEntityName,
+            subqueryTargetTableAlias: existsQuery.SourceAlias,
             subQuery: existsQuery);
 
         // The right operand is the SqlExistsQueryStructure.

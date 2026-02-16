@@ -703,7 +703,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title eq 'filter & test'",
+                queryString: "?$filter=title%20eq%20%27filter%20%26%20test%27",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterContainingSpecialCharacters))
             );
@@ -717,10 +717,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFilterContainingMultipleSpecialCharacters()
         {
-            // Test with plus and equals signs
+            // Test with plus and equals signs - URL-encoded
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title eq 'A+B=C'",
+                queryString: "?$filter=title%20eq%20%27A%2BB%3DC%27",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterContainingMultipleSpecialCharacters))
             );
@@ -735,7 +735,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title eq 'Tom & Jerry'",
+                queryString: "?$filter=title%20eq%20%27Tom%20%26%20Jerry%27",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterContainingAmpersandInPhrase))
             );
@@ -750,7 +750,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title eq '100% Complete'",
+                queryString: "?$filter=title%20eq%20%27100%25%20Complete%27",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterContainingPercentSign))
             );

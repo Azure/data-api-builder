@@ -303,11 +303,21 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <summary>
         /// Extracts the raw (URL-encoded) value of a query parameter from a query string.
         /// Preserves special characters like & in filter values (e.g., %26 stays as %26).
+        /// 
+        /// IMPORTANT: This method assumes the input queryString is a raw, URL-encoded query string
+        /// where special characters in parameter values are encoded (e.g., & is %26, space is %20).
+        /// It splits on unencoded '&' characters which are parameter separators in the URL standard.
+        /// If the queryString has already been decoded, this method will not work correctly.
         /// </summary>
-        private static string? ExtractRawQueryParameter(string queryString, string parameterName)
+        /// <param name="queryString">Raw URL-encoded query string (e.g., "?$filter=title%20eq%20%27A%26B%27")</param>
+        /// <param name="parameterName">The parameter name to extract (e.g., "$filter")</param>
+        /// <returns>The raw encoded value of the parameter, or null if not found</returns>
+        internal static string? ExtractRawQueryParameter(string queryString, string parameterName)
         {
             if (string.IsNullOrWhiteSpace(queryString)) return null;
 
+            // Split on '&' which are parameter separators in properly URL-encoded query strings.
+            // Any '&' characters within parameter values will be encoded as %26.
             foreach (string param in queryString.TrimStart('?').Split('&'))
             {
                 int idx = param.IndexOf('=');

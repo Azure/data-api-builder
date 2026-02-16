@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Reflection;
 using Azure.DataApiBuilder.Core.Parsers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -35,14 +34,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("?$filter=expr%20eq%20%27a%3Cb%3Ed%27", "$filter", "expr%20eq%20%27a%3Cb%3Ed%27", DisplayName = "Extract filter with encoded less-than and greater-than (< >)")]
         public void ExtractRawQueryParameter_PreservesEncoding(string queryString, string parameterName, string expectedValue)
         {
-            // Use reflection to call the private static method
-            MethodInfo? method = typeof(RequestParser).GetMethod(
-                "ExtractRawQueryParameter",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            
-            Assert.IsNotNull(method, "ExtractRawQueryParameter method should exist");
-
-            string? result = (string?)method.Invoke(null, new object[] { queryString, parameterName });
+            // Call the internal method directly (no reflection needed)
+            string? result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
             
             Assert.AreEqual(expectedValue, result, 
                 $"Expected '{expectedValue}' but got '{result}' for parameter '{parameterName}' in query '{queryString}'");
@@ -58,14 +51,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("?otherParam=value", "$filter", DisplayName = "Different parameter")]
         public void ExtractRawQueryParameter_ReturnsNull_WhenParameterNotFound(string? queryString, string parameterName)
         {
-            // Use reflection to call the private static method
-            MethodInfo? method = typeof(RequestParser).GetMethod(
-                "ExtractRawQueryParameter",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            
-            Assert.IsNotNull(method, "ExtractRawQueryParameter method should exist");
-
-            string? result = (string?)method.Invoke(null, new object?[] { queryString, parameterName });
+            // Call the internal method directly (no reflection needed)
+            string? result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
             
             Assert.IsNull(result, 
                 $"Expected null but got '{result}' for parameter '{parameterName}' in query '{queryString}'");
@@ -83,14 +70,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("?param=value1&value2", "param", "value1", DisplayName = "Value with unencoded ampersand after parameter")]
         public void ExtractRawQueryParameter_HandlesEdgeCases(string queryString, string parameterName, string expectedValue)
         {
-            // Use reflection to call the private static method
-            MethodInfo? method = typeof(RequestParser).GetMethod(
-                "ExtractRawQueryParameter",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            
-            Assert.IsNotNull(method, "ExtractRawQueryParameter method should exist");
-
-            string? result = (string?)method.Invoke(null, new object[] { queryString, parameterName });
+            // Call the internal method directly (no reflection needed)
+            string? result = RequestParser.ExtractRawQueryParameter(queryString, parameterName);
             
             Assert.AreEqual(expectedValue, result, 
                 $"Expected '{expectedValue}' but got '{result}' for parameter '{parameterName}' in query '{queryString}'");

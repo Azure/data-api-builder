@@ -243,8 +243,16 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         return NotFound();
                     }
 
-                    string role = Uri.UnescapeDataString(routeAfterPathBase.Substring(OpenApiDocumentor.OPENAPI_ROUTE.Length + 1));
-                    if (!string.IsNullOrEmpty(role) && _openApiDocumentor.TryGetDocumentForRole(role, out string? roleDocument))
+                    string role = Uri.UnescapeDataString(
+                        routeAfterPathBase.Substring(OpenApiDocumentor.OPENAPI_ROUTE.Length + 1));
+
+                    // Validate role doesn't contain path separators (reject /openapi/foo/bar)
+                    if (string.IsNullOrEmpty(role) || role.Contains('/'))
+                    {
+                        return NotFound();
+                    }
+
+                    if (_openApiDocumentor.TryGetDocumentForRole(role, out string? roleDocument))
                     {
                         return Content(roleDocument, MediaTypeNames.Application.Json);
                     }

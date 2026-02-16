@@ -62,37 +62,60 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
             // "TypeName": "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config",
             writer.WriteString(TYPE_NAME, GetTypeNameFromType(value.GetType()));
 
-            // Track SourceDefinition objects we've already escaped to avoid double-escaping
-            // (SourceDefinition and TableDefinition/ViewDefinition/StoredProcedureDefinition can reference the same object)
-            HashSet<SourceDefinition> escapedSourceDefs = new HashSet<SourceDefinition>();
+            // Track SourceDefinition objects and their original Columns dictionaries
+            // to restore them after serialization (avoiding permanent mutation)
+            Dictionary<SourceDefinition, Dictionary<string, ColumnDefinition>> originalColumnsDictionaries = new();
 
-            // Add other properties of DatabaseObject
-            foreach (PropertyInfo prop in value.GetType().GetProperties())
+            try
             {
-                // Skip the TypeName property, as it has been handled above
-                if (prop.Name == TYPE_NAME)
+                // Add other properties of DatabaseObject
+                foreach (PropertyInfo prop in value.GetType().GetProperties())
                 {
-                    continue;
+                    // Skip the TypeName property, as it has been handled above
+                    if (prop.Name == TYPE_NAME)
+                    {
+                        continue;
+                    }
+
+                    writer.WritePropertyName(prop.Name);
+                    object? propVal = prop.GetValue(value);
+
+                    // Only escape columns for properties whose type(derived type) is SourceDefinition.
+                    // Temporarily replace dictionary contents with escaped version, then restore after serialization.
+                    if (IsSourceDefinitionOrDerivedClassProperty(prop) && propVal is SourceDefinition sourceDef)
+                    {
+                        if (!originalColumnsDictionaries.ContainsKey(sourceDef))
+                        {
+                            // Store original dictionary contents
+                            originalColumnsDictionaries[sourceDef] = new Dictionary<string, ColumnDefinition>(sourceDef.Columns, sourceDef.Columns.Comparer);
+                            
+                            // Replace dictionary contents with escaped version
+                            Dictionary<string, ColumnDefinition> escapedColumns = CreateEscapedColumnsDictionary(sourceDef.Columns);
+                            sourceDef.Columns.Clear();
+                            foreach (var kvp in escapedColumns)
+                            {
+                                sourceDef.Columns[kvp.Key] = kvp.Value;
+                            }
+                        }
+                    }
+
+                    JsonSerializer.Serialize(writer, propVal, options);
                 }
 
-                writer.WritePropertyName(prop.Name);
-                object? propVal = prop.GetValue(value);
-
-                // Only escape columns for properties whose type(derived type) is SourceDefinition.
-                // Use HashSet to avoid double-escaping when multiple properties reference the same SourceDefinition object.
-                if (IsSourceDefinitionOrDerivedClassProperty(prop) && propVal is SourceDefinition sourceDef)
+                writer.WriteEndObject();
+            }
+            finally
+            {
+                // Always restore original Columns dictionary contents to avoid mutating the input object
+                foreach (var kvp in originalColumnsDictionaries)
                 {
-                    if (!escapedSourceDefs.Contains(sourceDef))
+                    kvp.Key.Columns.Clear();
+                    foreach (var colKvp in kvp.Value)
                     {
-                        EscapeDollaredColumns(sourceDef);
-                        escapedSourceDefs.Add(sourceDef);
+                        kvp.Key.Columns[colKvp.Key] = colKvp.Value;
                     }
                 }
-
-                JsonSerializer.Serialize(writer, propVal, options);
             }
-
-            writer.WriteEndObject();
         }
 
         private static bool IsSourceDefinitionOrDerivedClassProperty(PropertyInfo prop)
@@ -102,45 +125,48 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         }
 
         /// <summary>
-        /// Escapes column keys that start with '$' or 'DAB_ESCAPE$' for serialization.
+        /// Creates a new dictionary with escaped column keys for serialization.
         /// Uses a double-encoding approach to handle edge cases:
         /// 1. First escapes columns starting with 'DAB_ESCAPE$' to 'DAB_ESCAPE$DAB_ESCAPE$...'
         /// 2. Then escapes columns starting with '$' to 'DAB_ESCAPE$...'
         /// This ensures that even if a column is named 'DAB_ESCAPE$xyz', it will be properly handled.
+        /// Returns a new dictionary without modifying the original.
         /// </summary>
-        private static void EscapeDollaredColumns(SourceDefinition sourceDef)
+        private static Dictionary<string, ColumnDefinition> CreateEscapedColumnsDictionary(Dictionary<string, ColumnDefinition> originalColumns)
         {
-            if (sourceDef.Columns is null || sourceDef.Columns.Count == 0)
+            if (originalColumns is null || originalColumns.Count == 0)
             {
-                return;
+                return new Dictionary<string, ColumnDefinition>(StringComparer.InvariantCultureIgnoreCase);
             }
+
+            // Create a new dictionary with the same comparer as the original
+            Dictionary<string, ColumnDefinition> escapedColumns = new(originalColumns.Comparer);
 
             // Step 1: Escape columns that start with the escape sequence itself
             // This prevents collision when a column name already contains 'DAB_ESCAPE$'
-            List<string> keysStartingWithEscapeSequence = sourceDef.Columns.Keys
-                .Where(k => k.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
-                .ToList();
-
-            foreach (string key in keysStartingWithEscapeSequence)
+            foreach (var kvp in originalColumns)
             {
-                ColumnDefinition col = sourceDef.Columns[key];
-                sourceDef.Columns.Remove(key);
-                string newKey = ESCAPED_DOLLARCHAR + key;
-                sourceDef.Columns[newKey] = col;
+                string key = kvp.Key;
+                ColumnDefinition value = kvp.Value;
+
+                if (key.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
+                {
+                    // Double-escape: DAB_ESCAPE$FirstName -> DAB_ESCAPE$DAB_ESCAPE$FirstName
+                    escapedColumns[ESCAPED_DOLLARCHAR + key] = value;
+                }
+                else if (key.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
+                {
+                    // Escape dollar: $FirstName -> DAB_ESCAPE$FirstName
+                    escapedColumns[ESCAPED_DOLLARCHAR + key.Substring(1)] = value;
+                }
+                else
+                {
+                    // No escaping needed
+                    escapedColumns[key] = value;
+                }
             }
 
-            // Step 2: Escape columns that start with '$'
-            List<string> keysToEscape = sourceDef.Columns.Keys
-                .Where(k => k.StartsWith(DOLLAR_CHAR, StringComparison.Ordinal))
-                .ToList();
-
-            foreach (string key in keysToEscape)
-            {
-                ColumnDefinition col = sourceDef.Columns[key];
-                sourceDef.Columns.Remove(key);
-                string newKey = ESCAPED_DOLLARCHAR + key[1..];
-                sourceDef.Columns[newKey] = col;
-            }
+            return escapedColumns;
         }
 
         /// <summary>
@@ -148,6 +174,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         /// 1. First unescapes columns starting with 'DAB_ESCAPE$DAB_ESCAPE$' to 'DAB_ESCAPE$...'
         /// 2. Then unescapes columns starting with 'DAB_ESCAPE$' to '$...'
         /// This ensures proper reconstruction of original column names even in edge cases.
+        /// Modifies the dictionary in-place during deserialization.
         /// </summary>
         private static void UnescapeDollaredColumns(SourceDefinition sourceDef)
         {
@@ -156,32 +183,39 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
                 return;
             }
 
-            // Step 1: Unescape columns that were double-escaped (originally started with 'DAB_ESCAPE$')
-            string doubleEscapeSequence = ESCAPED_DOLLARCHAR + ESCAPED_DOLLARCHAR;
-            List<string> doubleEscapedKeys = sourceDef.Columns.Keys
-                .Where(k => k.StartsWith(doubleEscapeSequence, StringComparison.Ordinal))
-                .ToList();
+            // Create a new dictionary with unescaped keys
+            Dictionary<string, ColumnDefinition> unescapedColumns = new(sourceDef.Columns.Comparer);
 
-            foreach (string key in doubleEscapedKeys)
+            foreach (var kvp in sourceDef.Columns)
             {
-                ColumnDefinition col = sourceDef.Columns[key];
-                sourceDef.Columns.Remove(key);
-                // Remove the first 'DAB_ESCAPE$' prefix
-                string newKey = key.Substring(ESCAPED_DOLLARCHAR.Length);
-                sourceDef.Columns[newKey] = col;
+                string key = kvp.Key;
+                ColumnDefinition value = kvp.Value;
+
+                // Step 1: Unescape columns that were double-escaped (originally started with 'DAB_ESCAPE$')
+                string doubleEscapeSequence = ESCAPED_DOLLARCHAR + ESCAPED_DOLLARCHAR;
+                if (key.StartsWith(doubleEscapeSequence, StringComparison.Ordinal))
+                {
+                    // Remove the first 'DAB_ESCAPE$' prefix: DAB_ESCAPE$DAB_ESCAPE$FirstName -> DAB_ESCAPE$FirstName
+                    unescapedColumns[key.Substring(ESCAPED_DOLLARCHAR.Length)] = value;
+                }
+                // Step 2: Unescape columns that start with 'DAB_ESCAPE$' (originally started with '$')
+                else if (key.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
+                {
+                    // Add back the '$' prefix: DAB_ESCAPE$FirstName -> $FirstName
+                    unescapedColumns[DOLLAR_CHAR + key.Substring(ESCAPED_DOLLARCHAR.Length)] = value;
+                }
+                else
+                {
+                    // No unescaping needed
+                    unescapedColumns[key] = value;
+                }
             }
 
-            // Step 2: Unescape columns that start with 'DAB_ESCAPE$' (originally started with '$')
-            List<string> keysToUnescape = sourceDef.Columns.Keys
-                .Where(k => k.StartsWith(ESCAPED_DOLLARCHAR, StringComparison.Ordinal))
-                .ToList();
-
-            foreach (string key in keysToUnescape)
+            // Replace the dictionary contents with the unescaped version
+            sourceDef.Columns.Clear();
+            foreach (var kvp in unescapedColumns)
             {
-                ColumnDefinition col = sourceDef.Columns[key];
-                sourceDef.Columns.Remove(key);
-                string newKey = DOLLAR_CHAR + key[ESCAPED_DOLLARCHAR.Length..];
-                sourceDef.Columns[newKey] = col;
+                sourceDef.Columns[kvp.Key] = kvp.Value;
             }
         }
 

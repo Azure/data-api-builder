@@ -14,9 +14,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
         public const string EXECUTION_FAILED = "ExecutionFailed";
 
         /// <summary>
-        /// Authentication or authorization failure error code.
+        /// Authentication failure error code.
         /// </summary>
         public const string AUTHENTICATION_FAILED = "AuthenticationFailed";
+
+        /// <summary>
+        /// Authorization failure error code.
+        /// </summary>
+        public const string AUTHORIZATION_FAILED = "AuthorizationFailed";
 
         /// <summary>
         /// Database operation failure error code.

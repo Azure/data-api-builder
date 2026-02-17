@@ -97,6 +97,7 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
     <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
+    <ProjectReference Include="..\Azure.DataApiBuilder.Mcp\Azure.DataApiBuilder.Mcp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

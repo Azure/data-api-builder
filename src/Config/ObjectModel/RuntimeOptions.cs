@@ -17,6 +17,7 @@ public record RuntimeOptions
     public RuntimeCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
     public RuntimeHealthCheckConfig? Health { get; init; }
+    public CompressionOptions? Compression { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -28,7 +29,8 @@ public record RuntimeOptions
         TelemetryOptions? Telemetry = null,
         RuntimeCacheOptions? Cache = null,
         PaginationOptions? Pagination = null,
-        RuntimeHealthCheckConfig? Health = null)
+        RuntimeHealthCheckConfig? Health = null,
+        CompressionOptions? Compression = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -39,6 +41,7 @@ public record RuntimeOptions
         this.Cache = Cache;
         this.Pagination = Pagination;
         this.Health = Health;
+        this.Compression = Compression;
     }
 
     /// <summary>

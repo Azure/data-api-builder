@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName);
 
         /// <summary>
-        /// Helper method to populate DbType for parameter. Currently DbTypes for parameters are only populated for MsSql.
+        /// Helper method to populate DbType for parameter. Currently DbTypes for parameters are only populated for MsSql and PostgreSql.
         /// </summary>
         /// <param name="parameterEntry">Entry corresponding to current database parameter to be created.</param>
         /// <param name="parameter">Parameter sent to database.</param>

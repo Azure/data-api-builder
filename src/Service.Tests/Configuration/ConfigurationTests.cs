@@ -2846,7 +2846,7 @@ type Moon {
                         }";
                     string queryName = "stock_by_pk";
 
-                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
+                    await ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
                 }
                 finally
                 {
@@ -3168,7 +3168,7 @@ type Moon {
         /// <param name="query">GraphQL query/mutation text</param>
         /// <param name="queryName">GraphQL query/mutation name</param>
         /// <param name="authToken">Auth token for the graphQL request</param>
-        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
+        private static async Task ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
         {
             JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                                                 client,
@@ -5672,12 +5672,12 @@ type Planet @model(name:""PlanetAlias"") {
             return responseCode;
         }
 
-        /// <summary>	
-        /// Executing MCP POST requests against the engine until a non-503 error is received.	
-        /// </summary>	
-        /// <param name="httpClient">Client used for request execution.</param>	
-        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,	
-        /// else the response code from the MCP request</returns>	
+        /// <summary>
+        /// Executing MCP POST requests against the engine until a non-503 error is received.
+        /// </summary>
+        /// <param name="httpClient">Client used for request execution.</param>
+        /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
+        /// else the response code from the MCP request</returns>
         public static async Task<HttpStatusCode> GetMcpResponse(HttpClient httpClient, McpRuntimeOptions mcp)
         {
             // Retry request RETRY_COUNT times in exponential increments to allow

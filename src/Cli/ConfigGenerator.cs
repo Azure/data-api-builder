@@ -2831,7 +2831,7 @@ namespace Cli
         /// <param name="loader">The config loader to read the existing config.</param>
         /// <param name="fileSystem">The filesystem used for reading and writing the config file.</param>
         /// <returns>True if the autoentities definition was successfully configured; otherwise, false.</returns>
-        public static bool TryConfigureAutoentities(AutoentitiesConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static bool TryConfigureAutoentities(AutoConfigOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
@@ -2898,7 +2898,7 @@ namespace Cli
         /// <summary>
         /// Builds the AutoentityPatterns object from the provided options and existing autoentity.
         /// </summary>
-        private static AutoentityPatterns BuildAutoentityPatterns(AutoentitiesConfigureOptions options, Autoentity? existingAutoentity)
+        private static AutoentityPatterns BuildAutoentityPatterns(AutoConfigOptions options, Autoentity? existingAutoentity)
         {
             string[]? include = null;
             string[]? exclude = null;
@@ -2952,7 +2952,7 @@ namespace Cli
         /// Builds the AutoentityTemplate object from the provided options and existing autoentity.
         /// Returns null if validation fails.
         /// </summary>
-        private static AutoentityTemplate? BuildAutoentityTemplate(AutoentitiesConfigureOptions options, Autoentity? existingAutoentity)
+        private static AutoentityTemplate? BuildAutoentityTemplate(AutoConfigOptions options, Autoentity? existingAutoentity)
         {
             // Start with existing values or defaults
             EntityMcpOptions? mcp = existingAutoentity?.Template.Mcp;
@@ -3027,8 +3027,17 @@ namespace Cli
             if (options.TemplateCacheTtlSeconds is not null)
             {
                 cacheTtl = options.TemplateCacheTtlSeconds.Value;
+                bool status = RuntimeConfigValidatorUtil.IsTTLValid(ttl: (int)cacheTtl);
                 cacheUpdated = true;
-                _logger.LogInformation("Updated template.cache.ttl-seconds for definition '{DefinitionName}'", options.DefinitionName);
+                if (status)
+                {
+                    _logger.LogInformation("Updated template.cache.ttl-seconds for definition '{DefinitionName}'", options.DefinitionName);
+                }
+                else
+                {
+                    _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", cacheTtl);
+                    return null;
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(options.TemplateCacheLevel))
@@ -3069,7 +3078,7 @@ namespace Cli
         /// <summary>
         /// Builds the permissions array from the provided options and existing autoentity.
         /// </summary>
-        private static EntityPermission[]? BuildAutoentityPermissions(AutoentitiesConfigureOptions options, Autoentity? existingAutoentity)
+        private static EntityPermission[]? BuildAutoentityPermissions(AutoConfigOptions options, Autoentity? existingAutoentity)
         {
             if (options.Permissions is null || !options.Permissions.Any())
             {

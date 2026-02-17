@@ -4,10 +4,10 @@
 namespace Cli.Tests;
 
 /// <summary>
-/// Tests for the autoentities-configure CLI command.
+/// Tests for the auto-config CLI command.
 /// </summary>
 [TestClass]
-public class AutoentitiesConfigureTests
+public class AutoConfigTests
 {
     private IFileSystem? _fileSystem;
     private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
@@ -40,7 +40,7 @@ public class AutoentitiesConfigureTests
         InitOptions initOptions = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(ConfigGenerator.TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
-        AutoentitiesConfigureOptions options = new(
+        AutoConfigOptions options = new(
             definitionName: "test-def",
             patternsInclude: new[] { "dbo.%", "sys.%" },
             patternsExclude: new[] { "dbo.internal%" },
@@ -76,7 +76,7 @@ public class AutoentitiesConfigureTests
         InitOptions initOptions = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(ConfigGenerator.TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
-        AutoentitiesConfigureOptions options = new(
+        AutoConfigOptions options = new(
             definitionName: "test-def",
             templateRestEnabled: true,
             templateGraphqlEnabled: false,
@@ -116,7 +116,7 @@ public class AutoentitiesConfigureTests
         Assert.IsTrue(ConfigGenerator.TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
         // Create initial definition
-        AutoentitiesConfigureOptions initialOptions = new(
+        AutoConfigOptions initialOptions = new(
             definitionName: "test-def",
             patternsInclude: new[] { "dbo.%" },
             templateCacheTtlSeconds: 10,
@@ -126,7 +126,7 @@ public class AutoentitiesConfigureTests
         Assert.IsTrue(ConfigGenerator.TryConfigureAutoentities(initialOptions, _runtimeConfigLoader!, _fileSystem!));
 
         // Update definition
-        AutoentitiesConfigureOptions updateOptions = new(
+        AutoConfigOptions updateOptions = new(
             definitionName: "test-def",
             patternsExclude: new[] { "dbo.internal%" },
             templateCacheTtlSeconds: 60,
@@ -165,7 +165,7 @@ public class AutoentitiesConfigureTests
         InitOptions initOptions = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(ConfigGenerator.TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
-        AutoentitiesConfigureOptions options = new(
+        AutoConfigOptions options = new(
             definitionName: "test-def",
             permissions: new[] { "authenticated", "create,read,update,delete" },
             config: TEST_RUNTIME_CONFIG_FILE
@@ -194,7 +194,7 @@ public class AutoentitiesConfigureTests
         InitOptions initOptions = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(ConfigGenerator.TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
-        AutoentitiesConfigureOptions options = new(
+        AutoConfigOptions options = new(
             definitionName: "test-def",
             templateMcpDmlTool: "invalid-value",
             permissions: new[] { "anonymous", "read" },
@@ -218,7 +218,7 @@ public class AutoentitiesConfigureTests
         InitOptions initOptions = CreateBasicInitOptionsForMsSqlWithConfig(config: TEST_RUNTIME_CONFIG_FILE);
         Assert.IsTrue(ConfigGenerator.TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
-        AutoentitiesConfigureOptions options = new(
+        AutoConfigOptions options = new(
             definitionName: "test-def",
             templateCacheLevel: "InvalidLevel",
             permissions: new[] { "anonymous", "read" },
@@ -243,7 +243,7 @@ public class AutoentitiesConfigureTests
         Assert.IsTrue(ConfigGenerator.TryGenerateConfig(initOptions, _runtimeConfigLoader!, _fileSystem!));
 
         // Create first definition
-        AutoentitiesConfigureOptions options1 = new(
+        AutoConfigOptions options1 = new(
             definitionName: "def-1",
             patternsInclude: new[] { "dbo.%" },
             permissions: new[] { "anonymous", "read" },
@@ -252,7 +252,7 @@ public class AutoentitiesConfigureTests
         Assert.IsTrue(ConfigGenerator.TryConfigureAutoentities(options1, _runtimeConfigLoader!, _fileSystem!));
 
         // Create second definition
-        AutoentitiesConfigureOptions options2 = new(
+        AutoConfigOptions options2 = new(
             definitionName: "def-2",
             patternsInclude: new[] { "sys.%" },
             permissions: new[] { "authenticated", "*" },
@@ -277,7 +277,7 @@ public class AutoentitiesConfigureTests
     public void TestConfigureAutoentitiesDefinition_NoConfigFile()
     {
         // Arrange
-        AutoentitiesConfigureOptions options = new(
+        AutoConfigOptions options = new(
             definitionName: "test-def",
             permissions: new[] { "anonymous", "read" }
         );

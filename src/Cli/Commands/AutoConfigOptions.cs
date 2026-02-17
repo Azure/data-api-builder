@@ -13,13 +13,13 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 namespace Cli.Commands
 {
     /// <summary>
-    /// AutoentitiesConfigureOptions command options
+    /// AutoConfigOptions command options
     /// This command will be used to configure autoentities definitions in the config file.
     /// </summary>
-    [Verb("autoentities-configure", isDefault: false, HelpText = "Configure autoentities definitions", Hidden = false)]
-    public class AutoentitiesConfigureOptions : Options
+    [Verb("auto-config", isDefault: false, HelpText = "Configure autoentities definitions", Hidden = false)]
+    public class AutoConfigOptions : Options
     {
-        public AutoentitiesConfigureOptions(
+        public AutoConfigOptions(
             string definitionName,
             IEnumerable<string>? patternsInclude = null,
             IEnumerable<string>? patternsExclude = null,

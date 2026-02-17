@@ -155,8 +155,11 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 "Should have PATCH");
             // Request body schemas should be present for mutation operations
             Assert.IsTrue(
-                docWithMutations.Components.Schemas.ContainsKey("books_NoAutoPK"),
+                docWithMutations.Components.Schemas.ContainsKey("book_NoAutoPK"),
                 "Should have request body schema for mutations");
+            Assert.IsTrue(
+                docWithMutations.Components.Schemas.ContainsKey("book_NoPK"),
+                "Should have alternate request body schema for mutations");
 
             // Read-only permissions - no mutation operations
             EntityPermission[] permissionsReadOnly = new[]
@@ -178,10 +181,10 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                 "Should NOT have POST");
             // Request body schemas should NOT be generated for read-only entities (optimization)
             Assert.IsFalse(
-                docReadOnly.Components.Schemas.ContainsKey("books_NoAutoPK"),
+                docReadOnly.Components.Schemas.ContainsKey("book_NoAutoPK"),
                 "Should NOT have request body schema for read-only entity");
             Assert.IsFalse(
-                docReadOnly.Components.Schemas.ContainsKey("books_NoPK"),
+                docReadOnly.Components.Schemas.ContainsKey("book_NoPK"),
                 "Should NOT have alternate request body schema for read-only entity");
         }
 

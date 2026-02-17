@@ -69,15 +69,14 @@ namespace Azure.DataApiBuilder.Mcp.Utils
                 {
                     // Extract error code and message from the result content
                     (string? errorCode, string? errorMessage) = ExtractErrorFromCallToolResult(result);
-                    
                     activity?.SetStatus(ActivityStatusCode.Error, errorMessage ?? "Tool returned an error result");
                     activity?.SetTag("mcp.tool.error", true);
-                    
+
                     if (!string.IsNullOrEmpty(errorCode))
                     {
                         activity?.SetTag("error.code", errorCode);
                     }
-                    
+
                     if (!string.IsNullOrEmpty(errorMessage))
                     {
                         activity?.SetTag("error.message", errorMessage);

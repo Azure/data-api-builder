@@ -5233,9 +5233,9 @@ type Planet @model(name:""PlanetAlias"") {
 
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow(true, DisplayName = "Test Autoentities with additional entities")]
-        [DataRow(false, DisplayName = "Test Autoentities without additional entities")]
-        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities)
+        [DataRow(true, 4, DisplayName = "Test Autoentities with additional entities")]
+        [DataRow(false, 2, DisplayName = "Test Autoentities without additional entities")]
+        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities, int expectedEntityCount)
         {
             // Arrange
             EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
@@ -5333,6 +5333,7 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 // Act
+                RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
@@ -5355,6 +5356,9 @@ type Planet @model(name:""PlanetAlias"") {
 
                 // Assert
                 string expectedResponseFragment = @"{""id"":1156,""name"":""The First Publisher""}";
+
+                // Verify number of entities
+                Assert.AreEqual(expectedEntityCount, configProvider.GetConfig().Entities.Entities.Count, "Number of generated entities is not what is expected");
 
                 // Verify REST response
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");

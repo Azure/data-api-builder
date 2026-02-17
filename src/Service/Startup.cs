@@ -1140,13 +1140,13 @@ namespace Azure.DataApiBuilder.Service
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
 
-                // TODO: Add this check at the end of generating the new entities and skip this one only if it is 
+                // TODO: Task #3131. Need to change validation so that the validation of entities is done after the autoentities are generated and added with the regular entitites.
                 runtimeConfigValidator.ValidateConfigProperties();
 
                 if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    // TODO: Add this check at the end of generating the new entities and skip this one only if it is 
+                    // TODO: Task #3131. Need to change validation so that the validation of entities is done after the autoentities are generated and added with the regular entitites.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 

@@ -292,10 +292,10 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if ((Entities is null || Entities.Entities.Count == 0) && Autoentities is null)
+        if (this.Entities.Entities.Count == 0 && Autoentities is null)
         {
             throw new DataApiBuilderException(
-                message: "Configuration file should contain either at least the Entities or Autoentities property",
+                message: "Configuration file should contain either at least the entities or autoentities property",
                 statusCode: HttpStatusCode.UnprocessableEntity,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }

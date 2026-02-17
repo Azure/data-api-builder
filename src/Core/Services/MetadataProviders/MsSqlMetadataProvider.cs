@@ -322,11 +322,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Extract the entity name, schema, and database object name from the query result.
                     // The SQL query returns these values with placeholders already replaced.
-                    string entityName = resultObject["entity_name"]!.ToString();
-                    string schemaName = resultObject["schema"]!.ToString();
-                    string objectName = resultObject["object"]!.ToString();
+                    string? entityName = resultObject["entity_name"]?.ToString();
+                    string? objectName = resultObject["object"]?.ToString();
+                    string? schemaName = resultObject["schema"]?.ToString();
 
-                    if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName))
+                    if (string.IsNullOrWhiteSpace(entityName) || string.IsNullOrWhiteSpace(objectName) || string.IsNullOrWhiteSpace(schemaName))
                     {
                         _logger.LogError("Skipping autoentity generation: entity_name or object is null or empty for autoentity pattern '{AutoentityName}'.", autoentityName);
                         continue;
@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                _runtimeConfigProvider.AddNewEntitiesToConfig(entities);
+                _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
             }
         }
 

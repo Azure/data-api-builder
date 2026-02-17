@@ -412,7 +412,7 @@ public class RuntimeConfigProvider
         return runtimeConfig;
     }
 
-    public void AddNewEntitiesToConfig(Dictionary<string, Entity> entities)
+    public void AddMergedEntitiesToConfig(Dictionary<string, Entity> entities)
     {
         RuntimeConfig newRuntimeConfig = _configLoader.RuntimeConfig! with
         {

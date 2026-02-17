@@ -2,6 +2,8 @@
 
 This guide demonstrates how to run Data API Builder (DAB) locally with MCP (Model Context Protocol) support to enable database operations through AI agents.
 
+> **Note**: This guide assumes you are running commands from the `samples/aspire` directory unless otherwise specified.
+
 ## Prerequisites
 
 - .NET 8.0 SDK or later
@@ -26,10 +28,17 @@ docker run -d --name sqlserver \
 # Wait for SQL Server to start
 sleep 20
 
-# Run the database init script
+# Run the database init script from this directory
 docker exec -i sqlserver /opt/mssql-tools18/bin/sqlcmd \
   -S localhost -U sa -P 'YourStrong!Passw0rd' -C \
-  < src/Aspire.AppHost/init-scripts/sql/create-database.sql
+  < database.sql
+```
+
+Alternatively, use the Aspire AppHost init script from the repository root:
+```bash
+docker exec -i sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P 'YourStrong!Passw0rd' -C \
+  < ../../src/Aspire.AppHost/init-scripts/sql/create-database.sql
 ```
 
 This creates a "Trek" database with Star Trek themed tables:
@@ -43,114 +52,39 @@ This creates a "Trek" database with Star Trek themed tables:
 ### 3. Build DAB
 
 ```bash
-dotnet build src/Service/Azure.DataApiBuilder.Service.csproj -c Release
+# From repository root
+dotnet build ../../src/Service/Azure.DataApiBuilder.Service.csproj -c Release
 ```
 
-### 4. Create Configuration File
+### 4. Use the Existing Configuration File
 
-Create a `dab-config.json` file with MCP enabled:
+This directory includes a pre-configured `dab-config.json` file with MCP support already enabled. You can use it as-is or customize it for your needs.
 
+The key configuration for MCP is:
 ```json
-{
-  "data-source": {
-    "database-type": "mssql",
-    "connection-string": "Server=localhost,1433;Database=Trek;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;",
-    "options": {
-      "set-session-context": false
-    }
-  },
-  "runtime": {
-    "rest": {
-      "enabled": true,
-      "path": "/api"
-    },
-    "graphql": {
-      "enabled": true,
-      "path": "/graphql",
-      "allow-introspection": true
-    },
-    "mcp": {
-      "enabled": true,
-      "path": "/mcp"
-    },
-    "host": {
-      "authentication": {
-        "provider": "StaticWebApps"
-      },
-      "cors": {
-        "origins": [],
-        "allow-credentials": false
-      },
-      "mode": "development"
-    }
-  },
-  "entities": {
-    "Actor": {
-      "source": {
-        "object": "Actor",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": ["*"]
-        }
-      ]
-    },
-    "Character": {
-      "source": {
-        "object": "Character",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": ["*"]
-        }
-      ]
-    },
-    "Series": {
-      "source": {
-        "object": "Series",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": ["*"]
-        }
-      ]
-    }
-  }
+"mcp": {
+  "enabled": true,
+  "path": "/mcp"
 }
 ```
+
+If you need to modify the configuration, see the existing `dab-config.json` file in this directory for a complete example.
 
 ### 5. Run DAB
 
 ```bash
-cd src/out/engine/net8.0
+# From repository root
+cd ../../src/out/engine/net8.0
 ASPNETCORE_URLS="http://localhost:5002" \
   dotnet Azure.DataApiBuilder.Service.dll \
-  --ConfigFileName=/path/to/dab-config.json \
+  --ConfigFileName=../../../samples/aspire/dab-config.json \
   --verbose
+```
+
+Or if running from the samples/aspire directory:
+```bash
+dotnet run --project ../../src/Cli/Cli.csproj -c Release -f net8.0 -- \
+  start --config ./dab-config.json --no-https-redirect --verbose
 ```
 
 ## Testing MCP Integration

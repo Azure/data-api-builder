@@ -76,7 +76,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        $connectionString="Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=SA;Password=$(dbPassword);MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;Encrypt=False;"
+        $connectionString="Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=SA;Password=$(dbPassword);MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;Encrypt=False;"
         Write-Host "##vso[task.setvariable variable=data-source.connection-string]$connectionString"
 
   - task: Bash@3
@@ -161,7 +161,7 @@ jobs:
       # since windows needs a different string.
       # The variable setting on the pipeline UI sets the connection string
       # for the linux job above.
-      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;
+      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=30;TrustServerCertificate=True;
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
       SqlVersionCode: '15.0'
 

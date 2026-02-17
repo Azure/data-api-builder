@@ -122,16 +122,20 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             Assert.IsFalse(
                 writerDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Get)),
                 "Writer should NOT have GET");
+            Assert.IsFalse(
+                writerDoc.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Delete)),
+                "Writer should NOT have DELETE");
         }
 
         /// <summary>
-        /// Validates requestBodyRequired optimization - it should only be calculated
-        /// when PUT or PATCH operations are configured.
+        /// Validates that request body schemas (_NoAutoPK, _NoPK) are only generated
+        /// when mutation operations (POST, PUT, PATCH) are available.
+        /// This optimization reduces document size for read-only entities.
         /// </summary>
         [TestMethod]
-        public async Task RequestBodyRequired_OnlyCalculatedForPutPatch()
+        public async Task RequestBodySchemas_OnlyGeneratedForMutationOperations()
         {
-            // Create+Update permissions enable PUT/PATCH
+            // Create+Update permissions enable PUT/PATCH (mutation operations present)
             EntityPermission[] permissionsWithUpdate = new[]
             {
                 new EntityPermission(
@@ -142,15 +146,19 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
                     })
             };
 
-            OpenApiDocument docWithUpdate = await GenerateDocumentWithPermissions(permissionsWithUpdate);
+            OpenApiDocument docWithMutations = await GenerateDocumentWithPermissions(permissionsWithUpdate);
             Assert.IsTrue(
-                docWithUpdate.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Put)),
+                docWithMutations.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Put)),
                 "Should have PUT");
             Assert.IsTrue(
-                docWithUpdate.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)),
+                docWithMutations.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)),
                 "Should have PATCH");
+            // Request body schemas should be present for mutation operations
+            Assert.IsTrue(
+                docWithMutations.Components.Schemas.ContainsKey("books_NoAutoPK"),
+                "Should have request body schema for mutations");
 
-            // Read-only permissions - no PUT/PATCH
+            // Read-only permissions - no mutation operations
             EntityPermission[] permissionsReadOnly = new[]
             {
                 new EntityPermission(
@@ -165,6 +173,16 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             Assert.IsFalse(
                 docReadOnly.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Patch)),
                 "Should NOT have PATCH");
+            Assert.IsFalse(
+                docReadOnly.Paths.Any(p => p.Value.Operations.ContainsKey(OperationType.Post)),
+                "Should NOT have POST");
+            // Request body schemas should NOT be generated for read-only entities (optimization)
+            Assert.IsFalse(
+                docReadOnly.Components.Schemas.ContainsKey("books_NoAutoPK"),
+                "Should NOT have request body schema for read-only entity");
+            Assert.IsFalse(
+                docReadOnly.Components.Schemas.ContainsKey("books_NoPK"),
+                "Should NOT have alternate request body schema for read-only entity");
         }
 
         private static async Task<OpenApiDocument> GenerateDocumentWithPermissions(

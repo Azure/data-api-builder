@@ -349,21 +349,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             private readonly CallToolResult? _result;
             private readonly Exception? _exception;
-            private readonly ToolType _toolType;
 
             public MockMcpTool(CallToolResult result, ToolType toolType = ToolType.BuiltIn)
             {
                 _result = result;
-                _toolType = toolType;
+                ToolType = toolType;
             }
 
             public MockMcpTool(Exception exception, ToolType toolType = ToolType.BuiltIn)
             {
                 _exception = exception;
-                _toolType = toolType;
+                ToolType = toolType;
             }
 
-            public ToolType ToolType => _toolType;
+            public ToolType ToolType { get; }
 
             public Tool GetToolMetadata() => new() { Name = "mock_tool", Description = "Mock tool for testing" };
 

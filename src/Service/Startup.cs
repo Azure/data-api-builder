@@ -162,7 +162,8 @@ namespace Azure.DataApiBuilder.Service
                             configure.Headers = runtimeConfig.Runtime.Telemetry.OpenTelemetry.Headers;
                             configure.Protocol = OtlpExportProtocol.Grpc;
                         })
-                        .AddMeter(TelemetryMetricsHelper.MeterName);
+                        .AddMeter(TelemetryMetricsHelper.MeterName)
+                        .AddMeter(EmbeddingTelemetryHelper.MeterName);
                 })
                 .WithTracing(tracing =>
                 {
@@ -262,13 +263,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
-            services.AddSingleton<HealthCheckHelper>(sp =>
-            {
-                ILogger<HealthCheckHelper> logger = sp.GetRequiredService<ILogger<HealthCheckHelper>>();
-                HttpUtilities httpUtility = sp.GetRequiredService<HttpUtilities>();
-                IEmbeddingService? embeddingService = sp.GetService<IEmbeddingService>();
-                return new HealthCheckHelper(logger, httpUtility, embeddingService);
-            });
+            services.AddSingleton<HealthCheckHelper>();
             services.AddSingleton<HttpUtilities>();
             services.AddSingleton<BasicHealthReportResponseWriter>();
             services.AddSingleton<ComprehensiveHealthReportResponseWriter>();
@@ -395,7 +390,12 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
-            // Register embedding service if configured
+            // Register embedding service if configured and enabled.
+            // NOTE: IEmbeddingService is only registered when enabled to avoid constructor
+            // failures when config has empty/placeholder values for disabled embeddings.
+            // TODO: To support hot-reload for embeddings (toggling enabled on/off at runtime),
+            // EmbeddingService would need to read config dynamically from RuntimeConfigProvider
+            // and defer constructor validation. Track as a separate work item.
             if (runtimeConfigAvailable
                 && runtimeConfig?.Runtime?.IsEmbeddingsConfigured == true)
             {

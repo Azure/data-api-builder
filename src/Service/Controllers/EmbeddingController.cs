@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
@@ -12,7 +14,6 @@ using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.Embeddings;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -22,6 +23,7 @@ namespace Azure.DataApiBuilder.Service.Controllers;
 /// <summary>
 /// Controller to serve embedding requests at the configured endpoint path (default: /embed).
 /// Accepts plain text input and returns embedding vector as plain text (comma-separated floats).
+/// Uses a "embed" route prefix to avoid ambiguous catch-all route conflicts with RestController.
 /// </summary>
 [ApiController]
 public class EmbeddingController : ControllerBase
@@ -47,10 +49,10 @@ public class EmbeddingController : ControllerBase
     /// POST endpoint for generating embeddings.
     /// Accepts plain text body and returns embedding vector as comma-separated floats.
     /// </summary>
-    /// <param name="route">The route path.</param>
+    /// <param name="route">The route path after the "embed" prefix.</param>
     /// <returns>Plain text embedding vector or error response.</returns>
     [HttpPost]
-    [Route("{*route}")]
+    [Route("embed/{*route}")]
     [Consumes("text/plain", "application/json")]
     [Produces("text/plain")]
     public async Task<IActionResult> PostAsync(string? route)
@@ -70,9 +72,16 @@ public class EmbeddingController : ControllerBase
             return NotFound();
         }
 
-        // Check if the route matches the configured endpoint path
-        string expectedPath = endpointOptions.EffectivePath.TrimStart('/');
-        if (!string.Equals(route, expectedPath, StringComparison.OrdinalIgnoreCase))
+        // Check if the full request path matches the configured endpoint path.
+        // Use Request.Path for comparison since the route prefix "embed" is already
+        // consumed by the route template and not included in the route parameter.
+        string expectedPath = endpointOptions.EffectivePath;
+        if (!expectedPath.StartsWith('/'))
+        {
+            expectedPath = "/" + expectedPath;
+        }
+
+        if (!string.Equals(Request.Path.Value, expectedPath, StringComparison.OrdinalIgnoreCase))
         {
             return NotFound();
         }
@@ -142,7 +151,7 @@ public class EmbeddingController : ControllerBase
         }
 
         // Return embedding as comma-separated float values (plain text)
-        string embeddingText = string.Join(",", result.Embedding);
+        string embeddingText = string.Join(",", result.Embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture)));
         return Content(embeddingText, MediaTypeNames.Text.Plain);
     }
 

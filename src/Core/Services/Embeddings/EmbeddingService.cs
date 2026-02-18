@@ -133,12 +133,21 @@ public class EmbeddingService : IEmbeddingService
         {
             EmbeddingTelemetryHelper.TrackEmbeddingRequest(_providerName, textCount: 1);
 
-            float[] embedding = await EmbedAsync(text, cancellationToken);
+            (float[] embedding, bool fromCache) = await EmbedWithCacheInfoAsync(text, cancellationToken);
 
             stopwatch.Stop();
             activity?.SetEmbeddingActivitySuccess(stopwatch.Elapsed.TotalMilliseconds, embedding.Length);
-            EmbeddingTelemetryHelper.TrackTotalDuration(_providerName, stopwatch.Elapsed, fromCache: false);
+            EmbeddingTelemetryHelper.TrackTotalDuration(_providerName, stopwatch.Elapsed, fromCache: fromCache);
             EmbeddingTelemetryHelper.TrackDimensions(_providerName, embedding.Length);
+
+            if (fromCache)
+            {
+                EmbeddingTelemetryHelper.TrackCacheHit(_providerName);
+            }
+            else
+            {
+                EmbeddingTelemetryHelper.TrackCacheMiss(_providerName);
+            }
 
             return new EmbeddingResult(true, embedding);
         }
@@ -213,36 +222,7 @@ public class EmbeddingService : IEmbeddingService
             throw new ArgumentException("Text cannot be null or empty.", nameof(text));
         }
 
-        string cacheKey = CreateCacheKey(text);
-
-        float[]? embedding = await _cache.GetOrSetAsync<float[]>(
-            key: cacheKey,
-            async (FusionCacheFactoryExecutionContext<float[]> ctx, CancellationToken ct) =>
-            {
-                _logger.LogDebug("Embedding cache miss, calling API for text hash {TextHash}", cacheKey);
-
-                float[][] results = await EmbedFromApiAsync(new[] { text }, ct);
-                float[] result = results[0];
-
-                // Validate the embedding result is not empty
-                if (result.Length == 0)
-                {
-                    throw new InvalidOperationException("API returned empty embedding array.");
-                }
-
-                // L1 only - skip distributed cache
-                ctx.Options.SetSkipDistributedCache(true, true);
-                ctx.Options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
-
-                return result;
-            },
-            token: cancellationToken);
-
-        if (embedding is null || embedding.Length == 0)
-        {
-            throw new InvalidOperationException("Failed to get embedding from cache or API.");
-        }
-
+        (float[] embedding, _) = await EmbedWithCacheInfoAsync(text, cancellationToken);
         return embedding;
     }
 
@@ -323,6 +303,46 @@ public class EmbeddingService : IEmbeddingService
     }
 
     /// <summary>
+    /// Internal helper that embeds text using cache and returns whether the result came from cache.
+    /// </summary>
+    private async Task<(float[] Embedding, bool FromCache)> EmbedWithCacheInfoAsync(string text, CancellationToken cancellationToken)
+    {
+        string cacheKey = CreateCacheKey(text);
+        bool fromCache = true;
+
+        float[]? embedding = await _cache.GetOrSetAsync<float[]>(
+            key: cacheKey,
+            async (FusionCacheFactoryExecutionContext<float[]> ctx, CancellationToken ct) =>
+            {
+                fromCache = false;
+                _logger.LogDebug("Embedding cache miss, calling API for text hash {TextHash}", cacheKey);
+
+                float[][] results = await EmbedFromApiAsync(new[] { text }, ct);
+                float[] result = results[0];
+
+                // Validate the embedding result is not empty
+                if (result.Length == 0)
+                {
+                    throw new InvalidOperationException("API returned empty embedding array.");
+                }
+
+                // L1 only - skip distributed cache
+                ctx.Options.SetSkipDistributedCache(true, true);
+                ctx.Options.SetDuration(TimeSpan.FromHours(DEFAULT_CACHE_TTL_HOURS));
+
+                return result;
+            },
+            token: cancellationToken);
+
+        if (embedding is null || embedding.Length == 0)
+        {
+            throw new InvalidOperationException("Failed to get embedding from cache or API.");
+        }
+
+        return (embedding, fromCache);
+    }
+
+    /// <summary>
     /// Creates a cache key from the text using SHA256 hash.
     /// Format: embedding:{provider}:{model}:{SHA256_hash}
     /// Includes provider and model to prevent cross-configuration collisions.
@@ -359,7 +379,7 @@ public class EmbeddingService : IEmbeddingService
 
         _logger.LogDebug("Sending embedding request to {Url} with {Count} text(s)", requestUrl, texts.Length);
 
-        HttpResponseMessage response = await _httpClient.PostAsync(requestUrl, content, cancellationToken);
+        using HttpResponseMessage response = await _httpClient.PostAsync(requestUrl, content, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -378,8 +398,47 @@ public class EmbeddingService : IEmbeddingService
             throw new InvalidOperationException("No embedding data received from the provider.");
         }
 
+        List<EmbeddingData> data = embeddingResponse.Data;
+        int expectedCount = texts.Length;
+
+        // Validate that we received exactly one embedding per input text.
+        if (data.Count != expectedCount)
+        {
+            _logger.LogError(
+                "Embedding provider returned {ActualCount} embeddings for {ExpectedCount} input text(s).",
+                data.Count,
+                expectedCount);
+            throw new InvalidOperationException(
+                $"Embedding provider returned {data.Count} embeddings for {expectedCount} input text(s).");
+        }
+
+        // Validate indices are within range and unique.
+        int minIndex = data.Min(d => d.Index);
+        int maxIndex = data.Max(d => d.Index);
+        if (minIndex < 0 || maxIndex >= expectedCount)
+        {
+            _logger.LogError(
+                "Embedding provider returned out-of-range indices. MinIndex: {MinIndex}, MaxIndex: {MaxIndex}, ExpectedCount: {ExpectedCount}.",
+                minIndex,
+                maxIndex,
+                expectedCount);
+            throw new InvalidOperationException(
+                $"Embedding provider returned out-of-range indices. MinIndex: {minIndex}, MaxIndex: {maxIndex}, ExpectedCount: {expectedCount}.");
+        }
+
+        int distinctIndexCount = data.Select(d => d.Index).Distinct().Count();
+        if (distinctIndexCount != expectedCount)
+        {
+            _logger.LogError(
+                "Embedding provider returned duplicate or missing indices. DistinctIndexCount: {DistinctIndexCount}, ExpectedCount: {ExpectedCount}.",
+                distinctIndexCount,
+                expectedCount);
+            throw new InvalidOperationException(
+                $"Embedding provider returned duplicate or missing indices. DistinctIndexCount: {distinctIndexCount}, ExpectedCount: {expectedCount}.");
+        }
+
         // Sort by index to ensure correct order and extract embeddings
-        List<EmbeddingData> sortedData = embeddingResponse.Data.OrderBy(d => d.Index).ToList();
+        List<EmbeddingData> sortedData = data.OrderBy(d => d.Index).ToList();
         return sortedData.Select(d => d.Embedding).ToArray();
     }
 

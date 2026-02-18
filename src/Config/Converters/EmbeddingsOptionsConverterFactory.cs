@@ -69,7 +69,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 switch (propertyName)
                 {
                     case "enabled":
-                        enabled = reader.GetBoolean();
+                        enabled = JsonSerializer.Deserialize<bool?>(ref reader, options);
                         break;
                     case "provider":
                         string? providerStr = reader.GetString();
@@ -175,7 +175,7 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 switch (propName)
                 {
                     case "enabled":
-                        enabled = reader.GetBoolean();
+                        enabled = JsonSerializer.Deserialize<bool?>(ref reader, options);
                         break;
                     case "path":
                         path = JsonSerializer.Deserialize<string>(ref reader, options);
@@ -227,16 +227,16 @@ internal class EmbeddingsOptionsConverterFactory : JsonConverterFactory
                 switch (propName)
                 {
                     case "enabled":
-                        enabled = reader.GetBoolean();
+                        enabled = JsonSerializer.Deserialize<bool?>(ref reader, options);
                         break;
                     case "threshold-ms":
-                        thresholdMs = reader.GetInt32();
+                        thresholdMs = JsonSerializer.Deserialize<int?>(ref reader, options);
                         break;
                     case "test-text":
                         testText = JsonSerializer.Deserialize<string>(ref reader, options);
                         break;
                     case "expected-dimensions":
-                        expectedDimensions = reader.GetInt32();
+                        expectedDimensions = JsonSerializer.Deserialize<int?>(ref reader, options);
                         break;
                     default:
                         reader.Skip();

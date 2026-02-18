@@ -247,7 +247,7 @@ public abstract class RuntimeConfigLoader
                 }
                 else if (ds.DatabaseType is DatabaseType.PostgreSQL && replacementSettings?.DoReplaceEnvVar == true)
                 {
-                    updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue);
+                    updatedConnection = GetPgSqlConnectionStringWithApplicationName(connectionValue, ds);
                 }
 
                 ds = ds with { ConnectionString = updatedConnection };
@@ -401,8 +401,9 @@ public abstract class RuntimeConfigLoader
     /// else add the Application Name property with DataApiBuilder Application Name based on hosted/oss platform.
     /// </summary>
     /// <param name="connectionString">Connection string for connecting to database.</param>
-    /// <returns>Updated connection string with `Application Name` property.</returns>
-    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString)
+    /// <param name="dataSource">The data source configuration, used to get command timeout override.</param>
+    /// <returns>Updated connection string with `Application Name` property and command timeout.</returns>
+    internal static string GetPgSqlConnectionStringWithApplicationName(string connectionString, DataSource? dataSource = null)
     {
         // If the connection string is null, empty, or whitespace, return it as is.
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -437,6 +438,16 @@ public abstract class RuntimeConfigLoader
         {
             // If the connection string contains the `ApplicationName` property with a value, update the value by adding the DataApiBuilder Application Name.
             connectionStringBuilder.ApplicationName += $",{applicationName}";
+        }
+
+        // Apply command timeout from data source configuration if specified (overrides connection string value)
+        if (dataSource?.Options is not null)
+        {
+            PostgreSqlOptions? pgOptions = dataSource.GetTypedOptions<PostgreSqlOptions>();
+            if (pgOptions?.CommandTimeout is not null)
+            {
+                connectionStringBuilder.CommandTimeout = pgOptions.CommandTimeout.Value;
+            }
         }
 
         // Return the updated connection string.

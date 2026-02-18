@@ -1959,21 +1959,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow(true, "EntityA", "", true, "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
-        [DataRow(true, "EntityA", "entity?RestPath", true, "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity?RestPath", true, "The rest path: entity?RestPath for entity: EntityA contains '?' which is reserved for query strings in URLs.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity#RestPath", true, "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
-            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity[]RestPath", true, "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
-            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity+Rest*Path", true, "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
-            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "Entity?A", null, true, "The rest path: Entity?A for entity: Entity?A contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity#RestPath", true, "The rest path: entity#RestPath for entity: EntityA contains '#' which is reserved for URL fragments.",
+            DisplayName = "Rest path for an entity containing reserved character # fails config validation.")]
+        [DataRow(true, "EntityA", "entity[]RestPath", true, "The rest path: entity[]RestPath for entity: EntityA contains reserved characters that are not allowed in URL paths.",
+            DisplayName = "Rest path for an entity containing reserved character [] fails config validation.")]
+        [DataRow(true, "EntityA", "entity+Rest*Path", true, "The rest path: entity+Rest*Path for entity: EntityA contains reserved characters that are not allowed in URL paths.",
+            DisplayName = "Rest path for an entity containing reserved character +* fails config validation.")]
+        [DataRow(true, "Entity?A", null, true, "The rest path: Entity?A for entity: Entity?A contains '?' which is reserved for query strings in URLs.",
             DisplayName = "Entity name for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "Entity&*[]A", null, true, "The rest path: Entity&*[]A for entity: Entity&*[]A contains one or more reserved characters.",
-            DisplayName = "Entity name containing reserved character ? fails config validation.")]
+        [DataRow(true, "Entity&*[]A", null, true, "The rest path: Entity&*[]A for entity: Entity&*[]A contains reserved characters that are not allowed in URL paths.",
+            DisplayName = "Entity name containing reserved character &*[] fails config validation.")]
         [DataRow(false, "EntityA", "entityRestPath", true, DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
         [DataRow(false, "EntityA", "entityRest/?Path", false,
             DisplayName = "Rest path for an entity containing reserved character but with rest disabled passes config validation.")]
+        [DataRow(false, "EntityA", "shopping-cart/item", true,
+            DisplayName = "Rest path with sub-directory passes config validation.")]
+        [DataRow(false, "EntityA", "api/v1/books", true,
+            DisplayName = "Rest path with multiple sub-directories passes config validation.")]
+        [DataRow(true, "EntityA", "entity\\path", true, "The rest path: entity\\path for entity: EntityA contains a backslash (\\). Use forward slash (/) for path separators.",
+            DisplayName = "Rest path with backslash fails config validation with helpful message.")]
+        [DataRow(false, "EntityA", "/entity/path", true,
+            DisplayName = "Rest path with leading slash is trimmed and passes config validation.")]
+        [DataRow(true, "EntityA", "entity//path", true, "The rest path: entity//path for entity: EntityA contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.",
+            DisplayName = "Rest path with consecutive slashes fails config validation.")]
+        [DataRow(true, "EntityA", "entity/path/", true, "The rest path: entity/path/ for entity: EntityA contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.",
+            DisplayName = "Rest path with trailing slash fails config validation.")]
+        [DataRow(true, "EntityA", "entity /path", true, "The rest path: entity /path for entity: EntityA contains whitespace which is not allowed in URL paths.",
+            DisplayName = "Rest path with whitespace fails config validation with helpful message.")]
+        [DataRow(true, "EntityA", "entity%3Frest", true, "The rest path: entity%3Frest for entity: EntityA contains percent-encoding (%) which is not allowed. Use literal characters only.",
+            DisplayName = "Rest path with percent-encoded characters fails config validation.")]
+        [DataRow(true, "EntityA", "entity/../path", true, "The rest path: entity/../path for entity: EntityA contains path traversal patterns ('.' or '..') which are not allowed.",
+            DisplayName = "Rest path with dot-dot segments fails config validation.")]
+        [DataRow(true, "EntityA", "entity/./path", true, "The rest path: entity/./path for entity: EntityA contains path traversal patterns ('.' or '..') which are not allowed.",
+            DisplayName = "Rest path with dot segments fails config validation.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
             string entityName,

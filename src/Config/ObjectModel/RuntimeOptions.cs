@@ -19,6 +19,7 @@ public record RuntimeOptions
     public PaginationOptions? Pagination { get; init; }
     public RuntimeHealthCheckConfig? Health { get; init; }
     public EmbeddingsOptions? Embeddings { get; init; }
+    public CompressionOptions? Compression { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -32,6 +33,7 @@ public record RuntimeOptions
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null,
         EmbeddingsOptions? Embeddings = null)
+        CompressionOptions? Compression = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -43,6 +45,7 @@ public record RuntimeOptions
         this.Pagination = Pagination;
         this.Health = Health;
         this.Embeddings = Embeddings;
+        this.Compression = Compression;
     }
 
     /// <summary>

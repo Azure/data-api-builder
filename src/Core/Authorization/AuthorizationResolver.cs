@@ -147,9 +147,15 @@ public class AuthorizationResolver : IAuthorizationResolver
         string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-        if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
+        // First check if the entity is accessible for the given role.
+        // If the role is not found, fall back to the anonymous role's permissions
+        // since anonymous access implies the entity is publicly accessible.
+        if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
         {
-            return false;
+            if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(ROLE_ANONYMOUS, out roleMetadata))
+            {
+                return false;
+            }
         }
 
         // Short circuit when OperationMetadata lookup fails. When lookup succeeds, operationToColumnMap will be populated

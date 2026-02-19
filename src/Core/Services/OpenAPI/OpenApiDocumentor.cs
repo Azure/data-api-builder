@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
@@ -16,6 +17,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
@@ -31,8 +33,10 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly ILogger<OpenApiDocumentor> _logger;
         private OpenApiResponses _defaultOpenApiResponses;
         private OpenApiDocument? _openApiDocument;
+        private readonly ConcurrentDictionary<string, string> _roleSpecificDocuments = new(StringComparer.OrdinalIgnoreCase);
 
         private const string DOCUMENTOR_UI_TITLE = "Data API builder - REST Endpoint";
         private const string GETALL_DESCRIPTION = "Returns entities.";
@@ -62,19 +66,27 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
         /// </summary>
-        /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
+        /// <param name="metadataProviderFactory">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, HotReloadEventHandler<HotReloadEventArgs>? handler)
+        /// <param name="handler">Hot reload event handler.</param>
+        /// <param name="logger">Logger for diagnostic information.</param>
+        public OpenApiDocumentor(
+            IMetadataProviderFactory metadataProviderFactory,
+            RuntimeConfigProvider runtimeConfigProvider,
+            HotReloadEventHandler<HotReloadEventArgs>? handler,
+            ILogger<OpenApiDocumentor> logger)
         {
             handler?.Subscribe(DOCUMENTOR_ON_CONFIG_CHANGED, OnConfigChanged);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _logger = logger;
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
         }
 
         public void OnConfigChanged(object? sender, HotReloadEventArgs args)
         {
             CreateDocument(doOverrideExistingDocument: true);
+            _roleSpecificDocuments.Clear(); // Clear role-specific document cache on config change
         }
 
         /// <summary>
@@ -99,6 +111,127 @@ namespace Azure.DataApiBuilder.Core.Services
                 document = jsonPayload;
                 return true;
             }
+        }
+
+        /// <summary>
+        /// Attempts to return a role-specific OpenAPI description document.
+        /// </summary>
+        /// <param name="role">The role name to filter permissions (case-insensitive).</param>
+        /// <param name="document">String representation of JSON OpenAPI description document.</param>
+        /// <returns>True if role exists and document generated. False if role not found or empty/whitespace.</returns>
+        public bool TryGetDocumentForRole(string role, [NotNullWhen(true)] out string? document)
+        {
+            document = null;
+
+            // Validate role is not null, empty, or whitespace
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                return false;
+            }
+
+            // Check cache first
+            if (_roleSpecificDocuments.TryGetValue(role, out document))
+            {
+                return true;
+            }
+
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+
+            // Check if the role exists in any entity's permissions using LINQ
+            bool roleExists = runtimeConfig.Entities
+                .Any(kvp => kvp.Value.Permissions?.Any(p => string.Equals(p.Role, role, StringComparison.OrdinalIgnoreCase)) == true);
+
+            if (!roleExists)
+            {
+                return false;
+            }
+
+            try
+            {
+                OpenApiDocument? roleDoc = GenerateDocumentForRole(runtimeConfig, role);
+                if (roleDoc is null)
+                {
+                    return false;
+                }
+
+                using StringWriter textWriter = new(CultureInfo.InvariantCulture);
+                OpenApiJsonWriter jsonWriter = new(textWriter);
+                roleDoc.SerializeAsV3(jsonWriter);
+                document = textWriter.ToString();
+
+                // Cache the role-specific document
+                _roleSpecificDocuments.TryAdd(role, document);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log exception details for debugging document generation failures
+                _logger.LogError(ex, "Failed to generate OpenAPI document for role '{Role}'", role);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Generates an OpenAPI document filtered for a specific role.
+        /// </summary>
+        private OpenApiDocument? GenerateDocumentForRole(RuntimeConfig runtimeConfig, string role)
+        {
+            string title = $"{DOCUMENTOR_UI_TITLE} - {role}";
+            return BuildOpenApiDocument(runtimeConfig, role, title);
+        }
+
+        /// <summary>
+        /// Builds an OpenAPI document with optional role-based filtering.
+        /// Shared logic for both superset and role-specific document generation.
+        /// </summary>
+        /// <param name="runtimeConfig">Runtime configuration.</param>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
+        /// <param name="title">Document title.</param>
+        /// <returns>OpenAPI document.</returns>
+        private OpenApiDocument BuildOpenApiDocument(RuntimeConfig runtimeConfig, string? role, string title)
+        {
+            string restEndpointPath = runtimeConfig.RestPath;
+            string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
+            string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
+
+            OpenApiComponents components = new()
+            {
+                Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, role, isRequestBodyStrict: runtimeConfig.IsRequestBodyStrict)
+            };
+
+            List<OpenApiTag> globalTags = new();
+            foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
+            {
+                Entity entity = kvp.Value;
+                if (!entity.Rest.Enabled || !HasAnyAvailableOperations(entity, role))
+                {
+                    continue;
+                }
+
+                string restPath = entity.Rest?.Path ?? kvp.Key;
+                globalTags.Add(new OpenApiTag
+                {
+                    Name = restPath,
+                    Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
+                });
+            }
+
+            return new OpenApiDocument()
+            {
+                Info = new OpenApiInfo
+                {
+                    Version = ProductInfo.GetProductVersion(),
+                    Title = title
+                },
+                Servers = new List<OpenApiServer>
+                {
+                    new() { Url = url }
+                },
+                Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName, role),
+                Components = components,
+                Tags = globalTags
+            };
         }
 
         /// <summary>
@@ -130,42 +263,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
-                string restEndpointPath = runtimeConfig.RestPath;
-                string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
-                string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
-                OpenApiComponents components = new()
-                {
-                    Schemas = CreateComponentSchemas(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName)
-                };
-
-                // Collect all entity tags and their descriptions for the top-level tags array
-                List<OpenApiTag> globalTags = new();
-                foreach (KeyValuePair<string, Entity> kvp in runtimeConfig.Entities)
-                {
-                    Entity entity = kvp.Value;
-                    string restPath = entity.Rest?.Path ?? kvp.Key;
-                    globalTags.Add(new OpenApiTag
-                    {
-                        Name = restPath,
-                        Description = string.IsNullOrWhiteSpace(entity.Description) ? null : entity.Description
-                    });
-                }
-
-                OpenApiDocument doc = new()
-                {
-                    Info = new OpenApiInfo
-                    {
-                        Version = ProductInfo.GetProductVersion(),
-                        Title = DOCUMENTOR_UI_TITLE
-                    },
-                    Servers = new List<OpenApiServer>
-                    {
-                        new() { Url = url }
-                    },
-                    Paths = BuildPaths(runtimeConfig.Entities, runtimeConfig.DefaultDataSourceName),
-                    Components = components,
-                    Tags = globalTags
-                };
+                OpenApiDocument doc = BuildOpenApiDocument(runtimeConfig, role: null, title: DOCUMENTOR_UI_TITLE);
                 _openApiDocument = doc;
             }
             catch (Exception ex)
@@ -192,8 +290,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// A path with no primary key nor parameter representing the primary key value:
         /// "/EntityName"
         /// </example>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>All possible paths in the DAB engine's REST API endpoint.</returns>
-        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName)
+        private OpenApiPaths BuildPaths(RuntimeEntities entities, string defaultDataSourceName, string? role = null)
         {
             OpenApiPaths pathsCollection = new();
 
@@ -241,7 +340,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     openApiTag
                 };
 
-                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject);
+                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entity, dbObject, role);
+
+                // Skip entities with no available operations
+                if (!configuredRestOperations.ContainsValue(true))
+                {
+                    continue;
+                }
 
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
@@ -251,12 +356,15 @@ namespace Azure.DataApiBuilder.Core.Services
                         configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
-                    OpenApiPathItem openApiPathItem = new()
+                    if (operations.Count > 0)
                     {
-                        Operations = operations
-                    };
+                        OpenApiPathItem openApiPathItem = new()
+                        {
+                            Operations = operations
+                        };
 
-                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    }
                 }
                 else
                 {
@@ -266,33 +374,41 @@ namespace Azure.DataApiBuilder.Core.Services
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: true,
+                        configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
-                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
-                    string pkPathComponents = pkComponents.Item1;
-                    string fullPathComponent = entityBasePathComponent + pkPathComponents;
-
-                    OpenApiPathItem openApiPkPathItem = new()
+                    if (pkOperations.Count > 0)
                     {
-                        Operations = pkOperations,
-                        Parameters = pkComponents.Item2
-                    };
+                        Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
+                        string pkPathComponents = pkComponents.Item1;
+                        string fullPathComponent = entityBasePathComponent + pkPathComponents;
 
-                    pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                        OpenApiPathItem openApiPkPathItem = new()
+                        {
+                            Operations = pkOperations,
+                            Parameters = pkComponents.Item2
+                        };
+
+                        pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                    }
 
                     // Operations excluding primary key
                     Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
                         entityName: entityName,
                         sourceDefinition: sourceDefinition,
                         includePrimaryKeyPathComponent: false,
+                        configuredRestOperations: configuredRestOperations,
                         tags: tags);
 
-                    OpenApiPathItem openApiPathItem = new()
+                    if (operations.Count > 0)
                     {
-                        Operations = operations
-                    };
+                        OpenApiPathItem openApiPathItem = new()
+                        {
+                            Operations = operations
+                        };
 
-                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                    }
                 }
             }
 
@@ -308,6 +424,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// a path containing primary key parameters.
         /// TRUE: GET (one), PUT, PATCH, DELETE
         /// FALSE: GET (Many), POST</param>
+        /// <param name="configuredRestOperations">Operations available based on permissions.</param>
         /// <param name="tags">Tags denoting how the operations should be categorized.
         /// Typically one tag value, the entity's REST path.</param>
         /// <returns>Collection of operation types and associated definitions.</returns>
@@ -315,67 +432,75 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityName,
             SourceDefinition sourceDefinition,
             bool includePrimaryKeyPathComponent,
+            Dictionary<OperationType, bool> configuredRestOperations,
             List<OpenApiTag> tags)
         {
             Dictionary<OperationType, OpenApiOperation> openApiPathItemOperations = new();
 
             if (includePrimaryKeyPathComponent)
             {
-                // The OpenApiResponses dictionary key represents the integer value of the HttpStatusCode,
-                // which is returned when using Enum.ToString("D").
-                // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
-                // It will only contain $select query parameter to allow the user to specify which fields to return.
-                OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
-                AddQueryParameters(getOperation.Parameters);
-                getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Get, getOperation);
+                if (configuredRestOperations[OperationType.Get])
+                {
+                    OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
+                    AddQueryParameters(getOperation.Parameters);
+                    getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                    openApiPathItemOperations.Add(OperationType.Get, getOperation);
+                }
 
-                // PUT and PATCH requests have the same criteria for decided whether a request body is required.
-                bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
+                // Only calculate requestBodyRequired if PUT or PATCH operations are configured
+                if (configuredRestOperations[OperationType.Put] || configuredRestOperations[OperationType.Patch])
+                {
+                    bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false);
 
-                // PUT requests must include the primary key(s) in the URI path and exclude from the request body,
-                // independent of whether the PK(s) are autogenerated.
-                OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
-                putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
-                putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Put, putOperation);
+                    if (configuredRestOperations[OperationType.Put])
+                    {
+                        OpenApiOperation putOperation = CreateBaseOperation(description: PUT_DESCRIPTION, tags: tags);
+                        putOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                        putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                        putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                        openApiPathItemOperations.Add(OperationType.Put, putOperation);
+                    }
 
-                // PATCH requests must include the primary key(s) in the URI path and exclude from the request body,
-                // independent of whether the PK(s) are autogenerated.
-                OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
-                patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
-                patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
-                patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                    if (configuredRestOperations[OperationType.Patch])
+                    {
+                        OpenApiOperation patchOperation = CreateBaseOperation(description: PATCH_DESCRIPTION, tags: tags);
+                        patchOperation.RequestBody = CreateOpenApiRequestBodyPayload($"{entityName}_NoPK", requestBodyRequired);
+                        patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
+                        patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                        openApiPathItemOperations.Add(OperationType.Patch, patchOperation);
+                    }
+                }
 
-                OpenApiOperation deleteOperation = CreateBaseOperation(description: DELETE_DESCRIPTION, tags: tags);
-                deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
-                openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
+                if (configuredRestOperations[OperationType.Delete])
+                {
+                    OpenApiOperation deleteOperation = CreateBaseOperation(description: DELETE_DESCRIPTION, tags: tags);
+                    deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
+                    openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
+                }
 
                 return openApiPathItemOperations;
             }
             else
             {
-                // Primary key(s) are not included in the URI paths of the GET (all) and POST operations.
-                OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
-                AddQueryParameters(getAllOperation.Parameters);
-                getAllOperation.Responses.Add(
-                    HttpStatusCode.OK.ToString("D"),
-                    CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
-                openApiPathItemOperations.Add(OperationType.Get, getAllOperation);
+                if (configuredRestOperations[OperationType.Get])
+                {
+                    OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
+                    AddQueryParameters(getAllOperation.Parameters);
+                    getAllOperation.Responses.Add(
+                        HttpStatusCode.OK.ToString("D"),
+                        CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
+                    openApiPathItemOperations.Add(OperationType.Get, getAllOperation);
+                }
 
-                // The POST body must include fields for primary key(s) which are not autogenerated because a value must be supplied
-                // for those fields. {entityName}_NoAutoPK represents the schema component which has all fields except for autogenerated primary keys.
-                // When no autogenerated primary keys exist, then all fields can be included in the POST body which is represented by the schema
-                // component: {entityName}.
-                string postBodySchemaReferenceId = DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
-
-                OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
-                postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
-                postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
-                postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
-                openApiPathItemOperations.Add(OperationType.Post, postOperation);
+                if (configuredRestOperations[OperationType.Post])
+                {
+                    string postBodySchemaReferenceId = DoesSourceContainAutogeneratedPrimaryKey(sourceDefinition) ? $"{entityName}_NoAutoPK" : $"{entityName}";
+                    OpenApiOperation postOperation = CreateBaseOperation(description: POST_DESCRIPTION, tags: tags);
+                    postOperation.RequestBody = CreateOpenApiRequestBodyPayload(postBodySchemaReferenceId, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true));
+                    postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
+                    postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
+                    openApiPathItemOperations.Add(OperationType.Post, postOperation);
+                }
 
                 return openApiPathItemOperations;
             }
@@ -625,8 +750,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <param name="dbObject">Database object metadata, indicating entity SourceType</param>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
         /// <returns>Collection of OpenAPI OperationTypes and whether they should be created.</returns>
-        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity entity, DatabaseObject dbObject)
+        private static Dictionary<OperationType, bool> GetConfiguredRestOperations(Entity entity, DatabaseObject dbObject, string? role = null)
         {
             Dictionary<OperationType, bool> configuredOperations = new()
             {
@@ -680,14 +806,166 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                configuredOperations[OperationType.Get] = true;
-                configuredOperations[OperationType.Post] = true;
-                configuredOperations[OperationType.Put] = true;
-                configuredOperations[OperationType.Patch] = true;
-                configuredOperations[OperationType.Delete] = true;
+                // For tables/views, determine available operations from permissions
+                // If role is specified, filter to that role only; otherwise, get superset of all roles
+                // Note: PUT/PATCH require BOTH Create AND Update permissions (upsert semantics)
+                if (entity?.Permissions is not null)
+                {
+                    bool hasCreate = false;
+                    bool hasUpdate = false;
+
+                    foreach (EntityPermission permission in entity.Permissions)
+                    {
+                        // Skip permissions for other roles if a specific role is requested
+                        if (role is not null && !string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (permission.Actions is null)
+                        {
+                            continue;
+                        }
+
+                        foreach (EntityAction action in permission.Actions)
+                        {
+                            if (action.Action == EntityActionOperation.All)
+                            {
+                                configuredOperations[OperationType.Get] = true;
+                                configuredOperations[OperationType.Post] = true;
+                                configuredOperations[OperationType.Delete] = true;
+                                hasCreate = true;
+                                hasUpdate = true;
+                            }
+                            else
+                            {
+                                switch (action.Action)
+                                {
+                                    case EntityActionOperation.Read:
+                                        configuredOperations[OperationType.Get] = true;
+                                        break;
+                                    case EntityActionOperation.Create:
+                                        configuredOperations[OperationType.Post] = true;
+                                        hasCreate = true;
+                                        break;
+                                    case EntityActionOperation.Update:
+                                        hasUpdate = true;
+                                        break;
+                                    case EntityActionOperation.Delete:
+                                        configuredOperations[OperationType.Delete] = true;
+                                        break;
+                                }
+                            }
+                        }
+                    }
+
+                    // PUT/PATCH require both Create and Update permissions (upsert semantics)
+                    if (hasCreate && hasUpdate)
+                    {
+                        configuredOperations[OperationType.Put] = true;
+                        configuredOperations[OperationType.Patch] = true;
+                    }
+                }
             }
 
             return configuredOperations;
+        }
+
+        /// <summary>
+        /// Checks if an entity has any available REST operations based on its permissions.
+        /// </summary>
+        /// <param name="entity">The entity to check.</param>
+        /// <param name="role">Optional role to filter permissions. If null, checks all roles.</param>
+        /// <returns>True if the entity has any available operations.</returns>
+        private static bool HasAnyAvailableOperations(Entity entity, string? role = null)
+        {
+            if (entity?.Permissions is null || entity.Permissions.Length == 0)
+            {
+                return false;
+            }
+
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                // Skip permissions for other roles if a specific role is requested
+                if (role is not null && !string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (permission.Actions?.Length > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Filters the exposed column names based on the superset of available fields across role permissions.
+        /// A field is included if at least one role (or the specified role) has access to it.
+        /// </summary>
+        /// <param name="entity">The entity to check permissions for.</param>
+        /// <param name="exposedColumnNames">All exposed column names from the database.</param>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
+        /// <returns>Filtered set of column names that are available based on permissions.</returns>
+        private static HashSet<string> FilterFieldsByPermissions(Entity entity, HashSet<string> exposedColumnNames, string? role = null)
+        {
+            if (entity?.Permissions is null || entity.Permissions.Length == 0)
+            {
+                return exposedColumnNames;
+            }
+
+            HashSet<string> availableFields = new();
+
+            foreach (EntityPermission permission in entity.Permissions)
+            {
+                // Skip permissions for other roles if a specific role is requested
+                if (role is not null && !string.Equals(permission.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                // If actions is not defined for a matching role, all fields are available
+                if (permission.Actions is null)
+                {
+                    return exposedColumnNames;
+                }
+
+                foreach (EntityAction action in permission.Actions)
+                {
+                    // If Fields is null, all fields are available for this action
+                    if (action.Fields is null)
+                    {
+                        availableFields.UnionWith(exposedColumnNames);
+                        continue;
+                    }
+
+                    // Determine included fields using ternary - either all fields or explicitly listed
+                    HashSet<string> actionFields = (action.Fields.Include is null || action.Fields.Include.Contains("*"))
+                        ? new HashSet<string>(exposedColumnNames)
+                        : new HashSet<string>(action.Fields.Include.Where(f => exposedColumnNames.Contains(f)));
+
+                    // Remove excluded fields
+                    if (action.Fields.Exclude is not null && action.Fields.Exclude.Count > 0)
+                    {
+                        if (action.Fields.Exclude.Contains("*"))
+                        {
+                            // Exclude all - no fields available for this action
+                            actionFields.Clear();
+                        }
+                        else
+                        {
+                            actionFields.ExceptWith(action.Fields.Exclude);
+                        }
+                    }
+
+                    // Add to superset of available fields
+                    availableFields.UnionWith(actionFields);
+                }
+            }
+
+            return availableFields;
         }
 
         /// <summary>
@@ -977,8 +1255,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// 3) {EntityName}_NoPK -> No primary keys present in schema, used for POST requests where PK is autogenerated and GET (all).
         /// Schema objects can be referenced elsewhere in the OpenAPI document with the intent to reduce document verbosity.
         /// </summary>
+        /// <param name="role">Optional role to filter permissions. If null, returns superset of all roles.</param>
+        /// <param name="isRequestBodyStrict">When true, request body schemas disallow extra fields.</param>
         /// <returns>Collection of schemas for entities defined in the runtime configuration.</returns>
-        private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeEntities entities, string defaultDataSourceName)
+        private Dictionary<string, OpenApiSchema> CreateComponentSchemas(RuntimeEntities entities, string defaultDataSourceName, string? role = null, bool isRequestBodyStrict = true)
         {
             Dictionary<string, OpenApiSchema> schemas = new();
             // for rest scenario we need the default datasource name.
@@ -991,69 +1271,90 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
+                if (!entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled || !HasAnyAvailableOperations(entity, role))
                 {
                     // Don't create component schemas for:
                     // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.
                     // 2. Entity for which REST endpoint is disabled.
+                    // 3. Entity with no available operations based on permissions.
                     continue;
                 }
 
                 SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
                 HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList(), metadataProvider);
+
+                // Filter fields based on the superset of permissions across all roles (or specific role)
+                exposedColumnNames = FilterFieldsByPermissions(entity, exposedColumnNames, role);
+
+                // Get configured operations to determine which schemas to generate
+                Dictionary<OperationType, bool> configuredOps = GetConfiguredRestOperations(entity, dbObject, role);
+                bool hasPostOperation = configuredOps.GetValueOrDefault(OperationType.Post);
+                bool hasPutPatchOperation = configuredOps.GetValueOrDefault(OperationType.Put) || configuredOps.GetValueOrDefault(OperationType.Patch);
+
                 HashSet<string> nonAutoGeneratedPKColumnNames = new();
 
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
                 {
-                    // Request body schema whose properties map to stored procedure parameters
-                    DatabaseStoredProcedure spObject = (DatabaseStoredProcedure)dbObject;
-                    schemas.Add(entityName + SP_REQUEST_SUFFIX, CreateSpRequestComponentSchema(fields: spObject.StoredProcedureDefinition.Parameters));
+                    // Only generate request body schema if SP has operations that use it
+                    if (hasPostOperation || hasPutPatchOperation)
+                    {
+                        DatabaseStoredProcedure spObject = (DatabaseStoredProcedure)dbObject;
+                        schemas.Add(entityName + SP_REQUEST_SUFFIX, CreateSpRequestComponentSchema(fields: spObject.StoredProcedureDefinition.Parameters, isRequestBodyStrict: isRequestBodyStrict));
+                    }
 
                     // Response body schema whose properties map to the stored procedure's first result set columns
                     // as described by sys.dm_exec_describe_first_result_set. 
-                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
+                    // Response schemas don't need additionalProperties restriction
+                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: false));
                 }
                 else
                 {
                     // Create component schema for FULL entity with all primary key columns (included auto-generated)
                     // which will typically represent the response body of a request or a stored procedure's request body.
-                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
+                    // Response schemas don't need additionalProperties restriction
+                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: false));
 
-                    // Create an entity's request body component schema excluding autogenerated primary keys.
-                    // A POST request requires any non-autogenerated primary key references to be in the request body.
-                    foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
+                    // Only generate request body schemas if mutation operations are available
+                    if (hasPostOperation || hasPutPatchOperation)
                     {
-                        // Non-Autogenerated primary key(s) should appear in the request body.
-                        if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
+                        // Create an entity's request body component schema excluding autogenerated primary keys.
+                        // A POST request requires any non-autogenerated primary key references to be in the request body.
+                        foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
                         {
-                            nonAutoGeneratedPKColumnNames.Add(primaryKeyColumn);
-                            continue;
+                            // Non-Autogenerated primary key(s) should appear in the request body.
+                            if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
+                            {
+                                nonAutoGeneratedPKColumnNames.Add(primaryKeyColumn);
+                                continue;
+                            }
+
+                            if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                                && exposedColumnName is not null)
+                            {
+                                exposedColumnNames.Remove(exposedColumnName);
+                            }
                         }
 
-                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
-                            && exposedColumnName is not null)
+                        // Request body schema for POST - apply additionalProperties based on strict mode
+                        schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: true, isRequestBodyStrict: isRequestBodyStrict));
+
+                        // Create an entity's request body component schema excluding all primary keys
+                        // by removing the tracked non-autogenerated primary key column names and removing them from
+                        // the exposedColumnNames collection.
+                        // The schema component without primary keys is used for PUT and PATCH operation request bodies because
+                        // those operations require all primary key references to be in the URI path, not the request body.
+                        foreach (string primaryKeyColumn in nonAutoGeneratedPKColumnNames)
                         {
-                            exposedColumnNames.Remove(exposedColumnName);
+                            if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                                && exposedColumnName is not null)
+                            {
+                                exposedColumnNames.Remove(exposedColumnName);
+                            }
                         }
+
+                        // Request body schema for PUT/PATCH - apply additionalProperties based on strict mode
+                        schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities, isRequestBodySchema: true, isRequestBodyStrict: isRequestBodyStrict));
                     }
-
-                    schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
-
-                    // Create an entity's request body component schema excluding all primary keys
-                    // by removing the tracked non-autogenerated primary key column names and removing them from
-                    // the exposedColumnNames collection.
-                    // The schema component without primary keys is used for PUT and PATCH operation request bodies because
-                    // those operations require all primary key references to be in the URI path, not the request body.
-                    foreach (string primaryKeyColumn in nonAutoGeneratedPKColumnNames)
-                    {
-                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
-                            && exposedColumnName is not null)
-                        {
-                            exposedColumnNames.Remove(exposedColumnName);
-                        }
-                    }
-
-                    schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider, entities));
                 }
             }
 
@@ -1066,10 +1367,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Additionally, the property typeMetadata is sourced by converting the stored procedure
         /// parameter's SystemType to JsonDataType.
         /// </summary>
-        /// </summary>
         /// <param name="fields">Collection of stored procedure parameter metadata.</param>
+        /// <param name="isRequestBodyStrict">When true, sets additionalProperties to false.</param>
         /// <returns>OpenApiSchema object representing a stored procedure's request body.</returns>
-        private static OpenApiSchema CreateSpRequestComponentSchema(Dictionary<string, ParameterDefinition> fields)
+        private static OpenApiSchema CreateSpRequestComponentSchema(Dictionary<string, ParameterDefinition> fields, bool isRequestBodyStrict = true)
         {
             Dictionary<string, OpenApiSchema> properties = new();
             HashSet<string> required = new();
@@ -1097,7 +1398,9 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 Type = SCHEMA_OBJECT_TYPE,
                 Properties = properties,
-                Required = required
+                Required = required,
+                // For request body schemas, set additionalProperties based on request-body-strict setting
+                AdditionalPropertiesAllowed = !isRequestBodyStrict
             };
 
             return schema;
@@ -1115,10 +1418,18 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="fields">List of mapped (alias) field names.</param>
         /// <param name="metadataProvider">Metadata provider for database objects.</param>
         /// <param name="entities">Runtime entities from configuration.</param>
+        /// <param name="isRequestBodySchema">Whether this schema is for a request body (applies additionalProperties setting).</param>
+        /// <param name="isRequestBodyStrict">When true and isRequestBodySchema, sets additionalProperties to false.</param>
         /// <exception cref="DataApiBuilderException">Raised when an entity's database metadata can't be found,
         /// indicating a failure due to the provided entityName.</exception>
         /// <returns>Entity's OpenApiSchema representation.</returns>
-        private static OpenApiSchema CreateComponentSchema(string entityName, HashSet<string> fields, ISqlMetadataProvider metadataProvider, RuntimeEntities entities)
+        private static OpenApiSchema CreateComponentSchema(
+            string entityName,
+            HashSet<string> fields,
+            ISqlMetadataProvider metadataProvider,
+            RuntimeEntities entities,
+            bool isRequestBodySchema = false,
+            bool isRequestBodyStrict = true)
         {
             if (!metadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
             {
@@ -1166,7 +1477,10 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 Type = SCHEMA_OBJECT_TYPE,
                 Properties = properties,
-                Description = entityConfig?.Description
+                Description = entityConfig?.Description,
+                // Response schemas always allow additional properties (true).
+                // Request body schemas respect request-body-strict: strict=true → false, strict=false → true
+                AdditionalPropertiesAllowed = !isRequestBodySchema || !isRequestBodyStrict
             };
 
             return schema;

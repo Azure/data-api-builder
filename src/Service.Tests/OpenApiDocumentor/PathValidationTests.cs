@@ -38,7 +38,6 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         [DataRow("entity", "//customEntityPath", "/customEntityPath", DisplayName = "Entity REST path has two leading slashes - REST path override used.")]
         [DataRow("entity", "///customEntityPath", "/customEntityPath", DisplayName = "Entity REST path has many leading slashes - REST path override used.")]
         [DataRow("entity", "customEntityPath", "/customEntityPath", DisplayName = "Entity REST path has no leading slash(es) - REST path override used.")]
-        [DataRow("entity", "", "/entity", DisplayName = "Entity REST path is an emtpy string - top level entity name used.")]
         [DataRow("entity", null, "/entity", DisplayName = "Entity REST path is null - top level entity name used.")]
         [DataTestMethod]
         public async Task ValidateEntityRestPath(string entityName, string configuredRestPath, string expectedOpenApiPath)

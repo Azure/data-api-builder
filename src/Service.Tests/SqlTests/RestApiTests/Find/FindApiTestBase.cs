@@ -757,6 +757,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation with an $orderby clause containing special characters.
+        /// When column names or values in orderby contain special characters like spaces that need
+        /// URL encoding, this validates the fix preserves the encoding correctly.
+        /// Note: While this test uses 'title' (which has special chars in values not the column name),
+        /// it validates that $orderby parameter extraction preserves URL encoding through the same
+        /// code path as $filter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithOrderByContainingSpecialCharacters()
+        {
+            // Order by title - tests that $orderby parameter is extracted with URL encoding preserved
+            // The %20 represents space in "$orderby=title%20desc"
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$orderby=title%20desc",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(FindTestWithOrderByContainingSpecialCharacters))
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation where we compare one field
         /// to the bool returned from another comparison.
         /// </summary>

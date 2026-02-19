@@ -656,6 +656,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <summary>
     /// Helper method to validate that the rest path property for the entity is correctly configured.
     /// The rest path should not be null/empty and should not contain any reserved characters.
+    /// Allows sub-directories (forward slashes) in the path.
     /// </summary>
     /// <param name="entityName">Name of the entity.</param>
     /// <param name="pathForEntity">The rest path for the entity.</param>
@@ -672,10 +673,10 @@ public class RuntimeConfigValidator : IConfigValidator
                 );
         }
 
-        if (RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(pathForEntity))
+        if (!RuntimeConfigValidatorUtil.TryValidateEntityRestPath(pathForEntity, out string? errorMessage))
         {
             throw new DataApiBuilderException(
-                message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
+                message: $"The rest path: {pathForEntity} for entity: {entityName} {errorMessage ?? "contains invalid characters."}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                 );

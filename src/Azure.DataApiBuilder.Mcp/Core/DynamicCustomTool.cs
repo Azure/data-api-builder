@@ -38,7 +38,6 @@ namespace Azure.DataApiBuilder.Mcp.Core
     /// </summary>
     public class DynamicCustomTool : IMcpTool
     {
-        private readonly string _entityName;
         private readonly Entity _entity;
 
         /// <summary>
@@ -48,7 +47,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
         /// <param name="entity">The entity configuration object.</param>
         public DynamicCustomTool(string entityName, Entity entity)
         {
-            _entityName = entityName ?? throw new ArgumentNullException(nameof(entityName));
+            EntityName = entityName ?? throw new ArgumentNullException(nameof(entityName));
             _entity = entity ?? throw new ArgumentNullException(nameof(entity));
 
             // Validate that this is a stored procedure
@@ -66,11 +65,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
         public ToolType ToolType { get; } = ToolType.Custom;
 
         /// <summary>
+        /// Gets the entity name associated with this custom tool.
+        /// </summary>
+        public string EntityName { get; }
+
+        /// <summary>
         /// Gets the metadata for this custom tool, including name, description, and input schema.
         /// </summary>
         public Tool GetToolMetadata()
         {
-            string toolName = ConvertToToolName(_entityName);
+            string toolName = ConvertToToolName(EntityName);
             string description = _entity.Description ?? $"Executes the {toolName} stored procedure";
 
             // Build input schema based on parameters
@@ -114,25 +118,25 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
 
                 // 3) Validate entity still exists in configuration
-                if (!config.Entities.TryGetValue(_entityName, out Entity? entityConfig))
+                if (!config.Entities.TryGetValue(EntityName, out Entity? entityConfig))
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{_entityName}' not found in configuration.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "EntityNotFound", $"Entity '{EntityName}' not found in configuration.", logger);
                 }
 
                 if (entityConfig.Source.Type != EntitySourceType.StoredProcedure)
                 {
-                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity {_entityName} is not a stored procedure.", logger);
+                    return McpResponseBuilder.BuildErrorResult(toolName, "InvalidEntity", $"Entity {EntityName} is not a stored procedure.", logger);
                 }
 
                 // Check if custom tool is still enabled for this entity
                 if (entityConfig.Mcp?.CustomToolEnabled != true)
                 {
-                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"Custom tool is disabled for entity '{_entityName}'.");
+                    return McpErrorHelpers.ToolDisabled(toolName, logger, $"Custom tool is disabled for entity '{EntityName}'.");
                 }
 
                 // 4) Resolve metadata
                 if (!McpMetadataHelper.TryResolveMetadata(
-                        _entityName,
+                        EntityName,
                         config,
                         serviceProvider,
                         out ISqlMetadataProvider sqlMetadataProvider,
@@ -150,18 +154,18 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 if (!McpAuthorizationHelper.ValidateRoleContext(httpContext, authResolver, out string roleError))
                 {
-                    return McpErrorHelpers.PermissionDenied(toolName, _entityName, "execute", roleError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, EntityName, "execute", roleError, logger);
                 }
 
                 if (!McpAuthorizationHelper.TryResolveAuthorizedRole(
                     httpContext!,
                     authResolver,
-                    _entityName,
+                    EntityName,
                     EntityActionOperation.Execute,
                     out string? effectiveRole,
                     out string authError))
                 {
-                    return McpErrorHelpers.PermissionDenied(toolName, _entityName, "execute", authError, logger);
+                    return McpErrorHelpers.PermissionDenied(toolName, EntityName, "execute", authError, logger);
                 }
 
                 // 6) Build request payload
@@ -175,7 +179,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
                 // 7) Build stored procedure execution context
                 StoredProcedureRequestContext context = new(
-                    entityName: _entityName,
+                    entityName: EntityName,
                     dbo: dbObject,
                     requestPayloadRoot: requestPayloadRoot,
                     operationType: EntityActionOperation.Execute);
@@ -218,7 +222,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
                 catch (DataApiBuilderException dabEx)
                 {
-                    logger?.LogError(dabEx, "Error executing custom tool {ToolName} for entity {Entity}", toolName, _entityName);
+                    logger?.LogError(dabEx, "Error executing custom tool {ToolName} for entity {Entity}", toolName, EntityName);
                     return McpResponseBuilder.BuildErrorResult(toolName, "ExecutionError", dabEx.Message, logger);
                 }
                 catch (SqlException sqlEx)
@@ -238,7 +242,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
                 }
 
                 // 9) Build success response
-                return BuildExecuteSuccessResponse(toolName, _entityName, parameters, queryResult, logger);
+                return BuildExecuteSuccessResponse(toolName, EntityName, parameters, queryResult, logger);
             }
             catch (OperationCanceledException)
             {
@@ -246,7 +250,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Unexpected error in DynamicCustomTool for {EntityName}", _entityName);
+                logger?.LogError(ex, "Unexpected error in DynamicCustomTool for {EntityName}", EntityName);
                 return McpResponseBuilder.BuildErrorResult(toolName, "UnexpectedError", "An unexpected error occurred.", logger);
             }
         }

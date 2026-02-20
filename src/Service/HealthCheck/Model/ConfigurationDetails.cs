@@ -29,5 +29,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
         [JsonPropertyName("mode")]
         public HostMode Mode { get; init; }
+
+        [JsonPropertyName("embeddings")]
+        public bool Embeddings { get; init; }
+
+        [JsonPropertyName("embeddings-endpoint")]
+        public bool EmbeddingsEndpoint { get; init; }
     }
 }

@@ -12,6 +12,7 @@ namespace Azure.DataApiBuilder.Config.HealthCheck
         public const string DATASOURCE = "data-source";
         public const string REST = "rest";
         public const string GRAPHQL = "graphql";
+        public const string EMBEDDING = "embedding";
         public const int ERROR_RESPONSE_TIME_MS = -1;
         public const int DEFAULT_THRESHOLD_RESPONSE_TIME_MS = 1000;
         public const int DEFAULT_FIRST_VALUE = 100;

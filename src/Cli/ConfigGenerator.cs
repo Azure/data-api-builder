@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service;
@@ -953,6 +954,34 @@ namespace Cli
                 }
             }
 
+            // Embeddings: Provider, Endpoint, ApiKey, Model, ApiVersion, Dimensions, TimeoutMs, Enabled, Endpoint.*, Health.*
+            if (options.RuntimeEmbeddingsProvider is not null ||
+                options.RuntimeEmbeddingsBaseUrl is not null ||
+                options.RuntimeEmbeddingsApiKey is not null ||
+                options.RuntimeEmbeddingsModel is not null ||
+                options.RuntimeEmbeddingsApiVersion is not null ||
+                options.RuntimeEmbeddingsDimensions is not null ||
+                options.RuntimeEmbeddingsTimeoutMs is not null ||
+                options.RuntimeEmbeddingsEnabled is not null ||
+                options.RuntimeEmbeddingsEndpointEnabled is not null ||
+                options.RuntimeEmbeddingsEndpointPath is not null ||
+                options.RuntimeEmbeddingsEndpointRoles is not null ||
+                options.RuntimeEmbeddingsHealthEnabled is not null ||
+                options.RuntimeEmbeddingsHealthThresholdMs is not null ||
+                options.RuntimeEmbeddingsHealthTestText is not null ||
+                options.RuntimeEmbeddingsHealthExpectedDimensions is not null)
+            {
+                bool status = TryUpdateConfiguredEmbeddingsValues(options, runtimeConfig?.Runtime?.Embeddings, out EmbeddingsOptions? updatedEmbeddingsOptions);
+                if (status && updatedEmbeddingsOptions is not null)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Embeddings = updatedEmbeddingsOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
             return runtimeConfig != null;
         }
 
@@ -1594,6 +1623,178 @@ namespace Cli
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to update configuration with runtime.telemetry.file. Exception message: {ex.Message}.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to update the embeddings configuration based on the provided options.
+        /// Creates a new EmbeddingsOptions object if the configuration is valid.
+        /// Provider, endpoint, and API key are required when configuring embeddings.
+        /// </summary>
+        /// <param name="options">The configuration options provided by the user.</param>
+        /// <param name="existingEmbeddingsOptions">The existing embeddings options from the runtime configuration.</param>
+        /// <param name="updatedEmbeddingsOptions">The resulting embeddings options if successful.</param>
+        /// <returns>True if the embeddings options were successfully configured; otherwise, false.</returns>
+        private static bool TryUpdateConfiguredEmbeddingsValues(
+            ConfigureOptions options,
+            EmbeddingsOptions? existingEmbeddingsOptions,
+            out EmbeddingsOptions? updatedEmbeddingsOptions)
+        {
+            updatedEmbeddingsOptions = null;
+
+            try
+            {
+                // Get values from options or fall back to existing configuration
+                EmbeddingProviderType? provider = options.RuntimeEmbeddingsProvider ?? existingEmbeddingsOptions?.Provider;
+                string? baseUrl = options.RuntimeEmbeddingsBaseUrl ?? existingEmbeddingsOptions?.BaseUrl;
+                string? apiKey = options.RuntimeEmbeddingsApiKey ?? existingEmbeddingsOptions?.ApiKey;
+                string? model = options.RuntimeEmbeddingsModel ?? existingEmbeddingsOptions?.Model;
+                string? apiVersion = options.RuntimeEmbeddingsApiVersion ?? existingEmbeddingsOptions?.ApiVersion;
+                int? dimensions = options.RuntimeEmbeddingsDimensions ?? existingEmbeddingsOptions?.Dimensions;
+                int? timeoutMs = options.RuntimeEmbeddingsTimeoutMs ?? existingEmbeddingsOptions?.TimeoutMs;
+                bool? enabled = options.RuntimeEmbeddingsEnabled.HasValue
+                    ? options.RuntimeEmbeddingsEnabled.Value == CliBool.True
+                    : existingEmbeddingsOptions?.Enabled;
+
+                // Validate required fields
+                if (provider is null)
+                {
+                    _logger.LogError("Failed to configure embeddings: provider is required. Use --runtime.embeddings.provider to specify the provider (azure-openai or openai).");
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(baseUrl))
+                {
+                    _logger.LogError("Failed to configure embeddings: base-url is required. Use --runtime.embeddings.base-url to specify the provider base URL.");
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    _logger.LogError("Failed to configure embeddings: api-key is required. Use --runtime.embeddings.api-key to specify the authentication key.");
+                    return false;
+                }
+
+                // Validate Azure OpenAI requires model/deployment name
+                if (provider == EmbeddingProviderType.AzureOpenAI && string.IsNullOrEmpty(model))
+                {
+                    _logger.LogError("Failed to configure embeddings: model/deployment name is required for Azure OpenAI provider. Use --runtime.embeddings.model to specify the deployment name.");
+                    return false;
+                }
+
+                // Validate dimensions if provided
+                if (dimensions is not null && dimensions <= 0)
+                {
+                    _logger.LogError("Failed to configure embeddings: dimensions must be a positive integer.");
+                    return false;
+                }
+
+                // Validate timeout if provided
+                if (timeoutMs is not null && timeoutMs <= 0)
+                {
+                    _logger.LogError("Failed to configure embeddings: timeout-ms must be a positive integer.");
+                    return false;
+                }
+
+                // Build EmbeddingsEndpointOptions from CLI flags or existing config
+                EmbeddingsEndpointOptions? existingEndpoint = existingEmbeddingsOptions?.Endpoint;
+                EmbeddingsEndpointOptions? endpointOptions = null;
+
+                if (options.RuntimeEmbeddingsEndpointEnabled is not null ||
+                    options.RuntimeEmbeddingsEndpointPath is not null ||
+                    options.RuntimeEmbeddingsEndpointRoles is not null ||
+                    existingEndpoint is not null)
+                {
+                    bool? endpointEnabled = options.RuntimeEmbeddingsEndpointEnabled.HasValue
+                        ? options.RuntimeEmbeddingsEndpointEnabled.Value == CliBool.True
+                        : existingEndpoint?.Enabled;
+
+                    string? endpointPath = options.RuntimeEmbeddingsEndpointPath ?? existingEndpoint?.Path;
+
+                    string[]? endpointRoles = options.RuntimeEmbeddingsEndpointRoles is not null && options.RuntimeEmbeddingsEndpointRoles.Any()
+                        ? options.RuntimeEmbeddingsEndpointRoles.ToArray()
+                        : existingEndpoint?.Roles;
+
+                    // Validate endpoint path if provided
+                    if (endpointPath is not null)
+                    {
+                        bool pathValid = RuntimeConfigValidatorUtil.TryValidateUriComponent(uriComponent: endpointPath, out string pathExceptionMessage);
+                        if (!pathValid)
+                        {
+                            _logger.LogError("Failed to configure embeddings endpoint path as '{endpointPath}'. Error details: {exceptionMessage}", endpointPath, pathExceptionMessage);
+                            return false;
+                        }
+                    }
+
+                    endpointOptions = new EmbeddingsEndpointOptions(
+                        enabled: endpointEnabled,
+                        path: endpointPath,
+                        roles: endpointRoles);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Endpoint configuration.");
+                }
+
+                // Build EmbeddingsHealthCheckConfig from CLI flags or existing config
+                EmbeddingsHealthCheckConfig? existingHealth = existingEmbeddingsOptions?.Health;
+                EmbeddingsHealthCheckConfig? healthOptions = null;
+
+                if (options.RuntimeEmbeddingsHealthEnabled is not null ||
+                    options.RuntimeEmbeddingsHealthThresholdMs is not null ||
+                    options.RuntimeEmbeddingsHealthTestText is not null ||
+                    options.RuntimeEmbeddingsHealthExpectedDimensions is not null ||
+                    existingHealth is not null)
+                {
+                    bool? healthEnabled = options.RuntimeEmbeddingsHealthEnabled.HasValue
+                        ? options.RuntimeEmbeddingsHealthEnabled.Value == CliBool.True
+                        : existingHealth?.Enabled;
+
+                    int? healthThresholdMs = options.RuntimeEmbeddingsHealthThresholdMs ?? existingHealth?.ThresholdMs;
+                    string? healthTestText = options.RuntimeEmbeddingsHealthTestText ?? existingHealth?.TestText;
+                    int? healthExpectedDimensions = options.RuntimeEmbeddingsHealthExpectedDimensions ?? existingHealth?.ExpectedDimensions;
+
+                    // Validate threshold if provided
+                    if (healthThresholdMs is not null && healthThresholdMs <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings health: threshold-ms must be a positive integer.");
+                        return false;
+                    }
+
+                    // Validate expected dimensions if provided
+                    if (healthExpectedDimensions is not null && healthExpectedDimensions <= 0)
+                    {
+                        _logger.LogError("Failed to configure embeddings health: expected-dimensions must be a positive integer.");
+                        return false;
+                    }
+
+                    healthOptions = new EmbeddingsHealthCheckConfig(
+                        enabled: healthEnabled,
+                        thresholdMs: healthThresholdMs,
+                        testText: healthTestText,
+                        expectedDimensions: healthExpectedDimensions);
+
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings.Health configuration.");
+                }
+
+                // Create the embeddings options
+                updatedEmbeddingsOptions = new EmbeddingsOptions(
+                    Provider: (EmbeddingProviderType)provider,
+                    BaseUrl: baseUrl,
+                    ApiKey: apiKey,
+                    Enabled: enabled,
+                    Model: model,
+                    ApiVersion: apiVersion,
+                    Dimensions: dimensions,
+                    TimeoutMs: timeoutMs,
+                    Endpoint: endpointOptions,
+                    Health: healthOptions);
+
+                _logger.LogInformation("Updated RuntimeConfig with Runtime.Embeddings configuration.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update RuntimeConfig.Embeddings with exception message: {exceptionMessage}.", ex.Message);
                 return false;
             }
         }

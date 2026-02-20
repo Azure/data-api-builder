@@ -641,6 +641,17 @@ public record RuntimeConfig
         }
     }
 
+    private void CheckAutoentityNamePresent(string autoentityName)
+    {
+        if (!_autoentityNameToDataSourceName.ContainsKey(autoentityName))
+        {
+            throw new DataApiBuilderException(
+                message: $"{autoentityName} is not a valid autoentity.",
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+    }
+
     private void SetupDataSourcesUsed()
     {
         SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any

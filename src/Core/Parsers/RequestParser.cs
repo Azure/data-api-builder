@@ -123,6 +123,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
+
                         context.FilterClauseInUrl = sqlMetadataProvider.GetODataParser().GetFilterClause($"?{FILTER_URL}={rawFilterValue}", $"{context.EntityName}.{context.DatabaseObject.FullName}");
                         break;
                     case SORT_URL:
@@ -136,6 +137,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
+
                         (context.OrderByClauseInUrl, context.OrderByClauseOfBackingColumns) = GenerateOrderByLists(context, sqlMetadataProvider, $"?{SORT_URL}={rawSortValue}");
                         break;
                     case AFTER_URL:
@@ -314,7 +316,10 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>The raw encoded value of the parameter, or null if not found</returns>
         internal static string? ExtractRawQueryParameter(string queryString, string parameterName)
         {
-            if (string.IsNullOrWhiteSpace(queryString)) return null;
+            if (string.IsNullOrWhiteSpace(queryString))
+            {
+                return null;
+            }
 
             // Split on '&' which are parameter separators in properly URL-encoded query strings.
             // Any '&' characters within parameter values will be encoded as %26.
@@ -322,8 +327,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
             {
                 int idx = param.IndexOf('=');
                 if (idx >= 0 && param.Substring(0, idx).Equals(parameterName, StringComparison.OrdinalIgnoreCase))
+                {
                     return idx < param.Length - 1 ? param.Substring(idx + 1) : string.Empty;
+                }
             }
+
             return null;
         }
     }

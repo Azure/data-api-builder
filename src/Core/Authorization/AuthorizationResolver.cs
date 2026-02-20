@@ -128,9 +128,21 @@ public class AuthorizationResolver : IAuthorizationResolver
                     return true;
                 }
             }
+        
+            // If the role is not found or doesn't define the operation,
+            // fall back to the anonymous role's permissions
+            // since anonymous access implies the entity is publicly accessible.
+            if (valueOfEntityToRole.RoleToOperationMap.TryGetValue(ROLE_ANONYMOUS, out RoleMetadata? anonymousRoleMetadata))
+            {
+                if (anonymousRoleMetadata!.OperationToColumnMap.ContainsKey(operation))
+                {
+                    return true;
+                }
+            }
         }
+    }
 
-        return false;
+return false;
     }
 
     public bool IsStoredProcedureExecutionPermitted(string entityName, string roleName, SupportedHttpVerb httpVerb)

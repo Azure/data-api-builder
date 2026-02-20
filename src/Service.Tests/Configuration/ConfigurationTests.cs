@@ -5334,8 +5334,8 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 // Act
                 RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
-                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
                 string graphqlQuery = @"
                 {

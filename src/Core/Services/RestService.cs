@@ -70,6 +70,16 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
+            // When a PUT or PATCH request arrives without a primary key in the route,
+            // convert it to an Insert operation. This supports entities with identity/auto-generated
+            // keys where the caller doesn't know the key value before creation.
+            if (string.IsNullOrEmpty(primaryKeyRoute) &&
+                (operationType is EntityActionOperation.Upsert ||
+                 operationType is EntityActionOperation.UpsertIncremental))
+            {
+                operationType = EntityActionOperation.Insert;
+            }
+
             if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
             {
                 await AuthorizationCheckForRequirementAsync(resource: entityName, requirement: new EntityRoleOperationPermissionsRequirement());

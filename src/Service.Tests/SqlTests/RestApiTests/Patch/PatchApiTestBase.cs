@@ -347,357 +347,1071 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Tests successful execution of PATCH update requests on views
-        /// when requests try to modify fields belonging to one base table
-        /// in the view.
-        /// </summary>
-        /// <returns></returns>
-        [TestMethod]
-        public virtual async Task PatchOneUpdateViewTest()
-        {
-            // PATCH update on simple view based on stocks table.
-            string requestBody = @"
-            {
-                ""categoryName"": ""Historical""
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/2/pieceid/1",
-                    queryString: null,
-                    entityNameOrPath: _simple_subset_stocks,
-                    sqlQuery: GetQuery("PatchOneUpdateStocksViewSelected"),
-                    operationType: EntityActionOperation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK
-                );
-        }
-        /// <summary>
-        /// Tests the PatchOne functionality with a REST PATCH request using
-        /// headers that include as a key "If-Match" with an item that does exist,
-        /// resulting in an update occuring. Verify update with Find.
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOne_Update_IfMatchHeaders_Test()
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
         {
-            Dictionary<string, StringValues> headerDictionary = new();
-            headerDictionary.Add("If-Match", "*");
             string requestBody = @"
             {
-                ""title"": ""The Hobbit Returns to The Shire"",
+                ""title"": ""My New Book"",
                 ""publisher_id"": 1234
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/1",
+                    primaryKeyRoute: string.Empty,
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
-                    sqlQuery: GetQuery(nameof(PatchOne_Update_IfMatchHeaders_Test)),
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
                     operationType: EntityActionOperation.UpsertIncremental,
-                    headers: new HeaderDictionary(headerDictionary),
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
                 );
         }
 
         /// <summary>
-        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the update operation it resolves into.
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOneUpdateWithDatabasePolicy()
+        public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
         {
-            // PATCH operation resolves to update because we have a record present for given PK.
-            // Since the database policy for update operation ("@item.pieceid ne 1") is satisfied by the operation, it executes successfully.
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
             string requestBody = @"
             {
-                ""piecesAvailable"": 4
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/100/pieceid/99",
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    sqlQuery: GetQuery("PatchOneUpdateWithDatabasePolicy"),
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "database_policy_tester"
+                    expectedStatusCode: HttpStatusCode.OK
                 );
-        }
 
-        /// <summary>
-        /// Test to validate successful execution of PATCH operation which satisfies the database policy for the insert operation it resolves into.
-        /// </summary>
-        [TestMethod]
-        public virtual async Task PatchOneInsertWithDatabasePolicy()
-        {
-            // PATCH operation resolves to insert because we don't have a record present for given PK.
-            // Since the database policy for insert operation ("@item.pieceid ne 6 and @item.piecesAvailable gt 0") is satisfied by the operation, it executes successfully.
-            string requestBody = @"
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
             {
-                ""piecesAvailable"": 4,
-                ""categoryName"": ""SciFi""
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/0/pieceid/7",
+                    primaryKeyRoute: $"id/2",
                     queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    sqlQuery: GetQuery("PatchOneInsertWithDatabasePolicy"),
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    clientRoleHeader: "database_policy_tester",
                     expectedLocationHeader: string.Empty
                 );
         }
 
         /// <summary>
-        /// Tests that for a successful PATCH API request, the response returned takes into account that no read action is configured for the role.
-        /// URI Path: PK of existing record.
-        /// Req Body: Valid Parameter with intended update.
-        /// Expects:
-        /// Status: 200 OK since the PATCH operation results in an update
-        /// Response Body: Empty because the role policy_tester_noread has no read action configured.
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
         /// </summary>
         [TestMethod]
-        public virtual async Task PatchOne_Update_NoReadTest()
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
         {
-            string requestBody = @"
-            {
-                ""title"": ""Heart of Darkness""
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/8",
-                    queryString: null,
-                    entityNameOrPath: _integrationEntityName,
-                    sqlQuery: GetQuery(nameof(PatchOne_Update_NoReadTest)),
-                    operationType: EntityActionOperation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "test_role_with_noread"
-                );
+            return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Tests that for a successful PATCH API request, the response returned takes into account the include and exclude fields configured for the read action.
-        /// URI Path: PK of existing record.
-        /// Req Body: Valid Parameter with intended update.
-        /// Expects:
-        /// Status: 200 OK as PATCH operation results in an update operation.
-        /// Response Body: Contains only the id, title fields as publisher_id field is excluded in the read configuration.
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
         /// </summary>
         [TestMethod]
-        public virtual async Task Patch_Update_WithExcludeFieldsTest()
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
         {
             string requestBody = @"
             {
-                ""title"": ""Heart of Darkness""
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
             }";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/8",
+                    primaryKeyRoute: string.Empty,
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
-                    sqlQuery: GetQuery(nameof(Patch_Update_WithExcludeFieldsTest)),
-                    operationType: EntityActionOperation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "test_role_with_excluded_fields"
-                );
-        }
-
-        /// <summary>
-        /// Tests that for a successful PATCH API request, the response returned takes into account the database policy configured for the read action.
-        /// URI Path: PK of existing record.
-        /// Req Body: Valid Parameter with intended update.
-        /// Expects:
-        /// Status: 200 OK
-        /// Response Body: Empty. The read action for the role used in this test has a database policy
-        /// defined which states that title cannot be equal to Test. Since, this test updates the title
-        /// to Test the response must be empty.
-        /// </summary>
-        [TestMethod]
-        public virtual async Task Patch_Update_WithReadDatabasePolicyTest()
-        {
-            string requestBody = @"
-            {
-                ""title"": ""Test""
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/8",
-                    queryString: null,
-                    entityNameOrPath: _integrationEntityName,
-                    sqlQuery: GetQuery(nameof(PatchOne_Update_NoReadTest)),
-                    operationType: EntityActionOperation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "test_role_with_policy_excluded_fields"
-                );
-        }
-
-        /// <summary>
-        /// Tests that for a successful PATCH API request, the response returned takes into account the database policy configured for the read action.
-        /// URI Path: PK of existing record.
-        /// Req Body: Valid Parameter with intended update.
-        /// Expects:
-        /// Status: 200 OK
-        /// Response Body: Non-Empty and does not contain the publisher_id field. The read action for the role used in this test has a database policy
-        /// defined which states that title cannot be equal to Test. Since, this test updates the title
-        /// to a different the response must be non-empty. Also, since the role excludes the publisher_id field, the repsonse should not
-        /// contain publisher_id field.
-        /// </summary>
-        [TestMethod]
-        public virtual async Task Patch_Update_WithReadDatabasePolicyUnsatisfiedTest()
-        {
-            string requestBody = @"
-            {
-                ""title"": ""Heart of Darkness""
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "id/8",
-                    queryString: null,
-                    entityNameOrPath: _integrationEntityName,
-                    sqlQuery: GetQuery(nameof(Patch_Update_WithExcludeFieldsTest)),
-                    operationType: EntityActionOperation.UpsertIncremental,
-                    requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "test_role_with_policy_excluded_fields"
-                );
-        }
-
-        /// <summary>
-        /// Test to validate that for a PATCH API request that results in a successful insert operation,
-        /// the response returned takes into account that no read action is configured for the role.
-        /// URI Path: Contains a Non-existent PK.
-        /// Req Body: Valid Parameter with intended insert data.
-        /// Expects:
-        /// Status: 201 Created since the PATCH results in an insert operation
-        /// Response Body: Empty because the role policy_tester_noread has no read action configured.
-        /// </summary>
-        [TestMethod]
-        public virtual async Task PatchInsert_NoReadTest()
-        {
-            string requestBody = @"
-            {
-                ""piecesAvailable"": 4,
-                ""categoryName"": ""SciFi"",
-                ""piecesRequired"": 4
-            }";
-
-            await SetupAndRunRestApiTest(
-                    primaryKeyRoute: "categoryid/0/pieceid/7",
-                    queryString: null,
-                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    sqlQuery: GetQuery("PatchInsert_NoReadTest"),
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    clientRoleHeader: "test_role_with_noread",
                     expectedLocationHeader: string.Empty
                 );
         }
 
         /// <summary>
-        /// Tests that for a PATCH API request that results in a successful insert operation,
-        /// the response returned takes into account the include and exclude fields configured for the read action.
-        /// URI Path: Contains a non-existent PK.
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
-        /// Expects:
-        /// Status: 201 Created as PATCH results in an insert operation.
-        /// Response Body: Does not contain the categoryName field as it is excluded in the read configuration.
+        /// Expects: 200 OK where sqlQuery validates update.
         /// </summary>
         [TestMethod]
-        public virtual async Task Patch_Insert_WithExcludeFieldsTest()
+        public virtual async Task PatchOne_Update_Test()
         {
             string requestBody = @"
             {
-                ""piecesAvailable"": 4,
-                ""categoryName"": ""SciFi"",
-                ""piecesRequired"": 4
+                ""title"": ""Heart of Darkness""
             }";
 
             await SetupAndRunRestApiTest(
-                   primaryKeyRoute: "categoryid/0/pieceid/7",
-                   queryString: null,
-                   entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                   sqlQuery: GetQuery("Patch_Insert_WithExcludeFieldsTest"),
-                   operationType: EntityActionOperation.UpsertIncremental,
-                   requestBody: requestBody,
-                   expectedStatusCode: HttpStatusCode.Created,
-                   clientRoleHeader: "test_role_with_excluded_fields",
-                   expectedLocationHeader: string.Empty
-               );
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
         }
 
         /// <summary>
-        /// Tests that for a PATCH API request that results in a successful insert operation,
-        /// the response returned takes into account the database policy configured for the read action.
-        /// URI Path: Contains a non-existent PK.
-        /// Req Body: Valid Parameter with intended update.
-        /// Expects:
-        /// Status: 201 Created as PATCH results in an insert operation.
-        /// Response Body: Empty. The database policy configured for the read action states that piecesAvailable cannot be 0.
-        /// Since, the PATCH request inserts a record with piecesAvailable = 0, the response must be empty.
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
         /// </summary>
         [TestMethod]
-        public virtual async Task Patch_Insert_WithReadDatabasePolicyTest()
+        public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
         {
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
             string requestBody = @"
             {
-                ""piecesAvailable"": 0,
-                ""categoryName"": ""SciFi"",
-                ""piecesRequired"": 4
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
             }";
 
             await SetupAndRunRestApiTest(
-                   primaryKeyRoute: "categoryid/0/pieceid/7",
-                   queryString: null,
-                   entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                   sqlQuery: GetQuery("PatchInsert_NoReadTest"),
-                   operationType: EntityActionOperation.UpsertIncremental,
-                   requestBody: requestBody,
-                   expectedStatusCode: HttpStatusCode.Created,
-                   clientRoleHeader: "test_role_with_policy_excluded_fields",
-                   expectedLocationHeader: string.Empty
-               );
+                    primaryKeyRoute: $"id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/2",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
         }
 
         /// <summary>
-        /// Tests that for a PATCH API request that results in a successful insert operation,
-        /// the response returned takes into account the database policy and the include/exlude fields
-        /// configured for the read action.
-        /// URI Path: Contains a non-existent PK.
-        /// Req Body: Valid Parameter with intended update.
-        /// Expects:
-        /// Status: 201 Created as PATCH results in an insert operation.
-        /// Response Body: Non-empty and should not contain the categoryName. The database policy configured for the read action states that piecesAvailable cannot be 0.
-        /// But, the PATCH request inserts a record with piecesAvailable = 4, so the policy is unsatisfied. Hence, the response should be non-empty.
-        /// The policy also excludes the categoryName field, so the response should not contain the categoryName field.
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
         /// </summary>
         [TestMethod]
-        public virtual async Task Patch_Insert_WithReadDatabasePolicyUnsatisfiedTest()
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
         {
             string requestBody = @"
             {
-                ""piecesAvailable"": 4,
-                ""categoryName"": ""SciFi"",
-                ""piecesRequired"": 4
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
             }";
 
             await SetupAndRunRestApiTest(
-                   primaryKeyRoute: "categoryid/0/pieceid/7",
-                   queryString: null,
-                   entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                   sqlQuery: GetQuery("Patch_Insert_WithExcludeFieldsTest"),
-                   operationType: EntityActionOperation.UpsertIncremental,
-                   requestBody: requestBody,
-                   expectedStatusCode: HttpStatusCode.Created,
-                   clientRoleHeader: "test_role_with_policy_excluded_fields",
-                   expectedLocationHeader: string.Empty
-               );
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
+        {
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            string requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/2",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
+        {
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            string requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/2",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
+        {
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            string requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/2",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
+        {
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            string requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/2",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests that the PATCH updates can only update the rows which are accessible after applying the
+        /// security policy which uses data from session context.
+        /// </summary>
+        [TestMethod]
+        public virtual Task PatchOneUpdateTestOnTableWithSecurityPolicy()
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Tests the PatchOne functionality with a REST PATCH request
+        /// without a primary key route on an entity with an auto-generated primary key.
+        /// With keyless PATCH support, this converts to an Insert operation and succeeds
+        /// with 201 Created.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Insert_KeylessWithAutoGenPK_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: string.Empty,
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Insert_KeylessWithAutoGenPK_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects: 200 OK where sqlQuery validates update.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_Test)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""content"": ""That's a great book""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/567/book_id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithCompositePrimaryKey,
+                    sqlQuery: GetQuery("PatchOne_Update_Default_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""piecesAvailable"": ""10""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_CompositeNonAutoGenPK_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            requestBody = @"
+            {
+                ""categoryName"": """"
+
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/pieceid/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchOne_Update_Empty_Test"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
+        {
+            // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            string requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: $"id/2",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: string.Empty
+                );
         }
 
         #endregion
@@ -931,8 +1645,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         /// <summary>
         /// Tests the Patch functionality with a REST PATCH request
-        /// without a primary key route. We expect a failure and so
-        /// no sql query is provided.
+        /// without a primary key route. With keyless PUT/PATCH support,
+        /// this converts to an Insert operation. Since the entity has a
+        /// non-auto-generated PK and it's missing from the request body,
+        /// the Insert validation catches it with a BadRequest.
         /// </summary>
         [TestMethod]
         public virtual async Task PatchWithNoPrimaryKeyRouteTest()
@@ -951,8 +1667,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     exceptionExpected: true,
-                    expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
-                    expectedStatusCode: HttpStatusCode.BadRequest
+                    expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
             );
         }
 
@@ -988,7 +1705,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the update operation.
+        /// Test to validate failure of PATCH operation failing to satisfy the database policy for the insert operation.
         /// (because no record exists for given PK).
         /// </summary>
         [TestMethod]

@@ -23,11 +23,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public MySqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
+            RuntimeConfigValidator runtimeConfigValidator,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,
             bool isValidateOnly = false)
-            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
+            : base(runtimeConfigProvider, runtimeConfigValidator, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             try
             {

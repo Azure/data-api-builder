@@ -5434,6 +5434,92 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow("Publisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", DisplayName = "DAB ")]
+        [DataRow(false, 2, DisplayName = "Test Autoentities without additional entities")]
+        public void ValidateAutoentityGenerationConflicts(string entityName, string singular, string plural, string path)
+        {
+            // Arrange
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: null,
+                GraphQL: new(Singular: singular, Plural: plural),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { entityName, publisherEntity }
+            };
+
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "PublisherAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: new[] { "%" },
+                            Exclude: null,
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(
+                                Enabled: true,
+                                Path: path),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            // Create DataSource for MSSQL connection
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            // Build complete runtime configuration with autoentities
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(entityMap),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+
+            try
+            {
+                using TestServer server = new(Program.CreateWebHostBuilder(args));
+            }
+            catch (Exception ex)
+            {
+                string exceptionMessage = "holi";
+                Assert.AreEqual(exceptionMessage, ex.Message);
+            }
+        }
+
         /// <summary>
         /// Tests the behavior of GraphQL queries in non-hosted mode when the depth limit is explicitly set to -1 or null.
         /// Setting the depth limit to -1 is intended to disable the depth limit check, allowing queries of any depth.

@@ -96,18 +96,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateLoggerFilters(runtimeConfig);
         ValidateAzureLogAnalyticsAuth(runtimeConfig);
         ValidateFileSinkPath(runtimeConfig);
-
-        // Running these graphQL validations only in development mode to ensure
-        // fast startup of engine in production mode.
-        if (runtimeConfig.IsDevelopmentMode())
-        {
-            ValidateEntityConfiguration(runtimeConfig);
-
-            if (runtimeConfig.IsGraphQLEnabled)
-            {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
-            }
-        }
     }
 
     /// <summary>
@@ -499,6 +487,7 @@ public class RuntimeConfigValidator : IConfigValidator
         // Only used for validation so we don't need the handler which is for hot reload scenarios.
         MetadataProviderFactory metadataProviderFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
+            runtimeConfigValidator: this,
             queryManagerFactory: queryManagerFactory,
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,

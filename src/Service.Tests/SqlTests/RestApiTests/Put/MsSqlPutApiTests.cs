@@ -19,6 +19,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         private static Dictionary<string, string> _queryMap = new()
         {
             {
+                "PutOne_Insert_KeylessWithAutoGenPK_Test",
+                $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
+                $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [title] = 'My New Book' " +
+                $"AND [publisher_id] = 1234 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "PutOne_Update_Test",
                 $"SELECT [id], [title], [publisher_id] FROM { _integrationTableName } " +
                 $"WHERE id = 7 AND [title] = 'The Hobbit Returns to The Shire' " +

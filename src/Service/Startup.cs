@@ -867,7 +867,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
-                if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider() && !authOptions.IsUnauthenticatedAuthenticationProvider())
+                if (authOptions.IsJwtConfiguredIdentityProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>

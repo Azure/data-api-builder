@@ -55,6 +55,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -68,6 +69,7 @@ using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -251,6 +253,50 @@ namespace Azure.DataApiBuilder.Service
             // Below are the factory registrations that will enable multiple databases scenario.
             // within these factories the various instances will be created based on the database type and datasourceName.
             services.AddSingleton<IAbstractQueryManagerFactory, QueryManagerFactory>();
+
+            // Register IOboTokenProvider conditionally when user-delegated auth is configured.
+            // Requires environment variables: DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, DAB_OBO_CLIENT_SECRET
+            services.AddSingleton<IOboTokenProvider>(serviceProvider =>
+            {
+                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                RuntimeConfig? config = configProvider.TryGetConfig(out RuntimeConfig? c) ? c : null;
+
+                if (config is not null)
+                {
+                    // Check if any data source has user-delegated auth enabled
+                    foreach (DataSource ds in config.ListAllDataSources())
+                    {
+                        if (ds.IsUserDelegatedAuthEnabled &&
+                            ds.UserDelegatedAuth is not null &&
+                            !string.IsNullOrEmpty(ds.UserDelegatedAuth.DatabaseAudience))
+                        {
+                            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR);
+                            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR);
+                            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR);
+
+                            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientSecret))
+                            {
+                                // Validation will catch this and throw appropriate error
+                                break;
+                            }
+
+                            string authority = $"https://login.microsoftonline.com/{tenantId}";
+
+                            IConfidentialClientApplication msalClient = ConfidentialClientApplicationBuilder
+                                .Create(clientId)
+                                .WithAuthority(authority)
+                                .WithClientSecret(clientSecret)
+                                .Build();
+
+                            IMsalClientWrapper msalWrapper = new MsalClientWrapper(msalClient);
+                            ILogger<OboSqlTokenProvider> oboLogger = serviceProvider.GetRequiredService<ILogger<OboSqlTokenProvider>>();
+                            return new OboSqlTokenProvider(msalWrapper, oboLogger);
+                        }
+                    }
+                }
+
+                return null!;
+            });
 
             services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
 

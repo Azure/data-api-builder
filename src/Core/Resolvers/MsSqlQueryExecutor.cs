@@ -4,6 +4,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
+using System.Security.Claims;
 using System.Text;
 using Azure.Core;
 using Azure.DataApiBuilder.Config;
@@ -62,6 +63,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private Dictionary<string, bool> _dataSourceToSessionContextUsage;
 
+        /// <summary>
+        /// DatasourceName to UserDelegatedAuthOptions for user-delegated authentication.
+        /// Only populated for data sources with user-delegated-auth enabled.
+        /// </summary>
+        private Dictionary<string, UserDelegatedAuthOptions> _dataSourceUserDelegatedAuth;
+
+        /// <summary>
+        /// Optional OBO token provider for user-delegated authentication.
+        /// </summary>
+        private readonly IOboTokenProvider? _oboTokenProvider;
+
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         private const string QUERYIDHEADER = "QueryIdentifyingIds";
@@ -71,7 +83,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor,
-            HotReloadEventHandler<HotReloadEventArgs>? handler = null)
+            HotReloadEventHandler<HotReloadEventArgs>? handler = null,
+            IOboTokenProvider? oboTokenProvider = null)
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
@@ -80,8 +93,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
+            _dataSourceUserDelegatedAuth = new Dictionary<string, UserDelegatedAuthOptions>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _oboTokenProvider = oboTokenProvider;
             ConfigureMsSqlQueryExecutor();
         }
 
@@ -156,11 +171,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
                 _dataSourceToSessionContextUsage[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
+
+                // Track user-delegated authentication settings
+                if (dataSource.IsUserDelegatedAuthEnabled && dataSource.UserDelegatedAuth is not null)
+                {
+                    _dataSourceUserDelegatedAuth[dataSourceName] = dataSource.UserDelegatedAuth;
+
+                    // Disable connection pooling for OBO connections since each connection
+                    // uses a user-specific token and cannot be shared across users
+                    builder.Pooling = false;
+                }
             }
         }
 
         /// <summary>
-        /// Modifies the properties of the supplied connection to support managed identity access.
+        /// Modifies the properties of the supplied connection to support managed identity access
+        /// or user-delegated (OBO) authentication.
         /// In the case of MsSql, gets access token if deemed necessary and sets it on the connection.
         /// The supplied connection is assumed to already have the same connection string
         /// provided in the runtime configuration.
@@ -175,13 +201,42 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
+            SqlConnection sqlConn = (SqlConnection)conn;
+
+            // Check if user-delegated authentication is enabled for this data source
+            if (_dataSourceUserDelegatedAuth.TryGetValue(dataSourceName, out UserDelegatedAuthOptions? userDelegatedAuth))
+            {
+                // Check if we're in an HTTP request context (not startup/metadata phase)
+                bool isInRequestContext = HttpContextAccessor?.HttpContext is not null;
+
+                if (isInRequestContext)
+                {
+                    // At runtime with an HTTP request - attempt OBO flow
+                    string? oboToken = await GetOboAccessTokenAsync(userDelegatedAuth.DatabaseAudience!);
+                    if (oboToken is not null)
+                    {
+                        sqlConn.AccessToken = oboToken;
+                        return;
+                    }
+
+                    // OBO is enabled but we couldn't get a token (e.g., missing Bearer token in request)
+                    // This is an error during request processing - we must not fall back to managed identity
+                    throw new DataApiBuilderException(
+                        message: "User-delegated authentication is enabled but no valid user context is available.",
+                        statusCode: HttpStatusCode.Unauthorized,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
+                }
+
+                // At startup/metadata phase (no HTTP context) - fall through to use Managed Identity
+                // This allows DAB to read schema metadata at startup, while OBO is used for actual requests
+                QueryExecutorLogger.LogDebug("No HTTP context available - using Managed Identity for startup/metadata operations.");
+            }
+
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
 
             // Only attempt to get the access token if the connection string is in the appropriate format
             if (setAccessToken)
             {
-                SqlConnection sqlConn = (SqlConnection)conn;
-
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
@@ -196,6 +251,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     sqlConn.AccessToken = accessToken;
                 }
             }
+        }
+
+        /// <summary>
+        /// Acquires an access token using On-Behalf-Of (OBO) flow for user-delegated authentication.
+        /// </summary>
+        /// <param name="databaseAudience">The target database audience.</param>
+        /// <returns>The OBO access token, or null if OBO cannot be performed.</returns>
+        private async Task<string?> GetOboAccessTokenAsync(string databaseAudience)
+        {
+            if (_oboTokenProvider is null || HttpContextAccessor?.HttpContext is null)
+            {
+                return null;
+            }
+
+            HttpContext httpContext = HttpContextAccessor.HttpContext;
+            ClaimsPrincipal? principal = httpContext.User;
+
+            // Extract the incoming JWT assertion from the Authorization header
+            string? authHeader = httpContext.Request.Headers["Authorization"].FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                QueryExecutorLogger.LogWarning("Cannot acquire OBO token: No Bearer token in Authorization header.");
+                return null;
+            }
+
+            string incomingJwt = authHeader.Substring("Bearer ".Length).Trim();
+
+            return await _oboTokenProvider.GetAccessTokenOnBehalfOfAsync(
+                principal!,
+                incomingJwt,
+                databaseAudience);
         }
 
         /// <summary>

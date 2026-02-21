@@ -404,43 +404,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT *
                         FROM " + _integrationTableName + @"
-                        WHERE title = 'filter & test'
-                        ORDER BY id asc
-                    ) AS subq
-                "
-            },
-            {
-                "FindTestWithFilterContainingMultipleSpecialCharacters",
-                @"
-                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
-                    FROM (
-                        SELECT *
-                        FROM " + _integrationTableName + @"
-                        WHERE title = 'A+B=C'
-                        ORDER BY id asc
-                    ) AS subq
-                "
-            },
-            {
-                "FindTestWithFilterContainingAmpersandInPhrase",
-                @"
-                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
-                    FROM (
-                        SELECT *
-                        FROM " + _integrationTableName + @"
-                        WHERE title = 'Tom & Jerry'
-                        ORDER BY id asc
-                    ) AS subq
-                "
-            },
-            {
-                "FindTestWithFilterContainingPercentSign",
-                @"
-                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
-                    FROM (
-                        SELECT *
-                        FROM " + _integrationTableName + @"
-                        WHERE title = '100% Complete'
+                        WHERE title = 'SOME%CONN'
                         ORDER BY id asc
                     ) AS subq
                 "

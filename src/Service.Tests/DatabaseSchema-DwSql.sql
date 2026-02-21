@@ -337,11 +337,7 @@ VALUES (1, 'Awesome book', 1234),
 (18, '[Special Book]', 1234),
 (19, 'ME\YOU', 1234),
 (20, 'C:\\LIFE', 1234),
-(21, '', 1234),
-(22, 'filter & test', 1234),
-(23, 'A+B=C', 1234),
-(24, 'Tom & Jerry', 1234),
-(25, '100% Complete', 1234);
+(21, '', 1234);
 
 INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);
 

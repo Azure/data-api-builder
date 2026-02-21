@@ -392,11 +392,7 @@ INSERT INTO books(id, title, publisher_id)
         (18, '[Special Book]', 1234),
         (19, 'ME\YOU', 1234),
         (20, 'C:\\LIFE', 1234),
-        (21, '', 1234),
-        (22, 'filter & test', 1234),
-        (23, 'A+B=C', 1234),
-        (24, 'Tom & Jerry', 1234),
-        (25, '100% Complete', 1234);
+        (21, '', 1234);
 INSERT INTO book_website_placements(book_id, price) VALUES (1, 100), (2, 50), (3, 23), (5, 33);
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);;

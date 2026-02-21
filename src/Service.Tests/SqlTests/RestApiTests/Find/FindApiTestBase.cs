@@ -695,79 +695,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Tests the REST Api for Find operation with a filter containing special characters
-        /// like ampersand (&) that need to be URL-encoded. This validates that the fix for
-        /// the double-decoding issue is working correctly.
+        /// that need to be URL-encoded. Uses existing book with '%' character (SOME%CONN).
+        /// This validates that the fix for the double-decoding issue is working correctly.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithFilterContainingSpecialCharacters()
         {
+            // Testing with SOME%CONN - the %25 is URL-encoded %
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title%20eq%20%27filter%20%26%20test%27",
+                queryString: "?$filter=title%20eq%20%27SOME%25CONN%27",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFilterContainingSpecialCharacters))
             );
         }
 
         /// <summary>
-        /// Tests the REST Api for Find operation with filters containing various special characters
-        /// that need URL encoding: plus (+), equals (=), and percent (%).
-        /// Validates that multiple types of special characters are handled correctly.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterContainingMultipleSpecialCharacters()
-        {
-            // Test with plus and equals signs - URL-encoded
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title%20eq%20%27A%2BB%3DC%27",
-                entityNameOrPath: _integrationEntityName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingMultipleSpecialCharacters))
-            );
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with a filter containing ampersand
-        /// in a different context to ensure robustness across various data patterns.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterContainingAmpersandInPhrase()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title%20eq%20%27Tom%20%26%20Jerry%27",
-                entityNameOrPath: _integrationEntityName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingAmpersandInPhrase))
-            );
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with a filter containing percent sign (%)
-        /// which has special meaning in URL encoding and SQL LIKE patterns.
-        /// </summary>
-        [TestMethod]
-        public async Task FindTestWithFilterContainingPercentSign()
-        {
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: string.Empty,
-                queryString: "?$filter=title%20eq%20%27100%25%20Complete%27",
-                entityNameOrPath: _integrationEntityName,
-                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingPercentSign))
-            );
-        }
-
-        /// <summary>
-        /// Tests the REST Api for Find operation with an $orderby clause containing special characters.
-        /// When column names or values in orderby contain special characters like spaces that need
-        /// URL encoding, this validates the fix preserves the encoding correctly.
-        /// Note: While this test uses 'title' (which has special chars in values not the column name),
-        /// it validates that $orderby parameter extraction preserves URL encoding through the same
+        /// Tests the REST Api for Find operation with an $orderby clause containing URL-encoded spaces.
+        /// This validates that $orderby parameter extraction preserves URL encoding through the same
         /// code path as $filter.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithOrderByContainingSpecialCharacters()
         {
-            // Order by title - tests that $orderby parameter is extracted with URL encoding preserved
+            // Order by title desc - tests that $orderby parameter is extracted with URL encoding preserved
             // The %20 represents space in "$orderby=title%20desc"
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,

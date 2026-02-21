@@ -5437,7 +5437,6 @@ type Planet @model(name:""PlanetAlias"") {
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
         [DataRow("Publisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", DisplayName = "DAB ")]
-        [DataRow(false, 2, DisplayName = "Test Autoentities without additional entities")]
         public void ValidateAutoentityGenerationConflicts(string entityName, string singular, string plural, string path)
         {
             // Arrange

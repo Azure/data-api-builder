@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, RuntimeConfigValidator runtimeConfigValidator, IFileSystem fileSystem)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _fileSystem = fileSystem;
@@ -74,6 +74,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     message: "No CosmosDB configuration provided but CosmosDB is the specified database.",
                     statusCode: System.Net.HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            if (_isDevelopmentMode)
+            {
+                runtimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+
+                if (runtimeConfig.IsGraphQLEnabled)
+                {
+                    runtimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
+                }
+
+                // Running only in developer mode to ensure fast and smooth startup in production.
+                runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
 
             _cosmosDb = cosmosDb;

@@ -301,6 +301,7 @@ namespace Cli.Tests
         [DataRow("StaticWebApps", null, null, DisplayName = "StaticWebApps with no audience and no issuer specified.")]
         [DataRow("AppService", null, null, DisplayName = "AppService with no audience and no issuer specified.")]
         [DataRow("Simulator", null, null, DisplayName = "Simulator with no audience and no issuer specified.")]
+        [DataRow("Unauthenticated", null, null, DisplayName = "Unauthenticated with no audience and no issuer specified.")]
         [DataRow("AzureAD", "aud-xxx", "issuer-xxx", DisplayName = "AzureAD with both audience and issuer specified.")]
         [DataRow("EntraID", "aud-xxx", "issuer-xxx", DisplayName = "EntraID with both audience and issuer specified.")]
         public Task EnsureCorrectConfigGenerationWithDifferentAuthenticationProviders(

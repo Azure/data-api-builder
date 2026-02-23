@@ -835,7 +835,7 @@
                     "level": {
                       "type": "string",
                       "description": "Cache level (L1 or L1L2)",
-                      "enum": [ "L1", "L1L2", null ],
+                      "enum": [ "L1", "L1L2" ],
                       "default": "L1L2"
                     }
                   }
@@ -1151,9 +1151,16 @@
                   "default": false
                 },
                 "ttl-seconds": {
-                  "type": "integer",
+                  "type": [ "integer", "null" ],
                   "description": "Time to live in seconds",
-                  "default": 5
+                  "default": 5,
+                  "minimum": 1
+                },
+                "level": {
+                  "type": "string",
+                  "description": "Cache level (L1 or L1L2)",
+                  "enum": [ "L1", "L1L2" ],
+                  "default": "L1L2"
                 }
               }
             },

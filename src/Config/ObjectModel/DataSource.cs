@@ -14,13 +14,11 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="ConnectionString">Connection string to access the database.</param>
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
 /// <param name="Health">Health check configuration for the datasource.</param>
-/// <param name="UserDelegatedAuth">User-delegated authentication configuration (OBO). Optional.</param>
 public record DataSource(
     DatabaseType DatabaseType,
     string ConnectionString,
     Dictionary<string, object?>? Options = null,
-    DatasourceHealthCheckConfig? Health = null,
-    UserDelegatedAuthConfig? UserDelegatedAuth = null)
+    DatasourceHealthCheckConfig? Health = null)
 {
     [JsonIgnore]
     public bool IsDatasourceHealthEnabled =>
@@ -41,6 +39,13 @@ public record DataSource(
             }
         }
     }
+
+    /// <summary>
+    /// Configuration for user-delegated authentication (OBO) against the
+    /// configured database.
+    /// </summary>
+    [JsonPropertyName("user-delegated-auth")]
+    public UserDelegatedAuthOptions? UserDelegatedAuth { get; init; }
 
     /// <summary>
     /// Converts the <c>Options</c> dictionary into a typed options object.

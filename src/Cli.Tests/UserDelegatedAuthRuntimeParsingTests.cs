@@ -53,8 +53,6 @@ namespace Cli.Tests
             Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
             Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
             Assert.AreEqual("https://database.windows.net", config.DataSource.UserDelegatedAuth.DatabaseAudience);
-            Assert.AreEqual(50, config.DataSource.UserDelegatedAuth.EffectiveTokenCacheDurationMinutes);
-            Assert.IsTrue(config.DataSource.UserDelegatedAuth.EffectiveDisableConnectionPooling);
         }
 
         [TestMethod]

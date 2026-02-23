@@ -643,7 +643,7 @@ namespace Cli
             DatabaseType dbType = runtimeConfig.DataSource.DatabaseType;
             string dataSourceConnectionString = runtimeConfig.DataSource.ConnectionString;
             DatasourceHealthCheckConfig? datasourceHealthCheckConfig = runtimeConfig.DataSource.Health;
-            UserDelegatedAuthConfig? userDelegatedAuthConfig = runtimeConfig.DataSource.UserDelegatedAuth;
+            UserDelegatedAuthOptions? userDelegatedAuthConfig = runtimeConfig.DataSource.UserDelegatedAuth;
 
             if (options.DataSourceDatabaseType is not null)
             {
@@ -735,16 +735,21 @@ namespace Cli
                 string? databaseAudience = options.DataSourceUserDelegatedAuthDatabaseAudience
                     ?? userDelegatedAuthConfig?.DatabaseAudience;
 
+                // Get provider: preserve existing or use default "EntraId"
+                string? provider = userDelegatedAuthConfig?.Provider ?? "EntraId";
+
                 // Create or update user-delegated-auth config
-                userDelegatedAuthConfig = new UserDelegatedAuthConfig(
+                userDelegatedAuthConfig = new UserDelegatedAuthOptions(
                     Enabled: enabled,
-                    DatabaseAudience: databaseAudience,
-                    DisableConnectionPooling: userDelegatedAuthConfig?.DisableConnectionPooling,
-                    TokenCacheDurationMinutes: userDelegatedAuthConfig?.TokenCacheDurationMinutes);
+                    Provider: provider,
+                    DatabaseAudience: databaseAudience);
             }
 
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
-            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig, userDelegatedAuthConfig);
+            DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig)
+            {
+                UserDelegatedAuth = userDelegatedAuthConfig
+            };
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
 
             return runtimeConfig != null;

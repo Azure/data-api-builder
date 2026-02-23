@@ -211,8 +211,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (isInRequestContext)
                 {
+                    // Validate database-audience is configured before attempting OBO
+                    if (string.IsNullOrWhiteSpace(userDelegatedAuth.DatabaseAudience))
+                    {
+                        throw new DataApiBuilderException(
+                            message: DataApiBuilderException.OBO_MISSING_DATABASE_AUDIENCE,
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
                     // At runtime with an HTTP request - attempt OBO flow
-                    string? oboToken = await GetOboAccessTokenAsync(userDelegatedAuth.DatabaseAudience!);
+                    string? oboToken = await GetOboAccessTokenAsync(userDelegatedAuth.DatabaseAudience);
                     if (oboToken is not null)
                     {
                         sqlConn.AccessToken = oboToken;
@@ -222,7 +231,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // OBO is enabled but we couldn't get a token (e.g., missing Bearer token in request)
                     // This is an error during request processing - we must not fall back to managed identity
                     throw new DataApiBuilderException(
-                        message: "User-delegated authentication is enabled but no valid user context is available.",
+                        message: DataApiBuilderException.OBO_NO_USER_CONTEXT,
                         statusCode: HttpStatusCode.Unauthorized,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
                 }
@@ -272,7 +281,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string? authHeader = httpContext.Request.Headers["Authorization"].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                QueryExecutorLogger.LogWarning("Cannot acquire OBO token: No Bearer token in Authorization header.");
+                QueryExecutorLogger.LogWarning(DataApiBuilderException.OBO_MISSING_BEARER_TOKEN);
                 return null;
             }
 

@@ -92,6 +92,31 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         }
 
         [TestMethod]
+        public async Task GetAccessTokenOnBehalfOfAsync_MissingTenantId_ThrowsUnauthorized()
+        {
+            // Arrange
+            Mock<IMsalClientWrapper> msalMock = new();
+            Mock<ILogger<OboSqlTokenProvider>> loggerMock = new();
+            OboSqlTokenProvider provider = new(msalMock.Object, loggerMock.Object);
+
+            // Principal with oid but no tid
+            ClaimsIdentity identity = new();
+            identity.AddClaim(new Claim("oid", TEST_SUBJECT_OID));
+            ClaimsPrincipal principal = new(identity);
+
+            // Act & Assert
+            DataApiBuilderException exception = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
+                async () => await provider.GetAccessTokenOnBehalfOfAsync(
+                    principal: principal,
+                    incomingJwtAssertion: TEST_INCOMING_JWT,
+                    databaseAudience: TEST_DATABASE_AUDIENCE));
+
+            Assert.AreEqual(HttpStatusCode.Unauthorized, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure, exception.SubStatusCode);
+            Assert.AreEqual(DataApiBuilderException.OBO_TENANT_CLAIM_MISSING, exception.Message);
+        }
+
+        [TestMethod]
         public async Task GetAccessTokenOnBehalfOfAsync_PrefersOidOverSub()
         {
             // Arrange

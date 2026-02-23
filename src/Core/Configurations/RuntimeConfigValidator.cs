@@ -142,7 +142,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// rules are enforced:
     /// - data-source.database-type must be "mssql".
     /// - data-source.user-delegated-auth.database-audience must be present.
-    /// - runtime.caching.enabled must be false.
+    /// - runtime.cache.enabled must be false.
     /// - Environment variables DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET must be set.
     /// </summary>
     /// <param name="runtimeConfig">Runtime configuration.</param>

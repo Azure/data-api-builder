@@ -21,7 +21,11 @@ public class DataApiBuilderException : Exception
     public const string GRAPHQL_GROUPBY_FIELD_AUTHZ_FAILURE = "Access forbidden to field '{0}' referenced in the groupBy argument.";
     public const string GRAPHQL_AGGREGATION_FIELD_AUTHZ_FAILURE = "Access forbidden to field '{0}' referenced in the aggregation function '{1}'.";
     public const string OBO_IDENTITY_CLAIMS_MISSING = "User-delegated authentication failed: Neither 'oid' nor 'sub' claim found in the access token.";
+    public const string OBO_TENANT_CLAIM_MISSING = "User-delegated authentication failed: 'tid' (tenant id) claim not found in the access token.";
     public const string OBO_TOKEN_ACQUISITION_FAILED = "User-delegated authentication failed: Unable to acquire database access token on behalf of the user.";
+    public const string OBO_MISSING_BEARER_TOKEN = "User-delegated authentication failed: Missing or invalid 'Authorization: Bearer <token>' header in the request.";
+    public const string OBO_NO_USER_CONTEXT = "User-delegated authentication failed: No valid user context available. Ensure the request includes a valid Bearer token.";
+    public const string OBO_MISSING_DATABASE_AUDIENCE = "User-delegated authentication failed: 'database-audience' is not configured in the data source's user-delegated-auth settings.";
 
     public enum SubStatusCodes
     {

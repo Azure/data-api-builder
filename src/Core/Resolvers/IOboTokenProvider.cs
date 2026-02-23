@@ -20,7 +20,11 @@ public interface IOboTokenProvider
     /// <param name="incomingJwtAssertion">The incoming JWT token to use as the OBO assertion.</param>
     /// <param name="databaseAudience">The target database audience (e.g., https://database.windows.net/).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The database access token string, or null if OBO failed.</returns>
+    /// <returns>The database access token string, or null if the principal or JWT assertion is null/empty.</returns>
+    /// <exception cref="Service.Exceptions.DataApiBuilderException">
+    /// Thrown when required identity claims (oid/sub or tid) are missing from the principal,
+    /// or when MSAL token acquisition fails.
+    /// </exception>
     Task<string?> GetAccessTokenOnBehalfOfAsync(
         ClaimsPrincipal principal,
         string incomingJwtAssertion,

@@ -2300,7 +2300,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod]
         public void UserDelegatedAuthRequiresCachingDisabled()
         {
-            string runtimeConfigString = @"{
+            // Arrange - Set environment variables for Azure AD credentials to ensure
+            // validation reaches the caching check (not failing on missing credentials)
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, "test-tenant-id");
+
+            try
+            {
+                string runtimeConfigString = @"{
                     ""$schema"": ""test_schema"",
                     ""data-source"": {
                         ""database-type"": ""mssql"",
@@ -2327,18 +2335,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     ""entities"": { }
                 }";
 
-            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+                RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+                MockFileSystem fileSystem = new();
+                FileSystemRuntimeConfigLoader loader = new(fileSystem);
+                RuntimeConfigProvider provider = new(loader);
+                Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+                RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
 
-            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, loggerMock.Object));
+                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, loggerMock.Object));
 
-            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
-            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+                Assert.AreEqual(expected: RuntimeConfigValidator.USER_DELEGATED_AUTH_CACHING_ERR_MSG, actual: dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            finally
+            {
+                // Clean up environment variables
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, null);
+            }
         }
 
         /// <summary>
@@ -2522,19 +2539,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 MockFileSystem fileSystem = new();
                 RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
-                // Act & Assert - should not throw any user-delegated-auth errors
-                try
-                {
-                    configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
-                }
-                catch (DataApiBuilderException ex)
-                {
-                    // If an exception is thrown, it should NOT be one of the user-delegated-auth errors
-                    Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_DATABASE_TYPE_ERR_MSG, ex.Message);
-                    Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG, ex.Message);
-                    Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_CACHING_ERR_MSG, ex.Message);
-                    Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG, ex.Message);
-                }
+                // Act & Assert - validation should succeed without throwing
+                configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
             }
             finally
             {
@@ -2696,16 +2702,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 MockFileSystem fileSystem = new();
                 RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
-                // Act & Assert - should not throw credentials error when all env vars are set
-                try
-                {
-                    configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
-                }
-                catch (DataApiBuilderException ex)
-                {
-                    // Should NOT fail with missing credentials error
-                    Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG, ex.Message);
-                }
+                // Act & Assert - validation should succeed and not throw when all env vars are set
+                configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
             }
             finally
             {
@@ -2760,16 +2758,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 MockFileSystem fileSystem = new();
                 RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
-                // Act & Assert - should not throw credentials error when all env vars are set
-                try
-                {
-                    configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
-                }
-                catch (DataApiBuilderException ex)
-                {
-                    // Should NOT fail with missing credentials error
-                    Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG, ex.Message);
-                }
+                // Act & Assert - validation should succeed and not throw when all env vars are set
+                configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
             }
             finally
             {

@@ -33,6 +33,16 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
     private const int MIN_EARLY_REFRESH_MINUTES = 5;
 
     /// <summary>
+    /// Number of cache operations before triggering cleanup of expired tokens.
+    /// </summary>
+    private const int CLEANUP_INTERVAL = 100;
+
+    /// <summary>
+    /// Counter for cache operations to trigger periodic cleanup.
+    /// </summary>
+    private int _cacheOperationCount;
+
+    /// <summary>
     /// Maximum duration to cache tokens before forcing a refresh.
     /// </summary>
     private readonly TimeSpan _tokenCacheDuration;
@@ -86,7 +96,16 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
                 subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
         }
 
-        string tenantId = principal.FindFirst("tid")?.Value ?? string.Empty;
+        string? tenantId = principal.FindFirst("tid")?.Value;
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            _logger.LogWarning("Cannot acquire OBO token: 'tid' (tenant id) claim not found or empty in token.");
+            throw new DataApiBuilderException(
+                message: DataApiBuilderException.OBO_TENANT_CLAIM_MISSING,
+                statusCode: HttpStatusCode.Unauthorized,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
+        }
+
         string authContextHash = ComputeAuthorizationContextHash(principal);
         string cacheKey = BuildCacheKey(subjectId, tenantId, authContextHash);
 
@@ -99,6 +118,10 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
         }
 
         // Acquire new token via OBO
+        // Note: The incoming JWT assertion has already been validated by ASP.NET Core's JWT Bearer
+        // authentication middleware (issuer, audience, expiry, signature). MSAL will also validate
+        // the assertion as part of the OBO flow with Azure AD - invalid tokens will result in
+        // MsalServiceException which we catch and convert to DataApiBuilderException below.
         try
         {
             string[] scopes = [$"{databaseAudience.TrimEnd('/')}/.default"];
@@ -114,6 +137,9 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
                 CachedAt: DateTimeOffset.UtcNow);
 
             _tokenCache[cacheKey] = newCachedToken;
+
+            // Periodically clean up expired tokens to prevent unbounded memory growth
+            CleanupExpiredTokensIfNeeded();
 
             _logger.LogDebug(
                 "OBO token acquired for subject {SubjectId}, expires at {ExpiresOn}.",
@@ -199,11 +225,11 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
 
     /// <summary>
     /// Builds the cache key from subject, tenant, and authorization context hash.
-    /// Format: subjectId|tenantId|authContextHash
+    /// Format: subjectId + tenantId + authContextHash (strict concatenation, no separators).
     /// </summary>
     private static string BuildCacheKey(string subjectId, string tenantId, string authContextHash)
     {
-        return $"{subjectId}|{tenantId}|{authContextHash}";
+        return $"{subjectId}{tenantId}{authContextHash}";
     }
 
     /// <summary>
@@ -231,6 +257,39 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Periodically removes expired tokens from the cache to prevent unbounded memory growth.
+    /// Cleanup runs every CLEANUP_INTERVAL cache operations to amortize the cost.
+    /// </summary>
+    private void CleanupExpiredTokensIfNeeded()
+    {
+        int count = Interlocked.Increment(ref _cacheOperationCount);
+        if (count % CLEANUP_INTERVAL != 0)
+        {
+            return;
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        int removedCount = 0;
+
+        foreach (KeyValuePair<string, CachedToken> entry in _tokenCache)
+        {
+            // Remove tokens that have expired
+            if (now > entry.Value.ExpiresOn)
+            {
+                if (_tokenCache.TryRemove(entry.Key, out _))
+                {
+                    removedCount++;
+                }
+            }
+        }
+
+        if (removedCount > 0)
+        {
+            _logger.LogDebug("OBO token cache cleanup: removed {RemovedCount} expired tokens.", removedCount);
+        }
     }
 
     /// <summary>

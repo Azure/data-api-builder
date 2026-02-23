@@ -1583,4 +1583,26 @@ public class RuntimeConfigValidator : IConfigValidator
 
         return false;
     }
+
+    /// <summary>
+    /// Checks that all of the entities created with the Entities and Autoentities properties
+    /// are valid by not having unique paths for both REST and GraphQL, that there are no duplicate
+    /// Queries or Mutation entities, and ensure the semantic correctness of all the entities.
+    /// </summary>
+    /// <param name="runtimeConfig">The runtime configuration.</param>
+    public void ValidateEntityAndAutoentityConfigurations(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.IsDevelopmentMode())
+        {
+            ValidateEntityConfiguration(runtimeConfig);
+
+            if (runtimeConfig.IsGraphQLEnabled)
+            {
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
+            }
+
+            // Running only in developer mode to ensure fast and smooth startup in production.
+            ValidatePermissionsInConfig(runtimeConfig);
+        }
+    }
 }

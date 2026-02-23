@@ -76,18 +76,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            if (_isDevelopmentMode)
-            {
-                runtimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
-
-                if (runtimeConfig.IsGraphQLEnabled)
-                {
-                    runtimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
-                }
-
-                // Running only in developer mode to ensure fast and smooth startup in production.
-                runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
-            }
+            runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
 
             _cosmosDb = cosmosDb;
             ParseSchemaGraphQLDocument();

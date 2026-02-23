@@ -129,6 +129,6 @@ public class RuntimeConfigLoaderTests
 
         Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig), "Should successfully load config");
         Assert.IsTrue(runtimeConfig.SqlDataSourceUsed, "Should have Sql data source");
-        Assert.AreEqual(expectedEntities, runtimeConfig.Entities.Entities.Count, "Default datasource should be of root file database type.");
+        Assert.AreEqual(expectedEntities, runtimeConfig.Entities.Entities.Count, "Number of entities is not what is expected.");
     }
 }

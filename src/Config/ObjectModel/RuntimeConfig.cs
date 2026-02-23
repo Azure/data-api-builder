@@ -252,7 +252,7 @@ public record RuntimeConfig
         return _entityNameToDataSourceName.TryAdd(entityName, this.DefaultDataSourceName);
     }
 
-    public bool TryAddEntityNameToDataSourceName(string entityName, string autoEntityDefinition)
+    public bool TryAddGeneratedAutoentityNameToDataSourceName(string entityName, string autoEntityDefinition)
     {
         if (_autoentityNameToDataSourceName.TryGetValue(autoEntityDefinition, out string? dataSourceName))
         {
@@ -273,20 +273,20 @@ public record RuntimeConfig
     /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
     public RuntimeConfig(
-        string? Schema,
-        DataSource DataSource,
-        RuntimeEntities Entities,
-        RuntimeAutoentities? Autoentities = null,
-        RuntimeOptions? Runtime = null,
-        DataSourceFiles? DataSourceFiles = null,
-        AzureKeyVaultOptions? AzureKeyVault = null)
+        string? schema,
+        DataSource dataSource,
+        RuntimeEntities entities,
+        RuntimeAutoentities? autoentities = null,
+        RuntimeOptions? runtime = null,
+        DataSourceFiles? dataSourceFiles = null,
+        AzureKeyVaultOptions? azureKeyVault = null)
     {
-        this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
-        this.DataSource = DataSource;
-        this.Runtime = Runtime;
-        this.AzureKeyVault = AzureKeyVault;
-        this.Entities = Entities ?? new RuntimeEntities(new Dictionary<string, Entity>());
-        this.Autoentities = Autoentities ?? new RuntimeAutoentities(new Dictionary<string, Autoentity>());
+        this.Schema = schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
+        this.DataSource = dataSource;
+        this.Runtime = runtime;
+        this.AzureKeyVault = azureKeyVault;
+        this.Entities = entities ?? new RuntimeEntities(new Dictionary<string, Entity>());
+        this.Autoentities = autoentities ?? new RuntimeAutoentities(new Dictionary<string, Autoentity>());
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         if (this.DataSource is null)
@@ -304,8 +304,8 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if (Entities is null && this.Entities.Entities.Count == 0 &&
-            Autoentities is null && this.Autoentities.Autoentities.Count == 0)
+        if (entities is null && this.Entities.Entities.Count == 0 &&
+            autoentities is null && this.Autoentities.Autoentities.Count == 0)
         {
             throw new DataApiBuilderException(
                 message: "Configuration file should contain either at least the entities or autoentities property",
@@ -313,35 +313,35 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        if (Entities is not null)
+        if (entities is not null)
         {
-            foreach (KeyValuePair<string, Entity> entity in Entities)
+            foreach (KeyValuePair<string, Entity> entity in entities)
             {
                 _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
             }
         }
 
-        if (Autoentities is not null)
+        if (autoentities is not null)
         {
-            foreach (KeyValuePair<string, Autoentity> autoentity in Autoentities)
+            foreach (KeyValuePair<string, Autoentity> autoentity in autoentities)
             {
                 _autoentityNameToDataSourceName.TryAdd(autoentity.Key, this.DefaultDataSourceName);
             }
         }
 
         // Process data source and entities information for each database in multiple database scenario.
-        this.DataSourceFiles = DataSourceFiles;
+        this.DataSourceFiles = dataSourceFiles;
 
-        if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
+        if (dataSourceFiles is not null && dataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
-            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>>? allEntities = entities?.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = autoentities?.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             // This loader is not used as a part of hot reload and therefore does not need a handler.
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
-            foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
+            foreach (string dataSourceFile in dataSourceFiles.SourceFiles)
             {
                 // Use default replacement settings for environment variable replacement
                 DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);
@@ -493,8 +493,15 @@ public record RuntimeConfig
     /// <returns>DataSourceName</returns>
     public string GetDataSourceNameFromAutoentityName(string autoentityName)
     {
-        CheckAutoentityNamePresent(autoentityName);
-        return _autoentityNameToDataSourceName[autoentityName];
+        if (!_autoentityNameToDataSourceName.TryGetValue(autoentityName, out string? autoentityDataSource))
+        {
+            throw new DataApiBuilderException(
+                message: $"{autoentityName} is not a valid autoentity.",
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        return autoentityDataSource;
     }
 
     /// <summary>
@@ -629,17 +636,6 @@ public record RuntimeConfig
         {
             throw new DataApiBuilderException(
                 message: $"{entityName} is not a valid entity.",
-                statusCode: HttpStatusCode.NotFound,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-        }
-    }
-
-    private void CheckAutoentityNamePresent(string autoentityName)
-    {
-        if (!_autoentityNameToDataSourceName.ContainsKey(autoentityName))
-        {
-            throw new DataApiBuilderException(
-                message: $"{autoentityName} is not a valid autoentity.",
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Data.Common;
 using System.Net;
@@ -292,15 +293,15 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        protected override async Task GenerateAutoentitiesIntoEntities(Dictionary<string, Autoentity>? autoentities)
+        protected override async Task GenerateAutoentitiesIntoEntities(IReadOnlyDictionary<string, Autoentity>? autoentities)
         {
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            Dictionary<string, Entity> entities = new();
             if (autoentities is null)
             {
                 return;
             }
 
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            Dictionary<string, Entity> entities = new();
             foreach ((string autoentityName, Autoentity autoentity) in autoentities)
             {
                 int addedEntities = 0;
@@ -352,7 +353,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.
-                    if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddEntityNameToDataSourceName(entityName, autoentityName))
+                    if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
                         throw new DataApiBuilderException(
                             message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentity pattern with definition-name '{autoentityName}'.",

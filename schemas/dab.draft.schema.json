@@ -115,6 +115,12 @@
                   "set-session-context": {
                     "type": "boolean",
                     "description": "Enable sending data to MsSql using session context"
+                  },
+                  "command-timeout": {
+                    "type": "integer",
+                    "description": "Command timeout in seconds for database operations",
+                    "minimum": 0,
+                    "default": 30
                   }
                 }
               }
@@ -135,7 +141,14 @@
               "options": {
                 "type": "object",
                 "additionalProperties": false,
-                "properties": {},
+                "properties": {
+                  "command-timeout": {
+                    "type": "integer",
+                    "description": "Command timeout in seconds for database operations",
+                    "minimum": 0,
+                    "default": 30
+                  }
+                },
                 "required": []
               }
             }

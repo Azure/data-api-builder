@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.HealthCheck;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -69,6 +70,12 @@ public record DataSource(
                 SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))));
         }
 
+        if (typeof(TOptionType).IsAssignableFrom(typeof(PostgreSqlOptions)))
+        {
+            return (TOptionType)(object)new PostgreSqlOptions(
+                CommandTimeout: ReadIntOption(namingPolicy.ConvertName("command-timeout")));
+        }
+
         throw new NotSupportedException($"The type {typeof(TOptionType).FullName} is not a supported strongly typed options object");
     }
 
@@ -92,6 +99,52 @@ public record DataSource(
         return false;
     }
 
+    private int? ReadIntOption(string option)
+    {
+        if (Options is not null && Options.TryGetValue(option, out object? value))
+        {
+            if (value is int intValue)
+            {
+                return intValue;
+            }
+            else if (value is string stringValue && int.TryParse(stringValue, out int parsedValue))
+            {
+                return parsedValue;
+            }
+            else if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out int jsonValue))
+            {
+                return jsonValue;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the command timeout value from the options.
+    /// </summary>
+    /// <returns>The command timeout in seconds, or 30 (default) if not specified.</returns>
+    public int GetCommandTimeout()
+    {
+        if (Options is not null && Options.TryGetValue("command-timeout", out object? value))
+        {
+            if (value is int intValue)
+            {
+                return intValue;
+            }
+            else if (value is long longValue && longValue <= int.MaxValue && longValue >= int.MinValue)
+            {
+                return (int)longValue;
+            }
+            else if (value is string stringValue && int.TryParse(stringValue, out int parsedValue))
+            {
+                return parsedValue;
+            }
+        }
+
+        return 30; // default command timeout
+    }
+
     [JsonIgnore]
     public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";
 }
@@ -111,3 +164,8 @@ public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container
 /// Options for MsSql database.
 /// </summary>
 public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
+
+/// <summary>
+/// Options for PostgreSQL database.
+/// </summary>
+public record PostgreSqlOptions(int? CommandTimeout = null) : IDataSourceOptions;

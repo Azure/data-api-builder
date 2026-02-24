@@ -429,7 +429,7 @@ public class CachingConfigProcessingTests
     /// <param name="expectedLevel">Expected cache level returned by GetEntityCacheEntryLevel.</param>
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @",""cache"": { ""enabled"": false }", 10, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled with custom TTL, entity cache disabled: entity falls back to global TTL.")]
     [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": false }", DEFAULT_CACHE_TTL_SECONDS, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled with default TTL, entity cache disabled: entity falls back to default TTL.")]
-    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @"", DEFAULT_CACHE_TTL_SECONDS, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled, entity cache omitted: entity falls back to default TTL.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @"", 10, EntityCacheLevel.L1L2, DisplayName = "Global cache enabled with custom TTL, entity cache omitted: entity falls back to global TTL.")]
     [DataTestMethod]
     public void GetEntityCacheEntryTtlAndLevel_DoesNotThrow_WhenRuntimeCacheEnabledAndEntityCacheDisabled(
         string globalCacheConfig,

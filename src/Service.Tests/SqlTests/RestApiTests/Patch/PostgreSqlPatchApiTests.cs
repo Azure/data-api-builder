@@ -14,6 +14,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         protected static Dictionary<string, string> _queryMap = new()
         {
             {
+                "PatchOne_Insert_KeylessWithAutoGenPK_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                            AND title = 'My New Book' AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Insert_Mapping_Test",
                 @"
                     SELECT to_jsonb(subq) AS data

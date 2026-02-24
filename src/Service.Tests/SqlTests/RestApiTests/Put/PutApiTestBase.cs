@@ -1026,7 +1026,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// <summary>
         /// Tests the Put functionality with a REST PUT request
         /// without a primary key route. With keyless PUT/PATCH support,
-        /// this converts to an Insert operation and succeeds with 201 Created.
+        /// this converts to an Insert operation. Since the entity has a
+        /// non-auto-generated PK and it's missing from the request body,
+        /// the Insert validation catches it with a BadRequest.
         /// </summary>
         [TestMethod]
         public virtual async Task PutWithNoPrimaryKeyRouteTest()
@@ -1044,8 +1046,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     sqlQuery: string.Empty,
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
-                    expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: string.Empty
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Invalid request body. Missing field in body: id.",
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 

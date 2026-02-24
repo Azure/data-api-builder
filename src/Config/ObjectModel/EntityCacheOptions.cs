@@ -49,8 +49,15 @@ public record EntityCacheOptions
     [JsonConstructor]
     public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null, EntityCacheLevel? Level = null)
     {
-        // TODO: shouldn't we apply the same "UserProvidedXyz" logic to Enabled, too?
-        this.Enabled = Enabled;
+        if (Enabled is not null)
+        {
+            this.Enabled = Enabled;
+            UserProvidedEnabledOptions = true;
+        }
+        else
+        {
+            this.Enabled = null;
+        }
 
         if (TtlSeconds is not null)
         {
@@ -72,6 +79,15 @@ public record EntityCacheOptions
             this.Level = DEFAULT_LEVEL;
         }
     }
+
+    /// <summary>
+    /// Flag which informs the runtime whether the user explicitly set the Enabled property.
+    /// When the user doesn't provide the enabled property, the entity cache enabled state
+    /// will inherit from the runtime cache enabled setting.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(Enabled))]
+    public bool UserProvidedEnabledOptions { get; init; } = false;
 
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write ttl-seconds

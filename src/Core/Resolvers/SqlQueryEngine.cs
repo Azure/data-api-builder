@@ -330,7 +330,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 // Entity level cache behavior checks
                 bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
-                bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
+                bool entityCacheEnabled = runtimeConfig.IsEntityCachingEnabled(structure.EntityName);
 
                 // If a db policy is configured for the read operation in the context of the executing role, skip the cache.
                 // We want to avoid caching token metadata because token metadata can change frequently and we want to avoid caching it.
@@ -466,7 +466,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (runtimeConfig.CanUseCache())
             {
                 // Entity level cache behavior checks
-                bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
+                bool entityCacheEnabled = runtimeConfig.IsEntityCachingEnabled(structure.EntityName);
 
                 // Stored procedures do not support nor honor runtime config defined
                 // authorization policies. Here, DAB only checks that the entity has

@@ -492,7 +492,7 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
-        if (!entityConfig.IsCachingEnabled)
+        if (!IsEntityCachingEnabled(entityName))
         {
             throw new DataApiBuilderException(
                 message: $"{entityName} does not have caching enabled.",
@@ -500,9 +500,9 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
         }
 
-        if (entityConfig.Cache.UserProvidedTtlOptions)
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedTtlOptions)
         {
-            return entityConfig.Cache.TtlSeconds.Value;
+            return entityConfig.Cache.TtlSeconds!.Value;
         }
         else
         {
@@ -512,7 +512,8 @@ public record RuntimeConfig
 
     /// <summary>
     /// Returns the cache level value for a given entity.
-    /// If the property is not set, returns the default (L1L2) for a given entity.
+    /// If the property is not set, returns the global default value set in the runtime config.
+    /// If the global default value is not set, the default value (L1L2) is used.
     /// </summary>
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Cache level that a cache entry should be stored in.</returns>
@@ -527,7 +528,7 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
 
-        if (!entityConfig.IsCachingEnabled)
+        if (!IsEntityCachingEnabled(entityName))
         {
             throw new DataApiBuilderException(
                 message: $"{entityName} does not have caching enabled.",
@@ -535,14 +536,43 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
         }
 
-        if (entityConfig.Cache.UserProvidedLevelOptions)
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedLevelOptions)
         {
-            return entityConfig.Cache.Level.Value;
+            return entityConfig.Cache.Level!.Value;
         }
         else
         {
-            return EntityCacheLevel.L1L2;
+            return GlobalCacheEntryLevel();
         }
+    }
+
+    /// <summary>
+    /// Determines whether caching is enabled for a given entity, taking into account
+    /// inheritance from the runtime cache settings.
+    /// If the entity explicitly sets enabled, that value is used.
+    /// If the entity does not set enabled, the runtime cache enabled value is inherited.
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Whether caching is enabled for the entity.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
+    public bool IsEntityCachingEnabled(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        // If the entity explicitly set enabled, use that value.
+        if (entityConfig.Cache is not null && entityConfig.Cache.UserProvidedEnabledOptions)
+        {
+            return entityConfig.Cache.Enabled!.Value;
+        }
+
+        // Otherwise, inherit from the runtime cache enabled setting.
+        return Runtime?.Cache?.Enabled is true;
     }
 
     /// <summary>
@@ -567,6 +597,20 @@ public record RuntimeConfig
         return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
             ? Runtime.Cache.TtlSeconds.Value
             : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+    }
+
+    /// <summary>
+    /// Returns the cache level value for the global cache entry.
+    /// The level is inferred from the runtime cache Level2 configuration:
+    /// if Level2 is enabled, the level is L1L2; otherwise L1.
+    /// If runtime cache is not configured, the default cache level is used.
+    /// </summary>
+    /// <returns>Cache level that a cache entry should be stored in.</returns>
+    public EntityCacheLevel GlobalCacheEntryLevel()
+    {
+        return Runtime?.Cache is not null
+            ? Runtime.Cache.InferredLevel
+            : EntityCacheOptions.DEFAULT_LEVEL;
     }
 
     private void CheckDataSourceNamePresent(string dataSourceName)

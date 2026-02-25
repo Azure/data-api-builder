@@ -271,7 +271,14 @@ namespace Cli
                             Provider: options.AuthenticationProvider,
                             Jwt: (options.Audience is null && options.Issuer is null) ? null : new(options.Audience, options.Issuer)),
                         Mode: options.HostMode),
-                    BaseRoute: runtimeBaseRoute
+                    BaseRoute: runtimeBaseRoute,
+                    Telemetry: new TelemetryOptions(
+                        OpenTelemetry: new OpenTelemetryOptions(
+                            Enabled: true,
+                            Endpoint: "@env('OTEL_EXPORTER_OTLP_ENDPOINT')",
+                            Headers: "@env('OTEL_EXPORTER_OTLP_HEADERS')",
+                            ExporterProtocol: null,
+                            ServiceName: "@env('OTEL_SERVICE_NAME')"))
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 

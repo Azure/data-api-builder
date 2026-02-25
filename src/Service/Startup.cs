@@ -266,9 +266,9 @@ namespace Azure.DataApiBuilder.Service
             {
                 services.AddSingleton<IOboTokenProvider>(serviceProvider =>
                 {
-                    string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR);
-                    string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR);
-                    string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR);
+                    string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+                    string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+                    string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
 
                     string authority = $"https://login.microsoftonline.com/{tenantId}";
 
@@ -1281,9 +1281,9 @@ namespace Azure.DataApiBuilder.Service
         private bool IsOboConfigured()
         {
             // Check required environment variables first (fast path)
-            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR);
-            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR);
-            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR);
+            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
 
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientSecret))
             {

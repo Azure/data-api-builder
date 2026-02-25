@@ -138,10 +138,18 @@ public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
 /// Row-Level Security (RLS) filtering based on user identity.
 /// 
 /// OBO requires an Azure AD App Registration (separate from the DAB service's Managed Identity).
-/// Required environment variables for the OBO App Registration:
-/// - DAB_OBO_CLIENT_ID: The Application (client) ID of the App Registration used for OBO token exchange
-/// - DAB_OBO_TENANT_ID: The Directory (tenant) ID where the App Registration is registered
-/// - DAB_OBO_CLIENT_SECRET: The client secret of the App Registration (used for confidential client auth)
+/// The operator deploying DAB must set the following environment variables for the OBO App Registration,
+/// which DAB reads at startup via Environment.GetEnvironmentVariable():
+/// - DAB_OBO_CLIENT_ID: The Application (client) ID of the OBO App Registration
+/// - DAB_OBO_TENANT_ID: The Directory (tenant) ID where the OBO App Registration is registered
+/// - DAB_OBO_CLIENT_SECRET: The client secret of the OBO App Registration (not a user secret)
+/// 
+/// These credentials belong to the OBO App Registration, which acts as a confidential client to exchange
+/// the incoming user JWT for a database access token. The user provides only their JWT; DAB uses the
+/// App Registration credentials to perform the OBO token exchange on their behalf.
+/// 
+/// These can be set in the hosting environment (e.g., Azure Container Apps secrets, Kubernetes secrets,
+/// Docker environment variables, or local shell environment).
 /// 
 /// Note: DAB-specific prefixes (DAB_OBO_*) are used instead of AZURE_* to avoid conflict with
 /// DefaultAzureCredential, which interprets AZURE_CLIENT_ID as a User-Assigned Managed Identity ID.
@@ -167,17 +175,17 @@ public record UserDelegatedAuthOptions(
     /// interpreted by DefaultAzureCredential/ManagedIdentityCredential as a
     /// User-Assigned Managed Identity ID.
     /// </summary>
-    public const string AZURE_CLIENT_ID_ENV_VAR = "DAB_OBO_CLIENT_ID";
+    public const string DAB_OBO_CLIENT_ID_ENV_VAR = "DAB_OBO_CLIENT_ID";
 
     /// <summary>
     /// Environment variable name for OBO App Registration client secret.
     /// Used for On-Behalf-Of token exchange.
     /// </summary>
-    public const string AZURE_CLIENT_SECRET_ENV_VAR = "DAB_OBO_CLIENT_SECRET";
+    public const string DAB_OBO_CLIENT_SECRET_ENV_VAR = "DAB_OBO_CLIENT_SECRET";
 
     /// <summary>
     /// Environment variable name for OBO tenant ID.
     /// Uses DAB-specific prefix for consistency with OBO client ID.
     /// </summary>
-    public const string AZURE_TENANT_ID_ENV_VAR = "DAB_OBO_TENANT_ID";
+    public const string DAB_OBO_TENANT_ID_ENV_VAR = "DAB_OBO_TENANT_ID";
 }

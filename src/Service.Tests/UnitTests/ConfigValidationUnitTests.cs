@@ -2302,9 +2302,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // Arrange - Set environment variables for Azure AD credentials to ensure
             // validation reaches the caching check (not failing on missing credentials)
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, "test-client-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, "test-client-secret");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, "test-tenant-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
 
             try
             {
@@ -2352,9 +2352,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             finally
             {
                 // Clean up environment variables
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
             }
         }
 
@@ -2451,9 +2451,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ValidateUserDelegatedAuth_CachingEnabled_ThrowsError()
         {
             // Arrange - Set environment variables for Azure AD credentials
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, "test-client-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, "test-client-secret");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, "test-tenant-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
 
             try
             {
@@ -2494,9 +2494,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             finally
             {
                 // Clean up environment variables
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
             }
         }
 
@@ -2507,9 +2507,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ValidateUserDelegatedAuth_ValidConfiguration_Succeeds()
         {
             // Arrange - Set environment variables for Azure AD credentials
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, "test-client-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, "test-client-secret");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, "test-tenant-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
 
             try
             {
@@ -2545,9 +2545,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             finally
             {
                 // Clean up environment variables
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
             }
         }
 
@@ -2566,9 +2566,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             string clientId, string tenantId, string clientSecret)
         {
             // Arrange - Set environment variables (some may be null/empty to test validation)
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, clientId);
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, tenantId);
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, clientSecret);
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, clientId);
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, tenantId);
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, clientSecret);
 
             try
             {
@@ -2607,9 +2607,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             finally
             {
                 // Clean up environment variables
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
             }
         }
 
@@ -2670,9 +2670,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ValidateUserDelegatedAuth_AllRequiredEnvVarsSet_PassesValidation()
         {
             // Arrange - Set all required environment variables for OBO authentication
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, "test-client-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, "test-tenant-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
 
             try
             {
@@ -2708,9 +2708,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             finally
             {
                 // Clean up environment variables
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
             }
         }
 
@@ -2725,10 +2725,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             // Arrange - Simulate Azure environment (IDENTITY_ENDPOINT is set in Azure Container Apps/App Service)
             Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", "http://localhost:42356/msi/token");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, "test-client-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, "test-tenant-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
             // OBO requires client secret even in Azure - it uses App Registration, not Managed Identity
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
 
             try
             {
@@ -2765,9 +2765,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 // Clean up environment variables
                 Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_TENANT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.AZURE_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
             }
         }
 

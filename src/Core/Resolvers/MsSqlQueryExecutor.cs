@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // OBO is enabled but we couldn't get a token (e.g., missing Bearer token in request)
                     // This is an error during request processing - we must not fall back to managed identity
                     throw new DataApiBuilderException(
-                        message: DataApiBuilderException.OBO_NO_USER_CONTEXT,
+                        message: DataApiBuilderException.OBO_MISSING_USER_CONTEXT,
                         statusCode: HttpStatusCode.Unauthorized,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
                 }
@@ -281,7 +281,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string? authHeader = httpContext.Request.Headers["Authorization"].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                QueryExecutorLogger.LogWarning(DataApiBuilderException.OBO_MISSING_BEARER_TOKEN);
+                QueryExecutorLogger.LogWarning(DataApiBuilderException.OBO_MISSING_USER_CONTEXT);
                 return null;
             }
 

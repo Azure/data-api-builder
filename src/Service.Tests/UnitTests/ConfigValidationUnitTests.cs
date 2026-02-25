@@ -509,20 +509,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Mock ForeignKeyPair to be defined in DB with the custom schema
             // The schema comparison should be case-insensitive
+            // Use concrete DatabaseTable instances with differing casing so that
+            // Moq relies on DatabaseTable.Equals for argument matching.
+            DatabaseTable expectedLinkingTable = new(expectedSchema, expectedTable);
+            DatabaseTable expectedSource1Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE1");
+            DatabaseTable expectedSource2Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE2");
+
             _sqlMetadataProvider.Setup(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, expectedSchema, StringComparison.OrdinalIgnoreCase) &&
-                                              string.Equals(t.Name, expectedTable, StringComparison.OrdinalIgnoreCase)),
-                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, expectedSchema, StringComparison.OrdinalIgnoreCase) &&
-                                              string.Equals(t.Name, "TEST_SOURCE1", StringComparison.OrdinalIgnoreCase))
+                    expectedLinkingTable,
+                    expectedSource1Table
                 )).Returns(true);
 
             _sqlMetadataProvider.Setup(x =>
                 x.VerifyForeignKeyExistsInDB(
-                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, expectedSchema, StringComparison.OrdinalIgnoreCase) &&
-                                              string.Equals(t.Name, expectedTable, StringComparison.OrdinalIgnoreCase)),
-                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, expectedSchema, StringComparison.OrdinalIgnoreCase) &&
-                                              string.Equals(t.Name, "TEST_SOURCE2", StringComparison.OrdinalIgnoreCase))
+                    expectedLinkingTable,
+                    expectedSource2Table
                 )).Returns(true);
 
             // Validation should pass with custom schema

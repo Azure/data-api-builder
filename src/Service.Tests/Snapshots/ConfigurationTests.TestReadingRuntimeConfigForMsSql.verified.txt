@@ -53,6 +53,7 @@
       }
     }
   },
+  Autoentities: [],
   Entities: [
     {
       Publisher: {

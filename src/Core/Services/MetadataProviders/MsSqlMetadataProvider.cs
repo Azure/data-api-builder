@@ -292,18 +292,18 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        protected override async Task GenerateAutoentitiesIntoEntities()
+        protected override async Task GenerateAutoentitiesIntoEntities(IReadOnlyDictionary<string, Autoentity>? autoentities)
         {
-            int addedEntities = 0;
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            Dictionary<string, Entity> entities = (Dictionary<string, Entity>)_entities;
-            if (runtimeConfig.Autoentities is null)
+            if (autoentities is null)
             {
                 return;
             }
 
-            foreach ((string autoentityName, Autoentity autoentity) in runtimeConfig.Autoentities.AutoEntities)
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            Dictionary<string, Entity> entities = new();
+            foreach ((string autoentityName, Autoentity autoentity) in autoentities)
             {
+                int addedEntities = 0;
                 JsonArray? resultArray = await QueryAutoentitiesAsync(autoentity);
                 if (resultArray is null)
                 {
@@ -352,9 +352,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Add the generated entity to the linking entities dictionary.
                     // This allows the entity to be processed later during metadata population.
-                    if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddEntityNameToDataSourceName(entityName))
+                    if (!entities.TryAdd(entityName, generatedEntity) || !runtimeConfig.TryAddGeneratedAutoentityNameToDataSourceName(entityName, autoentityName))
                     {
-                        // TODO: need to make a better message that includes if the conflict is with a user-defined entity or another auto-generated entity.
                         throw new DataApiBuilderException(
                             message: $"Entity with name '{entityName}' already exists. Cannot create new entity from autoentity pattern with definition-name '{autoentityName}'.",
                             statusCode: HttpStatusCode.BadRequest,
@@ -372,16 +371,14 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     addedEntities++;
                 }
+
+                if (addedEntities == 0)
+                {
+                    _logger.LogWarning($"No new entities were generated from the autoentity {autoentityName} defined in the configuration.");
+                }
             }
 
-            if (addedEntities == 0)
-            {
-                _logger.LogWarning("No new entities were generated from the autoentity patterns defined in the configuration.");
-            }
-            else
-            {
-                _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
-            }
+            _runtimeConfigProvider.AddMergedEntitiesToConfig(entities);
         }
 
         public async Task<JsonArray?> QueryAutoentitiesAsync(Autoentity autoentity)

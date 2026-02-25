@@ -29,7 +29,7 @@ class RuntimeAutoentitiesConverter : JsonConverter<RuntimeAutoentities>
     public override void Write(Utf8JsonWriter writer, RuntimeAutoentities value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        foreach ((string key, Autoentity autoEntity) in value.AutoEntities)
+        foreach ((string key, Autoentity autoEntity) in value.Autoentities)
         {
             writer.WritePropertyName(key);
             JsonSerializer.Serialize(writer, autoEntity, options);

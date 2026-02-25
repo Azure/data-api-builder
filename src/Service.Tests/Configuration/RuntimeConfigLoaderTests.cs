@@ -101,4 +101,34 @@ public class RuntimeConfigLoaderTests
         Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
         Assert.IsTrue(error.Contains("An item with the same key has already been added."));
     }
+
+    /// <summary>
+    /// Test validates that when child files are present all autoentities are loaded correctly.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("Multidab-config.CosmosDb_NoSql.json", new string[] { "Multidab-config.MsSql.json", "Multidab-config.MySql.json", "Multidab-config.PostgreSql.json" }, 10)]
+    public async Task CanLoadValidMultiSourceConfigWithAutoentities(string configPath, IEnumerable<string> dataSourceFiles, int expectedEntities)
+    {
+        string fileContents = await File.ReadAllTextAsync(configPath);
+
+        // Parse the base JSON string
+        JObject baseJsonObject = JObject.Parse(fileContents);
+
+        // Create a new JArray to hold the values to be appended
+        JArray valuesToAppend = new(dataSourceFiles);
+
+        // Add or append the values to the base JSON
+        baseJsonObject.Add("data-source-files", valuesToAppend);
+
+        // Convert the modified JSON object back to a JSON string
+        string resultJson = baseJsonObject.ToString();
+
+        IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>() { { "dab-config.json", new MockFileData(resultJson) } });
+
+        FileSystemRuntimeConfigLoader loader = new(fs);
+
+        Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig), "Should successfully load config");
+        Assert.IsTrue(runtimeConfig.SqlDataSourceUsed, "Should have Sql data source");
+        Assert.AreEqual(expectedEntities, runtimeConfig.Entities.Entities.Count, "Number of entities is not what is expected.");
+    }
 }

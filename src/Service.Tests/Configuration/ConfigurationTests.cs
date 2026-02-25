@@ -1967,6 +1967,63 @@ type Moon {
         }
 
         /// <summary>
+        /// Validates that the JSON schema correctly validates entity cache configuration properties.
+        /// Tests both valid configurations (proper level values, ttl >= 1) and invalid configurations
+        /// (invalid level values, ttl = 0).
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("L1", 10, true, DisplayName = "Valid cache config with L1 and ttl=10")]
+        [DataRow("L1L2", 1, true, DisplayName = "Valid cache config with L1L2 and minimum ttl=1")]
+        [DataRow("L1L2", 3600, true, DisplayName = "Valid cache config with L1L2 and ttl=3600")]
+        [DataRow("L3", 10, false, DisplayName = "Invalid cache config with invalid level L3")]
+        [DataRow("L1", 0, false, DisplayName = "Invalid cache config with ttl=0 (below minimum)")]
+        [DataRow("L1L2", -1, false, DisplayName = "Invalid cache config with negative ttl")]
+        public void TestEntityCacheSchemaValidation(string level, int ttlSeconds, bool shouldBeValid)
+        {
+            string jsonData = $@"{{
+                ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+                ""data-source"": {{
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""Server=test;Database=test;""
+                }},
+                ""entities"": {{
+                    ""Book"": {{
+                        ""source"": {{
+                            ""object"": ""books"",
+                            ""type"": ""table""
+                        }},
+                        ""permissions"": [{{
+                            ""role"": ""anonymous"",
+                            ""actions"": [""read""]
+                        }}],
+                        ""cache"": {{
+                            ""enabled"": true,
+                            ""ttl-seconds"": {ttlSeconds},
+                            ""level"": ""{level}""
+                        }}
+                    }}
+                }}
+            }}";
+
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = jsonSchemaValidator.ValidateJsonConfigWithSchema(jsonSchema, jsonData);
+
+            if (shouldBeValid)
+            {
+                Assert.IsTrue(result.IsValid, $"Expected valid config but got errors: {result.ErrorMessage}");
+                Assert.IsTrue(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            }
+            else
+            {
+                Assert.IsFalse(result.IsValid, "Expected validation to fail but it passed");
+                Assert.IsFalse(EnumerableUtilities.IsNullOrEmpty(result.ValidationErrors));
+            }
+        }
+
+        /// <summary>
         /// This test tries to validate a runtime config file that is not compliant with the runtime config JSON schema.
         /// It validates no additional properties are defined in the config file.
         /// The config file used here contains `data-source-file` instead of `data-source-files`,
@@ -5334,8 +5391,8 @@ type Planet @model(name:""PlanetAlias"") {
             {
                 // Act
                 RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
-                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
-                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
 
                 string graphqlQuery = @"
                 {

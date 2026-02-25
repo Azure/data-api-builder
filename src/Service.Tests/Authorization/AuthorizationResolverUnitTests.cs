@@ -326,9 +326,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 }
             }
 
-            // Anonymous role's permissions are copied over for authenticated role only.
-            // Assert by checking for an arbitrary role.
-            Assert.IsFalse(authZResolver.AreRoleAndOperationDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
+            // With role inheritance, named roles inherit from authenticated (which inherited from anonymous).
+            // Assert that an arbitrary named role now effectively has the Create operation via inheritance.
+            Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(AuthorizationHelpers.TEST_ENTITY,
                 AuthorizationHelpers.TEST_ROLE, EntityActionOperation.Create));
 
             // Assert that the create operation has both anonymous, authenticated roles.
@@ -477,6 +477,93 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 AuthorizationHelpers.TEST_ENTITY,
                 "col1", EntityActionOperation.Update);
             CollectionAssert.AreEquivalent(expectedRolesForUpdateCol1, actualRolesForUpdateCol1.ToList());
+        }
+
+        /// <summary>
+        /// Validates role inheritance for named roles: when a named role is not configured for an entity
+        /// but 'authenticated' is configured (or inherited from 'anonymous'), the named role inherits
+        /// the permissions of 'authenticated'.
+        /// Inheritance chain: named-role → authenticated → anonymous → none.
+        /// </summary>
+        [TestMethod]
+        public void TestNamedRoleInheritsFromAuthenticatedRole()
+        {
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationResolver.ROLE_AUTHENTICATED,
+                operation: EntityActionOperation.Read);
+
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // Named role (TEST_ROLE = "Writer") is not configured but should inherit from 'authenticated'.
+            Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                EntityActionOperation.Read));
+
+            // Named role should NOT have operations that 'authenticated' does not have.
+            Assert.IsFalse(authZResolver.AreRoleAndOperationDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                EntityActionOperation.Create));
+        }
+
+        /// <summary>
+        /// Validates that when neither 'anonymous' nor 'authenticated' is configured for an entity,
+        /// a named role that is also not configured inherits nothing (rule 5).
+        /// </summary>
+        [TestMethod]
+        public void TestNamedRoleInheritsNothingWhenNoSystemRolesDefined()
+        {
+            const string CONFIGURED_NAMED_ROLE = "admin";
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: CONFIGURED_NAMED_ROLE,
+                operation: EntityActionOperation.Create);
+
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // The configured 'admin' role has Create permission.
+            Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                CONFIGURED_NAMED_ROLE,
+                EntityActionOperation.Create));
+
+            // TEST_ROLE ("Writer") is not configured and neither anonymous nor authenticated is configured,
+            // so it inherits nothing (rule 5).
+            Assert.IsFalse(authZResolver.AreRoleAndOperationDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                EntityActionOperation.Create));
+        }
+
+        /// <summary>
+        /// Validates that a named role inherits from 'authenticated', which in turn has already
+        /// inherited from 'anonymous' at setup time (when anonymous is configured but authenticated is not).
+        /// Inheritance chain: named-role → authenticated (inherited from anonymous).
+        /// </summary>
+        [TestMethod]
+        public void TestNamedRoleInheritsFromAnonymousViaAuthenticated()
+        {
+            // Only 'anonymous' is configured; 'authenticated' will inherit from it at setup time.
+            RuntimeConfig runtimeConfig = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: AuthorizationHelpers.TEST_ENTITY,
+                roleName: AuthorizationResolver.ROLE_ANONYMOUS,
+                operation: EntityActionOperation.Read);
+
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+
+            // Named role ("Writer") should inherit Read via: Writer → authenticated → anonymous.
+            Assert.IsTrue(authZResolver.AreRoleAndOperationDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                EntityActionOperation.Read));
+
+            // Named role should NOT have operations that anonymous does not have.
+            Assert.IsFalse(authZResolver.AreRoleAndOperationDefinedForEntity(
+                AuthorizationHelpers.TEST_ENTITY,
+                AuthorizationHelpers.TEST_ROLE,
+                EntityActionOperation.Create));
         }
 
         /// <summary>

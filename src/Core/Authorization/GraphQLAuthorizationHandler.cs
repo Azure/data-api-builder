@@ -134,10 +134,13 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
     /// The runtime's GraphQLSchemaBuilder will not add an @authorize directive without any roles defined,
     /// however, since the Roles property of HotChocolate's AuthorizeDirective object is nullable,
     /// handle the possible null gracefully.
+    /// Supports role inheritance: a named role not explicitly listed is permitted when 'authenticated'
+    /// is listed in the directive roles, implementing the chain: named-role → authenticated → anonymous.
     /// </summary>
     /// <param name="clientRoleHeader">Role defined in request HTTP Header, X-MS-API-ROLE</param>
     /// <param name="roles">Roles defined on the @authorize directive. Case insensitive.</param>
-    /// <returns>True when the authenticated user's explicitly defined role is present in the authorize directive role list. Otherwise, false.</returns>
+    /// <returns>True when the authenticated user's explicitly defined role is present in the authorize directive role list,
+    /// or when the role inherits permissions from 'authenticated'. Otherwise, false.</returns>
     private static bool IsInHeaderDesignatedRole(string clientRoleHeader, IReadOnlyList<string>? roles)
     {
         if (roles is null || roles.Count == 0)
@@ -146,6 +149,15 @@ public class GraphQLAuthorizationHandler : IAuthorizationHandler
         }
 
         if (roles.Any(role => role.Equals(clientRoleHeader, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Role inheritance: named roles (any role other than anonymous) inherit from 'authenticated'.
+        // If 'authenticated' is in the directive's roles and the requesting role is not 'anonymous',
+        // allow access because named roles inherit from 'authenticated'.
+        if (!clientRoleHeader.Equals(AuthorizationResolver.ROLE_ANONYMOUS, StringComparison.OrdinalIgnoreCase) &&
+            roles.Any(role => role.Equals(AuthorizationResolver.ROLE_AUTHENTICATED, StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }

@@ -73,6 +73,7 @@ namespace Cli.Commands
             RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
+            bool showEffectivePermissions = false,
             string? config = null)
             : base(config)
         {
@@ -137,6 +138,7 @@ namespace Cli.Commands
             FileSinkRollingInterval = fileSinkRollingInterval;
             FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
             FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
+            ShowEffectivePermissions = showEffectivePermissions;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -292,11 +294,27 @@ namespace Cli.Commands
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
         public long? FileSinkFileSizeLimitBytes { get; }
 
+        [Option("show-effective-permissions", Required = false, HelpText = "Display effective permissions for all entities, including inherited permissions. Entities are listed in alphabetical order.")]
+        public bool ShowEffectivePermissions { get; }
+
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
-            bool isSuccess = ConfigGenerator.TryConfigureSettings(this, loader, fileSystem);
-            if (isSuccess)
+
+            if (ShowEffectivePermissions)
+            {
+                bool isSuccess = ConfigGenerator.TryShowEffectivePermissions(this, loader, fileSystem);
+                if (!isSuccess)
+                {
+                    logger.LogError("Failed to display effective permissions.");
+                    return CliReturnCode.GENERAL_ERROR;
+                }
+
+                return CliReturnCode.SUCCESS;
+            }
+
+            bool configSuccess = ConfigGenerator.TryConfigureSettings(this, loader, fileSystem);
+            if (configSuccess)
             {
                 logger.LogInformation("Successfully updated runtime settings in the config file.");
                 return CliReturnCode.SUCCESS;

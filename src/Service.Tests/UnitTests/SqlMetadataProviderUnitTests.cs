@@ -129,8 +129,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
 
+            Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
+
             SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(
                 runtimeConfigProvider,
+                runtimeConfigValidator.Object,
                 queryManagerFactory.Object,
                 sqlMetadataLogger,
                 dataSourceName);
@@ -215,11 +218,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                 queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
+                Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
+
                 ISqlMetadataProvider sqlMetadataProvider = databaseType switch
                 {
-                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator.Object, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator.Object, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, runtimeConfigValidator.Object, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
                     _ => throw new ArgumentException($"Invalid database type: {databaseType}")
                 };
 
@@ -480,8 +485,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                 queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(mockQueryExecutor.Object);
 
+                Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
+
                 ISqlMetadataProvider sqlMetadataProvider = new MsSqlMetadataProvider(
                     runtimeConfigProvider,
+                    runtimeConfigValidator.Object,
                     queryManagerFactory.Object,
                     sqlMetadataLogger,
                     dataSourceName);
@@ -598,7 +606,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(new string[] { "dbo.%publish%" }, new string[] { }, "{schema}.{object}", new string[] { "publish" }, "")]
         [DataRow(new string[] { "dbo.%book%" }, new string[] { "dbo.%books%" }, "{schema}_{object}_exclude_books", new string[] { "book" }, "books")]
         [DataRow(new string[] { "dbo.%book%", "dbo.%publish%" }, new string[] { }, "{object}", new string[] { "book", "publish" }, "")]
-        [DataRow(new string[] { }, new string[] { "dbo.%book%" }, "{object}", new string[] { "" }, "book")]
+        [DataRow(new string[] { }, new string[] { "dbo.%book%", "foo.%", "bar.%", "%GQLmappings%" }, "{object}s", new string[] { "" }, "book")]
         public async Task CheckAutoentitiesQuery(string[] include, string[] exclude, string name, string[] includeObject, string excludeObject)
         {
             // Arrange

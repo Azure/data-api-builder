@@ -3680,9 +3680,10 @@ type Moon {
             });
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
+            Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
 
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, runtimeConfigValidator.Object, fileSystem));
             Assert.AreEqual("Circular reference detected in the provided GraphQL schema for entity 'Character'.", exception.Message);
             Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
@@ -3732,9 +3733,10 @@ type Planet @model(name:""PlanetAlias"") {
             });
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
+            Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
 
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, runtimeConfigValidator.Object, fileSystem));
             Assert.AreEqual("The entity 'Character' was not found in the runtime config.", exception.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
@@ -5436,14 +5438,17 @@ type Planet @model(name:""PlanetAlias"") {
 
         [TestCategory(TestCategory.MSSQL)]
         [DataTestMethod]
-        [DataRow("Publisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", DisplayName = "DAB Autoentities")]
-        public void ValidateAutoentityGenerationConflicts(string entityName, string singular, string plural, string path)
+        [DataRow("publishers", "uniqueSingularPublisher", "uniquePluralPublishers", "/unique/publisher", "Entity with name 'publishers' already exists. Cannot create new entity from autoentity pattern with definition-name 'PublisherAutoEntity'.", DisplayName = "Autoentities fail due to entity name")]
+        [DataRow("UniquePublisher", "publishers", "uniquePluralPublishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql singular type")]
+        [DataRow("UniquePublisher", "uniqueSingularPublisher", "publishers", "/unique/publisher", "Entity publishers generates queries/mutation that already exist", DisplayName = "Autoentities fail due to graphql plural type")]
+        [DataRow("UniquePublisher", "uniqueSingularPublisher", "uniquePluralPublishers", "/publishers", "The rest path: publishers specified for entity: publishers is already used by another entity.", DisplayName = "Autoentities fail due to rest path")]
+        public async Task ValidateAutoentityGenerationConflicts(string entityName, string singular, string plural, string path, string exceptionMessage)
         {
             // Arrange
             Entity publisherEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),
                 Fields: null,
-                Rest: null,
+                Rest: new(Path: path),
                 GraphQL: new(Singular: singular, Plural: plural),
                 Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
@@ -5459,14 +5464,13 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     "PublisherAutoEntity", new Autoentity(
                         Patterns: new AutoentityPatterns(
-                            Include: new[] { "%" },
+                            Include: new[] { "%publishers%" },
                             Exclude: null,
                             Name: null
                         ),
                         Template: new AutoentityTemplate(
                             Rest: new EntityRestOptions(
-                                Enabled: true,
-                                Path: path),
+                                Enabled: true),
                             GraphQL: new EntityGraphQLOptions(
                                 Singular: string.Empty,
                                 Plural: string.Empty,
@@ -5493,6 +5497,7 @@ type Planet @model(name:""PlanetAlias"") {
                     GraphQL: new(Enabled: true),
                     Mcp: new(Enabled: false),
                     Host: new(
+                        Mode: HostMode.Development,
                         Cors: null,
                         Authentication: new Config.ObjectModel.AuthenticationOptions(
                             Provider: nameof(EasyAuthType.StaticWebApps),
@@ -5506,15 +5511,28 @@ type Planet @model(name:""PlanetAlias"") {
 
             File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
 
-            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+            IFileSystem fileSystem = new FileSystem();
+            ;
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem)
+            {
+                RuntimeConfig = configuration
+            };
+
+            RuntimeConfigProvider configProvider = new(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+            RuntimeConfigValidator configValidator = new(configProvider, fileSystem, loggerValidator.Object);
+
+            LoggerFactory loggerFactory = new();
 
             try
             {
-                using TestServer server = new(Program.CreateWebHostBuilder(args));
+                await configValidator.ValidateEntitiesMetadata(configuration, loggerFactory);
+                
+                Assert.Fail("It is expected for DAB to fail due to entities not containing unique parameters.");
             }
             catch (Exception ex)
             {
-                string exceptionMessage = "holi";
                 Assert.AreEqual(exceptionMessage, ex.Message);
             }
         }

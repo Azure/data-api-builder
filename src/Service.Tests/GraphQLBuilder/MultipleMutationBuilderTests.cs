@@ -392,6 +392,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Mock<IFusionCache> cache = new();
             DabCacheService cacheService = new(cache: cache.Object, logger: null, httpContextAccessor: httpContextAccessor.Object);
 
+            // Setup mock runtime config validator
+            Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
+
             // Setup query manager factory.
             IAbstractQueryManagerFactory queryManagerfactory = new QueryManagerFactory(
                 runtimeConfigProvider: runtimeConfigProvider,
@@ -402,6 +405,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             // Setup metadata provider factory.
             IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(
                 runtimeConfigProvider: runtimeConfigProvider,
+                runtimeConfigValidator: runtimeConfigValidator.Object,
                 queryManagerFactory: queryManagerfactory,
                 logger: metadatProviderLogger.Object,
                 fileSystem: null,

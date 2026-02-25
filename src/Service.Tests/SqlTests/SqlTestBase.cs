@@ -279,6 +279,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
@@ -297,6 +298,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             runtimeConfigProvider,
+                            runtimeConfigValidator.Object,
                             _queryManagerFactory.Object,
                             _sqlMetadataLogger,
                             dataSourceName);
@@ -317,6 +319,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _sqlMetadataProvider =
                         new MsSqlMetadataProvider(
                             runtimeConfigProvider,
+                            runtimeConfigValidator.Object,
                             _queryManagerFactory.Object,
                             _sqlMetadataLogger,
                             dataSourceName);
@@ -337,6 +340,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
                              runtimeConfigProvider,
+                             runtimeConfigValidator.Object,
                              _queryManagerFactory.Object,
                              _sqlMetadataLogger,
                              dataSourceName);
@@ -357,6 +361,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     _sqlMetadataProvider =
                          new MsSqlMetadataProvider(
                              runtimeConfigProvider,
+                             runtimeConfigValidator.Object,
                              _queryManagerFactory.Object,
                              _sqlMetadataLogger,
                              dataSourceName);

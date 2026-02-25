@@ -96,20 +96,6 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                 }
 
                                 break;
-                            case "user-delegated-auth":
-                                if (reader.TokenType is not JsonTokenType.Null)
-                                {
-                                    try
-                                    {
-                                        userDelegatedAuth = JsonSerializer.Deserialize<UserDelegatedAuthOptions>(ref reader, options);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        throw new JsonException($"Error while deserializing DataSource user-delegated-auth: {e.Message}");
-                                    }
-                                }
-
-                                break;
                             case "options":
                                 if (reader.TokenType is not JsonTokenType.Null)
                                 {
@@ -152,6 +138,20 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                     }
 
                                     datasourceOptions = optionsDict;
+                                }
+
+                                break;
+                            case "user-delegated-auth":
+                                if (reader.TokenType != JsonTokenType.Null)
+                                {
+                                    try
+                                    {
+                                        userDelegatedAuth = JsonSerializer.Deserialize<UserDelegatedAuthOptions>(ref reader, options);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        throw new JsonException($"Error while deserializing DataSource user-delegated-auth: {e.Message}");
+                                    }
                                 }
 
                                 break;

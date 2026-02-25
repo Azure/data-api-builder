@@ -511,7 +511,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // The schema comparison should be case-insensitive
             // Use concrete DatabaseTable instances with differing casing so that
             // Moq relies on DatabaseTable.Equals for argument matching.
-            DatabaseTable expectedLinkingTable = new(expectedSchema, expectedTable);
+            // Linking table uses lowercase to ensure case-insensitive comparison is working.
+            DatabaseTable expectedLinkingTable = new(expectedSchema.ToLowerInvariant(), expectedTable.ToLowerInvariant());
             DatabaseTable expectedSource1Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE1");
             DatabaseTable expectedSource2Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE2");
 
@@ -529,6 +530,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Validation should pass with custom schema
             configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object);
+
+            // Verify that VerifyForeignKeyExistsInDB is never called with 'dbo' schema,
+            // guarding against the original dbo-fallback regression.
+            _sqlMetadataProvider.Verify(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, "dbo", StringComparison.OrdinalIgnoreCase)),
+                    It.IsAny<DatabaseTable>()
+                ), Times.Never);
+
+            _sqlMetadataProvider.Verify(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    It.IsAny<DatabaseTable>(),
+                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, "dbo", StringComparison.OrdinalIgnoreCase))
+                ), Times.Never);
         }
 
         /// <summary>

@@ -273,20 +273,20 @@ public record RuntimeConfig
     /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
     public RuntimeConfig(
-        string? schema,
-        DataSource dataSource,
-        RuntimeEntities entities,
-        RuntimeAutoentities? autoentities = null,
-        RuntimeOptions? runtime = null,
-        DataSourceFiles? dataSourceFiles = null,
-        AzureKeyVaultOptions? azureKeyVault = null)
+        string? Schema,
+        DataSource DataSource,
+        RuntimeEntities Entities,
+        RuntimeAutoentities? Autoentities = null,
+        RuntimeOptions? Runtime = null,
+        DataSourceFiles? DataSourceFiles = null,
+        AzureKeyVaultOptions? AzureKeyVault = null)
     {
-        this.Schema = schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
-        this.DataSource = dataSource;
-        this.Runtime = runtime;
-        this.AzureKeyVault = azureKeyVault;
-        this.Entities = entities ?? new RuntimeEntities(new Dictionary<string, Entity>());
-        this.Autoentities = autoentities ?? new RuntimeAutoentities(new Dictionary<string, Autoentity>());
+        this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
+        this.DataSource = DataSource;
+        this.Runtime = Runtime;
+        this.AzureKeyVault = AzureKeyVault;
+        this.Entities = Entities ?? new RuntimeEntities(new Dictionary<string, Entity>());
+        this.Autoentities = Autoentities ?? new RuntimeAutoentities(new Dictionary<string, Autoentity>());
         this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         if (this.DataSource is null)
@@ -304,8 +304,8 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        if (entities is null && this.Entities.Entities.Count == 0 &&
-            autoentities is null && this.Autoentities.Autoentities.Count == 0)
+        if (Entities is null && this.Entities.Entities.Count == 0 &&
+            Autoentities is null && this.Autoentities.Autoentities.Count == 0)
         {
             throw new DataApiBuilderException(
                 message: "Configuration file should contain either at least the entities or autoentities property",
@@ -313,35 +313,35 @@ public record RuntimeConfig
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        if (entities is not null)
+        if (Entities is not null)
         {
-            foreach (KeyValuePair<string, Entity> entity in entities)
+            foreach (KeyValuePair<string, Entity> entity in Entities)
             {
                 _entityNameToDataSourceName.TryAdd(entity.Key, this.DefaultDataSourceName);
             }
         }
 
-        if (autoentities is not null)
+        if (Autoentities is not null)
         {
-            foreach (KeyValuePair<string, Autoentity> autoentity in autoentities)
+            foreach (KeyValuePair<string, Autoentity> autoentity in Autoentities)
             {
                 _autoentityNameToDataSourceName.TryAdd(autoentity.Key, this.DefaultDataSourceName);
             }
         }
 
         // Process data source and entities information for each database in multiple database scenario.
-        this.DataSourceFiles = dataSourceFiles;
+        this.DataSourceFiles = DataSourceFiles;
 
-        if (dataSourceFiles is not null && dataSourceFiles.SourceFiles is not null)
+        if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>>? allEntities = entities?.AsEnumerable();
-            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = autoentities?.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>>? allEntities = Entities?.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Autoentity>>? allAutoentities = Autoentities?.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             // This loader is not used as a part of hot reload and therefore does not need a handler.
             FileSystemRuntimeConfigLoader loader = new(fileSystem, handler: null);
 
-            foreach (string dataSourceFile in dataSourceFiles.SourceFiles)
+            foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
                 // Use default replacement settings for environment variable replacement
                 DeserializationVariableReplacementSettings replacementSettings = new(azureKeyVaultOptions: null, doReplaceEnvVar: true, doReplaceAkvVar: true);

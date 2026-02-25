@@ -398,6 +398,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindTestWithFilterContainingSpecialCharacters",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationTableName + @"
+                        WHERE title = 'SOME%CONN'
+                        ORDER BY id asc
+                    ) AS subq
+                "
+            },
+            {
                 "FindTestWithFilterQueryStringBoolResultFilter",
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data

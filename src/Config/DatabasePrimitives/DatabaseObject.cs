@@ -50,8 +50,8 @@ public abstract class DatabaseObject
     public override int GetHashCode()
     {
         return HashCode.Combine(
-            SchemaName?.ToUpperInvariant(),
-            Name?.ToUpperInvariant());
+            SchemaName is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(SchemaName),
+            Name is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(Name));
     }
 
     /// <summary>

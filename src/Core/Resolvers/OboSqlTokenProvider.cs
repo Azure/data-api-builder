@@ -1,15 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Collections.Concurrent;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
+using ZiggyCreatures.Caching.Fusion;
 using AuthenticationOptions = Azure.DataApiBuilder.Config.ObjectModel.AuthenticationOptions;
 
 namespace Azure.DataApiBuilder.Core.Resolvers;
@@ -17,53 +16,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers;
 /// <summary>
 /// Provides SQL access tokens acquired using On-Behalf-Of (OBO) flow
 /// for user-delegated authentication against Microsoft Entra ID.
-/// Handles identity extraction, cache key construction, token caching,
-/// and early refresh of tokens before expiration.
+/// Uses FusionCache (L1 in-memory only) for token caching with automatic
+/// expiration and eager refresh.
 /// </summary>
 public sealed class OboSqlTokenProvider : IOboTokenProvider
 {
     private readonly IMsalClientWrapper _msalClient;
     private readonly ILogger<OboSqlTokenProvider> _logger;
-    private readonly ConcurrentDictionary<string, CachedToken> _tokenCache = new();
+    private readonly IFusionCache _cache;
 
     /// <summary>
-    /// Minimum buffer before token expiry to trigger a refresh.
-    /// Ensures tokens are refreshed before they expire during active operations.
+    /// Cache key prefix for OBO tokens to isolate from other cached data.
+    /// </summary>
+    private const string CACHE_KEY_PREFIX = "obo:";
+
+    /// <summary>
+    /// Eager refresh threshold as a fraction of TTL.
+    /// At 0.85, a token cached for 60 minutes will be eagerly refreshed after 51 minutes.
+    /// </summary>
+    private const float EAGER_REFRESH_THRESHOLD = 0.85f;
+
+    /// <summary>
+    /// Minimum buffer before token expiry to trigger a refresh (in minutes).
     /// </summary>
     private const int MIN_EARLY_REFRESH_MINUTES = 5;
-
-    /// <summary>
-    /// Number of cache operations before triggering cleanup of expired tokens.
-    /// </summary>
-    private const int CLEANUP_INTERVAL = 100;
-
-    /// <summary>
-    /// Counter for cache operations to trigger periodic cleanup.
-    /// </summary>
-    private int _cacheOperationCount;
-
-    /// <summary>
-    /// Maximum duration to cache tokens before forcing a refresh.
-    /// </summary>
-    private readonly TimeSpan _tokenCacheDuration;
 
     /// <summary>
     /// Initializes a new instance of OboSqlTokenProvider.
     /// </summary>
     /// <param name="msalClient">MSAL client wrapper for token acquisition.</param>
     /// <param name="logger">Logger instance.</param>
-    /// <param name="tokenCacheDurationMinutes">
-    /// Maximum duration in minutes to cache tokens before forcing a refresh.
-    /// Defaults to <see cref="UserDelegatedAuthOptions.DEFAULT_TOKEN_CACHE_DURATION_MINUTES"/>.
-    /// </param>
+    /// <param name="cache">FusionCache instance for token caching (L1 in-memory only).</param>
     public OboSqlTokenProvider(
         IMsalClientWrapper msalClient,
         ILogger<OboSqlTokenProvider> logger,
-        int tokenCacheDurationMinutes = UserDelegatedAuthOptions.DEFAULT_TOKEN_CACHE_DURATION_MINUTES)
+        IFusionCache cache)
     {
         _msalClient = msalClient ?? throw new ArgumentNullException(nameof(msalClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _tokenCacheDuration = TimeSpan.FromMinutes(tokenCacheDurationMinutes);
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     /// <inheritdoc />
@@ -109,44 +100,65 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
         string authContextHash = ComputeAuthorizationContextHash(principal);
         string cacheKey = BuildCacheKey(subjectId, tenantId, authContextHash);
 
-        // Check cache for valid token
-        // Refresh if: token older than cache duration OR token expires within early refresh buffer
-        if (_tokenCache.TryGetValue(cacheKey, out CachedToken? cached) && !ShouldRefresh(cached))
-        {
-            _logger.LogDebug("OBO token cache hit for subject {SubjectId}.", subjectId);
-            return cached.AccessToken;
-        }
-
-        // Acquire new token via OBO
-        // Note: The incoming JWT assertion has already been validated by ASP.NET Core's JWT Bearer
-        // authentication middleware (issuer, audience, expiry, signature). MSAL will also validate
-        // the assertion as part of the OBO flow with Azure AD - invalid tokens will result in
-        // MsalServiceException which we catch and convert to DataApiBuilderException below.
         try
         {
             string[] scopes = [$"{databaseAudience.TrimEnd('/')}/.default"];
 
-            AuthenticationResult result = await _msalClient.AcquireTokenOnBehalfOfAsync(
-                scopes,
-                incomingJwtAssertion,
-                cancellationToken);
+            // Track whether we had a cache hit for logging
+            bool wasCacheMiss = false;
 
-            CachedToken newCachedToken = new(
-                AccessToken: result.AccessToken,
-                ExpiresOn: result.ExpiresOn,
-                CachedAt: DateTimeOffset.UtcNow);
+            // Use FusionCache GetOrSetAsync with factory pattern
+            // The factory is only called on cache miss
+            string? accessToken = await _cache.GetOrSetAsync<string>(
+                key: cacheKey,
+                factory: async (ctx, ct) =>
+                {
+                    wasCacheMiss = true;
+                    _logger.LogInformation(
+                        "OBO token cache MISS for subject {SubjectId} (tenant: {TenantId}). Acquiring new token from Azure AD.",
+                        subjectId,
+                        tenantId);
 
-            _tokenCache[cacheKey] = newCachedToken;
+                    AuthenticationResult result = await _msalClient.AcquireTokenOnBehalfOfAsync(
+                        scopes,
+                        incomingJwtAssertion,
+                        ct);
 
-            // Periodically clean up expired tokens to prevent unbounded memory growth
-            CleanupExpiredTokensIfNeeded();
+                    // Calculate TTL based on token expiry with early refresh buffer
+                    TimeSpan tokenLifetime = result.ExpiresOn - DateTimeOffset.UtcNow;
+                    TimeSpan cacheDuration = tokenLifetime - TimeSpan.FromMinutes(MIN_EARLY_REFRESH_MINUTES);
 
-            _logger.LogDebug(
-                "OBO token acquired for subject {SubjectId}, expires at {ExpiresOn}.",
-                subjectId,
-                result.ExpiresOn);
+                    // Ensure minimum cache duration of 1 minute
+                    if (cacheDuration < TimeSpan.FromMinutes(1))
+                    {
+                        cacheDuration = TimeSpan.FromMinutes(1);
+                    }
 
-            return result.AccessToken;
+                    // Set the cache duration based on actual token expiry
+                    ctx.Options.SetDuration(cacheDuration);
+
+                    // Enable eager refresh - token will be refreshed in background at threshold
+                    ctx.Options.SetEagerRefresh(EAGER_REFRESH_THRESHOLD);
+
+                    // Ensure tokens stay in L1 only (no distributed cache for security)
+                    ctx.Options.SetSkipDistributedCache(true, true);
+
+                    _logger.LogInformation(
+                        "OBO token ACQUIRED for subject {SubjectId}. Expires: {ExpiresOn}, Cache TTL: {CacheDuration}.",
+                        subjectId,
+                        result.ExpiresOn,
+                        cacheDuration);
+
+                    return result.AccessToken;
+                },
+                token: cancellationToken);
+
+            if (!string.IsNullOrEmpty(accessToken) && !wasCacheMiss)
+            {
+                _logger.LogInformation("OBO token cache HIT for subject {SubjectId}.", subjectId);
+            }
+
+            return accessToken;
         }
         catch (MsalException ex)
         {
@@ -181,7 +193,7 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
 
     /// <summary>
     /// Builds a canonical representation of permission-affecting claims (roles and scopes)
-    /// and computes a SHA-256 hash for use in the cache key.
+    /// and computes a SHA-512 hash for use in the cache key.
     /// </summary>
     private static string ComputeAuthorizationContextHash(ClaimsPrincipal principal)
     {
@@ -205,95 +217,30 @@ public sealed class OboSqlTokenProvider : IOboTokenProvider
 
         if (values.Count == 0)
         {
-            return ComputeSha256Hex(string.Empty);
+            return ComputeSha512Hex(string.Empty);
         }
 
         values.Sort(StringComparer.OrdinalIgnoreCase);
         string canonical = string.Join("|", values);
-        return ComputeSha256Hex(canonical);
+        return ComputeSha512Hex(canonical);
     }
 
     /// <summary>
-    /// Computes SHA-256 hash and returns as hex string.
+    /// Computes SHA-512 hash and returns as hex string.
     /// </summary>
-    private static string ComputeSha256Hex(string input)
+    private static string ComputeSha512Hex(string input)
     {
         byte[] data = Encoding.UTF8.GetBytes(input ?? string.Empty);
-        byte[] hash = SHA256.HashData(data);
+        byte[] hash = SHA512.HashData(data);
         return Convert.ToHexString(hash);
     }
 
     /// <summary>
     /// Builds the cache key from subject, tenant, and authorization context hash.
-    /// Format: subjectId + tenantId + authContextHash (strict concatenation, no separators).
+    /// Format: obo:subjectId+tenantId+authContextHash
     /// </summary>
     private static string BuildCacheKey(string subjectId, string tenantId, string authContextHash)
     {
-        return $"{subjectId}{tenantId}{authContextHash}";
+        return $"{CACHE_KEY_PREFIX}{subjectId}{tenantId}{authContextHash}";
     }
-
-    /// <summary>
-    /// Determines if a cached token should be refreshed.
-    /// With a cache duration of N minutes and early refresh of M minutes,
-    /// the token is refreshed at (N - M) minutes after caching.
-    /// This ensures proactive refresh before the cache duration expires.
-    /// </summary>
-    private bool ShouldRefresh(CachedToken cached)
-    {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-
-        // Refresh at: cachedAt + (cacheDuration - earlyRefreshBuffer)
-        // Example: 45 min cache, 5 min buffer → refresh after 40 min
-        TimeSpan effectiveCacheDuration = _tokenCacheDuration - TimeSpan.FromMinutes(MIN_EARLY_REFRESH_MINUTES);
-        if (now > cached.CachedAt + effectiveCacheDuration)
-        {
-            return true;
-        }
-
-        // Also refresh if token is about to expire (safety check)
-        if (now > cached.ExpiresOn.AddMinutes(-MIN_EARLY_REFRESH_MINUTES))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Periodically removes expired tokens from the cache to prevent unbounded memory growth.
-    /// Cleanup runs every CLEANUP_INTERVAL cache operations to amortize the cost.
-    /// </summary>
-    private void CleanupExpiredTokensIfNeeded()
-    {
-        int count = Interlocked.Increment(ref _cacheOperationCount);
-        if (count % CLEANUP_INTERVAL != 0)
-        {
-            return;
-        }
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        int removedCount = 0;
-
-        foreach (KeyValuePair<string, CachedToken> entry in _tokenCache)
-        {
-            // Remove tokens that have expired
-            if (now > entry.Value.ExpiresOn)
-            {
-                if (_tokenCache.TryRemove(entry.Key, out _))
-                {
-                    removedCount++;
-                }
-            }
-        }
-
-        if (removedCount > 0)
-        {
-            _logger.LogDebug("OBO token cache cleanup: removed {RemovedCount} expired tokens.", removedCount);
-        }
-    }
-
-    /// <summary>
-    /// Represents a cached OBO access token with its expiration and cache timestamps.
-    /// </summary>
-    private sealed record CachedToken(string AccessToken, DateTimeOffset ExpiresOn, DateTimeOffset CachedAt);
 }

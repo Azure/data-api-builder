@@ -264,7 +264,8 @@ namespace Azure.DataApiBuilder.Service
             // MSAL client to acquire tokens for different resource servers.
             if (IsOboConfigured())
             {
-                services.AddSingleton<IOboTokenProvider>(serviceProvider =>
+                // Register IMsalClientWrapper for dependency injection
+                services.AddSingleton<IMsalClientWrapper>(serviceProvider =>
                 {
                     string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
                     string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
@@ -278,10 +279,11 @@ namespace Azure.DataApiBuilder.Service
                         .WithClientSecret(clientSecret)
                         .Build();
 
-                    IMsalClientWrapper msalWrapper = new MsalClientWrapper(msalClient);
-                    ILogger<OboSqlTokenProvider> oboLogger = serviceProvider.GetRequiredService<ILogger<OboSqlTokenProvider>>();
-                    return new OboSqlTokenProvider(msalWrapper, oboLogger);
+                    return new MsalClientWrapper(msalClient);
                 });
+
+                // Register OboSqlTokenProvider with dependencies from DI
+                services.AddSingleton<IOboTokenProvider, OboSqlTokenProvider>();
             }
 
             services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
@@ -1300,8 +1302,7 @@ namespace Azure.DataApiBuilder.Service
             foreach (DataSource ds in config.ListAllDataSources())
             {
                 if (ds.IsUserDelegatedAuthEnabled &&
-                    ds.UserDelegatedAuth is not null &&
-                    !string.IsNullOrEmpty(ds.UserDelegatedAuth.DatabaseAudience))
+                    !string.IsNullOrEmpty(ds.UserDelegatedAuth!.DatabaseAudience))
                 {
                     return true;
                 }

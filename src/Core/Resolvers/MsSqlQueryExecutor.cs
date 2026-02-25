@@ -173,9 +173,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
 
                 // Track user-delegated authentication settings
-                if (dataSource.IsUserDelegatedAuthEnabled && dataSource.UserDelegatedAuth is not null)
+                if (dataSource.IsUserDelegatedAuthEnabled)
                 {
-                    _dataSourceUserDelegatedAuth[dataSourceName] = dataSource.UserDelegatedAuth;
+                    _dataSourceUserDelegatedAuth[dataSourceName] = dataSource.UserDelegatedAuth!;
 
                     // Disable connection pooling for OBO connections since each connection
                     // uses a user-specific token and cannot be shared across users
@@ -211,17 +211,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (isInRequestContext)
                 {
-                    // Validate database-audience is configured before attempting OBO
-                    if (string.IsNullOrWhiteSpace(userDelegatedAuth.DatabaseAudience))
-                    {
-                        throw new DataApiBuilderException(
-                            message: DataApiBuilderException.OBO_MISSING_DATABASE_AUDIENCE,
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                    }
-
                     // At runtime with an HTTP request - attempt OBO flow
-                    string? oboToken = await GetOboAccessTokenAsync(userDelegatedAuth.DatabaseAudience);
+                    // Note: DatabaseAudience is validated at startup by RuntimeConfigValidator
+                    string? oboToken = await GetOboAccessTokenAsync(userDelegatedAuth.DatabaseAudience!);
                     if (oboToken is not null)
                     {
                         sqlConn.AccessToken = oboToken;
@@ -236,9 +228,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
                 }
 
-                // At startup/metadata phase (no HTTP context) - fall through to use Managed Identity
-                // This allows DAB to read schema metadata at startup, while OBO is used for actual requests
-                QueryExecutorLogger.LogDebug("No HTTP context available - using Managed Identity for startup/metadata operations.");
+                // At startup/metadata phase (no HTTP context) - fall through to use the configured
+                // connection string authentication (e.g., Managed Identity, SQL credentials, etc.)
+                // This allows DAB to read schema metadata at startup, while OBO is used for actual requests.
+                QueryExecutorLogger.LogDebug("No HTTP context available - using configured connection string authentication for startup/metadata operations.");
             }
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);

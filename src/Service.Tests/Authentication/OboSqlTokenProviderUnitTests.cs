@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using ZiggyCreatures.Caching.Fusion;
 using AuthenticationOptions = Azure.DataApiBuilder.Config.ObjectModel.AuthenticationOptions;
 
 namespace Azure.DataApiBuilder.Service.Tests.Authentication
@@ -33,6 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
         private Mock<IMsalClientWrapper> _msalMock;
         private Mock<ILogger<OboSqlTokenProvider>> _loggerMock;
+        private IFusionCache _cache;
         private OboSqlTokenProvider _provider;
 
         /// <summary>
@@ -43,7 +45,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         {
             _msalMock = new Mock<IMsalClientWrapper>();
             _loggerMock = new Mock<ILogger<OboSqlTokenProvider>>();
-            _provider = new OboSqlTokenProvider(_msalMock.Object, _loggerMock.Object);
+            _cache = CreateFusionCache();
+            _provider = new OboSqlTokenProvider(_msalMock.Object, _loggerMock.Object, _cache);
+        }
+
+        /// <summary>
+        /// Cleanup FusionCache after each test.
+        /// </summary>
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            (_cache as IDisposable)?.Dispose();
         }
 
         #region Input Validation Tests
@@ -183,23 +195,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
 
         /// <summary>
         /// Verifies that tokens are cached and reused for identical requests.
+        /// FusionCache handles caching - factory should only be called once.
         /// </summary>
         [TestMethod]
         public async Task GetAccessTokenOnBehalfOfAsync_CachesToken_AndReturnsCachedOnSecondCall()
         {
             // Arrange
-            CallCounter counter = new();
-            OboSqlTokenProvider provider = CreateProviderWithCallCounter(counter);
+            int msalCallCount = 0;
+            _msalMock
+                .Setup(m => m.AcquireTokenOnBehalfOfAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Callback(() => msalCallCount++)
+                .ReturnsAsync(CreateAuthenticationResult(TEST_ACCESS_TOKEN, DateTimeOffset.UtcNow.AddMinutes(30)));
+
             ClaimsPrincipal principal = CreatePrincipalWithOid(TEST_SUBJECT_OID, TEST_TENANT_ID);
 
             // Act
-            string result1 = await provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
-            string result2 = await provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
+            string result1 = await _provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
+            string result2 = await _provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
 
             // Assert
             Assert.IsNotNull(result1);
             Assert.AreEqual(result1, result2);
-            Assert.AreEqual(1, counter.Count, "OBO should only be called once due to caching.");
+            Assert.AreEqual(1, msalCallCount, "MSAL should only be called once due to FusionCache caching.");
         }
 
         /// <summary>
@@ -209,47 +226,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         public async Task GetAccessTokenOnBehalfOfAsync_DifferentRoles_ProducesDifferentCacheKeys()
         {
             // Arrange
-            CallCounter counter = new();
-            OboSqlTokenProvider provider = CreateProviderWithCallCounter(counter, useUniqueTokens: true);
+            int msalCallCount = 0;
+            _msalMock
+                .Setup(m => m.AcquireTokenOnBehalfOfAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Callback(() => msalCallCount++)
+                .ReturnsAsync(() => CreateAuthenticationResult($"token-{msalCallCount}", DateTimeOffset.UtcNow.AddMinutes(30)));
 
             ClaimsPrincipal principalReader = CreatePrincipalWithRoles(TEST_SUBJECT_OID, TEST_TENANT_ID, "reader");
             ClaimsPrincipal principalWriter = CreatePrincipalWithRoles(TEST_SUBJECT_OID, TEST_TENANT_ID, "writer");
 
             // Act
-            string resultReader = await provider.GetAccessTokenOnBehalfOfAsync(principalReader, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
-            string resultWriter = await provider.GetAccessTokenOnBehalfOfAsync(principalWriter, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
+            string resultReader = await _provider.GetAccessTokenOnBehalfOfAsync(principalReader, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
+            string resultWriter = await _provider.GetAccessTokenOnBehalfOfAsync(principalWriter, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
 
             // Assert
             Assert.IsNotNull(resultReader);
             Assert.IsNotNull(resultWriter);
-            Assert.AreEqual(2, counter.Count, "Different roles should produce different cache keys.");
-        }
-
-        /// <summary>
-        /// Verifies token refresh behavior based on cache duration and token expiry.
-        /// </summary>
-        [DataTestMethod]
-        [DataRow(1, 60, 2, DisplayName = "Short cache duration forces refresh")]
-        [DataRow(60, 3, 2, DisplayName = "Near-expiry token forces refresh")]
-        [DataRow(45, 60, 1, DisplayName = "Valid cache and token uses cached value")]
-        public async Task GetAccessTokenOnBehalfOfAsync_TokenRefresh_BasedOnCacheAndExpiry(
-            int cacheDurationMinutes, int tokenExpiryMinutes, int expectedOboCallCount)
-        {
-            // Arrange
-            CallCounter counter = new();
-            OboSqlTokenProvider provider = CreateProviderWithCallCounter(
-                counter,
-                useUniqueTokens: true,
-                tokenExpiryMinutes: tokenExpiryMinutes,
-                cacheDurationMinutes: cacheDurationMinutes);
-            ClaimsPrincipal principal = CreatePrincipalWithOid(TEST_SUBJECT_OID, TEST_TENANT_ID);
-
-            // Act - make two calls
-            await provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
-            await provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, TEST_DATABASE_AUDIENCE);
-
-            // Assert
-            Assert.AreEqual(expectedOboCallCount, counter.Count);
+            Assert.AreNotEqual(resultReader, resultWriter, "Different roles should produce different tokens.");
+            Assert.AreEqual(2, msalCallCount, "Different roles should produce different cache keys, requiring two MSAL calls.");
         }
 
         #endregion
@@ -267,18 +261,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         {
             // Arrange
             string capturedScope = null;
-            Mock<IMsalClientWrapper> msalMock = new();
-
-            msalMock
+            _msalMock
                 .Setup(m => m.AcquireTokenOnBehalfOfAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Callback<string[], string, CancellationToken>((scopes, _, _) => capturedScope = scopes[0])
                 .ReturnsAsync(CreateAuthenticationResult(TEST_ACCESS_TOKEN, DateTimeOffset.UtcNow.AddMinutes(30)));
 
-            OboSqlTokenProvider provider = new(msalMock.Object, _loggerMock.Object);
             ClaimsPrincipal principal = CreatePrincipalWithOid(TEST_SUBJECT_OID, TEST_TENANT_ID);
 
             // Act
-            await provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, databaseAudience);
+            await _provider.GetAccessTokenOnBehalfOfAsync(principal, TEST_INCOMING_JWT, databaseAudience);
 
             // Assert
             Assert.AreEqual(expectedScope, capturedScope);
@@ -314,11 +305,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
         #region Helper Methods
 
         /// <summary>
-        /// Simple counter wrapper to allow incrementing inside lambdas.
+        /// Creates an in-memory FusionCache instance for testing.
         /// </summary>
-        private class CallCounter
+        private static IFusionCache CreateFusionCache()
         {
-            public int Count { get; set; }
+            return new FusionCache(new FusionCacheOptions
+            {
+                DefaultEntryOptions = new FusionCacheEntryOptions
+                {
+                    Duration = TimeSpan.FromMinutes(30)
+                }
+            });
         }
 
         /// <summary>
@@ -329,29 +326,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication
             _msalMock
                 .Setup(m => m.AcquireTokenOnBehalfOfAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(CreateAuthenticationResult(TEST_ACCESS_TOKEN, DateTimeOffset.UtcNow.AddMinutes(tokenExpiryMinutes)));
-        }
-
-        /// <summary>
-        /// Creates a provider with a mock that tracks call count for verifying caching behavior.
-        /// </summary>
-        private OboSqlTokenProvider CreateProviderWithCallCounter(
-            CallCounter counter,
-            bool useUniqueTokens = false,
-            int tokenExpiryMinutes = 30,
-            int cacheDurationMinutes = 45)
-        {
-            Mock<IMsalClientWrapper> msalMock = new();
-
-            msalMock
-                .Setup(m => m.AcquireTokenOnBehalfOfAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Callback(() => counter.Count++)
-                .Returns<string[], string, CancellationToken>((_, _, _) =>
-                {
-                    string token = useUniqueTokens ? $"token-{counter.Count}" : TEST_ACCESS_TOKEN;
-                    return Task.FromResult(CreateAuthenticationResult(token, DateTimeOffset.UtcNow.AddMinutes(tokenExpiryMinutes)));
-                });
-
-            return new OboSqlTokenProvider(msalMock.Object, _loggerMock.Object, tokenCacheDurationMinutes: cacheDurationMinutes);
         }
 
         /// <summary>

@@ -2359,54 +2359,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that user-delegated-auth without database-audience throws an error.
-        /// </summary>
-        [TestMethod]
-        public void ValidateUserDelegatedAuth_MissingDatabaseAudience_ThrowsError()
-        {
-            // Arrange
-            DataSource dataSource = new(
-                DatabaseType: DatabaseType.MSSQL,
-                ConnectionString: "Server=test;Database=test;",
-                Options: null)
-            {
-                UserDelegatedAuth = new UserDelegatedAuthOptions(
-                    Enabled: true,
-                    Provider: "EntraId",
-                    DatabaseAudience: null)  // Missing audience
-            };
-
-            RuntimeConfig runtimeConfig = new(
-                Schema: "UnitTestSchema",
-                DataSource: dataSource,
-                Runtime: new(
-                    Rest: new(),
-                    GraphQL: new(),
-                    Mcp: new(),
-                    Host: new(Cors: null, Authentication: null),
-                    Cache: new(Enabled: false)
-                ),
-                Entities: new(new Dictionary<string, Entity>()));
-
-            MockFileSystem fileSystem = new();
-            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-
-            // Act & Assert
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object));
-
-            Assert.AreEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG, ex.Message);
-            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Test to validate that user-delegated-auth with empty database-audience throws an error.
+        /// Test to validate that user-delegated-auth with missing, empty, or whitespace database-audience throws an error.
         /// </summary>
         [DataTestMethod]
+        [DataRow(null, DisplayName = "Null audience should fail")]
         [DataRow("", DisplayName = "Empty string audience should fail")]
         [DataRow("   ", DisplayName = "Whitespace audience should fail")]
-        public void ValidateUserDelegatedAuth_EmptyDatabaseAudience_ThrowsError(string audience)
+        public void ValidateUserDelegatedAuth_InvalidDatabaseAudience_ThrowsError(string audience)
         {
             // Arrange
             DataSource dataSource = new(
@@ -2442,62 +2401,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-        }
-
-        /// <summary>
-        /// Test to validate that user-delegated-auth with caching enabled throws an error.
-        /// </summary>
-        [TestMethod]
-        public void ValidateUserDelegatedAuth_CachingEnabled_ThrowsError()
-        {
-            // Arrange - Set environment variables for Azure AD credentials
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
-
-            try
-            {
-                DataSource dataSource = new(
-                    DatabaseType: DatabaseType.MSSQL,
-                    ConnectionString: "Server=test;Database=test;",
-                    Options: null)
-                {
-                    UserDelegatedAuth = new UserDelegatedAuthOptions(
-                        Enabled: true,
-                        Provider: "EntraId",
-                        DatabaseAudience: "https://database.windows.net/")
-                };
-
-                RuntimeConfig runtimeConfig = new(
-                    Schema: "UnitTestSchema",
-                    DataSource: dataSource,
-                    Runtime: new(
-                        Rest: new(),
-                        GraphQL: new(),
-                        Mcp: new(),
-                        Host: new(Cors: null, Authentication: null),
-                        Cache: new(Enabled: true)  // Caching enabled - should fail
-                    ),
-                    Entities: new(new Dictionary<string, Entity>()));
-
-                MockFileSystem fileSystem = new();
-                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-
-                // Act & Assert
-                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
-                    () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object));
-
-                Assert.AreEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_CACHING_ERR_MSG, ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            finally
-            {
-                // Clean up environment variables
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
-            }
         }
 
         /// <summary>
@@ -2708,63 +2611,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             finally
             {
                 // Clean up environment variables
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
-                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
-            }
-        }
-
-        /// <summary>
-        /// Test to validate that running in Azure (simulated by IDENTITY_ENDPOINT) passes validation
-        /// when all required OBO environment variables are provided.
-        /// Note: OBO always requires DAB_OBO_CLIENT_SECRET even in Azure environments because
-        /// OBO uses a confidential client application (App Registration with secret), not Managed Identity.
-        /// </summary>
-        [TestMethod]
-        public void ValidateUserDelegatedAuth_AzureEnvironment_PassesValidation()
-        {
-            // Arrange - Simulate Azure environment (IDENTITY_ENDPOINT is set in Azure Container Apps/App Service)
-            Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", "http://localhost:42356/msi/token");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
-            // OBO requires client secret even in Azure - it uses App Registration, not Managed Identity
-            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
-
-            try
-            {
-                DataSource dataSource = new(
-                    DatabaseType: DatabaseType.MSSQL,
-                    ConnectionString: "Server=test;Database=test;",
-                    Options: null)
-                {
-                    UserDelegatedAuth = new UserDelegatedAuthOptions(
-                        Enabled: true,
-                        Provider: "EntraId",
-                        DatabaseAudience: "https://database.windows.net/")
-                };
-
-                RuntimeConfig runtimeConfig = new(
-                    Schema: "UnitTestSchema",
-                    DataSource: dataSource,
-                    Runtime: new(
-                        Rest: new(),
-                        GraphQL: new(),
-                        Mcp: new(),
-                        Host: new(Cors: null, Authentication: null),
-                        Cache: new(Enabled: false)
-                    ),
-                    Entities: new(new Dictionary<string, Entity>()));
-
-                MockFileSystem fileSystem = new();
-                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-
-                // Act & Assert - validation should succeed and not throw when all env vars are set
-                configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
-            }
-            finally
-            {
-                // Clean up environment variables
-                Environment.SetEnvironmentVariable("IDENTITY_ENDPOINT", null);
                 Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
                 Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
                 Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);

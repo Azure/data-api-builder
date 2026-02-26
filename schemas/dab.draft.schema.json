@@ -61,6 +61,28 @@
               "maximum": 2147483647
             }
           }
+        },
+        "user-delegated-auth": {
+          "description": "User-delegated authentication configuration for On-Behalf-Of (OBO) flow. Enables DAB to connect to the database using the calling user's identity.",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "$ref": "#/$defs/boolean-or-string",
+              "description": "Enable user-delegated authentication (OBO flow).",
+              "default": false
+            },
+            "provider": {
+              "type": "string",
+              "description": "Identity provider for user-delegated authentication.",
+              "enum": ["EntraId"],
+              "default": "EntraId"
+            },
+            "database-audience": {
+              "type": "string",
+              "description": "The audience URI for the target database (e.g., https://database.windows.net for Azure SQL)."
+            }
+          }
         }
       },
       "allOf": [
@@ -421,6 +443,19 @@
               "type": "integer",
               "description": "Time to live in seconds",
               "default": 5
+            }
+          }
+        },
+        "compression": {
+          "type": "object",
+          "description": "Configures HTTP response compression settings.",
+          "additionalProperties": false,
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": ["optimal", "fastest", "none"],
+              "default": "optimal",
+              "description": "Specifies the response compression level. 'optimal' provides best compression ratio, 'fastest' prioritizes speed, 'none' disables compression."
             }
           }
         },
@@ -800,7 +835,7 @@
                     "level": {
                       "type": "string",
                       "description": "Cache level (L1 or L1L2)",
-                      "enum": [ "L1", "L1L2", null ],
+                      "enum": [ "L1", "L1L2" ],
                       "default": "L1L2"
                     }
                   }
@@ -1116,9 +1151,16 @@
                   "default": false
                 },
                 "ttl-seconds": {
-                  "type": "integer",
+                  "type": [ "integer", "null" ],
                   "description": "Time to live in seconds",
-                  "default": 5
+                  "default": 5,
+                  "minimum": 1
+                },
+                "level": {
+                  "type": "string",
+                  "description": "Cache level (L1 or L1L2)",
+                  "enum": [ "L1", "L1L2" ],
+                  "default": "L1L2"
                 }
               }
             },

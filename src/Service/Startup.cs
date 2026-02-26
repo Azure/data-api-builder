@@ -3,6 +3,8 @@
 
 using System;
 using System.IO.Abstractions;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -53,6 +55,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -66,6 +69,7 @@ using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -249,6 +253,38 @@ namespace Azure.DataApiBuilder.Service
             // Below are the factory registrations that will enable multiple databases scenario.
             // within these factories the various instances will be created based on the database type and datasourceName.
             services.AddSingleton<IAbstractQueryManagerFactory, QueryManagerFactory>();
+
+            // Register IOboTokenProvider only when user-delegated auth is configured.
+            // This avoids registering a null singleton and supports hot-reload scenarios.
+            // Requires environment variables: DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, DAB_OBO_CLIENT_SECRET
+            //
+            // Design note: A single IOboTokenProvider is registered using one Azure AD app registration.
+            // Multiple databases with different database-audience values ARE supported - the audience
+            // is passed to GetAccessTokenOnBehalfOfAsync() at query execution time, allowing the same
+            // MSAL client to acquire tokens for different resource servers.
+            if (IsOboConfigured())
+            {
+                // Register IMsalClientWrapper for dependency injection
+                services.AddSingleton<IMsalClientWrapper>(serviceProvider =>
+                {
+                    string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+                    string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+                    string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
+
+                    string authority = $"https://login.microsoftonline.com/{tenantId}";
+
+                    IConfidentialClientApplication msalClient = ConfidentialClientApplicationBuilder
+                        .Create(clientId)
+                        .WithAuthority(authority)
+                        .WithClientSecret(clientSecret)
+                        .Build();
+
+                    return new MsalClientWrapper(msalClient);
+                });
+
+                // Register OboSqlTokenProvider with dependencies from DI
+                services.AddSingleton<IOboTokenProvider, OboSqlTokenProvider>();
+            }
 
             services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
 
@@ -435,7 +471,7 @@ namespace Azure.DataApiBuilder.Service
                         else
                         {
                             // NOTE: this is done to reuse the same connection multiplexer for both the cache and backplane
-                            Task<ConnectionMultiplexer> connectionMultiplexerTask = ConnectionMultiplexer.ConnectAsync(level2CacheOptions.ConnectionString);
+                            Task<IConnectionMultiplexer> connectionMultiplexerTask = CreateConnectionMultiplexerAsync(level2CacheOptions.ConnectionString);
 
                             fusionCacheBuilder
                                 .WithSerializer(new FusionCacheSystemTextJsonSerializer())
@@ -467,7 +503,92 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<IMcpStdioServer, McpStdioServer>();
 
+            // Add Response Compression services based on config
+            ConfigureResponseCompression(services, runtimeConfig);
+
             services.AddControllers();
+        }
+
+        /// <summary>
+        /// Creates a ConnectionMultiplexer for Redis with support for Azure Entra authentication.
+        /// </summary>
+        /// <param name="connectionString">The Redis connection string.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the connected IConnectionMultiplexer.</returns>
+        private static async Task<IConnectionMultiplexer> CreateConnectionMultiplexerAsync(string connectionString)
+        {
+            ConfigurationOptions options = ConfigurationOptions.Parse(connectionString);
+
+            if (ShouldUseEntraAuthForRedis(options))
+            {
+                options = await options.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+            }
+
+            return await ConnectionMultiplexer.ConnectAsync(options);
+        }
+
+        /// <summary>
+        /// Determines whether Azure Entra authentication should be used.
+        /// Conditions:
+        /// - No password provided
+        /// - At least one endpoint is NOT localhost/loopback
+        /// </summary>
+        /// <param name="options">The Redis configuration options.</param>
+        /// <returns>True if Azure Entra authentication should be used; otherwise, false.</returns>
+        /// <remarks>Internal for testing.</remarks>
+        internal static bool ShouldUseEntraAuthForRedis(ConfigurationOptions options)
+        {
+            // Determine if an endpoint is localhost/loopback
+            static bool IsLocalhostEndpoint(EndPoint ep) => ep switch
+            {
+                DnsEndPoint dns => string.Equals(dns.Host, "localhost", StringComparison.OrdinalIgnoreCase),
+                IPEndPoint ip => IPAddress.IsLoopback(ip.Address),
+                _ => false,
+            };
+
+            return string.IsNullOrEmpty(options.Password)
+                && options.EndPoints.Any(ep => !IsLocalhostEndpoint(ep));
+        }
+
+        /// <summary>
+        /// Configures HTTP response compression based on the runtime configuration.
+        /// Compression is applied at the middleware level and supports Gzip and Brotli.
+        /// Applies to REST, GraphQL, and MCP endpoints.
+        /// </summary>
+        private void ConfigureResponseCompression(IServiceCollection services, RuntimeConfig? runtimeConfig)
+        {
+            CompressionLevel compressionLevel = runtimeConfig?.Runtime?.Compression?.Level ?? CompressionOptions.DEFAULT_LEVEL;
+
+            // Only configure compression if level is not None
+            if (compressionLevel == CompressionLevel.None)
+            {
+                return;
+            }
+
+            System.IO.Compression.CompressionLevel systemCompressionLevel = compressionLevel switch
+            {
+                CompressionLevel.Fastest => System.IO.Compression.CompressionLevel.Fastest,
+                CompressionLevel.Optimal => System.IO.Compression.CompressionLevel.Optimal,
+                _ => System.IO.Compression.CompressionLevel.Optimal
+            };
+
+            services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+                options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+            });
+
+            services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
+            {
+                options.Level = systemCompressionLevel;
+            });
+
+            services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
+            {
+                options.Level = systemCompressionLevel;
+            });
+
+            _logger.LogInformation("Response compression enabled with level '{compressionLevel}' for REST, GraphQL, and MCP endpoints.", compressionLevel);
         }
 
         /// <summary>
@@ -613,6 +734,13 @@ namespace Azure.DataApiBuilder.Service
                     context => !(context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/graphql")),
                     appBuilder => appBuilder.UseHttpsRedirection()
                 );
+            }
+
+            // Response compression middleware should be placed early in the pipeline.
+            // Only use if compression is not set to None.
+            if (runtimeConfig?.Runtime?.Compression?.Level is not CompressionLevel.None)
+            {
+                app.UseResponseCompression();
             }
 
             // URL Rewrite middleware MUST be called prior to UseRouting().
@@ -1145,6 +1273,42 @@ namespace Azure.DataApiBuilder.Service
         private static bool IsUIEnabled(RuntimeConfig? runtimeConfig, IWebHostEnvironment env)
         {
             return (runtimeConfig is not null && runtimeConfig.IsDevelopmentMode()) || env.IsDevelopment();
+        }
+
+        /// <summary>
+        /// Checks whether On-Behalf-Of (OBO) authentication is configured by verifying that
+        /// the required environment variables are set and the config has user-delegated auth enabled.
+        /// </summary>
+        /// <returns>True if OBO is configured and ready to use; otherwise, false.</returns>
+        private bool IsOboConfigured()
+        {
+            // Check required environment variables first (fast path)
+            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
+
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientSecret))
+            {
+                return false;
+            }
+
+            // Check if any data source has user-delegated auth enabled
+            RuntimeConfig? config = _configProvider?.TryGetConfig(out RuntimeConfig? c) == true ? c : null;
+            if (config is null)
+            {
+                return false;
+            }
+
+            foreach (DataSource ds in config.ListAllDataSources())
+            {
+                if (ds.IsUserDelegatedAuthEnabled &&
+                    !string.IsNullOrEmpty(ds.UserDelegatedAuth!.DatabaseAudience))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

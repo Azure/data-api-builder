@@ -1586,7 +1586,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
     /// <summary>
     /// Checks that all of the entities created with the Entities and Autoentities properties
-    /// are valid by not having unique paths for both REST and GraphQL, that there are no duplicate
+    /// are valid by having unique paths for both REST and GraphQL, that there are no duplicate
     /// Queries or Mutation entities, and ensure the semantic correctness of all the entities.
     /// </summary>
     /// <param name="runtimeConfig">The runtime configuration.</param>

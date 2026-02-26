@@ -5512,7 +5512,7 @@ type Planet @model(name:""PlanetAlias"") {
             File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
 
             IFileSystem fileSystem = new FileSystem();
-            ;
+
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem)
             {
                 RuntimeConfig = configuration

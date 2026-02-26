@@ -381,9 +381,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // The third part is the computed primary key route.
             if (operationType is EntityActionOperation.Insert && !string.IsNullOrEmpty(primaryKeyRoute))
             {
+                // Use scheme/host from X-Forwarded-* headers if present, else fallback to request values
+                string scheme = SqlPaginationUtil.ResolveRequestScheme(httpContext.Request);
+                string host = SqlPaginationUtil.ResolveRequestHost(httpContext.Request);
                 locationHeaderURL = UriHelper.BuildAbsolute(
-                                        scheme: httpContext.Request.Scheme,
-                                        host: httpContext.Request.Host,
+                                        scheme: scheme,
+                                        host: new HostString(host),
                                         pathBase: baseRoute,
                                         path: httpContext.Request.Path);
 

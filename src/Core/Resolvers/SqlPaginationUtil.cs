@@ -756,7 +756,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="req">The HTTP request.</param>
         /// <returns>The scheme string ("http" or "https").</returns>
         /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid scheme.</exception>
-        private static string ResolveRequestScheme(HttpRequest req)
+        internal static string ResolveRequestScheme(HttpRequest req)
         {
             string? rawScheme = req.Headers["X-Forwarded-Proto"].FirstOrDefault();
             string? normalized = rawScheme?.Trim().ToLowerInvariant();
@@ -780,7 +780,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="req">The HTTP request.</param>
         /// <returns>The host string.</returns>
         /// <exception cref="DataApiBuilderException">Thrown when client explicitly sets an invalid host.</exception>
-        private static string ResolveRequestHost(HttpRequest req)
+        internal static string ResolveRequestHost(HttpRequest req)
         {
             string? rawHost = req.Headers["X-Forwarded-Host"].FirstOrDefault();
             string? trimmed = rawHost?.Trim();
@@ -803,7 +803,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="scheme">Scheme, e.g., "http" or "https".</param>
         /// <returns>True if valid, otherwise false.</returns>
-        private static bool IsValidScheme(string? scheme)
+        internal static bool IsValidScheme(string? scheme)
         {
             return scheme is "http" or "https";
         }
@@ -813,7 +813,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="host">The host name (with optional port).</param>
         /// <returns>True if valid, otherwise false.</returns>
-        private static bool IsValidHost(string? host)
+        internal static bool IsValidHost(string? host)
         {
             if (string.IsNullOrWhiteSpace(host))
             {

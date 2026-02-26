@@ -526,7 +526,7 @@ public record RuntimeConfig
 
         if (!entityConfig.IsCachingEnabled)
         {
-            return EntityCacheLevel.L1L2;
+            return EntityCacheOptions.DEFAULT_LEVEL;
         }
 
         if (entityConfig.Cache.UserProvidedLevelOptions)
@@ -535,7 +535,7 @@ public record RuntimeConfig
         }
         else
         {
-            return EntityCacheLevel.L1L2;
+            return EntityCacheOptions.DEFAULT_LEVEL;
         }
     }
 

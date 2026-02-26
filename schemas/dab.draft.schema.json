@@ -1405,17 +1405,30 @@
       }
     }
   },
-  "if": {
-    "required": ["azure-key-vault"]
-  },
-  "then": {
-    "properties": {
-      "azure-key-vault": {
-        "required": ["endpoint"]
+  "allOf": [
+    {
+      "if": {
+        "required": ["azure-key-vault"]
+      },
+      "then": {
+        "properties": {
+          "azure-key-vault": {
+            "required": ["endpoint"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "not": {
+          "required": ["data-source-files"]
+        }
+      },
+      "then": {
+        "required": ["data-source", "entities"]
       }
     }
-  },
-  "required": ["data-source", "entities"],
+  ],
   "$defs": {
     "singular-plural": {
       "oneOf": [

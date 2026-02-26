@@ -58,7 +58,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             ComprehensiveHealthCheckReport comprehensiveHealthCheckReport = new();
             UpdateVersionAndAppName(ref comprehensiveHealthCheckReport);
             UpdateTimestampOfResponse(ref comprehensiveHealthCheckReport);
-            comprehensiveHealthCheckReport.CurrentRole = AuthorizationResolver.ROLE_ANONYMOUS;
             UpdateDabConfigurationDetails(ref comprehensiveHealthCheckReport, runtimeConfig);
             await UpdateHealthCheckDetailsAsync(comprehensiveHealthCheckReport, runtimeConfig);
             UpdateOverallHealthStatus(ref comprehensiveHealthCheckReport);
@@ -86,6 +85,17 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             {
                 _incomingRoleToken = clientTokenHeader.ToString();
             }
+        }
+
+        // Returns the effective role for the current request.
+        // Falls back to "authenticated" if a bearer token is present, or "anonymous" otherwise.
+        public string GetCurrentRole()
+        {
+            return !string.IsNullOrEmpty(_incomingRoleHeader)
+                ? _incomingRoleHeader
+                : !string.IsNullOrEmpty(_incomingRoleToken)
+                    ? AuthorizationResolver.ROLE_AUTHENTICATED
+                    : AuthorizationResolver.ROLE_ANONYMOUS;
         }
 
         /// <summary>

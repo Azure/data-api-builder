@@ -663,8 +663,8 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Whether the embedding service is enabled. Defaults to true.",
-              "default": true
+              "description": "Whether the embedding service is enabled. Defaults to false.",
+              "default": false
             },
             "provider": {
               "type": "string",

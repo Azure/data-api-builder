@@ -23,6 +23,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.IsDatasourceHealthEnabled);
         // Ignore the DatasourceThresholdMs from the output to avoid committing it.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatasourceThresholdMs);
+        // Ignore the IsUserDelegatedAuthEnabled from the output as it's a computed property.
+        VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.IsUserDelegatedAuthEnabled);
         // Ignore the datasource files as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DataSourceFiles);
         // Ignore the CosmosDataSourceUsed as that's unimportant from a test standpoint.

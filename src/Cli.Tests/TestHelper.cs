@@ -1302,6 +1302,7 @@ namespace Cli.Tests
                     }}
                 }}
             }},
+            ""autoentities"": {{}},
             ""entities"": {{}}";
 
             return $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{runtimeSection}}}";

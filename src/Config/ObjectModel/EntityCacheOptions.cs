@@ -36,19 +36,19 @@ public record EntityCacheOptions
     /// behavior regardless of whether the object was created via JsonConstructor or with-expression.
     /// </summary>
     [JsonPropertyName("enabled")]
-    public bool? Enabled { get; init; } = null;
+    public bool? Enabled { get; init; }
 
     /// <summary>
     /// The number of seconds a cache entry is valid before eligible for cache eviction.
     /// </summary>
     [JsonPropertyName("ttl-seconds")]
-    public int? TtlSeconds { get; init; } = null;
+    public int? TtlSeconds { get; init; }
 
     /// <summary>
     /// The cache levels to use for a cache entry.
     /// </summary>
     [JsonPropertyName("level")]
-    public EntityCacheLevel? Level { get; init; } = null;
+    public EntityCacheLevel? Level { get; init; }
 
     [JsonConstructor]
     public EntityCacheOptions(bool? Enabled = null, int? TtlSeconds = null, EntityCacheLevel? Level = null)

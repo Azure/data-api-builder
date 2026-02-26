@@ -5288,6 +5288,152 @@ type Planet @model(name:""PlanetAlias"") {
             }
         }
 
+        [TestCategory(TestCategory.MSSQL)]
+        [DataTestMethod]
+        [DataRow(true, 4, DisplayName = "Test Autoentities with additional entities")]
+        [DataRow(false, 2, DisplayName = "Test Autoentities without additional entities")]
+        public async Task TestAutoentitiesAreGeneratedIntoEntities(bool useEntities, int expectedEntityCount)
+        {
+            // Arrange
+            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
+                                                      TargetEntity: "BookPublisher",
+                                                      SourceFields: new string[] { },
+                                                      TargetFields: new string[] { },
+                                                      LinkingObject: null,
+                                                      LinkingSourceFields: null,
+                                                      LinkingTargetFields: null);
+
+            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
+                                    Fields: null,
+                                    Rest: null,
+                                    GraphQL: new(Singular: "book", Plural: "books"),
+                                    Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
+                                    Mappings: null);
+
+            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
+                                                           TargetEntity: "Book",
+                                                           SourceFields: new string[] { },
+                                                           TargetFields: new string[] { },
+                                                           LinkingObject: null,
+                                                           LinkingSourceFields: null,
+                                                           LinkingTargetFields: null);
+
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Fields: null,
+                Rest: null,
+                GraphQL: new(Singular: "bookpublisher", Plural: "bookpublishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", bookEntity },
+                { "BookPublisher", publisherEntity }
+            };
+
+            Dictionary<string, Autoentity> autoentityMap = new()
+            {
+                {
+                    "PublisherAutoEntity", new Autoentity(
+                        Patterns: new AutoentityPatterns(
+                            Include: new[] { "%publishers%" },
+                            Exclude: null,
+                            Name: null
+                        ),
+                        Template: new AutoentityTemplate(
+                            Rest: new EntityRestOptions(Enabled: true),
+                            GraphQL: new EntityGraphQLOptions(
+                                Singular: string.Empty,
+                                Plural: string.Empty,
+                                Enabled: true
+                            ),
+                            Health: null,
+                            Cache: null
+                        ),
+                        Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) }
+                    )
+                }
+            };
+
+            // Create DataSource for MSSQL connection
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            // Build complete runtime configuration with autoentities
+            RuntimeConfig configuration = new(
+                Schema: "TestAutoentitiesSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(Enabled: true),
+                    GraphQL: new(Enabled: true),
+                    Mcp: new(Enabled: false),
+                    Host: new(
+                        Cors: null,
+                        Authentication: new Config.ObjectModel.AuthenticationOptions(
+                            Provider: nameof(EasyAuthType.StaticWebApps),
+                            Jwt: null
+                        )
+                    )
+                ),
+                Entities: new(useEntities ? entityMap : new Dictionary<string, Entity>()),
+                Autoentities: new RuntimeAutoentities(autoentityMap)
+            );
+
+            File.WriteAllText(CUSTOM_CONFIG_FILENAME, configuration.ToJson());
+
+            string[] args = new[] { $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}" };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Act
+                RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
+                using HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/publishers");
+                using HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+
+                string graphqlQuery = @"
+                {
+                    publishers {
+                        items {
+                            id
+                            name
+                        }
+                    }
+                }";
+
+                object graphqlPayload = new { query = graphqlQuery };
+                HttpRequestMessage graphqlRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(graphqlPayload)
+                };
+                HttpResponseMessage graphqlResponse = await client.SendAsync(graphqlRequest);
+
+                // Assert
+                string expectedResponseFragment = @"{""id"":1156,""name"":""The First Publisher""}";
+
+                // Verify number of entities
+                Assert.AreEqual(expectedEntityCount, configProvider.GetConfig().Entities.Entities.Count, "Number of generated entities is not what is expected");
+
+                // Verify REST response
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode, "REST request to auto-generated entity should succeed");
+
+                string restResponseBody = await restResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(restResponseBody), "REST response should contain data");
+                Assert.IsTrue(restResponseBody.Contains(expectedResponseFragment));
+
+                // Verify GraphQL response
+                Assert.AreEqual(HttpStatusCode.OK, graphqlResponse.StatusCode, "GraphQL request to auto-generated entity should succeed");
+
+                string graphqlResponseBody = await graphqlResponse.Content.ReadAsStringAsync();
+                Assert.IsTrue(!string.IsNullOrEmpty(graphqlResponseBody), "GraphQL response should contain data");
+                Assert.IsFalse(graphqlResponseBody.Contains("errors"), "GraphQL response should not contain errors");
+                Assert.IsTrue(graphqlResponseBody.Contains(expectedResponseFragment));
+            }
+        }
+
         /// <summary>
         /// Tests the behavior of GraphQL queries in non-hosted mode when the depth limit is explicitly set to -1 or null.
         /// Setting the depth limit to -1 is intended to disable the depth limit check, allowing queries of any depth.

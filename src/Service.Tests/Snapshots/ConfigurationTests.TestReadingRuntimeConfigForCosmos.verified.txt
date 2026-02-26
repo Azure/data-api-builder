@@ -49,7 +49,6 @@
       }
     }
   },
-  Autoentities: [],
   Entities: [
     {
       PlanetAlias: {

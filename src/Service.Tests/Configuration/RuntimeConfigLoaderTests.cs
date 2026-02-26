@@ -106,7 +106,7 @@ public class RuntimeConfigLoaderTests
     /// Test validates that when child files are present all autoentities are loaded correctly.
     /// </summary>
     [DataTestMethod]
-    [DataRow("Multidab-config.CosmosDb_NoSql.json", new string[] { "Multidab-config.MsSql.json", "Multidab-config.MySql.json", "Multidab-config.PostgreSql.json" }, 10)]
+    [DataRow("Multidab-config.CosmosDb_NoSql.json", new string[] { "Multidab-config.MsSql.json", "Multidab-config.MySql.json", "Multidab-config.PostgreSql.json" }, 36)]
     public async Task CanLoadValidMultiSourceConfigWithAutoentities(string configPath, IEnumerable<string> dataSourceFiles, int expectedEntities)
     {
         string fileContents = await File.ReadAllTextAsync(configPath);

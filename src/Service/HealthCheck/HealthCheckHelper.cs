@@ -27,8 +27,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Dependencies
         private ILogger<HealthCheckHelper> _logger;
         private HttpUtilities _httpUtility;
-        private string _incomingRoleHeader = string.Empty;
-        private string _incomingRoleToken = string.Empty;
 
         private const string TIME_EXCEEDED_ERROR_MESSAGE = "The threshold for executing the request has exceeded.";
 
@@ -48,8 +46,10 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// Serializes the report to JSON and returns the response.
         /// </summary>
         /// <param name="runtimeConfig">RuntimeConfig</param>
+        /// <param name="roleHeader">The effective role header for the current request.</param>
+        /// <param name="roleToken">The bearer token for the current request.</param>
         /// <returns>This function returns the comprehensive health report after calculating the response time of each datasource, rest and graphql health queries.</returns>
-        public async Task<ComprehensiveHealthCheckReport> GetHealthCheckResponseAsync(RuntimeConfig runtimeConfig)
+        public async Task<ComprehensiveHealthCheckReport> GetHealthCheckResponseAsync(RuntimeConfig runtimeConfig, string roleHeader, string roleToken)
         {
             // Create a JSON response for the comprehensive health check endpoint using the provided basic health report.
             // If the response has already been created, it will be reused.
@@ -59,13 +59,13 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             UpdateVersionAndAppName(ref comprehensiveHealthCheckReport);
             UpdateTimestampOfResponse(ref comprehensiveHealthCheckReport);
             UpdateDabConfigurationDetails(ref comprehensiveHealthCheckReport, runtimeConfig);
-            await UpdateHealthCheckDetailsAsync(comprehensiveHealthCheckReport, runtimeConfig);
+            await UpdateHealthCheckDetailsAsync(comprehensiveHealthCheckReport, runtimeConfig, roleHeader, roleToken);
             UpdateOverallHealthStatus(ref comprehensiveHealthCheckReport);
             return comprehensiveHealthCheckReport;
         }
 
-        // Updates the incoming role header with the appropriate value from the request headers.
-        public void StoreIncomingRoleHeader(HttpContext httpContext)
+        // Reads the incoming role and token headers from the request and returns them as local values.
+        public (string roleHeader, string roleToken) ReadRoleHeaders(HttpContext httpContext)
         {
             StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
             StringValues clientTokenHeader = httpContext.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER];
@@ -75,25 +75,18 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 throw new ArgumentException("Multiple values for the client role or token header are not allowed.");
             }
 
-            // Role Header is not present in the request, set it to anonymous.
-            if (clientRoleHeader.Count == 1)
-            {
-                _incomingRoleHeader = clientRoleHeader.ToString().ToLowerInvariant();
-            }
-
-            if (clientTokenHeader.Count == 1)
-            {
-                _incomingRoleToken = clientTokenHeader.ToString();
-            }
+            string roleHeader = clientRoleHeader.Count == 1 ? clientRoleHeader.ToString().ToLowerInvariant() : string.Empty;
+            string roleToken = clientTokenHeader.Count == 1 ? clientTokenHeader.ToString() : string.Empty;
+            return (roleHeader, roleToken);
         }
 
         // Returns the effective role for the current request.
         // Falls back to "authenticated" if a bearer token is present, or "anonymous" otherwise.
-        public string GetCurrentRole()
+        public string GetCurrentRole(string roleHeader, string roleToken)
         {
-            return !string.IsNullOrEmpty(_incomingRoleHeader)
-                ? _incomingRoleHeader
-                : !string.IsNullOrEmpty(_incomingRoleToken)
+            return !string.IsNullOrEmpty(roleHeader)
+                ? roleHeader
+                : !string.IsNullOrEmpty(roleToken)
                     ? AuthorizationResolver.ROLE_AUTHENTICATED
                     : AuthorizationResolver.ROLE_ANONYMOUS;
         }
@@ -102,11 +95,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         /// Checks if the incoming request is allowed to access the health check endpoint.
         /// Anonymous requests are only allowed in Development Mode.
         /// </summary>
-        /// <param name="httpContext">HttpContext to get the headers.</param>
-        /// <param name="hostMode">Compare with the HostMode of DAB</param>
+        /// <param name="isDevelopmentMode">Compare with the HostMode of DAB</param>
         /// <param name="allowedRoles">AllowedRoles in the Runtime.Health config</param>
+        /// <param name="roleHeader">The effective role header for the current request.</param>
         /// <returns></returns>
-        public bool IsUserAllowedToAccessHealthCheck(HttpContext httpContext, bool isDevelopmentMode, HashSet<string> allowedRoles)
+        public bool IsUserAllowedToAccessHealthCheck(bool isDevelopmentMode, HashSet<string> allowedRoles, string roleHeader)
         {
             if (allowedRoles == null || allowedRoles.Count == 0)
             {
@@ -114,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 return isDevelopmentMode;
             }
 
-            return allowedRoles.Contains(_incomingRoleHeader);
+            return allowedRoles.Contains(roleHeader);
         }
 
         // Updates the overall status by comparing all the internal HealthStatuses in the response.
@@ -160,11 +153,11 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Main function to internally call for data source and entities health check.
-        private async Task UpdateHealthCheckDetailsAsync(ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, RuntimeConfig runtimeConfig)
+        private async Task UpdateHealthCheckDetailsAsync(ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, RuntimeConfig runtimeConfig, string roleHeader, string roleToken)
         {
             comprehensiveHealthCheckReport.Checks = new List<HealthCheckResultEntry>();
             await UpdateDataSourceHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
-            await UpdateEntityHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig);
+            await UpdateEntityHealthCheckResultsAsync(comprehensiveHealthCheckReport, runtimeConfig, roleHeader, roleToken);
         }
 
         // Updates the DataSource Health Check Results in the response.
@@ -211,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Updates the Entity Health Check Results in the response.
         // Goes through the entities one by one and executes the rest and graphql checks (if enabled).
         // Stored procedures are excluded from health checks because they require parameters and are not guaranteed to be deterministic.
-        private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport report, RuntimeConfig runtimeConfig)
+        private async Task UpdateEntityHealthCheckResultsAsync(ComprehensiveHealthCheckReport report, RuntimeConfig runtimeConfig, string roleHeader, string roleToken)
         {
             List<KeyValuePair<string, Entity>> enabledEntities = runtimeConfig.Entities.Entities
                 .Where(e => e.Value.IsEntityHealthEnabled && e.Value.Source.Type != EntitySourceType.StoredProcedure)
@@ -243,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                         Checks = new List<HealthCheckResultEntry>()
                     };
 
-                    await PopulateEntityHealthAsync(localReport, entity, runtimeConfig);
+                    await PopulateEntityHealthAsync(localReport, entity, runtimeConfig, roleHeader, roleToken);
 
                     if (localReport.Checks != null)
                     {
@@ -266,7 +259,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         // Populates the Entity Health Check Results in the response for a particular entity.
         // Checks for Rest enabled and executes the rest query.
         // Checks for GraphQL enabled and executes the graphql query.
-        private async Task PopulateEntityHealthAsync(ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, KeyValuePair<string, Entity> entity, RuntimeConfig runtimeConfig)
+        private async Task PopulateEntityHealthAsync(ComprehensiveHealthCheckReport comprehensiveHealthCheckReport, KeyValuePair<string, Entity> entity, RuntimeConfig runtimeConfig, string roleHeader, string roleToken)
         {
             // Global Rest and GraphQL Runtime Options
             RuntimeOptions? runtimeOptions = runtimeConfig.Runtime;
@@ -285,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     // The path is trimmed to remove the leading '/' character.
                     // If the path is not present, use the entity key name as the path.
                     string entityPath = entityValue.Rest.Path != null ? entityValue.Rest.Path.TrimStart('/') : entityKeyName;
-                    (int, string?) response = await ExecuteRestEntityQueryAsync(runtimeConfig.RestPath, entityPath, entityValue.EntityFirst);
+                    (int, string?) response = await ExecuteRestEntityQueryAsync(runtimeConfig.RestPath, entityPath, entityValue.EntityFirst, roleHeader, roleToken);
                     bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     // Add Entity Health Check Results
@@ -307,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                 {
                     comprehensiveHealthCheckReport.Checks ??= new List<HealthCheckResultEntry>();
 
-                    (int, string?) response = await ExecuteGraphQlEntityQueryAsync(runtimeConfig.GraphQLPath, entityValue, entityKeyName);
+                    (int, string?) response = await ExecuteGraphQlEntityQueryAsync(runtimeConfig.GraphQLPath, entityValue, entityKeyName, roleHeader, roleToken);
                     bool isResponseTimeWithinThreshold = response.Item1 >= 0 && response.Item1 < entityValue.EntityThresholdMs;
 
                     comprehensiveHealthCheckReport.Checks.Add(new HealthCheckResultEntry
@@ -327,14 +320,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the Rest Entity Query and keeps track of the response time and error message.
-        private async Task<(int, string?)> ExecuteRestEntityQueryAsync(string restUriSuffix, string entityName, int first)
+        private async Task<(int, string?)> ExecuteRestEntityQueryAsync(string restUriSuffix, string entityName, int first, string roleHeader, string roleToken)
         {
             string? errorMessage = null;
             if (!string.IsNullOrEmpty(entityName))
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = await _httpUtility.ExecuteRestQueryAsync(restUriSuffix, entityName, first, _incomingRoleHeader, _incomingRoleToken);
+                errorMessage = await _httpUtility.ExecuteRestQueryAsync(restUriSuffix, entityName, first, roleHeader, roleToken);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }
@@ -343,14 +336,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         }
 
         // Executes the GraphQL Entity Query and keeps track of the response time and error message.
-        private async Task<(int, string?)> ExecuteGraphQlEntityQueryAsync(string graphqlUriSuffix, Entity entity, string entityName)
+        private async Task<(int, string?)> ExecuteGraphQlEntityQueryAsync(string graphqlUriSuffix, Entity entity, string entityName, string roleHeader, string roleToken)
         {
             string? errorMessage = null;
             if (entity != null)
             {
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
-                errorMessage = await _httpUtility.ExecuteGraphQLQueryAsync(graphqlUriSuffix, entityName, entity, _incomingRoleHeader, _incomingRoleToken);
+                errorMessage = await _httpUtility.ExecuteGraphQLQueryAsync(graphqlUriSuffix, entityName, entity, roleHeader, roleToken);
                 stopwatch.Stop();
                 return string.IsNullOrEmpty(errorMessage) ? ((int)stopwatch.ElapsedMilliseconds, errorMessage) : (HealthCheckConstants.ERROR_RESPONSE_TIME_MS, errorMessage);
             }

@@ -1275,5 +1275,190 @@ namespace Cli.Tests
             Assert.IsTrue(config.DataSource.UserDelegatedAuth.Enabled);
             Assert.AreEqual(newAudience, config.DataSource.UserDelegatedAuth.DatabaseAudience);
         }
+
+        /// <summary>
+        /// Tests that CLI commands write the correct JSON structure to dab-config.json.
+        /// Verifies that user-delegated-auth section is properly nested under data-source with correct property names.
+        /// </summary>
+        [TestMethod]
+        public void TestUserDelegatedAuthCreatesCorrectJsonStructure()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+            string audienceValue = "https://database.windows.net";
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthEnabled: true,
+                dataSourceUserDelegatedAuthDatabaseAudience: audienceValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+
+            // Verify JSON structure using JObject
+            JObject configJson = JObject.Parse(updatedConfig);
+
+            // Verify data-source exists
+            Assert.IsNotNull(configJson["data-source"]);
+
+            // Verify user-delegated-auth section exists under data-source
+            JToken? userDelegatedAuthSection = configJson["data-source"]?["user-delegated-auth"];
+            Assert.IsNotNull(userDelegatedAuthSection);
+
+            // Verify correct properties with correct values
+            Assert.AreEqual(true, (bool?)userDelegatedAuthSection["enabled"]);
+            Assert.AreEqual("EntraId", (string?)userDelegatedAuthSection["provider"]);
+            Assert.AreEqual(audienceValue, (string?)userDelegatedAuthSection["database-audience"]);
+
+            // Verify no unexpected properties
+            JObject userDelegatedAuthObj = (JObject)userDelegatedAuthSection;
+            Assert.AreEqual(3, userDelegatedAuthObj.Properties().Count());
+        }
+
+        /// <summary>
+        /// Tests that CLI correctly updates the JSON structure when modifying existing user-delegated-auth configuration.
+        /// Verifies that only the specified field is updated while others are preserved.
+        /// </summary>
+        [TestMethod]
+        public void TestUserDelegatedAuthUpdatesCorrectJsonFields()
+        {
+            // Arrange - Start with config that has user-delegated-auth
+            string configWithUserDelegatedAuth = @"
+            {
+                ""$schema"": ""test"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""user-delegated-auth"": {
+                        ""enabled"": true,
+                        ""provider"": ""EntraId"",
+                        ""database-audience"": ""https://database.windows.net""
+                    }
+                },
+                ""runtime"": {
+                    ""rest"": {
+                        ""enabled"": true,
+                        ""path"": ""/api""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""path"": ""/graphql"",
+                        ""allow-introspection"": true
+                    },
+                    ""host"": {
+                        ""mode"": ""development"",
+                        ""cors"": {
+                            ""origins"": [],
+                            ""allow-credentials"": false
+                        },
+                        ""authentication"": {
+                            ""provider"": ""StaticWebApps""
+                        }
+                    }
+                },
+                ""entities"": {}
+            }";
+            SetupFileSystemWithInitialConfig(configWithUserDelegatedAuth);
+
+            string newAudience = "https://database.chinacloudapi.cn";
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthDatabaseAudience: newAudience,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+
+            // Verify JSON structure
+            JObject configJson = JObject.Parse(updatedConfig);
+            JToken? userDelegatedAuthSection = configJson["data-source"]?["user-delegated-auth"];
+            Assert.IsNotNull(userDelegatedAuthSection);
+
+            // Verify database-audience was updated
+            Assert.AreEqual(newAudience, (string?)userDelegatedAuthSection["database-audience"]);
+
+            // Verify other fields were preserved
+            Assert.AreEqual(true, (bool?)userDelegatedAuthSection["enabled"]);
+            Assert.AreEqual("EntraId", (string?)userDelegatedAuthSection["provider"]);
+        }
+
+        /// <summary>
+        /// Tests that disabling user-delegated-auth updates the JSON structure correctly.
+        /// Verifies that the enabled field can be set to false while preserving other settings.
+        /// </summary>
+        [TestMethod]
+        public void TestUserDelegatedAuthDisableUpdatesJsonCorrectly()
+        {
+            // Arrange - Start with enabled config
+            string configWithUserDelegatedAuth = @"
+            {
+                ""$schema"": ""test"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""user-delegated-auth"": {
+                        ""enabled"": true,
+                        ""provider"": ""EntraId"",
+                        ""database-audience"": ""https://database.windows.net""
+                    }
+                },
+                ""runtime"": {
+                    ""rest"": {
+                        ""enabled"": true,
+                        ""path"": ""/api""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""path"": ""/graphql"",
+                        ""allow-introspection"": true
+                    },
+                    ""host"": {
+                        ""mode"": ""development"",
+                        ""cors"": {
+                            ""origins"": [],
+                            ""allow-credentials"": false
+                        },
+                        ""authentication"": {
+                            ""provider"": ""StaticWebApps""
+                        }
+                    }
+                },
+                ""entities"": {}
+            }";
+            SetupFileSystemWithInitialConfig(configWithUserDelegatedAuth);
+
+            ConfigureOptions options = new(
+                dataSourceUserDelegatedAuthEnabled: false,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+
+            // Verify JSON structure
+            JObject configJson = JObject.Parse(updatedConfig);
+            JToken? userDelegatedAuthSection = configJson["data-source"]?["user-delegated-auth"];
+            Assert.IsNotNull(userDelegatedAuthSection);
+
+            // Verify enabled was set to false
+            Assert.AreEqual(false, (bool?)userDelegatedAuthSection["enabled"]);
+
+            // Verify other fields were preserved
+            Assert.AreEqual("EntraId", (string?)userDelegatedAuthSection["provider"]);
+            Assert.AreEqual("https://database.windows.net", (string?)userDelegatedAuthSection["database-audience"]);
+        }
     }
 }

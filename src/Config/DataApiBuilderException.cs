@@ -20,6 +20,11 @@ public class DataApiBuilderException : Exception
     public const string GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE = "Unauthorized due to one or more fields in this mutation.";
     public const string GRAPHQL_GROUPBY_FIELD_AUTHZ_FAILURE = "Access forbidden to field '{0}' referenced in the groupBy argument.";
     public const string GRAPHQL_AGGREGATION_FIELD_AUTHZ_FAILURE = "Access forbidden to field '{0}' referenced in the aggregation function '{1}'.";
+    public const string OBO_IDENTITY_CLAIMS_MISSING = "User-delegated authentication failed: Neither 'oid' nor 'sub' claim found in the access token.";
+    public const string OBO_TENANT_CLAIM_MISSING = "User-delegated authentication failed: 'tid' (tenant id) claim not found in the access token.";
+    public const string OBO_TOKEN_ACQUISITION_FAILED = "User-delegated authentication failed: Unable to acquire database access token on behalf of the user.";
+    public const string OBO_MISSING_USER_CONTEXT = "User-delegated authentication failed: Missing or invalid 'Authorization: Bearer <token>' header. OBO requires a valid user token to exchange for database access.";
+    public const string OBO_MISSING_DATABASE_AUDIENCE = "User-delegated authentication failed: 'database-audience' is not configured in the data source's user-delegated-auth settings.";
 
     public enum SubStatusCodes
     {
@@ -127,7 +132,11 @@ public class DataApiBuilderException : Exception
         /// <summary>
         /// Error due to client input validation failure.
         /// </summary>
-        DatabaseInputError
+        DatabaseInputError,
+        /// <summary>
+        /// User-delegated (OBO) authentication failed due to missing identity claims.
+        /// </summary>
+        OboAuthenticationFailure
     }
 
     public HttpStatusCode StatusCode { get; }

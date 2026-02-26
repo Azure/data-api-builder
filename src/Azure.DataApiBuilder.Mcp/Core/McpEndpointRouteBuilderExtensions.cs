@@ -6,6 +6,9 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.ModelContextProtocol.HttpServer;
 
 namespace Azure.DataApiBuilder.Mcp.Core
 {
@@ -16,6 +19,8 @@ namespace Azure.DataApiBuilder.Mcp.Core
     {
         /// <summary>
         /// Maps the MCP endpoint to the specified <see cref="IEndpointRouteBuilder"/> if MCP is enabled in the runtime configuration.
+        /// Uses Microsoft MCP endpoint mapping (with auth/rate-limiting) when Entra ID is configured,
+        /// otherwise falls back to base MCP endpoint mapping.
         /// </summary>
         public static IEndpointRouteBuilder MapDabMcp(
             this IEndpointRouteBuilder endpoints,
@@ -29,8 +34,16 @@ namespace Azure.DataApiBuilder.Mcp.Core
 
             string mcpPath = mcpOptions.Path ?? McpRuntimeOptions.DEFAULT_PATH;
 
-            // Map the MCP endpoint
-            endpoints.MapMcp(mcpPath);
+            // Use Microsoft MCP endpoint mapping when Entra ID is configured, otherwise use base MCP
+            IConfiguration configuration = endpoints.ServiceProvider.GetRequiredService<IConfiguration>();
+            if (McpServerConfiguration.IsEntraIdConfigured(configuration))
+            {
+                endpoints.MapMicrosoftMcpServer(mcpPath);
+            }
+            else
+            {
+                endpoints.MapMcp(mcpPath);
+            }
 
             return endpoints;
         }

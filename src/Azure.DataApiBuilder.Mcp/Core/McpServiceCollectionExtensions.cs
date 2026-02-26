@@ -5,6 +5,7 @@ using System.Reflection;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Mcp.Model;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Mcp.Core
@@ -15,9 +16,19 @@ namespace Azure.DataApiBuilder.Mcp.Core
     public static class McpServiceCollectionExtensions
     {
         /// <summary>
+        /// Determines whether Entra ID (AzureAd) is configured for Microsoft MCP authentication.
+        /// When configured, the Microsoft MCP server with MISE auth is used.
+        /// When not configured, the base MCP server without enterprise auth is used.
+        /// </summary>
+        public static bool IsEntraIdConfigured(IConfiguration configuration)
+        {
+            return McpServerConfiguration.IsEntraIdConfigured(configuration);
+        }
+
+        /// <summary>
         /// Adds MCP server and related services to the service collection
         /// </summary>
-        public static IServiceCollection AddDabMcpServer(this IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider)
+        public static IServiceCollection AddDabMcpServer(this IServiceCollection services, RuntimeConfigProvider runtimeConfigProvider, IConfiguration configuration)
         {
             if (!runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
@@ -42,7 +53,7 @@ namespace Azure.DataApiBuilder.Mcp.Core
             RegisterCustomTools(services, runtimeConfig);
 
             // Configure MCP server
-            services.ConfigureMcpServer();
+            services.ConfigureMcpServer(configuration);
 
             return services;
         }

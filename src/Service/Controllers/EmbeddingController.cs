@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.Embeddings;
+using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -22,7 +23,8 @@ namespace Azure.DataApiBuilder.Service.Controllers;
 
 /// <summary>
 /// Controller to serve embedding requests at the configured endpoint path (default: /embed).
-/// Accepts plain text input and returns embedding vector as plain text (comma-separated floats).
+/// Accepts plain text or JSON input and returns embedding vector as JSON by default,
+/// or as plain text (comma-separated floats) when the client sends Accept: text/plain.
 /// Uses a "embed" route prefix to avoid ambiguous catch-all route conflicts with RestController.
 /// </summary>
 [ApiController]
@@ -47,14 +49,16 @@ public class EmbeddingController : ControllerBase
 
     /// <summary>
     /// POST endpoint for generating embeddings.
-    /// Accepts plain text body and returns embedding vector as comma-separated floats.
+    /// Accepts plain text or JSON body and returns embedding vector.
+    /// Default response is JSON: { "embedding": [...], "dimensions": N }.
+    /// Clients may request text/plain via Accept header for comma-separated floats.
     /// </summary>
     /// <param name="route">The route path after the "embed" prefix.</param>
-    /// <returns>Plain text embedding vector or error response.</returns>
+    /// <returns>Embedding vector as JSON (default) or plain text, or an error response.</returns>
     [HttpPost]
     [Route("embed/{*route}")]
     [Consumes("text/plain", "application/json")]
-    [Produces("text/plain")]
+    [Produces("application/json", "text/plain")]
     public async Task<IActionResult> PostAsync(string? route)
     {
         // Get embeddings configuration
@@ -150,9 +154,15 @@ public class EmbeddingController : ControllerBase
             return StatusCode((int)HttpStatusCode.InternalServerError, "Failed to generate embedding.");
         }
 
-        // Return embedding as comma-separated float values (plain text)
-        string embeddingText = string.Join(",", result.Embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture)));
-        return Content(embeddingText, MediaTypeNames.Text.Plain);
+        // Return embedding as plain text (comma-separated floats) when explicitly requested via Accept header.
+        if (ClientAcceptsTextPlain())
+        {
+            string embeddingText = string.Join(",", result.Embedding.Select(f => f.ToString("G", CultureInfo.InvariantCulture)));
+            return Content(embeddingText, MediaTypeNames.Text.Plain);
+        }
+
+        // Default: return structured JSON response.
+        return Ok(new EmbeddingResponse(result.Embedding));
     }
 
     /// <summary>
@@ -169,5 +179,27 @@ public class EmbeddingController : ControllerBase
         }
 
         return EmbeddingsEndpointOptions.ANONYMOUS_ROLE;
+    }
+
+    /// <summary>
+    /// Checks whether the client explicitly requests text/plain via the Accept header.
+    /// Returns true only when text/plain is present and application/json is not,
+    /// so that the default response format remains JSON.
+    /// </summary>
+    private bool ClientAcceptsTextPlain()
+    {
+        StringValues acceptHeader = Request.Headers.Accept;
+        if (acceptHeader.Count == 0)
+        {
+            return false;
+        }
+
+        string accept = acceptHeader.ToString();
+        bool wantsText = accept.Contains(MediaTypeNames.Text.Plain, StringComparison.OrdinalIgnoreCase);
+        bool wantsJson = accept.Contains(MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase);
+
+        // Only return text/plain when the client explicitly asks for it
+        // and does NOT also ask for JSON (in which case JSON wins).
+        return wantsText && !wantsJson;
     }
 }

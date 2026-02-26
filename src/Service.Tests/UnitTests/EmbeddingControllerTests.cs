@@ -5,6 +5,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -16,6 +17,7 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.Embeddings;
 using Azure.DataApiBuilder.Service.Controllers;
+using Azure.DataApiBuilder.Service.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -86,7 +88,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -109,7 +111,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -132,7 +134,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -332,7 +334,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -405,7 +407,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -430,7 +432,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -455,7 +457,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     #endregion
@@ -477,7 +479,8 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: "Hello, world!",
             contentType: "text/plain",
-            hostMode: HostMode.Development);
+            hostMode: HostMode.Development,
+            acceptHeader: "text/plain");
 
         // Act
         IActionResult result = await controller.PostAsync(route: null);
@@ -507,7 +510,8 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: "\"Hello, world!\"", // JSON-wrapped string
             contentType: "application/json",
-            hostMode: HostMode.Development);
+            hostMode: HostMode.Development,
+            acceptHeader: "text/plain");
 
         // Act
         IActionResult result = await controller.PostAsync(route: null);
@@ -541,7 +545,8 @@ public class EmbeddingControllerTests
             requestPath: "/embed",
             requestBody: rawBody,
             contentType: "application/json",
-            hostMode: HostMode.Development);
+            hostMode: HostMode.Development,
+            acceptHeader: "text/plain");
 
         // Act
         IActionResult result = await controller.PostAsync(route: null);
@@ -744,7 +749,8 @@ public class EmbeddingControllerTests
     }
 
     /// <summary>
-    /// Tests that the embedding vector is returned as comma-separated floats in plain text.
+    /// Tests that the embedding vector is returned as comma-separated floats in plain text
+    /// when Accept: text/plain is requested.
     /// </summary>
     [TestMethod]
     public async Task PostAsync_ReturnsCommaSeparatedFloats()
@@ -757,7 +763,8 @@ public class EmbeddingControllerTests
             endpointPath: "/embed",
             requestPath: "/embed",
             requestBody: "test",
-            hostMode: HostMode.Development);
+            hostMode: HostMode.Development,
+            acceptHeader: "text/plain");
 
         // Act
         IActionResult result = await controller.PostAsync(route: null);
@@ -864,7 +871,7 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert - should succeed because dev mode defaults to anonymous access
-        Assert.IsInstanceOfType(result, typeof(ContentResult));
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     /// <summary>
@@ -913,7 +920,146 @@ public class EmbeddingControllerTests
         IActionResult result = await controller.PostAsync(route: null);
 
         // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+    }
+
+    #endregion
+
+    #region Content Negotiation Tests
+
+    /// <summary>
+    /// Tests that the default response (no Accept header) is JSON with EmbeddingResponse.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsJson_WhenNoAcceptHeader()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f, 0.2f, 0.3f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingController controller = CreateController(
+            endpointPath: "/embed",
+            requestPath: "/embed",
+            requestBody: "test text",
+            hostMode: HostMode.Development,
+            acceptHeader: null); // no Accept header
+
+        // Act
+        IActionResult result = await controller.PostAsync(route: null);
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbeddingResponse));
+        EmbeddingResponse response = (EmbeddingResponse)okResult.Value!;
+        CollectionAssert.AreEqual(embedding, response.Embedding);
+        Assert.AreEqual(3, response.Dimensions);
+    }
+
+    /// <summary>
+    /// Tests that Accept: application/json returns JSON with EmbeddingResponse.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsJson_WhenAcceptIsApplicationJson()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.5f, 0.6f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingController controller = CreateController(
+            endpointPath: "/embed",
+            requestPath: "/embed",
+            requestBody: "test text",
+            hostMode: HostMode.Development,
+            acceptHeader: "application/json");
+
+        // Act
+        IActionResult result = await controller.PostAsync(route: null);
+
+        // Assert
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbeddingResponse));
+        EmbeddingResponse response = (EmbeddingResponse)okResult.Value!;
+        CollectionAssert.AreEqual(embedding, response.Embedding);
+        Assert.AreEqual(2, response.Dimensions);
+    }
+
+    /// <summary>
+    /// Tests that Accept: text/plain returns plain text with comma-separated floats.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsTextPlain_WhenAcceptIsTextPlain()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.7f, 0.8f, 0.9f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingController controller = CreateController(
+            endpointPath: "/embed",
+            requestPath: "/embed",
+            requestBody: "test text",
+            hostMode: HostMode.Development,
+            acceptHeader: "text/plain");
+
+        // Act
+        IActionResult result = await controller.PostAsync(route: null);
+
+        // Assert
         Assert.IsInstanceOfType(result, typeof(ContentResult));
+        ContentResult contentResult = (ContentResult)result;
+        Assert.AreEqual("0.7,0.8,0.9", contentResult.Content);
+        Assert.AreEqual("text/plain", contentResult.ContentType);
+    }
+
+    /// <summary>
+    /// Tests that when Accept includes both application/json and text/plain, JSON wins.
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsJson_WhenAcceptIncludesBothJsonAndTextPlain()
+    {
+        // Arrange
+        float[] embedding = new[] { 1.0f, 2.0f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingController controller = CreateController(
+            endpointPath: "/embed",
+            requestPath: "/embed",
+            requestBody: "test text",
+            hostMode: HostMode.Development,
+            acceptHeader: "text/plain, application/json");
+
+        // Act
+        IActionResult result = await controller.PostAsync(route: null);
+
+        // Assert - JSON wins when both are present
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
+        OkObjectResult okResult = (OkObjectResult)result;
+        Assert.IsInstanceOfType(okResult.Value, typeof(EmbeddingResponse));
+    }
+
+    /// <summary>
+    /// Tests that Accept: */* returns JSON (default format).
+    /// </summary>
+    [TestMethod]
+    public async Task PostAsync_ReturnsJson_WhenAcceptIsWildcard()
+    {
+        // Arrange
+        float[] embedding = new[] { 0.1f };
+        SetupSuccessfulEmbedding(embedding);
+
+        EmbeddingController controller = CreateController(
+            endpointPath: "/embed",
+            requestPath: "/embed",
+            requestBody: "test text",
+            hostMode: HostMode.Development,
+            acceptHeader: "*/*");
+
+        // Act
+        IActionResult result = await controller.PostAsync(route: null);
+
+        // Assert - wildcard does not trigger text/plain
+        Assert.IsInstanceOfType(result, typeof(OkObjectResult));
     }
 
     #endregion
@@ -942,7 +1088,8 @@ public class EmbeddingControllerTests
         string[]? endpointRoles = null,
         string? clientRole = null,
         IEmbeddingService? embeddingService = null,
-        bool useClassMockService = true)
+        bool useClassMockService = true,
+        string? acceptHeader = null)
     {
         EmbeddingsEndpointOptions endpointOptions = new(
             enabled: true,
@@ -973,7 +1120,8 @@ public class EmbeddingControllerTests
             requestPath,
             requestBody,
             contentType,
-            clientRole);
+            clientRole,
+            acceptHeader);
 
         return controller;
     }
@@ -1022,7 +1170,8 @@ public class EmbeddingControllerTests
         string requestPath,
         string? requestBody = null,
         string? contentType = "text/plain",
-        string? clientRole = null)
+        string? clientRole = null,
+        string? acceptHeader = null)
     {
         DefaultHttpContext httpContext = new();
         httpContext.Request.Path = requestPath;
@@ -1043,6 +1192,11 @@ public class EmbeddingControllerTests
         if (!string.IsNullOrEmpty(clientRole))
         {
             httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER] = clientRole;
+        }
+
+        if (!string.IsNullOrEmpty(acceptHeader))
+        {
+            httpContext.Request.Headers.Accept = acceptHeader;
         }
 
         return new ControllerContext

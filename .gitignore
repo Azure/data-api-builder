@@ -15,6 +15,7 @@ dab-config*.json
 *.dab-config.json
 !dab-config.*reference.json
 !dab-config.*.example.json
+!/dab-config.json
 
 *.cd
 

@@ -184,6 +184,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (!string.IsNullOrWhiteSpace(queryString))
                 {
+                    context.RawQueryString = queryString;
                     context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     RequestParser.ParseQueryString(context, sqlMetadataProvider);
                 }
@@ -287,6 +288,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // So, $filter will be treated as any other parameter (inevitably will raise a Bad Request)
                     if (!string.IsNullOrWhiteSpace(queryString))
                     {
+                        context.RawQueryString = queryString;
                         context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
                     }
 

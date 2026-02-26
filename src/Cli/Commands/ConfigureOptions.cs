@@ -164,10 +164,10 @@ namespace Cli.Commands
         [Option("data-source.health.name", Required = false, HelpText = "Identifier for data source in health check report.")]
         public string? DataSourceHealthName { get; }
 
-        [Option("data-source.user-delegated-auth.enabled", Required = false, HelpText = "Enable user-delegated authentication (OBO) for Azure SQL. Default: false (boolean).")]
+        [Option("data-source.user-delegated-auth.enabled", Required = false, HelpText = "Enable user-delegated authentication (OBO) for Azure SQL and SQL Server. Default: false (boolean).")]
         public bool? DataSourceUserDelegatedAuthEnabled { get; }
 
-        [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Azure SQL resource identifier for token acquisition (e.g., https://database.windows.net).")]
+        [Option("data-source.user-delegated-auth.database-audience", Required = false, HelpText = "Database resource identifier for token acquisition (e.g., https://database.windows.net for Azure SQL).")]
         public string? DataSourceUserDelegatedAuthDatabaseAudience { get; }
 
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]

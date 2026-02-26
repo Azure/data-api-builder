@@ -137,4 +137,41 @@ public interface IAuthorizationResolver
 
         return new List<string>();
     }
+
+    /// <summary>
+    /// Determines whether a given client role should be allowed through the GraphQL
+    /// schema-level authorization gate for a specific set of directive roles.
+    /// Centralizes the role inheritance logic so that callers (e.g. GraphQLAuthorizationHandler)
+    /// do not need to duplicate inheritance rules.
+    /// 
+    /// Inheritance chain: named-role → authenticated → anonymous → none.
+    /// - If the role is explicitly listed in the directive roles, return true.
+    /// - If the role is not 'anonymous' and 'authenticated' is listed, return true (inheritance).
+    /// - Otherwise, return false.
+    /// </summary>
+    /// <param name="clientRole">The role from the X-MS-API-ROLE header.</param>
+    /// <param name="directiveRoles">The roles listed on the @authorize directive.</param>
+    /// <returns>True if the client role should be allowed through the gate.</returns>
+    public bool IsRoleAllowedByDirective(string clientRole, IReadOnlyList<string>? directiveRoles)
+    {
+        if (directiveRoles is null || directiveRoles.Count == 0)
+        {
+            return false;
+        }
+
+        // Explicit match — role is directly listed.
+        if (directiveRoles.Any(role => role.Equals(clientRole, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Role inheritance: any non-anonymous role inherits from 'authenticated'.
+        if (!clientRole.Equals("anonymous", StringComparison.OrdinalIgnoreCase) &&
+            directiveRoles.Any(role => role.Equals("authenticated", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return false;
+    }
 }

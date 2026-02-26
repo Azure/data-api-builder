@@ -438,6 +438,115 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test method to verify that many-to-many relationships work correctly when the linking object
+        /// is in a custom schema (not dbo). This test validates that schema names are correctly compared
+        /// using case-insensitive comparison, which is important for SQL Server where schema names are
+        /// case-insensitive.
+        /// </summary>
+        [DataRow("mySchema.TEST_SOURCE_LINK", "mySchema", "TEST_SOURCE_LINK", DisplayName = "Linking object with custom schema")]
+        [DataRow("MYSCHEMA.TEST_SOURCE_LINK", "MYSCHEMA", "TEST_SOURCE_LINK", DisplayName = "Linking object with uppercase custom schema")]
+        [DataRow("myschema.test_source_link", "myschema", "test_source_link", DisplayName = "Linking object with lowercase schema and table")]
+        [DataTestMethod]
+        public void TestRelationshipWithLinkingObjectInCustomSchema(
+            string linkingObject,
+            string expectedSchema,
+            string expectedTable
+        )
+        {
+            // Creating an EntityMap with two sample entities
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: new string[] { "sourceField" },
+                targetFields: new string[] { "targetField" },
+                linkingObject: linkingObject,
+                linkingSourceFields: new string[] { "linkingSourceField" },
+                linkingTargetFields: new string[] { "linkingTargetField" }
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
+
+            // Mocking EntityToDatabaseObject - entities are in the custom schema as well
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable(expectedSchema, "TEST_SOURCE1")
+                },
+                {
+                    "SampleEntity2",
+                    new DatabaseTable(expectedSchema, "TEST_SOURCE2")
+                }
+            };
+
+            _sqlMetadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            // To mock the schema name and dbObjectName for linkingObject
+            _sqlMetadataProvider.Setup(x =>
+                x.ParseSchemaAndDbTableName(linkingObject)).Returns((expectedSchema, expectedTable));
+
+            string discard;
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            // Mock ForeignKeyPair to be defined in DB with the custom schema
+            // The schema comparison should be case-insensitive
+            // Use concrete DatabaseTable instances with differing casing so that
+            // Moq relies on DatabaseTable.Equals for argument matching.
+            // Linking table uses lowercase to ensure case-insensitive comparison is working.
+            DatabaseTable expectedLinkingTable = new(expectedSchema.ToLowerInvariant(), expectedTable.ToLowerInvariant());
+            DatabaseTable expectedSource1Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE1");
+            DatabaseTable expectedSource2Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE2");
+
+            _sqlMetadataProvider.Setup(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    expectedLinkingTable,
+                    expectedSource1Table
+                )).Returns(true);
+
+            _sqlMetadataProvider.Setup(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    expectedLinkingTable,
+                    expectedSource2Table
+                )).Returns(true);
+
+            // Validation should pass with custom schema
+            configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object);
+
+            // Verify that VerifyForeignKeyExistsInDB is never called with 'dbo' schema,
+            // guarding against the original dbo-fallback regression.
+            _sqlMetadataProvider.Verify(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, "dbo", StringComparison.OrdinalIgnoreCase)),
+                    It.IsAny<DatabaseTable>()
+                ), Times.Never);
+
+            _sqlMetadataProvider.Verify(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    It.IsAny<DatabaseTable>(),
+                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, "dbo", StringComparison.OrdinalIgnoreCase))
+                ), Times.Never);
+        }
+
+        /// <summary>
         /// Test method to check that an exception is thrown when the relationship is one-many
         /// or many-one (determined by the linking object being null), while both SourceFields
         /// and TargetFields are null in the config, and the foreignKey pair between source and target

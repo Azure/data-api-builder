@@ -694,6 +694,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the REST Api for Find operation with a filter containing special characters
+        /// that need to be URL-encoded. Uses existing book with '%' character (SOME%CONN).
+        /// This validates that the fix for the double-decoding issue is working correctly.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithFilterContainingSpecialCharacters()
+        {
+            // Testing with SOME%CONN - the %25 is URL-encoded %
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=title%20eq%20%27SOME%25CONN%27",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(FindTestWithFilterContainingSpecialCharacters))
+            );
+        }
+
+        /// <summary>
         /// Tests the REST Api for Find operation where we compare one field
         /// to the bool returned from another comparison.
         /// </summary>

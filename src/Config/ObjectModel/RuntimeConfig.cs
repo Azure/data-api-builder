@@ -608,7 +608,7 @@ public record RuntimeConfig
     /// <param name="entityName">Name of the entity to check cache configuration.</param>
     /// <returns>Whether caching is enabled for the entity.</returns>
     /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided.</exception>
-    public bool IsEntityCachingEnabled(string entityName)
+    public virtual bool IsEntityCachingEnabled(string entityName)
     {
         if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
         {
@@ -633,7 +633,7 @@ public record RuntimeConfig
     /// If no value is explicitly set, returns the global default value.
     /// </summary>
     /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
-    public int GlobalCacheEntryTtl()
+    public virtual int GlobalCacheEntryTtl()
     {
         return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
             ? Runtime.Cache.TtlSeconds.Value
@@ -647,7 +647,7 @@ public record RuntimeConfig
     /// If runtime cache is not configured, the default cache level is used.
     /// </summary>
     /// <returns>Cache level that a cache entry should be stored in.</returns>
-    public EntityCacheLevel GlobalCacheEntryLevel()
+    public virtual EntityCacheLevel GlobalCacheEntryLevel()
     {
         return Runtime?.Cache is not null
             ? Runtime.Cache.InferredLevel

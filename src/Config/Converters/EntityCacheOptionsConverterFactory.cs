@@ -55,7 +55,9 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         {
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                bool? enabled = false;
+                // Default to null (unset) so that an empty cache object ("cache": {})
+                // is treated as "not explicitly configured" and inherits from the runtime setting.
+                bool? enabled = null;
 
                 // Defer to EntityCacheOptions record definition to define default ttl value.
                 int? ttlSeconds = null;

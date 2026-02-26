@@ -778,6 +778,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 .Setup(c => c.CanUseCache())
                 .Returns(true);
             mockRuntimeConfig
+                .Setup(c => c.IsEntityCachingEnabled(It.IsAny<string>()))
+                .Returns(true);
+            mockRuntimeConfig
                 .Setup(c => c.GetEntityCacheEntryTtl(It.IsAny<string>()))
                 .Returns(60);
             mockRuntimeConfig

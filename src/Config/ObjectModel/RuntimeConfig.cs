@@ -654,6 +654,18 @@ public record RuntimeConfig
             : EntityCacheOptions.DEFAULT_LEVEL;
     }
 
+    /// <summary>
+    /// Whether the caching service should be used for a given operation. This is determined by
+    /// - whether caching is enabled globally
+    /// - whether the datasource is SQL and session context is disabled.
+    /// </summary>
+    /// <returns>Whether cache operations should proceed.</returns>
+    public virtual bool CanUseCache()
+    {
+        bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
+        return IsCachingEnabled && !setSessionContextEnabled;
+    }
+
     private void CheckDataSourceNamePresent(string dataSourceName)
     {
         if (!_dataSourceNameToDataSource.ContainsKey(dataSourceName))

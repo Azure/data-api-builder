@@ -375,7 +375,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (addedEntities == 0)
                 {
-                    _logger.LogWarning($"No new entities were generated from the autoentity {autoentityName} defined in the configuration.");
+                    _logger.LogWarning("No new entities were generated from the autoentity {autoentityName} defined in the configuration.", autoentityName);
                 }
             }
 

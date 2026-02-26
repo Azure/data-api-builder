@@ -5528,7 +5528,6 @@ type Planet @model(name:""PlanetAlias"") {
             try
             {
                 await configValidator.ValidateEntitiesMetadata(configuration, loggerFactory);
-                
                 Assert.Fail("It is expected for DAB to fail due to entities not containing unique parameters.");
             }
             catch (Exception ex)

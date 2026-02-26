@@ -315,17 +315,6 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
 
-            if (GetDatabaseType() == DatabaseType.MSSQL)
-            {
-                await GenerateAutoentitiesIntoEntities(Autoentities);
-            }
-
-            // Running these graphQL validations only in development mode to ensure
-            // fast startup of engine in production mode.
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
-
-            GenerateDatabaseObjectForEntities();
             if (_isValidateOnly)
             {
                 // Currently Validate mode only support single datasource,
@@ -341,6 +330,18 @@ namespace Azure.DataApiBuilder.Core.Services
                     return;
                 }
             }
+
+            if (GetDatabaseType() == DatabaseType.MSSQL)
+            {
+                await GenerateAutoentitiesIntoEntities(Autoentities);
+            }
+
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            _runtimeConfigValidator.ValidateEntityAndAutoentityConfigurations(runtimeConfig);
+
+            GenerateDatabaseObjectForEntities();
 
             await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();

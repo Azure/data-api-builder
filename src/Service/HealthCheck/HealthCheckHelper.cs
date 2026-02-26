@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
             ComprehensiveHealthCheckReport comprehensiveHealthCheckReport = new();
             UpdateVersionAndAppName(ref comprehensiveHealthCheckReport);
             UpdateTimestampOfResponse(ref comprehensiveHealthCheckReport);
-            comprehensiveHealthCheckReport.CurrentRole = string.IsNullOrEmpty(_incomingRoleHeader) ? AuthorizationResolver.ROLE_ANONYMOUS : _incomingRoleHeader;
+            comprehensiveHealthCheckReport.CurrentRole = AuthorizationResolver.ROLE_ANONYMOUS;
             UpdateDabConfigurationDetails(ref comprehensiveHealthCheckReport, runtimeConfig);
             await UpdateHealthCheckDetailsAsync(comprehensiveHealthCheckReport, runtimeConfig);
             UpdateOverallHealthStatus(ref comprehensiveHealthCheckReport);

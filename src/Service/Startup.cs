@@ -55,6 +55,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client;
 using NodaTime;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -68,6 +69,7 @@ using ZiggyCreatures.Caching.Fusion;
 using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -251,6 +253,38 @@ namespace Azure.DataApiBuilder.Service
             // Below are the factory registrations that will enable multiple databases scenario.
             // within these factories the various instances will be created based on the database type and datasourceName.
             services.AddSingleton<IAbstractQueryManagerFactory, QueryManagerFactory>();
+
+            // Register IOboTokenProvider only when user-delegated auth is configured.
+            // This avoids registering a null singleton and supports hot-reload scenarios.
+            // Requires environment variables: DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, DAB_OBO_CLIENT_SECRET
+            //
+            // Design note: A single IOboTokenProvider is registered using one Azure AD app registration.
+            // Multiple databases with different database-audience values ARE supported - the audience
+            // is passed to GetAccessTokenOnBehalfOfAsync() at query execution time, allowing the same
+            // MSAL client to acquire tokens for different resource servers.
+            if (IsOboConfigured())
+            {
+                // Register IMsalClientWrapper for dependency injection
+                services.AddSingleton<IMsalClientWrapper>(serviceProvider =>
+                {
+                    string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+                    string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+                    string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
+
+                    string authority = $"https://login.microsoftonline.com/{tenantId}";
+
+                    IConfidentialClientApplication msalClient = ConfidentialClientApplicationBuilder
+                        .Create(clientId)
+                        .WithAuthority(authority)
+                        .WithClientSecret(clientSecret)
+                        .Build();
+
+                    return new MsalClientWrapper(msalClient);
+                });
+
+                // Register OboSqlTokenProvider with dependencies from DI
+                services.AddSingleton<IOboTokenProvider, OboSqlTokenProvider>();
+            }
 
             services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
 
@@ -1239,6 +1273,42 @@ namespace Azure.DataApiBuilder.Service
         private static bool IsUIEnabled(RuntimeConfig? runtimeConfig, IWebHostEnvironment env)
         {
             return (runtimeConfig is not null && runtimeConfig.IsDevelopmentMode()) || env.IsDevelopment();
+        }
+
+        /// <summary>
+        /// Checks whether On-Behalf-Of (OBO) authentication is configured by verifying that
+        /// the required environment variables are set and the config has user-delegated auth enabled.
+        /// </summary>
+        /// <returns>True if OBO is configured and ready to use; otherwise, false.</returns>
+        private bool IsOboConfigured()
+        {
+            // Check required environment variables first (fast path)
+            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
+
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientSecret))
+            {
+                return false;
+            }
+
+            // Check if any data source has user-delegated auth enabled
+            RuntimeConfig? config = _configProvider?.TryGetConfig(out RuntimeConfig? c) == true ? c : null;
+            if (config is null)
+            {
+                return false;
+            }
+
+            foreach (DataSource ds in config.ListAllDataSources())
+            {
+                if (ds.IsUserDelegatedAuthEnabled &&
+                    !string.IsNullOrEmpty(ds.UserDelegatedAuth!.DatabaseAudience))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

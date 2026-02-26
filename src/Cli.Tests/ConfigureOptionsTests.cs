@@ -1098,6 +1098,7 @@ namespace Cli.Tests
         /// <summary>
         /// Tests adding user-delegated-auth configuration options individually or together.
         /// Verifies that enabled and database-audience properties can be set independently or combined.
+        /// Also verifies default values for properties not explicitly set.
         /// Commands:
         /// - dab configure --data-source.user-delegated-auth.enabled true
         /// - dab configure --data-source.user-delegated-auth.database-audience "https://database.windows.net"
@@ -1131,16 +1132,24 @@ namespace Cli.Tests
             Assert.IsNotNull(config.DataSource);
             Assert.IsNotNull(config.DataSource.UserDelegatedAuth);
 
-            // Verify enabled value
+            // Verify enabled value (if set, use provided value; otherwise defaults to false)
             if (enabledValue.HasValue)
             {
                 Assert.AreEqual(enabledValue.Value, config.DataSource.UserDelegatedAuth.Enabled);
+            }
+            else
+            {
+                Assert.IsFalse(config.DataSource.UserDelegatedAuth.Enabled);
             }
 
             // Verify database-audience value
             if (audienceValue is not null)
             {
                 Assert.AreEqual(audienceValue, config.DataSource.UserDelegatedAuth.DatabaseAudience);
+            }
+            else
+            {
+                Assert.IsNull(config.DataSource.UserDelegatedAuth.DatabaseAudience);
             }
 
             // Verify provider is set to default
@@ -1176,8 +1185,9 @@ namespace Cli.Tests
 
         /// <summary>
         /// Tests updating existing user-delegated-auth configuration by changing the database-audience.
-        /// This method verifies that the database-audience can be updated while preserving the enabled setting.
-        /// Also verifies that the JSON structure is correct with proper nesting under data-source.
+        /// Verifies that the database-audience can be updated while preserving the enabled setting.
+        /// Also validates JSON structure: verifies user-delegated-auth is correctly nested under data-source
+        /// with proper JSON property names (enabled, provider, database-audience).
         /// </summary>
         [TestMethod]
         public void TestUpdateUserDelegatedAuthDatabaseAudience()

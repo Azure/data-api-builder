@@ -677,6 +677,145 @@
               "default": 4
             }
           }
+        },
+        "embeddings": {
+          "type": "object",
+          "description": "Configuration for text embedding/vectorization service. Supports OpenAI and Azure OpenAI providers.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether the embedding service is enabled. Defaults to false.",
+              "default": false
+            },
+            "provider": {
+              "type": "string",
+              "description": "The embedding provider type.",
+              "enum": ["azure-openai", "openai"]
+            },
+            "base-url": {
+              "type": "string",
+              "description": "The provider base URL. For Azure OpenAI, use the Azure resource endpoint. For OpenAI, use https://api.openai.com."
+            },
+            "api-key": {
+              "type": "string",
+              "description": "The API key for authentication. Supports environment variable substitution with @env('VAR_NAME')."
+            },
+            "model": {
+              "type": "string",
+              "description": "The model or deployment name. Required for Azure OpenAI (deployment name). For OpenAI, defaults to 'text-embedding-3-small' if not specified."
+            },
+            "api-version": {
+              "type": "string",
+              "description": "Azure API version. Only used for Azure OpenAI provider.",
+              "default": "2024-02-01"
+            },
+            "dimensions": {
+              "type": "integer",
+              "description": "Output vector dimensions. Optional, uses model default if not specified. Useful for Redis schema alignment.",
+              "minimum": 1
+            },
+            "timeout-ms": {
+              "type": "integer",
+              "description": "Request timeout in milliseconds.",
+              "default": 30000,
+              "minimum": 1,
+              "maximum": 300000
+            },
+            "endpoint": {
+              "type": "object",
+              "description": "REST endpoint configuration for the embedding service.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the /embed REST endpoint is enabled. Defaults to false.",
+                  "default": false
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The endpoint path. Defaults to '/embed'.",
+                  "default": "/embed"
+                },
+                "roles": {
+                  "type": "array",
+                  "description": "The roles allowed to access the embedding endpoint. In development mode, defaults to ['anonymous'].",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "health": {
+              "type": "object",
+              "description": "Health check configuration for the embedding service.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether health checks are enabled for embeddings. Defaults to true.",
+                  "default": true
+                },
+                "threshold-ms": {
+                  "type": "integer",
+                  "description": "The maximum response time in milliseconds to be considered healthy.",
+                  "default": 5000,
+                  "minimum": 1,
+                  "maximum": 300000
+                },
+                "test-text": {
+                  "type": "string",
+                  "description": "The text to use for health check validation.",
+                  "default": "health check"
+                },
+                "expected-dimensions": {
+                  "type": "integer",
+                  "description": "The expected number of dimensions in the embedding result. If specified, dimension validation is performed.",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "required": ["provider", "base-url", "api-key"],
+          "allOf": [
+            {
+              "$comment": "Azure OpenAI requires the model (deployment name) to be specified.",
+              "if": {
+                "properties": {
+                  "provider": {
+                    "const": "azure-openai"
+                  }
+                },
+                "required": ["provider"]
+              },
+              "then": {
+                "required": ["model"],
+                "properties": {
+                  "api-version": {
+                    "type": "string",
+                    "description": "Azure API version. Required for Azure OpenAI provider.",
+                    "default": "2024-02-01"
+                  }
+                }
+              }
+            },
+            {
+              "$comment": "OpenAI does not require model (defaults to text-embedding-3-small) and does not use api-version.",
+              "if": {
+                "properties": {
+                  "provider": {
+                    "const": "openai"
+                  }
+                },
+                "required": ["provider"]
+              },
+              "then": {
+                "properties": {
+                  "api-version": false
+                }
+              }
+            }
+          ]
         }
       }
     },

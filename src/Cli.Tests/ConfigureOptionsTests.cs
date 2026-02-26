@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Serilog;
 
 namespace Cli.Tests
@@ -1093,6 +1094,301 @@ namespace Cli.Tests
 
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config));
             Assert.IsNotNull(config.Runtime);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure" with embeddings endpoint options on a config with existing embeddings
+        /// results in the endpoint options being added to the embeddings configuration.
+        /// </summary>
+        [TestMethod]
+        public void TestAddEmbeddingsEndpointOptions()
+        {
+            // Arrange: Create a config with embeddings but no endpoint/health
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+            config = config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.AzureOpenAI,
+                        BaseUrl: "https://myservice.openai.azure.com",
+                        ApiKey: "test-api-key",
+                        Model: "text-embedding-ada-002")
+                }
+            };
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure embeddings endpoint options
+            ConfigureOptions options = new(
+                runtimeEmbeddingsEndpointEnabled: CliBool.True,
+                runtimeEmbeddingsEndpointPath: "/vectorize",
+                runtimeEmbeddingsEndpointRoles: new List<string> { "admin", "reader" },
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? updatedRuntimeConfig));
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings);
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime.Embeddings.Endpoint);
+            Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Enabled);
+            Assert.AreEqual("/vectorize", updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Path);
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
+            CollectionAssert.AreEqual(new[] { "admin", "reader" }, updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
+            // Verify base embeddings settings are preserved
+            Assert.AreEqual(EmbeddingProviderType.AzureOpenAI, updatedRuntimeConfig.Runtime.Embeddings.Provider);
+            Assert.AreEqual("https://myservice.openai.azure.com", updatedRuntimeConfig.Runtime.Embeddings.BaseUrl);
+            Assert.AreEqual("test-api-key", updatedRuntimeConfig.Runtime.Embeddings.ApiKey);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure" with embeddings health options on a config with existing embeddings
+        /// results in the health options being added to the embeddings configuration.
+        /// </summary>
+        [TestMethod]
+        public void TestAddEmbeddingsHealthOptions()
+        {
+            // Arrange: Create a config with embeddings but no health config
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+            config = config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.OpenAI,
+                        BaseUrl: "https://api.openai.com",
+                        ApiKey: "test-api-key")
+                }
+            };
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure embeddings health options
+            ConfigureOptions options = new(
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthThresholdMs: 3000,
+                runtimeEmbeddingsHealthTestText: "hello world",
+                runtimeEmbeddingsHealthExpectedDimensions: 1536,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? updatedRuntimeConfig));
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings);
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime.Embeddings.Health);
+            Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Health.Enabled);
+            Assert.AreEqual(3000, updatedRuntimeConfig.Runtime.Embeddings.Health.ThresholdMs);
+            Assert.AreEqual("hello world", updatedRuntimeConfig.Runtime.Embeddings.Health.TestText);
+            Assert.AreEqual(1536, updatedRuntimeConfig.Runtime.Embeddings.Health.ExpectedDimensions);
+            // Verify base embeddings settings are preserved
+            Assert.AreEqual(EmbeddingProviderType.OpenAI, updatedRuntimeConfig.Runtime.Embeddings.Provider);
+        }
+
+        /// <summary>
+        /// Tests that running "dab configure" with both embeddings endpoint and health options
+        /// on a config with existing embeddings results in both being added.
+        /// </summary>
+        [TestMethod]
+        public void TestAddEmbeddingsEndpointAndHealthOptionsTogether()
+        {
+            // Arrange
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+            config = config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.AzureOpenAI,
+                        BaseUrl: "https://myservice.openai.azure.com",
+                        ApiKey: "test-api-key",
+                        Model: "text-embedding-ada-002")
+                }
+            };
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure both endpoint and health options at once
+            ConfigureOptions options = new(
+                runtimeEmbeddingsEndpointEnabled: CliBool.True,
+                runtimeEmbeddingsEndpointPath: "/embed-api",
+                runtimeEmbeddingsEndpointRoles: new List<string> { "authenticated" },
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthThresholdMs: 5000,
+                runtimeEmbeddingsHealthTestText: "test embedding",
+                runtimeEmbeddingsHealthExpectedDimensions: 768,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? updatedRuntimeConfig));
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings?.Endpoint);
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings?.Health);
+            // Endpoint assertions
+            Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Enabled);
+            Assert.AreEqual("/embed-api", updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Path);
+            CollectionAssert.AreEqual(new[] { "authenticated" }, updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
+            // Health assertions
+            Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Health.Enabled);
+            Assert.AreEqual(5000, updatedRuntimeConfig.Runtime.Embeddings.Health.ThresholdMs);
+            Assert.AreEqual("test embedding", updatedRuntimeConfig.Runtime.Embeddings.Health.TestText);
+            Assert.AreEqual(768, updatedRuntimeConfig.Runtime.Embeddings.Health.ExpectedDimensions);
+        }
+
+        /// <summary>
+        /// Tests that updating endpoint options on a config that already has endpoint and health settings
+        /// preserves the existing health settings and updates only the endpoint.
+        /// </summary>
+        [TestMethod]
+        public void TestUpdateExistingEmbeddingsEndpointPreservesHealth()
+        {
+            // Arrange: Create a config with embeddings that already has endpoint and health
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+            config = config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.AzureOpenAI,
+                        BaseUrl: "https://myservice.openai.azure.com",
+                        ApiKey: "test-api-key",
+                        Model: "text-embedding-ada-002",
+                        Endpoint: new EmbeddingsEndpointOptions(enabled: true, path: "/old-path", roles: new[] { "old-role" }),
+                        Health: new EmbeddingsHealthCheckConfig(enabled: true, thresholdMs: 2000, testText: "existing text", expectedDimensions: 512))
+                }
+            };
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Update only the endpoint path
+            ConfigureOptions options = new(
+                runtimeEmbeddingsEndpointPath: "/new-path",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? updatedRuntimeConfig));
+            // Endpoint: path updated, enabled and roles preserved
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime?.Embeddings?.Endpoint);
+            Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Enabled);
+            Assert.AreEqual("/new-path", updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Path);
+            CollectionAssert.AreEqual(new[] { "old-role" }, updatedRuntimeConfig.Runtime.Embeddings.Endpoint.Roles);
+            // Health: fully preserved
+            Assert.IsNotNull(updatedRuntimeConfig.Runtime.Embeddings.Health);
+            Assert.IsTrue(updatedRuntimeConfig.Runtime.Embeddings.Health.Enabled);
+            Assert.AreEqual(2000, updatedRuntimeConfig.Runtime.Embeddings.Health.ThresholdMs);
+            Assert.AreEqual("existing text", updatedRuntimeConfig.Runtime.Embeddings.Health.TestText);
+            Assert.AreEqual(512, updatedRuntimeConfig.Runtime.Embeddings.Health.ExpectedDimensions);
+        }
+
+        /// <summary>
+        /// Tests that configuring embeddings health with an invalid (negative) threshold fails.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureEmbeddingsHealthWithInvalidThresholdFails()
+        {
+            // Arrange
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+            config = config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.OpenAI,
+                        BaseUrl: "https://api.openai.com",
+                        ApiKey: "test-api-key")
+                }
+            };
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure with invalid threshold
+            ConfigureOptions options = new(
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthThresholdMs: -1,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Should fail
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests that configuring embeddings health with an invalid (negative) expected-dimensions fails.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureEmbeddingsHealthWithInvalidExpectedDimensionsFails()
+        {
+            // Arrange
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+            config = config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.OpenAI,
+                        BaseUrl: "https://api.openai.com",
+                        ApiKey: "test-api-key")
+                }
+            };
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure with invalid expected dimensions
+            ConfigureOptions options = new(
+                runtimeEmbeddingsHealthEnabled: CliBool.True,
+                runtimeEmbeddingsHealthExpectedDimensions: 0,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Should fail
+            Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests that configuring embeddings endpoint with a path containing reserved characters fails validation.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigureEmbeddingsEndpointWithInvalidPathFails()
+        {
+            // Arrange
+            RuntimeConfigLoader.TryParseConfig(INITIAL_CONFIG, out RuntimeConfig? config);
+            Assert.IsNotNull(config);
+            config = config with
+            {
+                Runtime = config.Runtime! with
+                {
+                    Embeddings = new EmbeddingsOptions(
+                        Provider: EmbeddingProviderType.OpenAI,
+                        BaseUrl: "https://api.openai.com",
+                        ApiKey: "test-api-key")
+                }
+            };
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
+
+            // Act: Configure with invalid endpoint path (contains spaces)
+            ConfigureOptions options = new(
+                runtimeEmbeddingsEndpointEnabled: CliBool.True,
+                runtimeEmbeddingsEndpointPath: "/invalid path with spaces",
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Should fail
+            Assert.IsFalse(isSuccess);
         }
     }
 }

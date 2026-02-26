@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 using Azure.DataApiBuilder.Product;
 using Cli.Constants;
 using CommandLine;
@@ -73,6 +74,21 @@ namespace Cli.Commands
             RollingInterval? fileSinkRollingInterval = null,
             int? fileSinkRetainedFileCountLimit = null,
             long? fileSinkFileSizeLimitBytes = null,
+            CliBool? runtimeEmbeddingsEnabled = null,
+            EmbeddingProviderType? runtimeEmbeddingsProvider = null,
+            string? runtimeEmbeddingsBaseUrl = null,
+            string? runtimeEmbeddingsApiKey = null,
+            string? runtimeEmbeddingsModel = null,
+            string? runtimeEmbeddingsApiVersion = null,
+            int? runtimeEmbeddingsDimensions = null,
+            int? runtimeEmbeddingsTimeoutMs = null,
+            CliBool? runtimeEmbeddingsEndpointEnabled = null,
+            string? runtimeEmbeddingsEndpointPath = null,
+            IEnumerable<string>? runtimeEmbeddingsEndpointRoles = null,
+            CliBool? runtimeEmbeddingsHealthEnabled = null,
+            int? runtimeEmbeddingsHealthThresholdMs = null,
+            string? runtimeEmbeddingsHealthTestText = null,
+            int? runtimeEmbeddingsHealthExpectedDimensions = null,
             string? config = null)
             : base(config)
         {
@@ -137,6 +153,24 @@ namespace Cli.Commands
             FileSinkRollingInterval = fileSinkRollingInterval;
             FileSinkRetainedFileCountLimit = fileSinkRetainedFileCountLimit;
             FileSinkFileSizeLimitBytes = fileSinkFileSizeLimitBytes;
+            // Embeddings
+            RuntimeEmbeddingsEnabled = runtimeEmbeddingsEnabled;
+            RuntimeEmbeddingsProvider = runtimeEmbeddingsProvider;
+            RuntimeEmbeddingsBaseUrl = runtimeEmbeddingsBaseUrl;
+            RuntimeEmbeddingsApiKey = runtimeEmbeddingsApiKey;
+            RuntimeEmbeddingsModel = runtimeEmbeddingsModel;
+            RuntimeEmbeddingsApiVersion = runtimeEmbeddingsApiVersion;
+            RuntimeEmbeddingsDimensions = runtimeEmbeddingsDimensions;
+            RuntimeEmbeddingsTimeoutMs = runtimeEmbeddingsTimeoutMs;
+            // Embeddings Endpoint
+            RuntimeEmbeddingsEndpointEnabled = runtimeEmbeddingsEndpointEnabled;
+            RuntimeEmbeddingsEndpointPath = runtimeEmbeddingsEndpointPath;
+            RuntimeEmbeddingsEndpointRoles = runtimeEmbeddingsEndpointRoles;
+            // Embeddings Health
+            RuntimeEmbeddingsHealthEnabled = runtimeEmbeddingsHealthEnabled;
+            RuntimeEmbeddingsHealthThresholdMs = runtimeEmbeddingsHealthThresholdMs;
+            RuntimeEmbeddingsHealthTestText = runtimeEmbeddingsHealthTestText;
+            RuntimeEmbeddingsHealthExpectedDimensions = runtimeEmbeddingsHealthExpectedDimensions;
         }
 
         [Option("data-source.database-type", Required = false, HelpText = "Database type. Allowed values: MSSQL, PostgreSQL, CosmosDB_NoSQL, MySQL.")]
@@ -291,6 +325,51 @@ namespace Cli.Commands
 
         [Option("runtime.telemetry.file.file-size-limit-bytes", Required = false, HelpText = "Configure maximum file size limit in bytes. Default: 1048576")]
         public long? FileSinkFileSizeLimitBytes { get; }
+
+        [Option("runtime.embeddings.enabled", Required = false, HelpText = "Enable/disable the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsEnabled { get; }
+
+        [Option("runtime.embeddings.provider", Required = false, HelpText = "Configure embedding provider type. Allowed values: azure-openai, openai.")]
+        public EmbeddingProviderType? RuntimeEmbeddingsProvider { get; }
+
+        [Option("runtime.embeddings.base-url", Required = false, HelpText = "Configure the embedding provider base URL.")]
+        public string? RuntimeEmbeddingsBaseUrl { get; }
+
+        [Option("runtime.embeddings.api-key", Required = false, HelpText = "Configure the embedding API key for authentication.")]
+        public string? RuntimeEmbeddingsApiKey { get; }
+
+        [Option("runtime.embeddings.model", Required = false, HelpText = "Configure the model/deployment name. Required for Azure OpenAI, defaults to text-embedding-3-small for OpenAI.")]
+        public string? RuntimeEmbeddingsModel { get; }
+
+        [Option("runtime.embeddings.api-version", Required = false, HelpText = "Configure the Azure API version. Only used for Azure OpenAI provider. Default: 2024-02-01")]
+        public string? RuntimeEmbeddingsApiVersion { get; }
+
+        [Option("runtime.embeddings.dimensions", Required = false, HelpText = "Configure the output vector dimensions. Optional, uses model default if not specified.")]
+        public int? RuntimeEmbeddingsDimensions { get; }
+
+        [Option("runtime.embeddings.timeout-ms", Required = false, HelpText = "Configure the request timeout in milliseconds. Default: 30000")]
+        public int? RuntimeEmbeddingsTimeoutMs { get; }
+
+        [Option("runtime.embeddings.endpoint.enabled", Required = false, HelpText = "Enable/disable the endpoint for embeddings. Default: false")]
+        public CliBool? RuntimeEmbeddingsEndpointEnabled { get; }
+
+        [Option("runtime.embeddings.endpoint.path", Required = false, HelpText = "Configure the endpoint path for embeddings. Default: /embed")]
+        public string? RuntimeEmbeddingsEndpointPath { get; }
+
+        [Option("runtime.embeddings.endpoint.roles", Required = false, Separator = ',', HelpText = "Configure the roles allowed to access the embedding endpoint. Comma-separated list. In development mode defaults to 'anonymous'.")]
+        public IEnumerable<string>? RuntimeEmbeddingsEndpointRoles { get; }
+
+        [Option("runtime.embeddings.health.enabled", Required = false, HelpText = "Enable/disable health checks for the embedding service. Default: true")]
+        public CliBool? RuntimeEmbeddingsHealthEnabled { get; }
+
+        [Option("runtime.embeddings.health.threshold-ms", Required = false, HelpText = "Configure the health check threshold in milliseconds. Default: 5000")]
+        public int? RuntimeEmbeddingsHealthThresholdMs { get; }
+
+        [Option("runtime.embeddings.health.test-text", Required = false, HelpText = "Configure the test text for health check validation. Default: 'health check'")]
+        public string? RuntimeEmbeddingsHealthTestText { get; }
+
+        [Option("runtime.embeddings.health.expected-dimensions", Required = false, HelpText = "Configure the expected dimensions for health check validation. Optional.")]
+        public int? RuntimeEmbeddingsHealthExpectedDimensions { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.ObjectModel.Embeddings;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -17,6 +18,7 @@ public record RuntimeOptions
     public RuntimeCacheOptions? Cache { get; init; }
     public PaginationOptions? Pagination { get; init; }
     public RuntimeHealthCheckConfig? Health { get; init; }
+    public EmbeddingsOptions? Embeddings { get; init; }
     public CompressionOptions? Compression { get; init; }
 
     [JsonConstructor]
@@ -30,6 +32,7 @@ public record RuntimeOptions
         RuntimeCacheOptions? Cache = null,
         PaginationOptions? Pagination = null,
         RuntimeHealthCheckConfig? Health = null,
+        EmbeddingsOptions? Embeddings = null)
         CompressionOptions? Compression = null)
     {
         this.Rest = Rest;
@@ -41,6 +44,7 @@ public record RuntimeOptions
         this.Cache = Cache;
         this.Pagination = Pagination;
         this.Health = Health;
+        this.Embeddings = Embeddings;
         this.Compression = Compression;
     }
 
@@ -77,4 +81,12 @@ public record RuntimeOptions
         Health is null ||
         Health?.Enabled is null ||
         Health?.Enabled is true;
+
+    /// <summary>
+    /// Indicates whether embeddings are configured.
+    /// Embeddings are considered configured when the Embeddings property is not null.
+    /// </summary>
+    [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Embeddings))]
+    public bool IsEmbeddingsConfigured => Embeddings is not null;
 }

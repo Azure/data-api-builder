@@ -1462,7 +1462,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.AreEqual(expected: "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY", actual: claimsInRequestContext["sub"], message: "Expected the sub claim to be present.");
             Assert.AreEqual(expected: "55296aad-ea7f-4c44-9a4c-bb1e8d43a005", actual: claimsInRequestContext["oid"], message: "Expected the oid claim to be present.");
             Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE], actual: TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
-            Assert.AreEqual(expected: @"[""ROLE2"",""ROLE3""]", actual: claimsInRequestContext[AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE], message: "Original roles should be preserved in a new context");
+            Assert.AreEqual(expected: "[\"" + TEST_ROLE + "\",\"ROLE2\",\"ROLE3\"]", actual: claimsInRequestContext[AuthenticationOptions.ORIGINAL_ROLE_CLAIM_TYPE], message: "Original roles should be preserved in a new context");
         }
 
         /// <summary>

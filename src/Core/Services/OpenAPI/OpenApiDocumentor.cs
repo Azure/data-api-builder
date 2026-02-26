@@ -43,9 +43,8 @@ namespace Azure.DataApiBuilder.Core.Services
         private const string GETONE_DESCRIPTION = "Returns an entity.";
         private const string POST_DESCRIPTION = "Create entity.";
         private const string PUT_DESCRIPTION = "Replace or create entity.";
-        private const string PUT_KEYLESS_DESCRIPTION = "Create entity (keyless). For entities with auto-generated primary keys, creates a new record without requiring the key in the URL.";
+        private const string PUT_PATCH_KEYLESS_DESCRIPTION = "Create entity (keyless). For entities with auto-generated primary keys, creates a new record without requiring the key in the URL.";
         private const string PATCH_DESCRIPTION = "Update or create entity.";
-        private const string PATCH_KEYLESS_DESCRIPTION = "Create entity (keyless). For entities with auto-generated primary keys, creates a new record without requiring the key in the URL.";
         private const string DELETE_DESCRIPTION = "Delete entity.";
         private const string SP_EXECUTE_DESCRIPTION = "Executes a stored procedure.";
 
@@ -514,7 +513,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (configuredRestOperations[OperationType.Put])
                     {
-                        OpenApiOperation putKeylessOperation = CreateBaseOperation(description: PUT_KEYLESS_DESCRIPTION, tags: tags);
+                        OpenApiOperation putKeylessOperation = CreateBaseOperation(description: PUT_PATCH_KEYLESS_DESCRIPTION, tags: tags);
                         putKeylessOperation.RequestBody = CreateOpenApiRequestBodyPayload(keylessBodySchemaReferenceId, keylessRequestBodyRequired);
                         putKeylessOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
                         openApiPathItemOperations.Add(OperationType.Put, putKeylessOperation);
@@ -522,7 +521,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (configuredRestOperations[OperationType.Patch])
                     {
-                        OpenApiOperation patchKeylessOperation = CreateBaseOperation(description: PATCH_KEYLESS_DESCRIPTION, tags: tags);
+                        OpenApiOperation patchKeylessOperation = CreateBaseOperation(description: PUT_PATCH_KEYLESS_DESCRIPTION, tags: tags);
                         patchKeylessOperation.RequestBody = CreateOpenApiRequestBodyPayload(keylessBodySchemaReferenceId, keylessRequestBodyRequired);
                         patchKeylessOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: entityName));
                         openApiPathItemOperations.Add(OperationType.Patch, patchKeylessOperation);

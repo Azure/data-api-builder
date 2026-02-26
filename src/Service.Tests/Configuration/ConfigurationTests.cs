@@ -2903,7 +2903,7 @@ type Moon {
                         }";
                     string queryName = "stock_by_pk";
 
-                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
+                    await ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
                 }
                 finally
                 {
@@ -3225,7 +3225,7 @@ type Moon {
         /// <param name="query">GraphQL query/mutation text</param>
         /// <param name="queryName">GraphQL query/mutation name</param>
         /// <param name="authToken">Auth token for the graphQL request</param>
-        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
+        private static async Task ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
         {
             JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                                                 client,
@@ -3237,6 +3237,7 @@ type Moon {
                                                 clientRoleHeader: clientRoleHeader);
 
             Assert.IsNotNull(queryResponse);
+            Assert.AreNotEqual(JsonValueKind.Null, queryResponse.ValueKind, "Expected a JSON object response but received null.");
             Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
         }
 

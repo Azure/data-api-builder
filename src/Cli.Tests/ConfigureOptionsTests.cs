@@ -1221,41 +1221,7 @@ namespace Cli.Tests
         public void TestUpdateUserDelegatedAuthDatabaseAudience()
         {
             // Arrange - Config with existing user-delegated-auth section
-            string configWithUserDelegatedAuth = @"
-            {
-                ""$schema"": ""test"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""user-delegated-auth"": {
-                        ""enabled"": true,
-                        ""database-audience"": ""https://database.windows.net""
-                    }
-                },
-                ""runtime"": {
-                    ""rest"": {
-                        ""enabled"": true,
-                        ""path"": ""/api""
-                    },
-                    ""graphql"": {
-                        ""enabled"": true,
-                        ""path"": ""/graphql"",
-                        ""allow-introspection"": true
-                    },
-                    ""host"": {
-                        ""mode"": ""development"",
-                        ""cors"": {
-                            ""origins"": [],
-                            ""allow-credentials"": false
-                        },
-                        ""authentication"": {
-                            ""provider"": ""StaticWebApps""
-                        }
-                    }
-                },
-                ""entities"": {}
-            }";
-            SetupFileSystemWithInitialConfig(configWithUserDelegatedAuth);
+            SetupFileSystemWithInitialConfig(TestHelper.CONFIG_WITH_USER_DELEGATED_AUTH);
 
             string newAudience = "https://database.usgovcloudapi.net";
             ConfigureOptions options = new(
@@ -1328,42 +1294,7 @@ namespace Cli.Tests
         public void TestUserDelegatedAuthUpdatesCorrectJsonFields()
         {
             // Arrange - Start with config that has user-delegated-auth
-            string configWithUserDelegatedAuth = @"
-            {
-                ""$schema"": ""test"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""user-delegated-auth"": {
-                        ""enabled"": true,
-                        ""provider"": ""EntraId"",
-                        ""database-audience"": ""https://database.windows.net""
-                    }
-                },
-                ""runtime"": {
-                    ""rest"": {
-                        ""enabled"": true,
-                        ""path"": ""/api""
-                    },
-                    ""graphql"": {
-                        ""enabled"": true,
-                        ""path"": ""/graphql"",
-                        ""allow-introspection"": true
-                    },
-                    ""host"": {
-                        ""mode"": ""development"",
-                        ""cors"": {
-                            ""origins"": [],
-                            ""allow-credentials"": false
-                        },
-                        ""authentication"": {
-                            ""provider"": ""StaticWebApps""
-                        }
-                    }
-                },
-                ""entities"": {}
-            }";
-            SetupFileSystemWithInitialConfig(configWithUserDelegatedAuth);
+            SetupFileSystemWithInitialConfig(TestHelper.CONFIG_WITH_USER_DELEGATED_AUTH);
 
             string newAudience = "https://database.chinacloudapi.cn";
             ConfigureOptions options = new(
@@ -1399,42 +1330,7 @@ namespace Cli.Tests
         public void TestUserDelegatedAuthDisableUpdatesJsonCorrectly()
         {
             // Arrange - Start with enabled config
-            string configWithUserDelegatedAuth = @"
-            {
-                ""$schema"": ""test"",
-                ""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""user-delegated-auth"": {
-                        ""enabled"": true,
-                        ""provider"": ""EntraId"",
-                        ""database-audience"": ""https://database.windows.net""
-                    }
-                },
-                ""runtime"": {
-                    ""rest"": {
-                        ""enabled"": true,
-                        ""path"": ""/api""
-                    },
-                    ""graphql"": {
-                        ""enabled"": true,
-                        ""path"": ""/graphql"",
-                        ""allow-introspection"": true
-                    },
-                    ""host"": {
-                        ""mode"": ""development"",
-                        ""cors"": {
-                            ""origins"": [],
-                            ""allow-credentials"": false
-                        },
-                        ""authentication"": {
-                            ""provider"": ""StaticWebApps""
-                        }
-                    }
-                },
-                ""entities"": {}
-            }";
-            SetupFileSystemWithInitialConfig(configWithUserDelegatedAuth);
+            SetupFileSystemWithInitialConfig(TestHelper.CONFIG_WITH_USER_DELEGATED_AUTH);
 
             ConfigureOptions options = new(
                 dataSourceUserDelegatedAuthEnabled: false,

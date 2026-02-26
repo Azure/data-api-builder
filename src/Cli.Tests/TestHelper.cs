@@ -279,6 +279,46 @@ namespace Cli.Tests
 
         public const string CONFIG_WITH_DISABLED_GLOBAL_REST_GRAPHQL = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION_WITH_DISABLED_REST_GRAPHQL}}}";
 
+        /// <summary>
+        /// A config json with user-delegated-auth enabled. This is used in tests to verify updating existing
+        /// user-delegated-auth configuration.
+        /// </summary>
+        public const string CONFIG_WITH_USER_DELEGATED_AUTH = @"
+            {
+                ""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @""",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+                    ""user-delegated-auth"": {
+                        ""enabled"": true,
+                        ""provider"": ""EntraId"",
+                        ""database-audience"": ""https://database.windows.net""
+                    }
+                },
+                ""runtime"": {
+                    ""rest"": {
+                        ""enabled"": true,
+                        ""path"": ""/api""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""path"": ""/graphql"",
+                        ""allow-introspection"": true
+                    },
+                    ""host"": {
+                        ""mode"": ""development"",
+                        ""cors"": {
+                            ""origins"": [],
+                            ""allow-credentials"": false
+                        },
+                        ""authentication"": {
+                            ""provider"": ""StaticWebApps""
+                        }
+                    }
+                },
+                ""entities"": {}
+            }";
+
         public const string SINGLE_ENTITY = @"
           {
               ""entities"": {

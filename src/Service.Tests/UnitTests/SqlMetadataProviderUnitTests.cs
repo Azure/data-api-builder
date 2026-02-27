@@ -490,11 +490,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                 queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(mockQueryExecutor.Object);
 
-                Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
+                IFileSystem fileSystem = new FileSystem();
+                Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+                RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, loggerValidator.Object);
 
                 ISqlMetadataProvider sqlMetadataProvider = new MsSqlMetadataProvider(
                     runtimeConfigProvider,
-                    runtimeConfigValidator.Object,
+                    runtimeConfigValidator,
                     queryManagerFactory.Object,
                     sqlMetadataLogger,
                     dataSourceName);

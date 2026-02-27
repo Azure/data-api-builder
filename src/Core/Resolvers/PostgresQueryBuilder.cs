@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (value is string || value is char)
             {
                 // Handle string values, escaping single quotes
-                return $"'{value.ToString()!.Replace("'", "''")}'"; 
+                return $"'{value.ToString()!.Replace("'", "''")}'";
             }
 
             if (value is bool boolValue)
@@ -312,7 +312,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return query;
         }
-
 
         /// <inheritdoc/>
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)

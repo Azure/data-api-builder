@@ -782,12 +782,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test that when OBO is enabled, connection pooling is forcibly enabled even if
-        /// the original connection string has Pooling=false. Per-user pooling is required
-        /// for OBO to prevent connection exhaustion, so DAB intentionally overrides this setting.
+        /// Test that when OBO is enabled, the user's pooling setting from the connection string is respected.
+        /// DAB does not override the user's choice - if they set Pooling=false, it stays false.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public void TestOboEnabled_ForciblyEnablesPooling_EvenWhenConnectionStringDisablesIt()
+        public void TestOboEnabled_RespectsUserPoolingSetting()
         {
             // Arrange - connection string explicitly disables pooling
             Mock<IHttpContextAccessor> httpContextAccessor = new();
@@ -800,9 +799,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SqlConnectionStringBuilder connBuilder = new(
                 queryExecutor.ConnectionStringBuilders[provider.GetConfig().DefaultDataSourceName].ConnectionString);
 
-            // Assert - pooling should be forcibly enabled despite Pooling=false in original connection string
-            Assert.IsTrue(connBuilder.Pooling,
-                "OBO requires per-user pooling, so Pooling should be forcibly enabled even when connection string specifies Pooling=false");
+            // Assert - pooling setting should be respected from user's connection string
+            Assert.IsFalse(connBuilder.Pooling,
+                "User's Pooling=false setting should be respected, not overridden by OBO");
         }
 
         /// <summary>
@@ -825,12 +824,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SqlConnection conn = queryExecutor.CreateConnection(provider.GetConfig().DefaultDataSourceName);
             SqlConnectionStringBuilder connBuilder = new(conn.ConnectionString);
 
-            // Assert - Application Name should contain the base name plus |obo: and a hash
-            // Note: The actual format includes version suffix, e.g., "TestApp,dab_oss_2.0.0|obo:{hash}"
-            Assert.IsTrue(connBuilder.ApplicationName.Contains("|obo:"),
-                $"Application Name should contain '|obo:' but was '{connBuilder.ApplicationName}'");
-            Assert.IsTrue(connBuilder.ApplicationName.StartsWith("TestApp"),
-                $"Application Name should start with 'TestApp' but was '{connBuilder.ApplicationName}'");
+            // Assert - Application Name should have hash prefix followed by the base name
+            // Format: {hash}|{user-custom-appname} where hash is ~22 chars
+            // Hash is placed first to ensure it's never truncated if app name exceeds 128 chars
+            Assert.IsTrue(connBuilder.ApplicationName.Contains("|"),
+                $"Application Name should contain '|' separator but was '{connBuilder.ApplicationName}'");
+            Assert.IsTrue(connBuilder.ApplicationName.Contains("TestApp"),
+                $"Application Name should contain 'TestApp' but was '{connBuilder.ApplicationName}'");
+            // Hash should be at the start (before the | separator)
+            string hashPart = connBuilder.ApplicationName.Split('|')[0];
+            Assert.IsTrue(hashPart.Length >= 20 && hashPart.Length <= 25,
+                $"Hash prefix should be ~22 chars but was {hashPart.Length} chars: '{hashPart}'");
             Assert.IsTrue(connBuilder.Pooling, "Pooling should be enabled");
         }
 
@@ -866,10 +870,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SqlConnection conn2 = queryExecutor2.CreateConnection(provider2.GetConfig().DefaultDataSourceName);
             SqlConnectionStringBuilder connBuilder2 = new(conn2.ConnectionString);
 
-            // Assert - both should have |obo: in Application Name but different hashes
-            // Note: The actual format includes version suffix, e.g., "DAB,dab_oss_2.0.0|obo:{hash}"
-            Assert.IsTrue(connBuilder1.ApplicationName.Contains("|obo:"), "User 1 should have OBO pool prefix");
-            Assert.IsTrue(connBuilder2.ApplicationName.Contains("|obo:"), "User 2 should have OBO pool prefix");
+            // Assert - both should have hash prefix and different hashes
+            // Format: {hash}|{appname} - hash is first to prevent truncation
+            Assert.IsTrue(connBuilder1.ApplicationName.Contains("|"), "User 1 should have hash prefix");
+            Assert.IsTrue(connBuilder2.ApplicationName.Contains("|"), "User 2 should have hash prefix");
             Assert.AreNotEqual(connBuilder1.ApplicationName, connBuilder2.ApplicationName,
                 "Different users should have different Application Names (different pool hashes)");
         }
@@ -891,12 +895,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             SqlConnection conn = queryExecutor.CreateConnection(provider.GetConfig().DefaultDataSourceName);
             SqlConnectionStringBuilder connBuilder = new(conn.ConnectionString);
 
-            // Assert - without user context, should use base Application Name (no |obo: suffix)
+            // Assert - without user context, should use base Application Name (no hash prefix)
             // Note: The actual format includes version suffix, e.g., "BaseApp,dab_oss_2.0.0"
             Assert.IsTrue(connBuilder.ApplicationName.StartsWith("BaseApp"),
                 $"Without user context, Application Name should start with 'BaseApp' but was '{connBuilder.ApplicationName}'");
-            Assert.IsFalse(connBuilder.ApplicationName.Contains("|obo:"),
-                $"Without user context, Application Name should not contain '|obo:' but was '{connBuilder.ApplicationName}'");
+            // When no user context, the app name should NOT have the hash prefix pattern
+            // (hash prefix would be ~22 chars followed by |)
+            string[] parts = connBuilder.ApplicationName.Split('|');
+            bool hasHashPrefix = parts.Length > 1 && parts[0].Length >= 20 && parts[0].Length <= 25;
+            Assert.IsFalse(hasHashPrefix,
+                $"Without user context, Application Name should not have hash prefix but was '{connBuilder.ApplicationName}'");
         }
 
         /// <summary>

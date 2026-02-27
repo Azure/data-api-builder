@@ -200,25 +200,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return baseConnectionString;
             }
 
-            // Create a user-specific connection string by appending to the existing Application Name.
-            // baseAppName preserves the customer's original Application Name.
-            // We append |obo:{hash} to create a separate connection pool for each unique user.
-            // Format: {existingAppName}|obo:{hash}
-            // SQL Server limits Application Name to 128 characters. To avoid SQL Server silently
-            // truncating the value (which could cut off part of the hash and compromise per-user
-            // pooling), we ensure the full |obo:{hash} suffix is preserved and, if necessary,
-            // truncate only the baseAppName portion.
-            string oboSuffix = $"|obo:{poolKeyHash}";
+            // Create a user-specific connection string with per-user pool isolation.
+            // Format: {hash}|{user-custom-appname} where hash is placed FIRST to ensure it's never truncated.
+            // SQL Server limits Application Name to 128 characters. By placing the hash first, we guarantee
+            // per-user pool isolation even if the user's custom app name gets truncated.
+            // The hash is a URL-safe Base64-encoded SHA256 hash (16 bytes = ~22 chars).
             const int maxApplicationNameLength = 128;
-            int allowedBaseAppNameLength = Math.Max(0, maxApplicationNameLength - oboSuffix.Length);
+            string hashPrefix = $"{poolKeyHash}|";
+            int allowedBaseAppNameLength = Math.Max(0, maxApplicationNameLength - hashPrefix.Length);
             string effectiveBaseAppName = baseAppName.Length > allowedBaseAppNameLength
                 ? baseAppName[..allowedBaseAppNameLength]
                 : baseAppName;
 
             SqlConnectionStringBuilder userBuilder = new(baseConnectionString)
             {
-                ApplicationName = $"{effectiveBaseAppName}{oboSuffix}",
-                Pooling = true
+                ApplicationName = $"{hashPrefix}{effectiveBaseAppName}"
             };
 
             return userBuilder.ConnectionString;
@@ -277,16 +273,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Hashes the pool key using SHA512 to create a compact, URL-safe identifier.
-        /// This keeps the Application Name reasonably short while ensuring uniqueness.
+        /// Hashes the pool key using SHA256 truncated to 16 bytes for a compact, URL-safe identifier.
+        /// Uses SHA256 (SHA-2 family) with 128-bit truncation per Microsoft security requirements.
+        /// This produces a ~22 character hash that fits well within SQL Server's 128-char Application Name limit
+        /// while providing sufficient collision resistance.
         /// </summary>
         /// <param name="key">The pool key to hash (format: iss|oid or iss|sub).</param>
-        /// <returns>A URL-safe Base64-encoded hash of the key.</returns>
+        /// <returns>A URL-safe Base64-encoded hash of the key (~22 characters).</returns>
         private static string HashPoolKey(string key)
         {
-            using var sha = System.Security.Cryptography.SHA512.Create();
-            byte[] bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(key));
-            return Convert.ToBase64String(bytes)
+            byte[] fullHash = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(key));
+            // Truncate to 16 bytes (128 bits) per MS security requirements for SHA-2 family
+            return Convert.ToBase64String(fullHash, 0, 16)
                 .TrimEnd('=')
                 .Replace('+', '-')
                 .Replace('/', '_');
@@ -319,13 +318,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     _dataSourceUserDelegatedAuth[dataSourceName] = dataSource.UserDelegatedAuth!;
 
-                    // Per-user pooling: Keep pooling enabled but store the base Application Name.
-                    // At connection time, we'll append the user's iss|oid (or iss|sub) hash to create isolated pools per user.
-                    // This is automatic for OBO to prevent connection exhaustion while ensuring pool isolation.
+                    // Per-user pooling: Store the base Application Name for hash prefixing at connection time.
+                    // We'll prepend the user's iss|oid (or iss|sub) hash to create isolated pools per user.
                     // Note: ApplicationName is typically already set by RuntimeConfigLoader (e.g., "CustomerApp,dab_oss_2.0.0")
                     // but we use GetDataApiBuilderUserAgent() as fallback for consistency.
+                    // We respect the user's Pooling setting from the connection string.
                     _dataSourceBaseAppName[dataSourceName] = builder.ApplicationName ?? ProductInfo.GetDataApiBuilderUserAgent();
-                    builder.Pooling = true;
                 }
             }
         }

@@ -187,7 +187,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // The selection type can be a wrapper type like NonNullType or ListType.
                 // To get the most inner type (aka the named type) we use our named type helper.
-                ITypeDefinition namedType = context.Selection.Field.Type.NamedType();
+                INamedType namedType = context.Selection.Field.Type.NamedType();
 
                 // Each scalar in HotChocolate has a runtime type representation.
                 // In order to let scalar values flow through the GraphQL type completion
@@ -357,14 +357,14 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <param name="variables">the request context variable values needed to resolve value nodes represented as variables</param>
         public static object? ExtractValueFromIValueNode(
             IValueNode value,
-            IInputValueDefinition argumentSchema,
+            IInputField argumentSchema,
             IVariableValueCollection variables)
         {
             // extract value from the variable if the IValueNode is a variable
             if (value.Kind == SyntaxKind.Variable)
             {
                 string variableName = ((VariableNode)value).Name.Value;
-                IValueNode? variableValue = variables.GetValue<IValueNode>(variableName);
+                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
 
                 if (variableValue is null)
                 {
@@ -415,16 +415,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// Value: (object) argument value
         /// </returns>
         public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(
-            ObjectField schema,
+            IObjectField schema,
             FieldNode query,
             IVariableValueCollection variables)
         {
             IDictionary<string, object?> collectedParameters = new Dictionary<string, object?>();
 
             // Fill the parameters dictionary with the default argument values
-            ArgumentCollection schemaArguments = schema.Arguments;
+            IFieldCollection<IInputField> schemaArguments = schema.Arguments;
 
-            // Example 'argumentSchemas' IInputValueDefinition objects of type 'HotChocolate.Types.Argument':
+            // Example 'argumentSchemas' IInputField objects of type 'HotChocolate.Types.Argument':
             // These are all default arguments defined in the schema for queries.
             // {first:int}
             // {after:String}
@@ -432,7 +432,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // {orderBy:entityOrderByInput}
             // The values in schemaArguments will have default values when the backing
             // entity is a stored procedure with runtime config defined default parameter values.
-            foreach (IInputValueDefinition argument in schemaArguments)
+            foreach (IInputField argument in schemaArguments)
             {
                 if (argument.DefaultValue != null)
                 {
@@ -454,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Services
             foreach (ArgumentNode argument in passedArguments)
             {
                 string argumentName = argument.Name.Value;
-                IInputValueDefinition argumentSchema = schemaArguments[argumentName];
+                IInputField argumentSchema = schemaArguments[argumentName];
 
                 object? nodeValue = ExtractValueFromIValueNode(
                             value: argument.Value,
@@ -490,7 +490,7 @@ namespace Azure.DataApiBuilder.Service.Services
             return InnerMostType(type.InnerType());
         }
 
-        public static InputObjectType InputObjectTypeFromIInputField(IInputValueDefinition field)
+        public static InputObjectType InputObjectTypeFromIInputField(IInputField field)
         {
             return (InputObjectType)InnerMostType(field.Type);
         }

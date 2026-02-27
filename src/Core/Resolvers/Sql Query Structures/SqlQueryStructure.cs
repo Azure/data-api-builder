@@ -172,7 +172,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _ctx = ctx;
             IsMultipleCreateOperation = isMultipleCreateOperation;
 
-            ObjectField schemaField = _ctx.Selection.Field;
+            IObjectField schemaField = _ctx.Selection.Field;
             FieldNode? queryField = _ctx.Selection.SyntaxNode;
 
             IOutputType outputType = schemaField.Type;
@@ -388,7 +388,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IDictionary<string, object?> queryParams,
                 ISqlMetadataProvider sqlMetadataProvider,
                 IAuthorizationResolver authorizationResolver,
-                ObjectField schemaField,
+                IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter,
                 RuntimeConfigProvider runtimeConfigProvider,
@@ -408,7 +408,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // extract the query argument schemas before switching schemaField to point to *Connetion.items
             // since the pagination arguments are not placed on the items, but on the pagination query
-            ArgumentCollection queryArgumentSchemas = schemaField.Arguments;
+            IFieldCollection<IInputField> queryArgumentSchemas = schemaField.Arguments;
 
             PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
 
@@ -796,7 +796,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
                 else
                 {
-                    ObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
+                    IObjectField? subschemaField = _underlyingFieldType.Fields[fieldName];
 
                     if (_ctx == null)
                     {
@@ -986,14 +986,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // Retrieve the schema field from the GraphQL context
-            ObjectField schemaField = ctx.Selection.Field;
+            IObjectField schemaField = ctx.Selection.Field;
 
             // Get the 'group by' field from the schema's entity type
-            ObjectField groupByField = schemaField.Type.NamedType<ObjectType>()
+            IObjectField groupByField = schemaField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_FIELD_NAME];
 
             // Get the 'aggregations' field from the 'group by' entity type
-            ObjectField aggregationsObjectField = groupByField.Type.NamedType<ObjectType>()
+            IObjectField aggregationsObjectField = groupByField.Type.NamedType<ObjectType>()
                 .Fields[QueryBuilder.GROUP_BY_AGGREGATE_FIELD_NAME];
 
             // Iterate through each selection in the aggregation field
@@ -1064,7 +1064,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)havingArg.Value.Value!;
 
                         // Retrieve the corresponding aggregation operation field from the schema
-                        ObjectField operationObjectField = aggregationsObjectField.Type.NamedType<ObjectType>()
+                        IObjectField operationObjectField = aggregationsObjectField.Type.NamedType<ObjectType>()
                             .Fields[operation.ToString()];
 
                         // Parse the filtering conditions and apply them to the aggregation
@@ -1105,7 +1105,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// so we find their backing column names before creating the orderBy list.
         /// All the remaining primary key columns are also added to ensure there are no tie breaks.
         /// </summary>
-        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields, IInputValueDefinition orderByArgumentSchema, bool isGroupByQuery = false)
+        private List<OrderByColumn> ProcessGqlOrderByArg(List<ObjectFieldNode> orderByFields, IInputField orderByArgumentSchema, bool isGroupByQuery = false)
         {
             if (_ctx is null)
             {

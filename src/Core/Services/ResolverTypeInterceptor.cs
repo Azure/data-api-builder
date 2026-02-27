@@ -5,12 +5,12 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Configuration;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using HotChocolate.Types.Descriptors.Configurations;
+using HotChocolate.Types.Descriptors.Definitions;
 
 internal sealed class ResolverTypeInterceptor : TypeInterceptor
 {
-    private readonly FieldMiddlewareConfiguration _queryMiddleware;
-    private readonly FieldMiddlewareConfiguration _mutationMiddleware;
+    private readonly FieldMiddlewareDefinition _queryMiddleware;
+    private readonly FieldMiddlewareDefinition _mutationMiddleware;
     private readonly PureFieldDelegate _leafFieldResolver;
     private readonly PureFieldDelegate _objectFieldResolver;
     private readonly PureFieldDelegate _listFieldResolver;
@@ -22,7 +22,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
     public ResolverTypeInterceptor(ExecutionHelper executionHelper)
     {
         _queryMiddleware =
-            new FieldMiddlewareConfiguration(
+            new FieldMiddlewareDefinition(
                 next => async context =>
                 {
                     await executionHelper.ExecuteQueryAsync(context).ConfigureAwait(false);
@@ -30,21 +30,21 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                 });
 
         _mutationMiddleware =
-            new FieldMiddlewareConfiguration(
+            new FieldMiddlewareDefinition(
                 next => async context =>
                 {
                     await executionHelper.ExecuteMutateAsync(context).ConfigureAwait(false);
                     await next(context).ConfigureAwait(false);
                 });
 
-        _leafFieldResolver = ExecutionHelper.ExecuteLeafField;
-        _objectFieldResolver = executionHelper.ExecuteObjectField;
-        _listFieldResolver = executionHelper.ExecuteListField;
+        _leafFieldResolver = ctx => ExecutionHelper.ExecuteLeafField(ctx);
+        _objectFieldResolver = ctx => executionHelper.ExecuteObjectField(ctx);
+        _listFieldResolver = ctx => executionHelper.ExecuteListField(ctx);
     }
 
     public override void OnAfterResolveRootType(
         ITypeCompletionContext completionContext,
-        ObjectTypeConfiguration definition,
+        ObjectTypeDefinition definition,
         OperationType operationType)
     {
         switch (operationType)
@@ -69,26 +69,26 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
 
     public override void OnBeforeCompleteType(
         ITypeCompletionContext completionContext,
-        TypeSystemConfiguration? definition)
+        DefinitionBase? definition)
     {
         // We are only interested in object types here as only object types can have resolvers.
-        if (definition is not ObjectTypeConfiguration objectTypeConfig)
+        if (definition is not ObjectTypeDefinition objectTypeDef)
         {
             return;
         }
 
         if (ReferenceEquals(completionContext.Type, _queryType))
         {
-            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
+            foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
-                field.MiddlewareConfigurations.Add(_queryMiddleware);
+                field.MiddlewareDefinitions.Add(_queryMiddleware);
             }
         }
         else if (ReferenceEquals(completionContext.Type, _mutationType))
         {
-            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
+            foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
-                field.MiddlewareConfigurations.Add(_mutationMiddleware);
+                field.MiddlewareDefinitions.Add(_mutationMiddleware);
             }
         }
         else if (ReferenceEquals(completionContext.Type, _subscriptionType))
@@ -97,7 +97,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         }
         else
         {
-            foreach (ObjectFieldConfiguration field in objectTypeConfig.Fields)
+            foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
                 if (field.Type is not null &&
                     completionContext.TryGetType(field.Type, out IType? type))

@@ -32,7 +32,7 @@ public sealed class BuildRequestStateMiddleware
     /// http context's "X-MS-API-ROLE" header/value to HotChocolate's request context.
     /// </summary>
     /// <param name="context">HotChocolate execution request context.</param>
-    public async ValueTask InvokeAsync(RequestContext context)
+    public async ValueTask InvokeAsync(IRequestContext context)
     {
         bool isIntrospectionQuery = context.Request.OperationName == "IntrospectionQuery";
         ApiType apiType = ApiType.GraphQL;
@@ -77,11 +77,11 @@ public sealed class BuildRequestStateMiddleware
                 // There is an error in GraphQL when ContextData is not null
                 if (context.Result!.ContextData is not null)
                 {
-                    if (context.Result.ContextData.ContainsKey(ExecutionContextData.ValidationErrors))
+                    if (context.Result.ContextData.ContainsKey(WellKnownContextData.ValidationErrors))
                     {
                         statusCode = HttpStatusCode.BadRequest;
                     }
-                    else if (context.Result.ContextData.ContainsKey(ExecutionContextData.OperationNotAllowed))
+                    else if (context.Result.ContextData.ContainsKey(WellKnownContextData.OperationNotAllowed))
                     {
                         statusCode = HttpStatusCode.MethodNotAllowed;
                     }

@@ -487,10 +487,7 @@ namespace Azure.DataApiBuilder.Service
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
                 .ConfigureSchema((serviceProvider, schemaBuilder) =>
                 {
-                    // The GraphQLSchemaCreator is an application service that is not available on 
-                    // the schema specific service provider, this means we have to get it with 
-                    // the GetRootServiceProvider helper.
-                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRootServiceProvider().GetRequiredService<GraphQLSchemaCreator>();
+                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
                     graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
                 })
                 .AddHttpRequestInterceptor<IntrospectionInterceptor>()
@@ -684,10 +681,10 @@ namespace Azure.DataApiBuilder.Service
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
 
-            IRequestExecutorManager requestExecutorManager = app.ApplicationServices.GetRequiredService<IRequestExecutorManager>();
+            IRequestExecutorResolver requestExecutorResolver = app.ApplicationServices.GetRequiredService<IRequestExecutorResolver>();
             _hotReloadEventHandler.Subscribe(
                 "GRAPHQL_SCHEMA_EVICTION_ON_CONFIG_CHANGED",
-                (_, _) => EvictGraphQLSchema(requestExecutorManager));
+                (_, _) => EvictGraphQLSchema(requestExecutorResolver));
 
             app.UseEndpoints(endpoints =>
             {
@@ -727,10 +724,10 @@ namespace Azure.DataApiBuilder.Service
         /// <summary>
         /// Evicts the GraphQL schema from the request executor resolver.
         /// </summary>
-        private static void EvictGraphQLSchema(IRequestExecutorManager requestExecutorResolver)
+        private static void EvictGraphQLSchema(IRequestExecutorResolver requestExecutorResolver)
         {
             Console.WriteLine("Evicting old GraphQL schema.");
-            requestExecutorResolver.EvictExecutor();
+            requestExecutorResolver.EvictRequestExecutor();
         }
 
         /// <summary>

@@ -18,7 +18,7 @@ public sealed class DetermineStatusCodeMiddleware(RequestDelegate next)
 {
     private const string ERROR_CODE = nameof(DataApiBuilderException.SubStatusCodes.DatabaseInputError);
 
-    public async ValueTask InvokeAsync(RequestContext context)
+    public async ValueTask InvokeAsync(IRequestContext context)
     {
         await next(context).ConfigureAwait(false);
 
@@ -34,7 +34,7 @@ public sealed class DetermineStatusCodeMiddleware(RequestDelegate next)
                     contextData.AddRange(singleResult.ContextData);
                 }
 
-                contextData[ExecutionContextData.HttpStatusCode] = HttpStatusCode.BadRequest;
+                contextData[WellKnownContextData.HttpStatusCode] = HttpStatusCode.BadRequest;
                 context.Result = singleResult.WithContextData(contextData.ToImmutable());
             }
         }

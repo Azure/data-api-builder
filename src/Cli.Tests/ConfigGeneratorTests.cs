@@ -178,6 +178,7 @@ public class ConfigGeneratorTests
                   ""mode"": ""production""
                   }
               },
+              ""autoentities"": {},
               ""entities"": {}
             }");
 

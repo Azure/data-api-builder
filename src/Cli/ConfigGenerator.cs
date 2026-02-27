@@ -2858,6 +2858,279 @@ namespace Cli
         }
 
         /// <summary>
+        /// Configures an autoentities definition in the runtime config.
+        /// This method updates or creates an autoentities definition with the specified patterns, template, and permissions.
+        /// </summary>
+        /// <param name="options">The autoentities configuration options provided by the user.</param>
+        /// <param name="loader">The config loader to read the existing config.</param>
+        /// <param name="fileSystem">The filesystem used for reading and writing the config file.</param>
+        /// <returns>True if the autoentities definition was successfully configured; otherwise, false.</returns>
+        public static bool TryConfigureAutoentities(AutoConfigOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            // Get existing autoentities or create new collection
+            Dictionary<string, Autoentity> autoEntitiesDictionary = runtimeConfig.Autoentities?.Autoentities != null
+                ? new Dictionary<string, Autoentity>(runtimeConfig.Autoentities.Autoentities)
+                : new Dictionary<string, Autoentity>();
+
+            // Get existing autoentity definition or create a new one
+            Autoentity? existingAutoentity = null;
+            if (autoEntitiesDictionary.TryGetValue(options.DefinitionName, out Autoentity? value))
+            {
+                existingAutoentity = value;
+            }
+
+            // Build patterns
+            AutoentityPatterns patterns = BuildAutoentityPatterns(options, existingAutoentity);
+
+            // Build template
+            AutoentityTemplate? template = BuildAutoentityTemplate(options, existingAutoentity);
+            if (template is null)
+            {
+                return false;
+            }
+
+            // Build permissions
+            EntityPermission[]? permissions = BuildAutoentityPermissions(options, existingAutoentity);
+
+            // Check if permissions parsing failed (non-empty input but failed to parse)
+            if (permissions is null && options.Permissions is not null && options.Permissions.Count() > 0)
+            {
+                _logger.LogError("Failed to parse permissions.");
+                return false;
+            }
+
+            // Create updated autoentity
+            Autoentity updatedAutoentity = new(
+                Patterns: patterns,
+                Template: template,
+                Permissions: permissions ?? existingAutoentity?.Permissions
+            );
+
+            // Update the dictionary
+            autoEntitiesDictionary[options.DefinitionName] = updatedAutoentity;
+
+            // Update runtime config
+            runtimeConfig = runtimeConfig with
+            {
+                Autoentities = new RuntimeAutoentities(autoEntitiesDictionary)
+            };
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Builds the AutoentityPatterns object from the provided options and existing autoentity.
+        /// </summary>
+        private static AutoentityPatterns BuildAutoentityPatterns(AutoConfigOptions options, Autoentity? existingAutoentity)
+        {
+            string[]? include = null;
+            string[]? exclude = null;
+            string? name = null;
+            bool userProvidedInclude = false;
+            bool userProvidedExclude = false;
+            bool userProvidedName = false;
+
+            // Start with existing values
+            if (existingAutoentity is not null)
+            {
+                include = existingAutoentity.Patterns.Include;
+                exclude = existingAutoentity.Patterns.Exclude;
+                name = existingAutoentity.Patterns.Name;
+                userProvidedInclude = existingAutoentity.Patterns.UserProvidedIncludeOptions;
+                userProvidedExclude = existingAutoentity.Patterns.UserProvidedExcludeOptions;
+                userProvidedName = existingAutoentity.Patterns.UserProvidedNameOptions;
+            }
+
+            // Override with new values if provided
+            if (options.PatternsInclude is not null && options.PatternsInclude.Any())
+            {
+                include = options.PatternsInclude.ToArray();
+                userProvidedInclude = true;
+                _logger.LogInformation("Updated patterns.include for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (options.PatternsExclude is not null && options.PatternsExclude.Any())
+            {
+                exclude = options.PatternsExclude.ToArray();
+                userProvidedExclude = true;
+                _logger.LogInformation("Updated patterns.exclude for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.PatternsName))
+            {
+                name = options.PatternsName;
+                userProvidedName = true;
+                _logger.LogInformation("Updated patterns.name for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            return new AutoentityPatterns(Include: include, Exclude: exclude, Name: name)
+            {
+                UserProvidedIncludeOptions = userProvidedInclude,
+                UserProvidedExcludeOptions = userProvidedExclude,
+                UserProvidedNameOptions = userProvidedName
+            };
+        }
+
+        /// <summary>
+        /// Builds the AutoentityTemplate object from the provided options and existing autoentity.
+        /// Returns null if validation fails.
+        /// </summary>
+        private static AutoentityTemplate? BuildAutoentityTemplate(AutoConfigOptions options, Autoentity? existingAutoentity)
+        {
+            // Start with existing values or defaults
+            EntityMcpOptions? mcp = existingAutoentity?.Template.Mcp;
+            EntityRestOptions rest = existingAutoentity?.Template.Rest ?? new EntityRestOptions();
+            EntityGraphQLOptions graphQL = existingAutoentity?.Template.GraphQL ?? new EntityGraphQLOptions(string.Empty, string.Empty);
+            EntityHealthCheckConfig health = existingAutoentity?.Template.Health ?? new EntityHealthCheckConfig();
+            EntityCacheOptions cache = existingAutoentity?.Template.Cache ?? new EntityCacheOptions();
+
+            bool userProvidedMcp = existingAutoentity?.Template.UserProvidedMcpOptions ?? false;
+            bool userProvidedRest = existingAutoentity?.Template.UserProvidedRestOptions ?? false;
+            bool userProvidedGraphQL = existingAutoentity?.Template.UserProvidedGraphQLOptions ?? false;
+            bool userProvidedHealth = existingAutoentity?.Template.UserProvidedHealthOptions ?? false;
+            bool userProvidedCache = existingAutoentity?.Template.UserProvidedCacheOptions ?? false;
+
+            // Update MCP options
+            if (!string.IsNullOrWhiteSpace(options.TemplateMcpDmlTool))
+            {
+                if (!bool.TryParse(options.TemplateMcpDmlTool, out bool mcpDmlToolValue))
+                {
+                    _logger.LogError("Invalid value for template.mcp.dml-tool: {value}. Valid values are: true, false", options.TemplateMcpDmlTool);
+                    return null;
+                }
+
+                // TODO: Task #2949. Once autoentities is able to support stored procedures, we will need to change this in order to allow the CLI to edit the custom tool section.
+                bool? customToolEnabled = mcp?.UserProvidedCustomToolEnabled == true ? mcp.CustomToolEnabled : null;
+                bool? dmlToolValue = mcpDmlToolValue;
+                mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
+                userProvidedMcp = true;
+                _logger.LogInformation("Updated template.mcp.dml-tool for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update REST options
+            if (options.TemplateRestEnabled is not null)
+            {
+                rest = rest with { Enabled = options.TemplateRestEnabled.Value };
+                userProvidedRest = true;
+                _logger.LogInformation("Updated template.rest.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update GraphQL options
+            if (options.TemplateGraphqlEnabled is not null)
+            {
+                graphQL = graphQL with { Enabled = options.TemplateGraphqlEnabled.Value };
+                userProvidedGraphQL = true;
+                _logger.LogInformation("Updated template.graphql.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update Health options
+            if (options.TemplateHealthEnabled is not null)
+            {
+                health = new EntityHealthCheckConfig(
+                    enabled: options.TemplateHealthEnabled.Value,
+                    first: health.UserProvidedFirst ? health.First : null,
+                    thresholdMs: health.UserProvidedThresholdMs ? health.ThresholdMs : null
+                );
+                userProvidedHealth = true;
+                _logger.LogInformation("Updated template.health.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            // Update Cache options
+            bool cacheUpdated = false;
+            bool? cacheEnabled = cache.Enabled;
+            int? cacheTtl = cache.UserProvidedTtlOptions ? cache.TtlSeconds : null;
+            EntityCacheLevel? cacheLevel = cache.UserProvidedLevelOptions ? cache.Level : null;
+
+            if (options.TemplateCacheEnabled is not null)
+            {
+                cacheEnabled = options.TemplateCacheEnabled.Value;
+                cacheUpdated = true;
+                _logger.LogInformation("Updated template.cache.enabled for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (options.TemplateCacheTtlSeconds is not null)
+            {
+                cacheTtl = options.TemplateCacheTtlSeconds.Value;
+                bool status = RuntimeConfigValidatorUtil.IsTTLValid(ttl: (int)cacheTtl);
+                cacheUpdated = true;
+                if (status)
+                {
+                    _logger.LogInformation("Updated template.cache.ttl-seconds for definition '{DefinitionName}'", options.DefinitionName);
+                }
+                else
+                {
+                    _logger.LogError("Failed to update Runtime.Cache.ttl-seconds as '{updatedValue}' value in TTL is not valid.", cacheTtl);
+                    return null;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.TemplateCacheLevel))
+            {
+                if (!Enum.TryParse<EntityCacheLevel>(options.TemplateCacheLevel, ignoreCase: true, out EntityCacheLevel cacheLevelValue))
+                {
+                    _logger.LogError(EnumExtensions.GenerateMessageForInvalidInput<EntityCacheLevel>(options.TemplateCacheLevel));
+                    return null;
+                }
+
+                cacheLevel = cacheLevelValue;
+                cacheUpdated = true;
+                _logger.LogInformation("Updated template.cache.level for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            if (cacheUpdated)
+            {
+                cache = new EntityCacheOptions(Enabled: cacheEnabled, TtlSeconds: cacheTtl, Level: cacheLevel);
+                userProvidedCache = true;
+            }
+
+            return new AutoentityTemplate(
+                Rest: rest,
+                GraphQL: graphQL,
+                Mcp: mcp,
+                Health: health,
+                Cache: cache
+            )
+            {
+                UserProvidedMcpOptions = userProvidedMcp,
+                UserProvidedRestOptions = userProvidedRest,
+                UserProvidedGraphQLOptions = userProvidedGraphQL,
+                UserProvidedHealthOptions = userProvidedHealth,
+                UserProvidedCacheOptions = userProvidedCache
+            };
+        }
+
+        /// <summary>
+        /// Builds the permissions array from the provided options and existing autoentity.
+        /// </summary>
+        private static EntityPermission[]? BuildAutoentityPermissions(AutoConfigOptions options, Autoentity? existingAutoentity)
+        {
+            if (options.Permissions is null || !options.Permissions.Any())
+            {
+                return existingAutoentity?.Permissions;
+            }
+
+            // Parse the permissions
+            EntityPermission[]? parsedPermissions = ParsePermission(options.Permissions, null, null, null);
+            if (parsedPermissions is not null)
+            {
+                _logger.LogInformation("Updated permissions for definition '{DefinitionName}'", options.DefinitionName);
+            }
+
+            return parsedPermissions;
+        }
+
+        /// <summary>
         /// Attempts to update the Azure Key Vault configuration options based on the provided values.
         /// Validates that any user-provided parameter value is valid and updates the runtime configuration accordingly.
         /// </summary>

@@ -113,7 +113,17 @@ internal class AutoentityTemplateConverter : JsonConverter<AutoentityTemplate>
         if (value?.UserProvidedGraphQLOptions is true)
         {
             writer.WritePropertyName("graphql");
-            JsonSerializer.Serialize(writer, value.GraphQL, options);
+            // For autoentities template, only write the enabled property
+            // The type (singular/plural) is determined by the generated entities
+            writer.WriteStartObject();
+            writer.WriteBoolean("enabled", value.GraphQL.Enabled);
+            writer.WriteEndObject();
+        }
+
+        if (value?.UserProvidedMcpOptions is true)
+        {
+            writer.WritePropertyName("mcp");
+            JsonSerializer.Serialize(writer, value.Mcp, options);
         }
 
         if (value?.UserProvidedHealthOptions is true)

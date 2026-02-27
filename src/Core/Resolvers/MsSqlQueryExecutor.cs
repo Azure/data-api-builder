@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
@@ -70,6 +71,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private Dictionary<string, UserDelegatedAuthOptions> _dataSourceUserDelegatedAuth;
 
         /// <summary>
+        /// DatasourceName to base Application Name for OBO per-user pooling.
+        /// Only populated for data sources with user-delegated-auth enabled.
+        /// Used as a prefix when constructing user-specific Application Names.
+        /// </summary>
+        private Dictionary<string, string> _dataSourceBaseAppName;
+
+        /// <summary>
         /// Optional OBO token provider for user-delegated authentication.
         /// </summary>
         private readonly IOboTokenProvider? _oboTokenProvider;
@@ -94,6 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _dataSourceUserDelegatedAuth = new Dictionary<string, UserDelegatedAuthOptions>();
+            _dataSourceBaseAppName = new Dictionary<string, string>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
             _runtimeConfigProvider = runtimeConfigProvider;
             _oboTokenProvider = oboTokenProvider;
@@ -114,9 +123,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
+            string connectionString = GetConnectionStringForCurrentUser(dataSourceName);
+
             SqlConnection conn = new()
             {
-                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+                ConnectionString = connectionString,
             };
 
             // Extract info message from SQLConnection
@@ -151,6 +162,116 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Gets the connection string for the current user. For OBO-enabled data sources,
+        /// this returns a connection string with a user-specific Application Name to isolate
+        /// connection pools per user identity.
+        /// </summary>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>The connection string to use for the current request.</returns>
+        private string GetConnectionStringForCurrentUser(string dataSourceName)
+        {
+            string baseConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString;
+
+            // Per-user pooling is automatic when OBO is enabled.
+            // _dataSourceBaseAppName is only populated for data sources with user-delegated-auth enabled.
+            if (!_dataSourceBaseAppName.TryGetValue(dataSourceName, out string? baseAppName))
+            {
+                // OBO not enabled for this data source, use the standard connection string
+                return baseConnectionString;
+            }
+
+            // Extract user pool key from current HTTP context (prefers oid, falls back to sub)
+            string? poolKeyHash = GetUserPoolKeyHash(dataSourceName);
+            if (string.IsNullOrEmpty(poolKeyHash))
+            {
+                // For OBO-enabled data sources, we must have a user context for actual requests.
+                // Null poolKeyHash is only acceptable during startup/metadata phase when there's no HttpContext.
+                // If we have an HttpContext with a User but missing required claims, fail-safe to prevent
+                // potential cross-user connection pool contamination.
+                if (HttpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated == true)
+                {
+                    throw new DataApiBuilderException(
+                        message: "User-delegated authentication requires 'iss' and user identifier (oid/sub) claims for connection pool isolation.",
+                        statusCode: System.Net.HttpStatusCode.Unauthorized,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure);
+                }
+
+                // No user context (startup/metadata phase), use base connection string
+                return baseConnectionString;
+            }
+
+            // Create a user-specific connection string by appending to the existing Application Name.
+            // baseAppName preserves the customer's original Application Name.
+            // We append |obo:{hash} to create a separate connection pool for each unique user.
+            // Format: {existingAppName}|obo:{hash}
+            SqlConnectionStringBuilder userBuilder = new(baseConnectionString)
+            {
+                ApplicationName = $"{baseAppName}|obo:{poolKeyHash}",
+                Pooling = true
+            };
+
+            return userBuilder.ConnectionString;
+        }
+
+        /// <summary>
+        /// Generates a pool key hash from the current user's claims for OBO per-user pooling.
+        /// Uses iss|(oid||sub) to ensure each unique user identity gets its own connection pool.
+        /// Prefers 'oid' (stable GUID) but falls back to 'sub' for guest/B2B users.
+        /// </summary>
+        /// <param name="dataSourceName">The data source name for logging purposes.</param>
+        /// <returns>A URL-safe Base64-encoded hash, or null if no user context is available.</returns>
+        private string? GetUserPoolKeyHash(string dataSourceName)
+        {
+            if (HttpContextAccessor?.HttpContext?.User is null)
+            {
+                return null;
+            }
+
+            ClaimsPrincipal user = HttpContextAccessor.HttpContext.User;
+
+            // Extract issuer claim - required for tenant isolation and connection pool security.
+            // The "iss" claim must be present along with a user identifier (oid/sub) for per-user pooling.
+            // Callers are responsible for enforcing fail-safe behavior when claims are missing.
+            string? iss = user.FindFirst("iss")?.Value;
+
+            // Prefer oid (stable GUID), fall back to sub for guest/B2B users
+            string? userKey = user.FindFirst("oid")?.Value
+                ?? user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+                ?? user.FindFirst("sub")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(iss) || string.IsNullOrEmpty(userKey))
+            {
+                // Cannot create a pool key without both claims
+                QueryExecutorLogger.LogDebug(
+                    "Cannot create per-user pool key for data source {DataSourceName}: missing {MissingClaim} claim.",
+                    dataSourceName,
+                    string.IsNullOrEmpty(iss) ? "iss" : "user identifier (oid/sub)");
+                return null;
+            }
+
+            // Create the pool key as iss|userKey and hash it to keep connection string small
+            string poolKey = $"{iss}|{userKey}";
+            return HashPoolKey(poolKey);
+        }
+
+        /// <summary>
+        /// Hashes the pool key using SHA512 to create a compact, URL-safe identifier.
+        /// This keeps the Application Name reasonably short while ensuring uniqueness.
+        /// </summary>
+        /// <param name="key">The pool key to hash (format: iss|oid or iss|sub).</param>
+        /// <returns>A URL-safe Base64-encoded hash of the key.</returns>
+        private static string HashPoolKey(string key)
+        {
+            using var sha = System.Security.Cryptography.SHA512.Create();
+            byte[] bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(key));
+            return Convert.ToBase64String(bytes)
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+        }
+
+        /// <summary>
         /// Configure during construction or a hot-reload scenario.
         /// </summary>
         private void ConfigureMsSqlQueryExecutor()
@@ -177,9 +298,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     _dataSourceUserDelegatedAuth[dataSourceName] = dataSource.UserDelegatedAuth!;
 
-                    // Disable connection pooling for OBO connections since each connection
-                    // uses a user-specific token and cannot be shared across users
-                    builder.Pooling = false;
+                    // Per-user pooling: Keep pooling enabled but store the base Application Name.
+                    // At connection time, we'll append the user's iss:sub hash to create isolated pools per user.
+                    // This is automatic for OBO to prevent connection exhaustion while ensuring pool isolation.
+                    // Note: ApplicationName is typically already set by RuntimeConfigLoader (e.g., "CustomerApp,dab_oss_2.0.0")
+                    // but we use GetDataApiBuilderUserAgent() as fallback for consistency.
+                    _dataSourceBaseAppName[dataSourceName] = builder.ApplicationName ?? ProductInfo.GetDataApiBuilderUserAgent();
+                    builder.Pooling = true;
                 }
             }
         }

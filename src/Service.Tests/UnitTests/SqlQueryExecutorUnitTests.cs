@@ -671,6 +671,212 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(availableSize, (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024);
         }
 
+        #region Per-User Connection Pooling Tests
+
+        /// <summary>
+        /// Creates MsSqlQueryExecutor with the specified configuration for per-user connection pooling tests.
+        /// </summary>
+        /// <param name="connectionString">The connection string to use.</param>
+        /// <param name="enableObo">Whether to enable user-delegated-auth (OBO).</param>
+        /// <param name="httpContextAccessor">The HttpContextAccessor mock to use.</param>
+        /// <returns>A tuple containing the query executor and runtime config provider.</returns>
+        private static (MsSqlQueryExecutor QueryExecutor, RuntimeConfigProvider Provider) CreateQueryExecutorForPoolingTest(
+            string connectionString,
+            bool enableObo,
+            Mock<IHttpContextAccessor> httpContextAccessor)
+        {
+            DataSource dataSource = new(
+                DatabaseType: DatabaseType.MSSQL,
+                ConnectionString: connectionString,
+                Options: null)
+            {
+                UserDelegatedAuth = enableObo
+                    ? new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net")
+                    : null
+            };
+
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: dataSource,
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Mcp: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>()));
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+
+            MsSqlQueryExecutor queryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            return (queryExecutor, provider);
+        }
+
+        /// <summary>
+        /// Creates an HttpContextAccessor mock with the specified user claims.
+        /// </summary>
+        /// <param name="issuer">The issuer claim value, or empty string for no context.</param>
+        /// <param name="objectId">The oid claim value, or empty string for no context.</param>
+        /// <returns>A configured HttpContextAccessor mock.</returns>
+        private static Mock<IHttpContextAccessor> CreateHttpContextAccessorWithClaims(string issuer, string objectId)
+        {
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+
+            if (string.IsNullOrEmpty(issuer) && string.IsNullOrEmpty(objectId))
+            {
+                httpContextAccessor.Setup(x => x.HttpContext).Returns(value: null);
+            }
+            else
+            {
+                DefaultHttpContext context = new();
+                System.Security.Claims.ClaimsIdentity identity = new("TestAuth");
+                if (!string.IsNullOrEmpty(issuer))
+                {
+                    identity.AddClaim(new System.Security.Claims.Claim("iss", issuer));
+                }
+
+                if (!string.IsNullOrEmpty(objectId))
+                {
+                    identity.AddClaim(new System.Security.Claims.Claim("oid", objectId));
+                }
+
+                context.User = new System.Security.Claims.ClaimsPrincipal(identity);
+                httpContextAccessor.Setup(x => x.HttpContext).Returns(context);
+            }
+
+            return httpContextAccessor;
+        }
+
+        /// <summary>
+        /// Test that pooling remains enabled regardless of whether user-delegated-auth is configured.
+        /// When OBO is enabled, per-user pooling is automatic. When disabled, pooling stays as configured.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow(true, DisplayName = "OBO enabled - per-user pooling is automatic")]
+        [DataRow(false, DisplayName = "OBO disabled - pooling not modified")]
+        public void TestPoolingBehaviorWithAndWithoutUserDelegatedAuth(bool enableUserDelegatedAuth)
+        {
+            // Arrange & Act
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Pooling=true;",
+                enableObo: enableUserDelegatedAuth,
+                httpContextAccessor: httpContextAccessor);
+
+            SqlConnectionStringBuilder connBuilder = new(queryExecutor.ConnectionStringBuilders[provider.GetConfig().DefaultDataSourceName].ConnectionString);
+
+            // Assert - pooling should be enabled in both cases
+            string expectedMessage = enableUserDelegatedAuth
+                ? "Pooling should be enabled when user-delegated-auth is configured (per-user pooling is automatic)"
+                : "Pooling should remain as configured when user-delegated-auth is not used";
+            Assert.IsTrue(connBuilder.Pooling, expectedMessage);
+        }
+
+        /// <summary>
+        /// Test that when OBO is enabled and user claims are present, CreateConnection returns
+        /// a connection string with a user-specific Application Name containing the pool hash.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void TestOboWithUserClaims_ConnectionStringHasUserSpecificAppName()
+        {
+            // Arrange & Act
+            Mock<IHttpContextAccessor> httpContextAccessor = CreateHttpContextAccessorWithClaims(
+                issuer: "https://login.microsoftonline.com/tenant-id/v2.0",
+                objectId: "user-object-id-12345");
+
+            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Application Name=TestApp;",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor);
+
+            SqlConnection conn = queryExecutor.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+            SqlConnectionStringBuilder connBuilder = new(conn.ConnectionString);
+
+            // Assert - Application Name should contain the base name plus |obo: and a hash
+            // Note: The actual format includes version suffix, e.g., "TestApp,dab_oss_2.0.0|obo:{hash}"
+            Assert.IsTrue(connBuilder.ApplicationName.Contains("|obo:"),
+                $"Application Name should contain '|obo:' but was '{connBuilder.ApplicationName}'");
+            Assert.IsTrue(connBuilder.ApplicationName.StartsWith("TestApp"),
+                $"Application Name should start with 'TestApp' but was '{connBuilder.ApplicationName}'");
+            Assert.IsTrue(connBuilder.Pooling, "Pooling should be enabled");
+        }
+
+        /// <summary>
+        /// Test that different users get different pool hashes (different Application Names).
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void TestObo_DifferentUsersGetDifferentPoolHashes()
+        {
+            // Arrange & Act - User 1
+            Mock<IHttpContextAccessor> httpContextAccessor1 = CreateHttpContextAccessorWithClaims(
+                issuer: "https://login.microsoftonline.com/tenant-id/v2.0",
+                objectId: "user1-oid-aaaa");
+
+            (MsSqlQueryExecutor queryExecutor1, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Application Name=DAB;",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor1);
+
+            SqlConnection conn1 = queryExecutor1.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+            SqlConnectionStringBuilder connBuilder1 = new(conn1.ConnectionString);
+
+            // Arrange & Act - User 2
+            Mock<IHttpContextAccessor> httpContextAccessor2 = CreateHttpContextAccessorWithClaims(
+                issuer: "https://login.microsoftonline.com/tenant-id/v2.0",
+                objectId: "user2-oid-bbbb");
+
+            (MsSqlQueryExecutor queryExecutor2, _) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Application Name=DAB;",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor2);
+
+            SqlConnection conn2 = queryExecutor2.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+            SqlConnectionStringBuilder connBuilder2 = new(conn2.ConnectionString);
+
+            // Assert - both should have |obo: in Application Name but different hashes
+            // Note: The actual format includes version suffix, e.g., "DAB,dab_oss_2.0.0|obo:{hash}"
+            Assert.IsTrue(connBuilder1.ApplicationName.Contains("|obo:"), "User 1 should have OBO pool prefix");
+            Assert.IsTrue(connBuilder2.ApplicationName.Contains("|obo:"), "User 2 should have OBO pool prefix");
+            Assert.AreNotEqual(connBuilder1.ApplicationName, connBuilder2.ApplicationName,
+                "Different users should have different Application Names (different pool hashes)");
+        }
+
+        /// <summary>
+        /// Test that when no user context is present (e.g., startup), connection string uses base Application Name.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void TestOboNoUserContext_UsesBaseConnectionString()
+        {
+            // Arrange & Act
+            Mock<IHttpContextAccessor> httpContextAccessor = CreateHttpContextAccessorWithClaims(issuer: string.Empty, objectId: string.Empty);
+
+            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Application Name=BaseApp;",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor);
+
+            SqlConnection conn = queryExecutor.CreateConnection(provider.GetConfig().DefaultDataSourceName);
+            SqlConnectionStringBuilder connBuilder = new(conn.ConnectionString);
+
+            // Assert - without user context, should use base Application Name (no |obo: suffix)
+            // Note: The actual format includes version suffix, e.g., "BaseApp,dab_oss_2.0.0"
+            Assert.IsTrue(connBuilder.ApplicationName.StartsWith("BaseApp"),
+                $"Without user context, Application Name should start with 'BaseApp' but was '{connBuilder.ApplicationName}'");
+            Assert.IsFalse(connBuilder.ApplicationName.Contains("|obo:"),
+                $"Without user context, Application Name should not contain '|obo:' but was '{connBuilder.ApplicationName}'");
+        }
+
+        #endregion
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {

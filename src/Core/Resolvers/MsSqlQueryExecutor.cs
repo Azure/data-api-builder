@@ -204,9 +204,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // baseAppName preserves the customer's original Application Name.
             // We append |obo:{hash} to create a separate connection pool for each unique user.
             // Format: {existingAppName}|obo:{hash}
+            // SQL Server limits Application Name to 128 characters. To avoid SQL Server silently
+            // truncating the value (which could cut off part of the hash and compromise per-user
+            // pooling), we ensure the full |obo:{hash} suffix is preserved and, if necessary,
+            // truncate only the baseAppName portion.
+            string oboSuffix = $"|obo:{poolKeyHash}";
+            const int maxApplicationNameLength = 128;
+            int allowedBaseAppNameLength = Math.Max(0, maxApplicationNameLength - oboSuffix.Length);
+            string effectiveBaseAppName = baseAppName.Length > allowedBaseAppNameLength
+                ? baseAppName[..allowedBaseAppNameLength]
+                : baseAppName;
+
             SqlConnectionStringBuilder userBuilder = new(baseConnectionString)
             {
-                ApplicationName = $"{baseAppName}|obo:{poolKeyHash}",
+                ApplicationName = $"{effectiveBaseAppName}{oboSuffix}",
                 Pooling = true
             };
 

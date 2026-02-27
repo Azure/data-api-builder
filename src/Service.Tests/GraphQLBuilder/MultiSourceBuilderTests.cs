@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
@@ -46,12 +47,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 
             RuntimeConfigProvider provider = new(loader);
 
-            Mock<RuntimeConfigValidator> runtimeConfigValidator = new();
+            Mock<ILogger<RuntimeConfigValidator>> loggerValidator = new();
+            RuntimeConfigValidator validator = new(provider, fs, loggerValidator.Object);
+
             Mock<IAbstractQueryManagerFactory> queryManagerfactory = new();
             Mock<IQueryEngineFactory> queryEngineFactory = new();
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
             Mock<ILogger<ISqlMetadataProvider>> logger = new();
-            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, runtimeConfigValidator.Object, queryManagerfactory.Object, logger.Object, fs, handler: null);
+            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, validator, queryManagerfactory.Object, logger.Object, fs, handler: null);
             Mock<IAuthorizationResolver> authResolver = new();
 
             GraphQLSchemaCreator creator = new(provider, queryEngineFactory.Object, mutationEngineFactory.Object, metadataProviderFactory, authResolver.Object);

@@ -449,6 +449,18 @@ namespace Cli
             EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
             EntityCacheOptions? cacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
+            EntityMcpOptions? mcpOptions = null;
+
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                mcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedure);
+
+                if (mcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
 
             // Create new entity.
             Entity entity = new(
@@ -460,7 +472,8 @@ namespace Cli
                 Relationships: null,
                 Mappings: null,
                 Cache: cacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description);
+                Description: string.IsNullOrWhiteSpace(options.Description) ? null : options.Description,
+                Mcp: mcpOptions);
 
             // Add entity to existing runtime config.
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialRuntimeConfig.Entities.Entities)
@@ -671,6 +684,36 @@ namespace Cli
                 dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.DataSourceOptionsSetSessionContext.Value);
             }
 
+            // Handle health.name option
+            if (options.DataSourceHealthName is not null)
+            {
+                // If there's no existing health config, create one with the name
+                // Note: Passing enabled: null results in Enabled = true at runtime (default behavior)
+                // but UserProvidedEnabled = false, so the enabled property won't be serialized to JSON.
+                // This ensures only the name property is written to the config file.
+                if (datasourceHealthCheckConfig is null)
+                {
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(enabled: null, name: options.DataSourceHealthName);
+                }
+                else
+                {
+                    // Update the existing health config with the new name while preserving other settings.
+                    // DatasourceHealthCheckConfig is a record (immutable), so we create a new instance.
+                    // Preserve threshold only if it was explicitly set by the user
+                    int? thresholdToPreserve = datasourceHealthCheckConfig.UserProvidedThresholdMs
+                        ? datasourceHealthCheckConfig.ThresholdMs
+                        : null;
+                    // Preserve enabled only if it was explicitly set by the user
+                    bool? enabledToPreserve = datasourceHealthCheckConfig.UserProvidedEnabled
+                        ? datasourceHealthCheckConfig.Enabled
+                        : null;
+                    datasourceHealthCheckConfig = new DatasourceHealthCheckConfig(
+                        enabled: enabledToPreserve,
+                        name: options.DataSourceHealthName,
+                        thresholdMs: thresholdToPreserve);
+                }
+            }
+
             dbOptions = EnumerableUtilities.IsNullOrEmpty(dbOptions) ? null : dbOptions;
             DataSource dataSource = new(dbType, dataSourceConnectionString, dbOptions, datasourceHealthCheckConfig);
             runtimeConfig = runtimeConfig with { DataSource = dataSource };
@@ -797,7 +840,15 @@ namespace Cli
 
             // MCP: Enabled and Path
             if (options.RuntimeMcpEnabled != null ||
-                options.RuntimeMcpPath != null)
+                options.RuntimeMcpPath != null ||
+                options.RuntimeMcpDescription != null ||
+                options.RuntimeMcpDmlToolsEnabled != null ||
+                options.RuntimeMcpDmlToolsDescribeEntitiesEnabled != null ||
+                options.RuntimeMcpDmlToolsCreateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsReadRecordsEnabled != null ||
+                options.RuntimeMcpDmlToolsUpdateRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsDeleteRecordEnabled != null ||
+                options.RuntimeMcpDmlToolsExecuteEntityEnabled != null)
             {
                 McpRuntimeOptions updatedMcpOptions = runtimeConfig?.Runtime?.Mcp ?? new();
                 bool status = TryUpdateConfiguredMcpValues(options, ref updatedMcpOptions);
@@ -821,6 +872,21 @@ namespace Cli
                 if (status)
                 {
                     runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Cache = updatedCacheOptions } };
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            // Compression: Level
+            if (options.RuntimeCompressionLevel != null)
+            {
+                CompressionOptions updatedCompressionOptions = runtimeConfig?.Runtime?.Compression ?? new();
+                bool status = TryUpdateConfiguredCompressionValues(options, ref updatedCompressionOptions);
+                if (status)
+                {
+                    runtimeConfig = runtimeConfig! with { Runtime = runtimeConfig.Runtime! with { Compression = updatedCompressionOptions } };
                 }
                 else
                 {
@@ -1053,6 +1119,14 @@ namespace Cli
                     }
                 }
 
+                // Runtime.Mcp.Description
+                updatedValue = options?.RuntimeMcpDescription;
+                if (updatedValue != null)
+                {
+                    updatedMcpOptions = updatedMcpOptions! with { Description = (string)updatedValue };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Mcp.Description as '{updatedValue}'", updatedValue);
+                }
+
                 // Handle DML tools configuration
                 bool hasToolUpdates = false;
                 DmlToolsConfig? currentDmlTools = updatedMcpOptions?.DmlTools;
@@ -1198,6 +1272,37 @@ namespace Cli
         }
 
         /// <summary>
+        /// Attempts to update the Config parameters in the Compression runtime settings based on the provided value.
+        /// Validates user-provided parameters and then returns true if the updated Compression options
+        /// need to be overwritten on the existing config parameters.
+        /// </summary>
+        /// <param name="options">options.</param>
+        /// <param name="updatedCompressionOptions">updatedCompressionOptions.</param>
+        /// <returns>True if the value needs to be updated in the runtime config, else false</returns>
+        private static bool TryUpdateConfiguredCompressionValues(
+            ConfigureOptions options,
+            ref CompressionOptions updatedCompressionOptions)
+        {
+            try
+            {
+                // Runtime.Compression.Level
+                CompressionLevel? updatedValue = options?.RuntimeCompressionLevel;
+                if (updatedValue != null)
+                {
+                    updatedCompressionOptions = updatedCompressionOptions with { Level = updatedValue.Value, UserProvidedLevel = true };
+                    _logger.LogInformation("Updated RuntimeConfig with Runtime.Compression.Level as '{updatedValue}'", updatedValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to configure RuntimeConfig.Compression with exception message: {exceptionMessage}.", ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Attempts to update the Config parameters in the Host runtime settings based on the provided value.
         /// Validates that any user-provided parameter value is valid and then returns true if the updated Host options
         /// needs to be overwritten on the existing config parameters
@@ -1260,7 +1365,8 @@ namespace Cli
                 string? updatedProviderValue = options?.RuntimeHostAuthenticationProvider;
                 if (updatedProviderValue != null)
                 {
-                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.StaticWebApps);
+                    // Default to AppService when provider string is not provided
+                    updatedValue = updatedProviderValue?.ToString() ?? nameof(EasyAuthType.AppService);
                     AuthenticationOptions AuthOptions;
                     if (updatedHostOptions?.Authentication == null)
                     {
@@ -1621,6 +1727,26 @@ namespace Cli
             EntityActionFields? updatedFields = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
             EntityCacheOptions? updatedCacheOptions = ConstructCacheOptions(options.CacheEnabled, options.CacheTtl);
 
+            // Determine if the entity is or will be a stored procedure
+            bool isStoredProcedureAfterUpdate = doOptionsRepresentStoredProcedure || (isCurrentEntityStoredProcedure && options.SourceType is null);
+
+            // Construct and validate MCP options if provided
+            EntityMcpOptions? updatedMcpOptions = null;
+            if (options.McpDmlTools is not null || options.McpCustomTool is not null)
+            {
+                updatedMcpOptions = ConstructMcpOptions(options.McpDmlTools, options.McpCustomTool, isStoredProcedureAfterUpdate);
+                if (updatedMcpOptions is null)
+                {
+                    _logger.LogError("Failed to construct MCP options.");
+                    return false;
+                }
+            }
+            else
+            {
+                // Keep existing MCP options if no updates provided
+                updatedMcpOptions = entity.Mcp;
+            }
+
             if (!updatedGraphQLDetails.Enabled)
             {
                 _logger.LogWarning("Disabling GraphQL for this entity will restrict its usage in relationships");
@@ -1713,6 +1839,7 @@ namespace Cli
                 List<FieldMetadata> updatedFieldsList = ComposeFieldsFromOptions(options);
                 Dictionary<string, FieldMetadata> updatedFieldsDict = updatedFieldsList.ToDictionary(f => f.Name, f => f);
                 List<FieldMetadata> mergedFields = [];
+                bool primaryKeyOptionProvided = options.FieldsPrimaryKeyCollection?.Any() == true;
 
                 foreach (FieldMetadata field in existingFields)
                 {
@@ -1723,7 +1850,10 @@ namespace Cli
                             Name = updatedField.Name,
                             Alias = updatedField.Alias ?? field.Alias,
                             Description = updatedField.Description ?? field.Description,
-                            PrimaryKey = updatedField.PrimaryKey
+                            // If --fields.primary-key was not provided at all,
+                            // keep the existing primary-key flag. Otherwise,
+                            // use the value coming from updatedField.
+                            PrimaryKey = primaryKeyOptionProvided ? updatedField.PrimaryKey : field.PrimaryKey
                         });
                         updatedFieldsDict.Remove(field.Name); // Remove so only new fields remain
                     }
@@ -1857,7 +1987,8 @@ namespace Cli
                 Relationships: updatedRelationships,
                 Mappings: updatedMappings,
                 Cache: updatedCacheOptions,
-                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description
+                Description: string.IsNullOrWhiteSpace(options.Description) ? entity.Description : options.Description,
+                Mcp: updatedMcpOptions
                 );
             IDictionary<string, Entity> entities = new Dictionary<string, Entity>(initialConfig.Entities.Entities)
             {

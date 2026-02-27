@@ -28,6 +28,7 @@ namespace Cli.Commands
             string? dataSourceOptionsContainer = null,
             string? dataSourceOptionsSchema = null,
             bool? dataSourceOptionsSetSessionContext = null,
+            string? dataSourceHealthName = null,
             int? depthLimit = null,
             bool? runtimeGraphQLEnabled = null,
             string? runtimeGraphQLPath = null,
@@ -38,6 +39,7 @@ namespace Cli.Commands
             bool? runtimeRestRequestBodyStrict = null,
             bool? runtimeMcpEnabled = null,
             string? runtimeMcpPath = null,
+            string? runtimeMcpDescription = null,
             bool? runtimeMcpDmlToolsEnabled = null,
             bool? runtimeMcpDmlToolsDescribeEntitiesEnabled = null,
             bool? runtimeMcpDmlToolsCreateRecordEnabled = null,
@@ -47,6 +49,7 @@ namespace Cli.Commands
             bool? runtimeMcpDmlToolsExecuteEntityEnabled = null,
             bool? runtimeCacheEnabled = null,
             int? runtimeCacheTtl = null,
+            CompressionLevel? runtimeCompressionLevel = null,
             HostMode? runtimeHostMode = null,
             IEnumerable<string>? runtimeHostCorsOrigins = null,
             bool? runtimeHostCorsAllowCredentials = null,
@@ -80,6 +83,7 @@ namespace Cli.Commands
             DataSourceOptionsContainer = dataSourceOptionsContainer;
             DataSourceOptionsSchema = dataSourceOptionsSchema;
             DataSourceOptionsSetSessionContext = dataSourceOptionsSetSessionContext;
+            DataSourceHealthName = dataSourceHealthName;
             // GraphQL
             DepthLimit = depthLimit;
             RuntimeGraphQLEnabled = runtimeGraphQLEnabled;
@@ -93,6 +97,7 @@ namespace Cli.Commands
             // Mcp
             RuntimeMcpEnabled = runtimeMcpEnabled;
             RuntimeMcpPath = runtimeMcpPath;
+            RuntimeMcpDescription = runtimeMcpDescription;
             RuntimeMcpDmlToolsEnabled = runtimeMcpDmlToolsEnabled;
             RuntimeMcpDmlToolsDescribeEntitiesEnabled = runtimeMcpDmlToolsDescribeEntitiesEnabled;
             RuntimeMcpDmlToolsCreateRecordEnabled = runtimeMcpDmlToolsCreateRecordEnabled;
@@ -103,6 +108,8 @@ namespace Cli.Commands
             // Cache
             RuntimeCacheEnabled = runtimeCacheEnabled;
             RuntimeCacheTTL = runtimeCacheTtl;
+            // Compression
+            RuntimeCompressionLevel = runtimeCompressionLevel;
             // Host
             RuntimeHostMode = runtimeHostMode;
             RuntimeHostCorsOrigins = runtimeHostCorsOrigins;
@@ -150,6 +157,9 @@ namespace Cli.Commands
         [Option("data-source.options.set-session-context", Required = false, HelpText = "Enable session context. Allowed values: true (default), false.")]
         public bool? DataSourceOptionsSetSessionContext { get; }
 
+        [Option("data-source.health.name", Required = false, HelpText = "Identifier for data source in health check report.")]
+        public string? DataSourceHealthName { get; }
+
         [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
 
@@ -180,6 +190,9 @@ namespace Cli.Commands
         [Option("runtime.mcp.path", Required = false, HelpText = "Customize DAB's MCP endpoint path. Default: '/mcp' Conditions: Prefix path with '/'.")]
         public string? RuntimeMcpPath { get; }
 
+        [Option("runtime.mcp.description", Required = false, HelpText = "Set the MCP server description to be exposed in the initialize response.")]
+        public string? RuntimeMcpDescription { get; }
+
         [Option("runtime.mcp.dml-tools.enabled", Required = false, HelpText = "Enable DAB's MCP DML tools endpoint. Default: true (boolean).")]
         public bool? RuntimeMcpDmlToolsEnabled { get; }
 
@@ -207,6 +220,9 @@ namespace Cli.Commands
         [Option("runtime.cache.ttl-seconds", Required = false, HelpText = "Customize the DAB cache's global default time to live in seconds. Default: 5 seconds (Integer).")]
         public int? RuntimeCacheTTL { get; }
 
+        [Option("runtime.compression.level", Required = false, HelpText = "Set the response compression level. Allowed values: optimal (default), fastest, none.")]
+        public CompressionLevel? RuntimeCompressionLevel { get; }
+
         [Option("runtime.host.mode", Required = false, HelpText = "Set the host running mode of DAB in Development or Production. Default: Development.")]
         public HostMode? RuntimeHostMode { get; }
 
@@ -216,7 +232,7 @@ namespace Cli.Commands
         [Option("runtime.host.cors.allow-credentials", Required = false, HelpText = "Set value for Access-Control-Allow-Credentials header in Host.Cors. Default: false (boolean).")]
         public bool? RuntimeHostCorsAllowCredentials { get; }
 
-        [Option("runtime.host.authentication.provider", Required = false, HelpText = "Configure the name of authentication provider. Default: StaticWebApps.")]
+        [Option("runtime.host.authentication.provider", Required = false, HelpText = "Configure the name of authentication provider. Default: AppService.")]
         public string? RuntimeHostAuthenticationProvider { get; }
 
         [Option("runtime.host.authentication.jwt.audience", Required = false, HelpText = "Configure the intended recipient(s) of the Jwt Token.")]

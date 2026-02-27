@@ -438,6 +438,115 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test method to verify that many-to-many relationships work correctly when the linking object
+        /// is in a custom schema (not dbo). This test validates that schema names are correctly compared
+        /// using case-insensitive comparison, which is important for SQL Server where schema names are
+        /// case-insensitive.
+        /// </summary>
+        [DataRow("mySchema.TEST_SOURCE_LINK", "mySchema", "TEST_SOURCE_LINK", DisplayName = "Linking object with custom schema")]
+        [DataRow("MYSCHEMA.TEST_SOURCE_LINK", "MYSCHEMA", "TEST_SOURCE_LINK", DisplayName = "Linking object with uppercase custom schema")]
+        [DataRow("myschema.test_source_link", "myschema", "test_source_link", DisplayName = "Linking object with lowercase schema and table")]
+        [DataTestMethod]
+        public void TestRelationshipWithLinkingObjectInCustomSchema(
+            string linkingObject,
+            string expectedSchema,
+            string expectedTable
+        )
+        {
+            // Creating an EntityMap with two sample entities
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: new string[] { "sourceField" },
+                targetFields: new string[] { "targetField" },
+                linkingObject: linkingObject,
+                linkingSourceFields: new string[] { "linkingSourceField" },
+                linkingTargetFields: new string[] { "linkingTargetField" }
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, ConnectionString: "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
+
+            // Mocking EntityToDatabaseObject - entities are in the custom schema as well
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable(expectedSchema, "TEST_SOURCE1")
+                },
+                {
+                    "SampleEntity2",
+                    new DatabaseTable(expectedSchema, "TEST_SOURCE2")
+                }
+            };
+
+            _sqlMetadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            // To mock the schema name and dbObjectName for linkingObject
+            _sqlMetadataProvider.Setup(x =>
+                x.ParseSchemaAndDbTableName(linkingObject)).Returns((expectedSchema, expectedTable));
+
+            string discard;
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            // Mock ForeignKeyPair to be defined in DB with the custom schema
+            // The schema comparison should be case-insensitive
+            // Use concrete DatabaseTable instances with differing casing so that
+            // Moq relies on DatabaseTable.Equals for argument matching.
+            // Linking table uses lowercase to ensure case-insensitive comparison is working.
+            DatabaseTable expectedLinkingTable = new(expectedSchema.ToLowerInvariant(), expectedTable.ToLowerInvariant());
+            DatabaseTable expectedSource1Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE1");
+            DatabaseTable expectedSource2Table = new(expectedSchema.ToUpperInvariant(), "TEST_SOURCE2");
+
+            _sqlMetadataProvider.Setup(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    expectedLinkingTable,
+                    expectedSource1Table
+                )).Returns(true);
+
+            _sqlMetadataProvider.Setup(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    expectedLinkingTable,
+                    expectedSource2Table
+                )).Returns(true);
+
+            // Validation should pass with custom schema
+            configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object);
+
+            // Verify that VerifyForeignKeyExistsInDB is never called with 'dbo' schema,
+            // guarding against the original dbo-fallback regression.
+            _sqlMetadataProvider.Verify(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, "dbo", StringComparison.OrdinalIgnoreCase)),
+                    It.IsAny<DatabaseTable>()
+                ), Times.Never);
+
+            _sqlMetadataProvider.Verify(x =>
+                x.VerifyForeignKeyExistsInDB(
+                    It.IsAny<DatabaseTable>(),
+                    It.Is<DatabaseTable>(t => string.Equals(t.SchemaName, "dbo", StringComparison.OrdinalIgnoreCase))
+                ), Times.Never);
+        }
+
+        /// <summary>
         /// Test method to check that an exception is thrown when the relationship is one-many
         /// or many-one (determined by the linking object being null), while both SourceFields
         /// and TargetFields are null in the config, and the foreignKey pair between source and target
@@ -2066,21 +2175,41 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataTestMethod]
         [DataRow(true, "EntityA", "", true, "The rest path for entity: EntityA cannot be empty.",
             DisplayName = "Empty rest path configured for an entity fails config validation.")]
-        [DataRow(true, "EntityA", "entity?RestPath", true, "The rest path: entity?RestPath for entity: EntityA contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity?RestPath", true, "The rest path: entity?RestPath for entity: EntityA contains '?' which is reserved for query strings in URLs.",
             DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity#RestPath", true, "The rest path: entity#RestPath for entity: EntityA contains one or more reserved characters.",
-            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity[]RestPath", true, "The rest path: entity[]RestPath for entity: EntityA contains one or more reserved characters.",
-            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "EntityA", "entity+Rest*Path", true, "The rest path: entity+Rest*Path for entity: EntityA contains one or more reserved characters.",
-            DisplayName = "Rest path for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "Entity?A", null, true, "The rest path: Entity?A for entity: Entity?A contains one or more reserved characters.",
+        [DataRow(true, "EntityA", "entity#RestPath", true, "The rest path: entity#RestPath for entity: EntityA contains '#' which is reserved for URL fragments.",
+            DisplayName = "Rest path for an entity containing reserved character # fails config validation.")]
+        [DataRow(true, "EntityA", "entity[]RestPath", true, "The rest path: entity[]RestPath for entity: EntityA contains reserved characters that are not allowed in URL paths.",
+            DisplayName = "Rest path for an entity containing reserved character [] fails config validation.")]
+        [DataRow(true, "EntityA", "entity+Rest*Path", true, "The rest path: entity+Rest*Path for entity: EntityA contains reserved characters that are not allowed in URL paths.",
+            DisplayName = "Rest path for an entity containing reserved character +* fails config validation.")]
+        [DataRow(true, "Entity?A", null, true, "The rest path: Entity?A for entity: Entity?A contains '?' which is reserved for query strings in URLs.",
             DisplayName = "Entity name for an entity containing reserved character ? fails config validation.")]
-        [DataRow(true, "Entity&*[]A", null, true, "The rest path: Entity&*[]A for entity: Entity&*[]A contains one or more reserved characters.",
-            DisplayName = "Entity name containing reserved character ? fails config validation.")]
+        [DataRow(true, "Entity&*[]A", null, true, "The rest path: Entity&*[]A for entity: Entity&*[]A contains reserved characters that are not allowed in URL paths.",
+            DisplayName = "Entity name containing reserved character &*[] fails config validation.")]
         [DataRow(false, "EntityA", "entityRestPath", true, DisplayName = "Rest path correctly configured as a non-empty string without any reserved characters.")]
         [DataRow(false, "EntityA", "entityRest/?Path", false,
             DisplayName = "Rest path for an entity containing reserved character but with rest disabled passes config validation.")]
+        [DataRow(false, "EntityA", "shopping-cart/item", true,
+            DisplayName = "Rest path with sub-directory passes config validation.")]
+        [DataRow(false, "EntityA", "api/v1/books", true,
+            DisplayName = "Rest path with multiple sub-directories passes config validation.")]
+        [DataRow(true, "EntityA", "entity\\path", true, "The rest path: entity\\path for entity: EntityA contains a backslash (\\). Use forward slash (/) for path separators.",
+            DisplayName = "Rest path with backslash fails config validation with helpful message.")]
+        [DataRow(false, "EntityA", "/entity/path", true,
+            DisplayName = "Rest path with leading slash is trimmed and passes config validation.")]
+        [DataRow(true, "EntityA", "entity//path", true, "The rest path: entity//path for entity: EntityA contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.",
+            DisplayName = "Rest path with consecutive slashes fails config validation.")]
+        [DataRow(true, "EntityA", "entity/path/", true, "The rest path: entity/path/ for entity: EntityA contains empty path segments. Ensure there are no leading, consecutive, or trailing slashes.",
+            DisplayName = "Rest path with trailing slash fails config validation.")]
+        [DataRow(true, "EntityA", "entity /path", true, "The rest path: entity /path for entity: EntityA contains whitespace which is not allowed in URL paths.",
+            DisplayName = "Rest path with whitespace fails config validation with helpful message.")]
+        [DataRow(true, "EntityA", "entity%3Frest", true, "The rest path: entity%3Frest for entity: EntityA contains percent-encoding (%) which is not allowed. Use literal characters only.",
+            DisplayName = "Rest path with percent-encoded characters fails config validation.")]
+        [DataRow(true, "EntityA", "entity/../path", true, "The rest path: entity/../path for entity: EntityA contains path traversal patterns ('.' or '..') which are not allowed.",
+            DisplayName = "Rest path with dot-dot segments fails config validation.")]
+        [DataRow(true, "EntityA", "entity/./path", true, "The rest path: entity/./path for entity: EntityA contains path traversal patterns ('.' or '..') which are not allowed.",
+            DisplayName = "Rest path with dot segments fails config validation.")]
         public void ValidateRestPathForEntityInConfig(
             bool exceptionExpected,
             string entityName,
@@ -2193,6 +2322,407 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             else
             {
                 configValidator.ValidateEntityConfiguration(runtimeConfig);
+            }
+        }
+
+        [TestMethod]
+        public void UserDelegatedAuthRequiresMssqlDatabaseType()
+        {
+            string runtimeConfigString = @"{
+                    ""$schema"": ""test_schema"",
+                    ""data-source"": {
+                        ""database-type"": ""postgresql"",
+                        ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+                        ""user-delegated-auth"": {
+                            ""enabled"": true,
+                            ""database-audience"": ""https://database.example""
+                        }
+                    },
+                    ""runtime"": {
+                        ""host"": {
+                            ""authentication"": {
+                                ""provider"": ""AzureAD"",
+                                ""jwt"": {
+                                    ""audience"": ""api-audience"",
+                                    ""issuer"": ""https://login.microsoftonline.com/common/v2.0""
+                                }
+                            }
+                        }
+                    },
+                    ""entities"": { }
+                }";
+
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+
+            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, loggerMock.Object));
+
+            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+        }
+
+        [TestMethod]
+        public void UserDelegatedAuthRequiresDatabaseAudience()
+        {
+            string runtimeConfigString = @"{
+                    ""$schema"": ""test_schema"",
+                    ""data-source"": {
+                        ""database-type"": ""mssql"",
+                        ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+                        ""user-delegated-auth"": {
+                            ""enabled"": true
+                        }
+                    },
+                    ""runtime"": {
+                        ""host"": {
+                            ""authentication"": {
+                                ""provider"": ""AzureAD"",
+                                ""jwt"": {
+                                    ""audience"": ""api-audience"",
+                                    ""issuer"": ""https://login.microsoftonline.com/common/v2.0""
+                                }
+                            }
+                        }
+                    },
+                    ""entities"": { }
+                }";
+
+            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+
+            DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, loggerMock.Object));
+
+            Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+            Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+        }
+
+        [TestMethod]
+        public void UserDelegatedAuthRequiresCachingDisabled()
+        {
+            // Arrange - Set environment variables for Azure AD credentials to ensure
+            // validation reaches the caching check (not failing on missing credentials)
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
+
+            try
+            {
+                string runtimeConfigString = @"{
+                    ""$schema"": ""test_schema"",
+                    ""data-source"": {
+                        ""database-type"": ""mssql"",
+                        ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+                        ""user-delegated-auth"": {
+                            ""enabled"": true,
+                            ""database-audience"": ""https://database.example""
+                        }
+                    },
+                    ""runtime"": {
+                        ""cache"": {
+                            ""enabled"": true
+                        },
+                        ""host"": {
+                            ""authentication"": {
+                                ""provider"": ""AzureAD"",
+                                ""jwt"": {
+                                    ""audience"": ""api-audience"",
+                                    ""issuer"": ""https://login.microsoftonline.com/common/v2.0""
+                                }
+                            }
+                        }
+                    },
+                    ""entities"": { }
+                }";
+
+                RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+                MockFileSystem fileSystem = new();
+                FileSystemRuntimeConfigLoader loader = new(fileSystem);
+                RuntimeConfigProvider provider = new(loader);
+                Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+                RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+
+                DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, loggerMock.Object));
+
+                Assert.AreEqual(expected: RuntimeConfigValidator.USER_DELEGATED_AUTH_CACHING_ERR_MSG, actual: dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+            finally
+            {
+                // Clean up environment variables
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that user-delegated-auth with missing, empty, or whitespace database-audience throws an error.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, DisplayName = "Null audience should fail")]
+        [DataRow("", DisplayName = "Empty string audience should fail")]
+        [DataRow("   ", DisplayName = "Whitespace audience should fail")]
+        public void ValidateUserDelegatedAuth_InvalidDatabaseAudience_ThrowsError(string audience)
+        {
+            // Arrange
+            DataSource dataSource = new(
+                DatabaseType: DatabaseType.MSSQL,
+                ConnectionString: "Server=test;Database=test;",
+                Options: null)
+            {
+                UserDelegatedAuth = new UserDelegatedAuthOptions(
+                    Enabled: true,
+                    Provider: "EntraId",
+                    DatabaseAudience: audience)
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null),
+                    Cache: new(Enabled: false)
+                ),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            MockFileSystem fileSystem = new();
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            // Act & Assert
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object));
+
+            Assert.AreEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG, ex.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        /// <summary>
+        /// Test to validate that user-delegated-auth with MSSQL, valid audience, and caching disabled passes validation.
+        /// </summary>
+        [TestMethod]
+        public void ValidateUserDelegatedAuth_ValidConfiguration_Succeeds()
+        {
+            // Arrange - Set environment variables for Azure AD credentials
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
+
+            try
+            {
+                DataSource dataSource = new(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConnectionString: "Server=test;Database=test;",
+                    Options: null)
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                };
+
+                RuntimeConfig runtimeConfig = new(
+                    Schema: "UnitTestSchema",
+                    DataSource: dataSource,
+                    Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Mcp: new(),
+                        Host: new(Cors: null, Authentication: null),
+                        Cache: new(Enabled: false)
+                    ),
+                    Entities: new(new Dictionary<string, Entity>()));
+
+                MockFileSystem fileSystem = new();
+                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+                // Act & Assert - validation should succeed without throwing
+                configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
+            }
+            finally
+            {
+                // Clean up environment variables
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that user-delegated-auth with missing DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID,
+        /// or DAB_OBO_CLIENT_SECRET throws an error.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(null, "test-tenant", "test-secret", DisplayName = "Missing DAB_OBO_CLIENT_ID")]
+        [DataRow("test-client", null, "test-secret", DisplayName = "Missing DAB_OBO_TENANT_ID")]
+        [DataRow("test-client", "test-tenant", null, DisplayName = "Missing DAB_OBO_CLIENT_SECRET")]
+        [DataRow("", "test-tenant", "test-secret", DisplayName = "Empty DAB_OBO_CLIENT_ID")]
+        [DataRow("test-client", "", "test-secret", DisplayName = "Empty DAB_OBO_TENANT_ID")]
+        [DataRow("test-client", "test-tenant", "", DisplayName = "Empty DAB_OBO_CLIENT_SECRET")]
+        public void ValidateUserDelegatedAuth_MissingEnvVars_ThrowsError(
+            string clientId, string tenantId, string clientSecret)
+        {
+            // Arrange - Set environment variables (some may be null/empty to test validation)
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, clientId);
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, tenantId);
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, clientSecret);
+
+            try
+            {
+                DataSource dataSource = new(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConnectionString: "Server=test;Database=test;",
+                    Options: null)
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                };
+
+                RuntimeConfig runtimeConfig = new(
+                    Schema: "UnitTestSchema",
+                    DataSource: dataSource,
+                    Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Mcp: new(),
+                        Host: new(Cors: null, Authentication: null),
+                        Cache: new(Enabled: false)
+                    ),
+                    Entities: new(new Dictionary<string, Entity>()));
+
+                MockFileSystem fileSystem = new();
+                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+                // Act & Assert
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                    () => configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object));
+
+                Assert.AreEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG, ex.Message);
+            }
+            finally
+            {
+                // Clean up environment variables
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that disabled user-delegated-auth does not trigger validation errors.
+        /// </summary>
+        [TestMethod]
+        public void ValidateUserDelegatedAuth_Disabled_SkipsValidation()
+        {
+            // Arrange - PostgreSQL with disabled user-delegated-auth should NOT fail
+            // Note: No environment variables set - should be fine since OBO is disabled
+            DataSource dataSource = new(
+                DatabaseType: DatabaseType.PostgreSQL,
+                ConnectionString: "Host=test;Database=test;",
+                Options: null)
+            {
+                UserDelegatedAuth = new UserDelegatedAuthOptions(
+                    Enabled: false,  // Disabled
+                    Provider: "EntraId",
+                    DatabaseAudience: null)  // Missing audience, but should be ignored since disabled
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: dataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Mcp: new(),
+                    Host: new(Cors: null, Authentication: null),
+                    Cache: new(Enabled: true)  // Caching enabled, but should be fine since OBO disabled
+                ),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            MockFileSystem fileSystem = new();
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+            // Act & Assert - should not throw user-delegated-auth errors
+            try
+            {
+                configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
+            }
+            catch (DataApiBuilderException ex)
+            {
+                // If an exception is thrown, it should NOT be one of the user-delegated-auth errors
+                Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_DATABASE_TYPE_ERR_MSG, ex.Message);
+                Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG, ex.Message);
+                Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_CACHING_ERR_MSG, ex.Message);
+                Assert.AreNotEqual(RuntimeConfigValidator.USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET are required.
+        /// OBO authentication uses MSAL ConfidentialClientApplication with client secret for token exchange.
+        /// </summary>
+        [TestMethod]
+        public void ValidateUserDelegatedAuth_AllRequiredEnvVarsSet_PassesValidation()
+        {
+            // Arrange - Set all required environment variables for OBO authentication
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, "test-client-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, "test-tenant-id");
+            Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, "test-client-secret");
+
+            try
+            {
+                DataSource dataSource = new(
+                    DatabaseType: DatabaseType.MSSQL,
+                    ConnectionString: "Server=test;Database=test;",
+                    Options: null)
+                {
+                    UserDelegatedAuth = new UserDelegatedAuthOptions(
+                        Enabled: true,
+                        Provider: "EntraId",
+                        DatabaseAudience: "https://database.windows.net/")
+                };
+
+                RuntimeConfig runtimeConfig = new(
+                    Schema: "UnitTestSchema",
+                    DataSource: dataSource,
+                    Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Mcp: new(),
+                        Host: new(Cors: null, Authentication: null),
+                        Cache: new(Enabled: false)
+                    ),
+                    Entities: new(new Dictionary<string, Entity>()));
+
+                MockFileSystem fileSystem = new();
+                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
+                // Act & Assert - validation should succeed and not throw when all env vars are set
+                configValidator.ValidateDataSourceInConfig(runtimeConfig, fileSystem, new Mock<ILogger>().Object);
+            }
+            finally
+            {
+                // Clean up environment variables
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR, null);
+                Environment.SetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR, null);
             }
         }
 
@@ -2519,3 +3049,4 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
     }
 }
+

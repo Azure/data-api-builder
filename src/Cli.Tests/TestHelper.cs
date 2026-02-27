@@ -143,7 +143,7 @@ namespace Cli.Tests
                       ""allow-credentials"": false
                   },
                   ""authentication"": {
-                      ""provider"": ""StaticWebApps""
+                      ""provider"": ""AppService""
                   }
               }
           },
@@ -170,7 +170,7 @@ namespace Cli.Tests
                       ""allow-credentials"": false
                   },
                   ""authentication"": {
-                      ""provider"": ""StaticWebApps""
+                      ""provider"": ""AppService""
                   }
               }
           }";
@@ -228,7 +228,7 @@ namespace Cli.Tests
                       ""allow-credentials"": false
                   },
                   ""authentication"": {
-                      ""provider"": ""StaticWebApps""
+                      ""provider"": ""AppService""
                   }
               }
           },
@@ -1003,7 +1003,7 @@ namespace Cli.Tests
               ""allow-credentials"": false
             },
             ""authentication"": {
-              ""provider"": ""StaticWebApps""
+              ""provider"": ""AppService""
             }
           }
         },
@@ -1048,7 +1048,7 @@ namespace Cli.Tests
               ""allow-credentials"": false
             },
             ""authentication"": {
-              ""provider"": ""StaticWebApps""
+              ""provider"": ""AppService""
             }
           }
         },
@@ -1118,7 +1118,7 @@ namespace Cli.Tests
               ""allow-credentials"": false
             },
             ""authentication"": {
-              ""provider"": ""StaticWebApps""
+              ""provider"": ""AppService""
             }
           }
         },
@@ -1199,7 +1199,7 @@ namespace Cli.Tests
         ""allow-credentials"": false
       },
       ""authentication"": {
-        ""provider"": ""StaticWebApps""
+        ""provider"": ""AppService""
       }
     }
   },
@@ -1298,10 +1298,11 @@ namespace Cli.Tests
                         ""allow-credentials"": false
                     }},
                     ""authentication"": {{
-                        ""provider"": ""StaticWebApps""
+                        ""provider"": ""AppService""
                     }}
                 }}
             }},
+            ""autoentities"": {{}},
             ""entities"": {{}}";
 
             return $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{runtimeSection}}}";
@@ -1323,7 +1324,7 @@ namespace Cli.Tests
                 setSessionContext: true,
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>(),
-                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                authenticationProvider: EasyAuthType.AppService.ToString(),
                 restRequestBodyStrict: CliBool.True,
                 config: config);
         }

@@ -49,6 +49,19 @@ public class RuntimeConfigValidator : IConfigValidator
         DatabaseType.DWSQL
     ];
 
+    // Error messages for user-delegated authentication configuration.
+    public const string USER_DELEGATED_AUTH_DATABASE_TYPE_ERR_MSG =
+        "User-delegated authentication is only supported when data-source.database-type is 'mssql'.";
+
+    public const string USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG =
+        "data-source.user-delegated-auth.database-audience must be set when user-delegated-auth is configured.";
+
+    public const string USER_DELEGATED_AUTH_CACHING_ERR_MSG =
+        "runtime.cache.enabled must be false when user-delegated-auth is configured.";
+
+    public const string USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG =
+        "User-delegated authentication requires DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET environment variables.";
+
     // Error messages.
     public const string INVALID_CLAIMS_IN_POLICY_ERR_MSG = "One or more claim types supplied in the database policy are not supported.";
 
@@ -119,6 +132,68 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+
+        ValidateUserDelegatedAuthOptions(runtimeConfig);
+    }
+
+    /// <summary>
+    /// Validates configuration for user-delegated authentication (OBO).
+    /// When any data source has user-delegated-auth configured, the following
+    /// rules are enforced:
+    /// - data-source.database-type must be "mssql".
+    /// - data-source.user-delegated-auth.database-audience must be present.
+    /// - runtime.cache.enabled must be false.
+    /// - Environment variables DAB_OBO_CLIENT_ID, DAB_OBO_TENANT_ID, and DAB_OBO_CLIENT_SECRET must be set.
+    /// </summary>
+    /// <param name="runtimeConfig">Runtime configuration.</param>
+    private void ValidateUserDelegatedAuthOptions(RuntimeConfig runtimeConfig)
+    {
+        foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
+        {
+            // Skip validation if user-delegated-auth is not configured or not enabled
+            if (dataSource.UserDelegatedAuth is null || !dataSource.UserDelegatedAuth.Enabled)
+            {
+                continue;
+            }
+
+            if (dataSource.DatabaseType != DatabaseType.MSSQL)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_DATABASE_TYPE_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if (string.IsNullOrWhiteSpace(dataSource.UserDelegatedAuth.DatabaseAudience))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_MISSING_AUDIENCE_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Validate OBO App Registration credentials are configured via environment variables.
+            string? clientId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_ID_ENV_VAR);
+            string? tenantId = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_TENANT_ID_ENV_VAR);
+            string? clientSecret = Environment.GetEnvironmentVariable(UserDelegatedAuthOptions.DAB_OBO_CLIENT_SECRET_ENV_VAR);
+
+            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(clientSecret))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_MISSING_CREDENTIALS_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            // Validate caching is disabled when user-delegated-auth is enabled
+            if (runtimeConfig.Runtime?.Cache?.Enabled == true)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: USER_DELEGATED_AUTH_CACHING_ERR_MSG,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
     }
 
     /// <summary>
@@ -656,6 +731,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <summary>
     /// Helper method to validate that the rest path property for the entity is correctly configured.
     /// The rest path should not be null/empty and should not contain any reserved characters.
+    /// Allows sub-directories (forward slashes) in the path.
     /// </summary>
     /// <param name="entityName">Name of the entity.</param>
     /// <param name="pathForEntity">The rest path for the entity.</param>
@@ -672,10 +748,10 @@ public class RuntimeConfigValidator : IConfigValidator
                 );
         }
 
-        if (RuntimeConfigValidatorUtil.DoesUriComponentContainReservedChars(pathForEntity))
+        if (!RuntimeConfigValidatorUtil.TryValidateEntityRestPath(pathForEntity, out string? errorMessage))
         {
             throw new DataApiBuilderException(
-                message: $"The rest path: {pathForEntity} for entity: {entityName} contains one or more reserved characters.",
+                message: $"The rest path: {pathForEntity} for entity: {entityName} {errorMessage ?? "contains invalid characters."}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                 );
@@ -846,6 +922,14 @@ public class RuntimeConfigValidator : IConfigValidator
         if (runtimeConfig.Runtime?.Host?.Authentication is null)
         {
             return;
+        }
+
+        // Warn if the configured EasyAuth provider is StaticWebApps (deprecated)
+        if (!string.IsNullOrWhiteSpace(runtimeConfig.Runtime.Host.Authentication.Provider) &&
+            Enum.TryParse<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider, ignoreCase: true, out EasyAuthType provider) &&
+            provider == EasyAuthType.StaticWebApps)
+        {
+            _logger.LogWarning("The 'StaticWebApps' authentication provider is deprecated.");
         }
 
         bool isAudienceSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Audience);

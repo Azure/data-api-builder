@@ -14,6 +14,7 @@ namespace Cli.Tests
         private MockFileSystem? _fileSystem;
         private FileSystemRuntimeConfigLoader? _runtimeConfigLoader;
         private const string TEST_RUNTIME_CONFIG_FILE = "test-update-runtime-setting.json";
+        private const string TEST_DATASOURCE_HEALTH_NAME = "My Data Source";
 
         [TestInitialize]
         public void TestInitialize()
@@ -541,6 +542,34 @@ namespace Cli.Tests
         }
 
         /// <summary>
+        /// Tests that running "dab configure --runtime.compression.level {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for compression.level and
+        /// validates whether the runtime config reflects those updated values.
+        [DataTestMethod]
+        [DataRow(CompressionLevel.Fastest, DisplayName = "Update Compression.Level to fastest.")]
+        [DataRow(CompressionLevel.Optimal, DisplayName = "Update Compression.Level to optimal.")]
+        [DataRow(CompressionLevel.None, DisplayName = "Update Compression.Level to none.")]
+        public void TestUpdateLevelForCompressionSettings(CompressionLevel updatedLevelValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update compression level value
+            ConfigureOptions options = new(
+                runtimeCompressionLevel: updatedLevelValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Level Value is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Compression?.Level);
+            Assert.AreEqual(updatedLevelValue, runtimeConfig.Runtime.Compression.Level);
+        }
+
+        /// <summary>
         /// Tests that running "dab configure --runtime.host.mode {value}" on a config with various values results
         /// in runtime config update. Takes in updated value for host.mode and 
         /// validates whether the runtime config reflects those updated values
@@ -924,6 +953,130 @@ namespace Cli.Tests
 
             // Assert
             Assert.IsFalse(isSuccess);
+        }
+
+        /// <summary>
+        /// Tests adding data-source.health.name to a config that doesn't have a health section.
+        /// This method verifies that the health.name can be added to a data source configuration
+        /// that doesn't previously have a health section.
+        /// Command: dab configure --data-source.health.name "My Data Source"
+        /// </summary>
+        [TestMethod]
+        public void TestAddDataSourceHealthName()
+        {
+            // Arrange
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            ConfigureOptions options = new(
+                dataSourceHealthName: TEST_DATASOURCE_HEALTH_NAME,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.Health);
+            Assert.AreEqual(TEST_DATASOURCE_HEALTH_NAME, config.DataSource.Health.Name);
+            Assert.IsTrue(config.DataSource.Health.Enabled); // Default value
+        }
+
+        /// <summary>
+        /// Tests updating data-source.health.name on a config that already has a health section.
+        /// This method verifies that the health.name can be updated while preserving other health settings.
+        /// Command: dab configure --data-source.health.name "Updated Name"
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("New Name", DisplayName = "Update health name with a simple string")]
+        [DataRow("This is the value", DisplayName = "Update health name with the example from the issue")]
+        public void TestUpdateDataSourceHealthName(string healthName)
+        {
+            // Arrange - Config with existing health section
+            string configWithHealth = @"
+            {
+                ""$schema"": ""test"",
+                ""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""testconnectionstring"",
+                    ""health"": {
+                        ""enabled"": false,
+                        ""threshold-ms"": 2000
+                    }
+                },
+                ""runtime"": {
+                    ""rest"": {
+                        ""enabled"": true,
+                        ""path"": ""/api""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""path"": ""/graphql"",
+                        ""allow-introspection"": true
+                    },
+                    ""host"": {
+                        ""mode"": ""development"",
+                        ""cors"": {
+                            ""origins"": [],
+                            ""allow-credentials"": false
+                        },
+                        ""authentication"": {
+                            ""provider"": ""StaticWebApps""
+                        }
+                    }
+                },
+                ""entities"": {}
+            }";
+            SetupFileSystemWithInitialConfig(configWithHealth);
+
+            ConfigureOptions options = new(
+                dataSourceHealthName: healthName,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+
+            // Act
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? config));
+            Assert.IsNotNull(config.DataSource);
+            Assert.IsNotNull(config.DataSource.Health);
+            Assert.AreEqual(healthName, config.DataSource.Health.Name);
+            // Verify existing health settings are preserved
+            Assert.IsFalse(config.DataSource.Health.Enabled);
+            Assert.AreEqual(2000, config.DataSource.Health.ThresholdMs);
+        }
+
+        /// Tests that running "dab configure --runtime.mcp.description {value}" on a config with various values results
+        /// in runtime config update. Takes in updated value for mcp.description and 
+        /// validates whether the runtime config reflects those updated values
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("This MCP provides access to the Products database and should be used to answer product-related or inventory-related questions from the user.", DisplayName = "Set MCP description.")]
+        [DataRow("Use this server for customer data queries.", DisplayName = "Set MCP description with short text.")]
+        public void TestConfigureDescriptionForMcpSettings(string descriptionValue)
+        {
+            // Arrange -> all the setup which includes creating options.
+            SetupFileSystemWithInitialConfig(INITIAL_CONFIG);
+
+            // Act: Attempts to update mcp.description value
+            ConfigureOptions options = new(
+                runtimeMcpDescription: descriptionValue,
+                config: TEST_RUNTIME_CONFIG_FILE
+            );
+            bool isSuccess = TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!);
+
+            // Assert: Validate the Description is updated
+            Assert.IsTrue(isSuccess);
+            string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig.Runtime?.Mcp?.Description);
+            Assert.AreEqual(descriptionValue, runtimeConfig.Runtime.Mcp.Description);
         }
 
         /// <summary>

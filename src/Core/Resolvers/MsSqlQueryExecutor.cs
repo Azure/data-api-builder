@@ -310,7 +310,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _dataSourceUserDelegatedAuth[dataSourceName] = dataSource.UserDelegatedAuth!;
 
                     // Per-user pooling: Keep pooling enabled but store the base Application Name.
-                    // At connection time, we'll append the user's iss:sub hash to create isolated pools per user.
+                    // At connection time, we'll append the user's iss|oid (or iss|sub) hash to create isolated pools per user.
                     // This is automatic for OBO to prevent connection exhaustion while ensuring pool isolation.
                     // Note: ApplicationName is typically already set by RuntimeConfigLoader (e.g., "CustomerApp,dab_oss_2.0.0")
                     // but we use GetDataApiBuilderUserAgent() as fallback for consistency.

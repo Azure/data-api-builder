@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Collections;
 using System.Data;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -129,119 +128,93 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Takes a string version of a PostgreSql data type and returns its .NET common language runtime (CLR) counterpart
-        /// TODO: For PostgreSql stored procedure support, this needs to be implemented.
+        /// Takes a string version of a MySql data type and returns its .NET common language runtime (CLR) counterpart
         /// </summary>
         public override Type SqlToCLRType(string sqlType)
         {
             switch (sqlType.ToLower())
             {
-                case "boolean":
+                case "tinyint":
+                    return typeof(sbyte);
+                case "tinyint unsigned":
+                    return typeof(byte);
                 case "bool":
+                case "boolean":
                     return typeof(bool);
 
                 case "smallint":
                     return typeof(short);
+                case "smallint unsigned":
+                    return typeof(ushort);
 
-                case "integer":
-                case "int":
+                case "mediumint":
                     return typeof(int);
+                case "mediumint unsigned":
+                    return typeof(uint);
+
+                case "int":
+                case "integer":
+                    return typeof(int);
+                case "int unsigned":
+                case "integer unsigned":
+                    return typeof(uint);
 
                 case "bigint":
                     return typeof(long);
+                case "bigint unsigned":
+                    return typeof(ulong);
 
-                case "real":
+                case "float":
                     return typeof(float);
 
+                case "double":
                 case "double precision":
                     return typeof(double);
 
-                case "numeric":
                 case "decimal":
+                case "dec":
+                case "fixed":
+                case "numeric":
                     return typeof(decimal);
-
-                case "money":
-                    return typeof(decimal);
-
-                case "character varying":
-                case "varchar":
-                case "character":
-                case "char":
-                case "text":
-                    return typeof(string);
-
-                case "bytea":
-                    return typeof(byte[]);
-
-                case "date":
-                    return typeof(DateTime);
-
-                case "timestamp":
-                case "timestamp without time zone":
-                    return typeof(DateTime);
-
-                case "timestamp with time zone":
-                    return typeof(DateTimeOffset);
-
-                case "time":
-                case "time without time zone":
-                    return typeof(TimeSpan);
-
-                case "time with time zone":
-                    return typeof(DateTimeOffset);
-
-                case "interval":
-                    return typeof(TimeSpan);
-
-                case "uuid":
-                    return typeof(Guid);
-
-                case "json":
-                case "jsonb":
-                    return typeof(string);
-
-                case "xml":
-                    return typeof(string);
-
-                case "inet":
-                    return typeof(System.Net.IPAddress);
-
-                case "cidr":
-                    return typeof(ValueTuple<System.Net.IPAddress, int>);
-
-                case "macaddr":
-                    return typeof(System.Net.NetworkInformation.PhysicalAddress);
 
                 case "bit":
-                case "bit varying":
-                    return typeof(BitArray);
+                    return typeof(ulong);
 
-                case "point":
-                    return typeof((double, double));
+                case "char":
+                case "nchar":
+                case "varchar":
+                case "nvarchar":
+                case "text":
+                case "tinytext":
+                case "mediumtext":
+                case "longtext":
+                    return typeof(string);
 
-                case "line":
-                    return typeof(string); // Implement a custom type if needed
+                case "binary":
+                case "varbinary":
+                case "blob":
+                case "tinyblob":
+                case "mediumblob":
+                case "longblob":
+                    return typeof(byte[]);
 
-                case "lseg":
-                    return typeof((double, double)[]);
+                case "enum":
+                case "set":
+                    return typeof(string);
 
-                case "box":
-                    return typeof((double, double)[]);
+                case "date":
+                case "datetime":
+                case "timestamp":
+                    return typeof(DateTime);
 
-                case "path":
-                    return typeof((double, double)[]);
+                case "time":
+                    return typeof(TimeSpan);
 
-                case "polygon":
-                    return typeof((double, double)[]);
+                case "year":
+                    return typeof(int);
 
-                case "circle":
-                    return typeof((double, double, double));
-
-                case "tsvector":
-                    return typeof(string); // Implement a custom type if needed
-
-                case "tsquery":
-                    return typeof(string); // Implement a custom type if needed
+                case "json":
+                    return typeof(string);
 
                 default:
                     throw new NotSupportedException($"The SQL type '{sqlType}' is not supported.");

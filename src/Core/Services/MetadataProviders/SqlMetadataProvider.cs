@@ -20,7 +20,6 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using KeyNotFoundException = System.Collections.Generic.KeyNotFoundException;
 
@@ -530,101 +529,14 @@ namespace Azure.DataApiBuilder.Core.Services
             GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
         }
 
-        protected virtual async Task FillSchemaForFunctionAsync(
-   Entity procedureEntity,
-   string entityName,
-   string schemaName,
-   string storedProcedureSourceName,
-   StoredProcedureDefinition storedProcedureDefinition)
+        protected virtual Task FillSchemaForFunctionAsync(
+            Entity procedureEntity,
+            string entityName,
+            string schemaName,
+            string storedProcedureSourceName,
+            StoredProcedureDefinition storedProcedureDefinition)
         {
-            using NpgsqlConnection conn = new(ConnectionString);
-            DataTable procedureMetadata;
-            DataTable parameterMetadata;
-
-            try
-            {
-                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
-                await conn.OpenAsync();
-
-                // Retrieve procedure metadata from PostgreSQL information schema
-                string procedureMetadataQuery = @"
-            SELECT routine_name
-            FROM information_schema.routines
-            WHERE routine_schema = @schemaName AND routine_name = @procedureName
-        ";
-
-                using (NpgsqlCommand procedureCommand = new(procedureMetadataQuery, conn))
-                {
-                    procedureCommand.Parameters.AddWithValue("@schemaName", schemaName);
-                    procedureCommand.Parameters.AddWithValue("@procedureName", storedProcedureSourceName);
-
-                    using (NpgsqlDataReader reader = await procedureCommand.ExecuteReaderAsync())
-                    {
-                        procedureMetadata = new DataTable();
-                        procedureMetadata.Load(reader);
-                    }
-                }
-
-                // Throw exception if procedure does not exist
-                if (procedureMetadata.Rows.Count == 0)
-                {
-                    throw new DataApiBuilderException(
-                        message: $"No stored procedure definition found for the given database object {storedProcedureSourceName}",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                }
-
-                // Retrieve parameter metadata from PostgreSQL information schema
-                string parameterMetadataQuery = @"
-            SELECT 
-            p.parameter_name, 
-            p.data_type 
-        FROM 
-            information_schema.parameters p
-        JOIN 
-            information_schema.routines r ON p.specific_name = r.specific_name
-        WHERE
-            p.parameter_mode ='IN' AND
-            r.routine_schema = @schemaName AND r.routine_name = @functionName";
-
-                using (NpgsqlCommand parameterCommand = new(parameterMetadataQuery, conn))
-                {
-                    parameterCommand.Parameters.AddWithValue("@schemaName", schemaName);
-                    parameterCommand.Parameters.AddWithValue("@functionName", storedProcedureSourceName);
-
-                    using (NpgsqlDataReader reader = await parameterCommand.ExecuteReaderAsync())
-                    {
-                        parameterMetadata = new DataTable();
-                        parameterMetadata.Load(reader);
-                    }
-                }
-
-                // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
-                foreach (DataRow row in parameterMetadata.Rows)
-                {
-                    string sqlType = (string)row["data_type"];
-                    Type systemType = SqlToCLRType(sqlType);
-                    ParameterDefinition paramDefinition = new()
-                    {
-                        SystemType = systemType,
-                        DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
-                    };
-
-                    storedProcedureDefinition.Parameters.TryAdd((string)row["parameter_name"], paramDefinition);
-                }
-            }
-            catch (Exception ex)
-            {
-                string message = $"Cannot obtain Schema for entity {entityName} " +
-                                 $"with underlying database object source: {schemaName}.{storedProcedureSourceName} " +
-                                 $"due to: {ex.Message}";
-
-                throw new DataApiBuilderException(
-                    message: message,
-                    innerException: ex,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-            }
+            throw new NotImplementedException("FillSchemaForFunctionAsync must be implemented in a database-specific provider.");
         }
         /// <summary>
         /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
@@ -1241,7 +1153,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 EntitySourceType entitySourceType = GetEntitySourceType(entityName, entity);
                 if (entitySourceType is EntitySourceType.StoredProcedure)
                 {
-                    await FillSchemaForFunctionAsync(
+                    await FillSchemaForStoredProcedureAsync(
                         entity,
                         entityName,
                         GetSchemaName(entityName),
@@ -1372,7 +1284,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Generate query to get result set details
             // of the stored procedure.
             string queryForResultSetDetails = SqlQueryBuilder.BuildStoredProcedureResultDetailsQuery(
-                storedProcedureName);
+                dbStoredProcedureName);
 
             // Execute the query to get columns' details.
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(

@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Collections;
+using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
@@ -76,7 +78,103 @@ namespace Azure.DataApiBuilder.Core.Services
             string storedProcedureSourceName,
             StoredProcedureDefinition storedProcedureDefinition)
         {
+            // PostgreSQL does not support stored procedures in the same way as other databases.
+            // Function support is handled via FillSchemaForFunctionAsync.
             return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        protected override async Task FillSchemaForFunctionAsync(
+            Entity procedureEntity,
+            string entityName,
+            string schemaName,
+            string storedProcedureSourceName,
+            StoredProcedureDefinition storedProcedureDefinition)
+        {
+            using NpgsqlConnection conn = new(ConnectionString);
+
+            try
+            {
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
+                await conn.OpenAsync();
+
+                // Retrieve function metadata from PostgreSQL information schema
+                string procedureMetadataQuery = @"
+                    SELECT routine_name
+                    FROM information_schema.routines
+                    WHERE routine_schema = @schemaName AND routine_name = @procedureName";
+
+                using (NpgsqlCommand procedureCommand = new(procedureMetadataQuery, conn))
+                {
+                    procedureCommand.Parameters.AddWithValue("@schemaName", schemaName);
+                    procedureCommand.Parameters.AddWithValue("@procedureName", storedProcedureSourceName);
+
+                    using NpgsqlDataReader reader = await procedureCommand.ExecuteReaderAsync();
+                    using DataTable procedureMetadata = new();
+                    procedureMetadata.Load(reader);
+
+                    if (procedureMetadata.Rows.Count == 0)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"No function definition found for the given database object {storedProcedureSourceName}",
+                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+                }
+
+                // Retrieve parameter metadata from PostgreSQL information schema
+                string parameterMetadataQuery = @"
+                    SELECT
+                        p.parameter_name,
+                        p.data_type
+                    FROM
+                        information_schema.parameters p
+                    JOIN
+                        information_schema.routines r ON p.specific_name = r.specific_name
+                    WHERE
+                        p.parameter_mode = 'IN' AND
+                        r.routine_schema = @schemaName AND r.routine_name = @functionName";
+
+                using (NpgsqlCommand parameterCommand = new(parameterMetadataQuery, conn))
+                {
+                    parameterCommand.Parameters.AddWithValue("@schemaName", schemaName);
+                    parameterCommand.Parameters.AddWithValue("@functionName", storedProcedureSourceName);
+
+                    using NpgsqlDataReader reader = await parameterCommand.ExecuteReaderAsync();
+                    using DataTable parameterMetadata = new();
+                    parameterMetadata.Load(reader);
+
+                    // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
+                    foreach (DataRow row in parameterMetadata.Rows)
+                    {
+                        string sqlType = (string)row["data_type"];
+                        Type systemType = SqlToCLRType(sqlType);
+                        ParameterDefinition paramDefinition = new()
+                        {
+                            SystemType = systemType,
+                            DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
+                        };
+
+                        storedProcedureDefinition.Parameters.TryAdd((string)row["parameter_name"], paramDefinition);
+                    }
+                }
+            }
+            catch (DataApiBuilderException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string message = $"Cannot obtain Schema for entity {entityName} " +
+                                 $"with underlying database object source: {schemaName}.{storedProcedureSourceName} " +
+                                 $"due to: {ex.Message}";
+
+                throw new DataApiBuilderException(
+                    message: message,
+                    innerException: ex,
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
         }
 
         /// <summary>

@@ -68,7 +68,7 @@ public abstract class DatabaseObject
                 EntitySourceType.StoredProcedure => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
                 EntitySourceType.Function => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
                 _ => throw new Exception(
-                        message: $"Unsupported EntitySourceType. It can either be Table,View, or Stored Procedure.")
+                        message: $"Unsupported EntitySourceType. It can either be Table, View, Stored Procedure, or Function.")
             };
         }
     }

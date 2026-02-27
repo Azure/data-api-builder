@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string encodedParamName = GetEncodedParamName(Counter.Next());
             if (!string.IsNullOrEmpty(paramName))
             {
-                Parameters.Add(paramName,
+                Parameters.Add(encodedParamName,
                     new(value,
                         dbType: GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName),
                         sqlDbType: GetUnderlyingSourceDefinition().GetSqlDbTypeForParam(paramName)));
@@ -131,9 +131,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Parameters.Add(encodedParamName, new(value));
             }
 
-            return paramName == null ? encodedParamName : $"{PARAM_NAME_PREFIX}{paramName}";
-
-
+            return encodedParamName;
         }
 
         /// <summary>

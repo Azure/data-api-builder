@@ -128,9 +128,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return string.Join(", ", parameterList);
         }
 
-#pragma warning disable CA1822 // Mark members as static
-        private string? FormatParameterValue(object value)
-#pragma warning restore CA1822 // Mark members as static
+        private static string FormatParameterValue(object value)
         {
             if (value == null)
             {
@@ -139,30 +137,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (value is string || value is char)
             {
-                if (value == null)
-                {
-                    value = string.Empty;
-                }
                 // Handle string values, escaping single quotes
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-                return $"{value.ToString().Replace("'", "''")}";
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
+                return $"'{value.ToString()!.Replace("'", "''")}'"; 
             }
 
-            if (value is bool)
+            if (value is bool boolValue)
             {
-                // Handle boolean values
-                return (bool)value ? "TRUE" : "FALSE";
+                return boolValue ? "TRUE" : "FALSE";
             }
 
-            if (value is DateTime)
+            if (value is DateTime dateTimeValue)
             {
-                // Handle DateTime values
-                return $"'{((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss")}'";
+                return $"'{dateTimeValue:yyyy-MM-dd HH:mm:ss}'";
             }
 
             // Handle numeric and other types
-            return value == null ? string.Empty : value.ToString();
+            return value.ToString()!;
         }
 
         public string Build(SqlUpsertQueryStructure structure)
@@ -279,11 +269,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return string.Join(", ", builtColumns);
         }
-        public string BuildStoredProcedureResultDetailsQuery(string procedureName)
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
-            // This query retrieves the details of the result set for a given stored procedure
-            
-    string query = $@"
+            // Parse schema and procedure name from the fully qualified name (schema.procedure)
+            string schemaName;
+            string procedureName;
+            string[] parts = databaseObjectName.Split('.');
+            if (parts.Length == 2)
+            {
+                schemaName = parts[0];
+                procedureName = parts[1];
+            }
+            else
+            {
+                schemaName = "public";
+                procedureName = databaseObjectName;
+            }
+
+            // Escape single quotes to prevent SQL injection
+            schemaName = schemaName.Replace("'", "''");
+            procedureName = procedureName.Replace("'", "''");
+
+            string query = $@"
     SELECT
         p.parameter_name AS name,
         p.data_type AS system_type_name,
@@ -297,13 +304,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         information_schema.routines r
         ON p.specific_name = r.specific_name
     WHERE
-        r.routine_schema = 'public'
-        and p.parameter_mode = 'OUT'
+        r.routine_schema = '{schemaName}'
+        AND p.parameter_mode = 'OUT'
         AND r.routine_name = '{procedureName}'
     ORDER BY
         p.ordinal_position";
-
-
 
             return query;
         }

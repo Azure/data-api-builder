@@ -851,6 +851,32 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Test that when OBO is enabled and a user is authenticated but missing required claims,
+        /// CreateConnection throws a DataApiBuilderException with OboAuthenticationFailure to prevent
+        /// cross-user connection pool contamination.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow("https://login.microsoftonline.com/tenant-id/v2.0", "", DisplayName = "Authenticated with iss only - missing oid/sub")]
+        [DataRow("", "user-object-id-12345", DisplayName = "Authenticated with oid only - missing iss")]
+        public void TestOboAuthenticatedUserMissingRequiredClaims_ThrowsOboAuthenticationFailure(string issuer, string objectId)
+        {
+            // Arrange - create an authenticated context that is missing required claims
+            Mock<IHttpContextAccessor> httpContextAccessor = CreateHttpContextAccessorWithClaims(issuer: issuer, objectId: objectId);
+            (MsSqlQueryExecutor queryExecutor, RuntimeConfigProvider provider) = CreateQueryExecutorForPoolingTest(
+                connectionString: "Server=localhost;Database=test;Application Name=TestApp;",
+                enableObo: true,
+                httpContextAccessor: httpContextAccessor);
+
+            // Act & Assert - should throw because authenticated user is missing claims needed for pool isolation
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
+                () => queryExecutor.CreateConnection(provider.GetConfig().DefaultDataSourceName));
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.OboAuthenticationFailure, ex.SubStatusCode,
+                "Missing required OBO claims should result in OboAuthenticationFailure sub-status code");
+            Assert.AreEqual(HttpStatusCode.Unauthorized, ex.StatusCode,
+                "Missing required OBO claims should result in Unauthorized status code");
+        }
+
+        /// <summary>
         /// Test that when no user context is present (e.g., startup), connection string uses base Application Name.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]

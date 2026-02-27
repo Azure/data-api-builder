@@ -2879,8 +2879,8 @@ namespace Cli
             }
 
             // Get existing autoentities or create new collection
-            Dictionary<string, Autoentity> autoEntitiesDictionary = runtimeConfig.Autoentities?.AutoEntities != null
-                ? new Dictionary<string, Autoentity>(runtimeConfig.Autoentities.AutoEntities)
+            Dictionary<string, Autoentity> autoEntitiesDictionary = runtimeConfig.Autoentities?.Autoentities != null
+                ? new Dictionary<string, Autoentity>(runtimeConfig.Autoentities.Autoentities)
                 : new Dictionary<string, Autoentity>();
 
             // Get existing autoentity definition or create a new one

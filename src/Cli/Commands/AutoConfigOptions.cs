@@ -52,37 +52,37 @@ namespace Cli.Commands
         [Value(0, Required = true, HelpText = "Name of the autoentities definition to configure.")]
         public string DefinitionName { get; }
 
-        [Option("patterns.include", Required = false, HelpText = "T-SQL LIKE pattern(s) to include database objects. Space-separated array of patterns.")]
+        [Option("patterns.include", Required = false, HelpText = "T-SQL LIKE pattern(s) to include database objects. Space-separated array of patterns. Default: '%.%'.")]
         public IEnumerable<string>? PatternsInclude { get; }
 
-        [Option("patterns.exclude", Required = false, HelpText = "T-SQL LIKE pattern(s) to exclude database objects. Space-separated array of patterns.")]
+        [Option("patterns.exclude", Required = false, HelpText = "T-SQL LIKE pattern(s) to exclude database objects. Space-separated array of patterns. Default: null")]
         public IEnumerable<string>? PatternsExclude { get; }
 
-        [Option("patterns.name", Required = false, HelpText = "Interpolation syntax for entity naming (must be unique for each generated entity).")]
+        [Option("patterns.name", Required = false, HelpText = "Interpolation syntax for entity naming (must be unique for each generated entity). Default: '{object}'")]
         public string? PatternsName { get; }
 
-        [Option("template.mcp.dml-tool", Required = false, HelpText = "Enable/disable DML tools for generated entities. Allowed values: true, false.")]
+        [Option("template.mcp.dml-tool", Required = false, HelpText = "Enable/disable DML tools for generated entities. Allowed values: true, false. Default: true")]
         public string? TemplateMcpDmlTool { get; }
 
-        [Option("template.rest.enabled", Required = false, HelpText = "Enable/disable REST endpoint for generated entities. Allowed values: true, false.")]
+        [Option("template.rest.enabled", Required = false, HelpText = "Enable/disable REST endpoint for generated entities. Allowed values: true, false. Default: true")]
         public bool? TemplateRestEnabled { get; }
 
-        [Option("template.graphql.enabled", Required = false, HelpText = "Enable/disable GraphQL endpoint for generated entities. Allowed values: true, false.")]
+        [Option("template.graphql.enabled", Required = false, HelpText = "Enable/disable GraphQL endpoint for generated entities. Allowed values: true, false. Default: true")]
         public bool? TemplateGraphqlEnabled { get; }
 
-        [Option("template.cache.enabled", Required = false, HelpText = "Enable/disable cache for generated entities. Allowed values: true, false.")]
+        [Option("template.cache.enabled", Required = false, HelpText = "Enable/disable cache for generated entities. Allowed values: true, false. Default: false")]
         public bool? TemplateCacheEnabled { get; }
 
-        [Option("template.cache.ttl-seconds", Required = false, HelpText = "Cache time-to-live in seconds for generated entities.")]
+        [Option("template.cache.ttl-seconds", Required = false, HelpText = "Cache time-to-live in seconds for generated entities. Default: null")]
         public int? TemplateCacheTtlSeconds { get; }
 
-        [Option("template.cache.level", Required = false, HelpText = "Cache level for generated entities. Allowed values: L1, L1L2.")]
+        [Option("template.cache.level", Required = false, HelpText = "Cache level for generated entities. Allowed values: L1, L1L2. Default: L1L2")]
         public string? TemplateCacheLevel { get; }
 
-        [Option("template.health.enabled", Required = false, HelpText = "Enable/disable health check for generated entities. Allowed values: true, false.")]
+        [Option("template.health.enabled", Required = false, HelpText = "Enable/disable health check for generated entities. Allowed values: true, false. Default: true")]
         public bool? TemplateHealthEnabled { get; }
 
-        [Option("permissions", Required = false, Separator = ':', HelpText = "Permissions for generated entities in the format role:actions (e.g., anonymous:read).")]
+        [Option("permissions", Required = false, Separator = ':', HelpText = "Permissions for generated entities in the format role:actions (e.g., anonymous:read). Default: null")]
         public IEnumerable<string>? Permissions { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

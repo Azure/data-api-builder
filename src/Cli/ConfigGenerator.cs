@@ -2976,6 +2976,7 @@ namespace Cli
                     return null;
                 }
 
+                // TODO: Task #2949. Once autoentities is able to support stored procedures, we will need to change this in order to allow the CLI to edit the custom tool section.
                 bool? customToolEnabled = mcp?.UserProvidedCustomToolEnabled == true ? mcp.CustomToolEnabled : null;
                 bool? dmlToolValue = mcpDmlToolValue;
                 mcp = new EntityMcpOptions(customToolEnabled: customToolEnabled, dmlToolsEnabled: dmlToolValue);
